@@ -305,8 +305,12 @@
 
           <div class="form-grid">
             <div>
-              <label id="lblCustName">Your Name *</label>
+              <label id="lblCustName">Your Full Name *</label>
               <input id="ciName" placeholder="e.g. John Smith" />
+            </div>
+            <div id="ciContactWrap" hidden>
+              <label>Dropped Off By (Your Name) *</label>
+              <input id="ciContactPerson" placeholder="e.g. Capt. Mike Miller / Driver Name" />
             </div>
             <div>
               <label>10-Digit Cell / Station Phone *</label>
@@ -470,6 +474,7 @@
         b.classList.toggle('active', b.getAttribute('data-acct') === acct);
       });
       document.getElementById('ciPoWrap').hidden = (acct === 'WALK_IN' || CHECKIN_MODE !== 'DROPOFF');
+      document.getElementById('ciContactWrap').hidden = (acct === 'WALK_IN' || CHECKIN_MODE !== 'DROPOFF');
       const lbl = document.getElementById('lblCustName');
       const inp = document.getElementById('ciName');
       if (acct === 'FIRE_EMS') { lbl.textContent = 'Fire Dept / EMS Agency *'; inp.placeholder = 'e.g. Baden VFD Station 47'; }
@@ -535,6 +540,7 @@
       document.getElementById('tabPick').classList.toggle('active', !isDrop);
       document.getElementById('acctTypeSection').hidden = !isDrop;
       document.getElementById('ciPoWrap').hidden = (!isDrop || PUB_ACCT === 'WALK_IN');
+      document.getElementById('ciContactWrap').hidden = (!isDrop || PUB_ACCT === 'WALK_IN');
       document.getElementById('ciSvcWrap').hidden = !isDrop;
       document.getElementById('ciTankBuilderWrap').hidden = !isDrop;
       document.getElementById('ciValvesWrap').hidden = !isDrop;
@@ -548,12 +554,18 @@
 
     async function submitPublicCheckin() {
       const name = document.getElementById('ciName').value.trim();
+      const contactPerson = document.getElementById('ciContactPerson').value.trim();
       const phone = document.getElementById('ciPhone').value.trim();
       const phoneDigits = phone.replace(/\D/g, '');
       const pickedBy = document.getElementById('ciPickedBy').value.trim();
 
       if (!name || phoneDigits.length < 10) {
         alert('Please enter your Name/Department and a valid 10-digit Phone Number.');
+        return;
+      }
+      if (CHECKIN_MODE === 'DROPOFF' && PUB_ACCT !== 'WALK_IN' && contactPerson.length < 2) {
+        alert("Please enter your individual name in 'Dropped Off By' so our shop knows who dropped off the cylinders.");
+        document.getElementById('ciContactPerson').focus();
         return;
       }
       if (CHECKIN_MODE === 'PICKUP_NOTICE' && !pickedBy) {
@@ -570,6 +582,7 @@
             entry_type: CHECKIN_MODE,
             account_type: PUB_ACCT,
             po_station: document.getElementById('ciPoStation').value,
+            contact_person: contactPerson,
             customer_name: name,
             customer_phone: phone,
             bottle_count: parseInt(document.getElementById('ciCount').value || '1', 10),
@@ -593,7 +606,7 @@
           ? `✅ <strong>Checked In! Your Ticket # is ${esc(data.ticket_no)}</strong><br />Estimated Ready Date: <strong>${esc(data.estimated_ready)}</strong>. Save your Ticket # to track status anytime above—we'll text ${esc(phone)} when your cylinders hit the Zone E pickup shelf!`
           : `✅ <strong>Verified Pickup Logged (${esc(data.ticket_no)})!</strong>${data.released_bottles ? ` (${data.released_bottles} cylinder(s) marked picked up.)` : ''} Thank you for trusting Weber's Tank Testing.`;
         if (CHECKIN_MODE === 'DROPOFF') document.getElementById('trkTicket').value = data.ticket_no;
-        ['ciName', 'ciPoStation', 'ciSummary', 'ciNotes', 'ciTicketRef', 'ciPickedBy'].forEach(id => { document.getElementById(id).value = ''; });
+        ['ciName', 'ciContactPerson', 'ciPoStation', 'ciSummary', 'ciNotes', 'ciTicketRef', 'ciPickedBy'].forEach(id => { document.getElementById(id).value = ''; });
         document.getElementById('ciRush').checked = false;
         PUB_TANK_COUNTS = {};
       } finally {
@@ -629,6 +642,14 @@
         : `✅ <strong>IN-DATE &amp; VALID THROUGH ${String(mo).padStart(2,'0')}-${dueY}:</strong> Next ${cycle}-year DOT hydro test is due by ${String(mo).padStart(2,'0')}-${dueY}.`;
     }
 
+    (function initDeepLink() {
+      const params = new URLSearchParams(location.search);
+      if (params.get('mode') === 'pickup') {
+        setCheckinMode('PICKUP_NOTICE');
+        if (params.get('customer')) document.getElementById('ciName').value = params.get('customer');
+        setTimeout(() => document.getElementById('dropoff')?.scrollIntoView({ behavior: 'smooth' }), 150);
+      }
+    })();
     refreshPublicSla(4);
   </script>
 </body>

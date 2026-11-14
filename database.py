@@ -345,6 +345,7 @@ def init_db() -> None:
         ("holding_zone", "TEXT DEFAULT 'ZONE_A_BACKROOM'"),
         ("picked_up_by", "TEXT DEFAULT ''"),
         ("pickup_ticket_ref", "TEXT DEFAULT ''"),
+        ("contact_person", "TEXT DEFAULT ''"),
     ]:
         _ensure_column(conn, "dropoffs", col, cdef)
 
@@ -357,6 +358,7 @@ def init_db() -> None:
         ("rush_fee", "INTEGER DEFAULT 0"),
         ("holding_zone", "TEXT DEFAULT 'ZONE_A_BACKROOM'"),
         ("prep_status", "TEXT DEFAULT 'WAITING'"),
+        ("contact_person", "TEXT DEFAULT ''"),
     ]:
         _ensure_column(conn, "schedule_jobs", col, cdef)
 

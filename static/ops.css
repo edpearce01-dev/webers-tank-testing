@@ -146,7 +146,7 @@ input[type="checkbox"] {
 .bnav-btn {
   border: none; background: transparent; color: var(--muted); padding: 5px 2px;
   display: flex; flex-direction: column; align-items: center; gap: 2px;
-  font-size: 0.68rem; font-weight: 700; cursor: pointer; position: relative; white-space: nowrap;
+  font-size: 0.64rem; font-weight: 700; cursor: pointer; position: relative; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .bnav-btn .ico { font-size: 1.12rem; line-height: 1.1; }
 .bnav-btn.active { color: var(--green); font-weight: 900; }

@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b2219" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/static/ops.css?v=8.0" />
+  <link rel="stylesheet" href="/static/ops.css?v=8.1" />
   <title>Weber's Tank Testing — Month Schedule &amp; Dispatch | DOT B386</title>
 </head>
 <body>
@@ -203,6 +203,7 @@
                   <label>Cell / Station Phone *</label>
                   <input id="sjPhone" type="tel" placeholder="724-555-0199" oninput="formatPhoneLive(this)" />
                 </div>
+                <div id="sjContactWrap"><label>Contact / Caller Name</label><input id="sjContact" placeholder="e.g. Chief Miller / Foreman" /></div>
                 <div id="sjPoWrap" hidden>
                   <label>PO # / Station #</label>
                   <input id="sjPoStation" placeholder="e.g. Station #2 / PO-1042" />
@@ -571,7 +572,7 @@
               ${isPrepped ? '<span class="stage-chip ready">✓ Prepped</span>' : ''}
             </div>
             <div class="rec-sub">
-              Sched: <strong>${escHtml(j.scheduled_date)}</strong>${j.due_date ? ` • Due: <strong>${escHtml(j.due_date)}</strong>` : ''}${j.po_station ? ` • ${escHtml(j.po_station)}` : ''}${j.tank_summary ? ` • ${escHtml(j.tank_summary)}` : ''}${j.location_notes ? ` • 📍 ${escHtml(j.location_notes)}` : ''}
+              Sched: <strong>${escHtml(j.scheduled_date)}</strong>${j.due_date ? ` • Due: <strong>${escHtml(j.due_date)}</strong>` : ''}${j.contact_person ? ` • 👤 ${escHtml(j.contact_person)}` : ''}${j.po_station ? ` • ${escHtml(j.po_station)}` : ''}${j.tank_summary ? ` • ${escHtml(j.tank_summary)}` : ''}${j.location_notes ? ` • 📍 ${escHtml(j.location_notes)}` : ''}
             </div>
             ${j.notes ? `<div style="font-size:0.75rem;color:#92400e;margin-top:2px;">Note: ${escHtml(j.notes)}</div>` : ''}
           </div>
@@ -616,7 +617,7 @@
                     
                   </div>
                   <div style="font-size:0.79rem;color:var(--muted);margin-top:2px;">
-                    ${isPickup ? `Picked up by: <strong>${escHtml(d.picked_up_by || d.customer_name)}</strong>` : `${escHtml(d.service_requested)}${d.tank_summary ? ' • ' + escHtml(d.tank_summary) : ''}`}${d.customer_phone ? ' • 📞 ' + escHtml(d.customer_phone) : ''}
+                    ${isPickup ? `Picked up by: <strong>${escHtml(d.picked_up_by || d.customer_name)}</strong>` : `${escHtml(d.service_requested)}${d.tank_summary ? ' • ' + escHtml(d.tank_summary) : ''}`}${d.contact_person ? ' • 👤 ' + escHtml(d.contact_person) : ''}${d.customer_phone ? ' • 📞 ' + escHtml(d.customer_phone) : ''}
                   </div>
                 </div>
                 <div style="display:flex;gap:6px;">
@@ -643,6 +644,7 @@
       const m = (STATE.customers_rolodex || []).find(c => c.customer_name.toUpperCase() === val.toUpperCase());
       if (m) {
         if (m.phone) document.getElementById('sjPhone').value = m.phone;
+        if (m.contact_person) document.getElementById('sjContact').value = m.contact_person;
         if (m.account_type) setBookingAcct(m.account_type);
         if (m.street_address && !document.getElementById('sjLocation').value) {
           document.getElementById('sjLocation').value = [m.street_address, m.city, m.state].filter(Boolean).join(', ');
@@ -723,6 +725,7 @@
           job_type: document.getElementById('sjType').value,
           account_type: BOOK_ACCT,
           po_station: document.getElementById('sjPoStation').value,
+          contact_person: document.getElementById('sjContact').value,
           scheduled_date: schedD,
           due_date: document.getElementById('sjDueDate').value || '',
           customer_name: cust,
@@ -739,7 +742,7 @@
         }),
       });
       if (!res.ok) { alert((await res.json()).detail || 'Could not save entry.'); return; }
-      ['sjCustomer', 'sjPhone', 'sjPoStation', 'sjSummary', 'sjLocation', 'sjNotes'].forEach(id => { document.getElementById(id).value = ''; });
+      ['sjCustomer', 'sjContact', 'sjPhone', 'sjPoStation', 'sjSummary', 'sjLocation', 'sjNotes'].forEach(id => { document.getElementById(id).value = ''; });
             TANK_COUNTS = {};
       selectCalendarDay(schedD, true);
       switchSchedTab('cal');

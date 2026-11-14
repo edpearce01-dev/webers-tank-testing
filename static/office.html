@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b2219" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/static/ops.css?v=8.0" />
+  <link rel="stylesheet" href="/static/ops.css?v=8.1" />
   <title>Weber's Tank Testing — Office, Rolodex, Printouts &amp; Supplies | RIN B386</title>
 </head>
 <body>
@@ -102,6 +102,7 @@
               </div>
             </div>
 
+            <div id="zeroRatesHint" class="notice warn" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;" hidden><span>⚠️ <strong>Master Service Rates are still $0.00</strong> — set standard prices once so invoices calculate automatically.</span><button class="secondary" onclick="switchOfficeTab('rates')">⚙️ Set Service Rates →</button></div>
             <div id="unbilledPillsWrap" style="margin-bottom:10px;"></div>
 
             <div class="grid" style="margin-bottom:10px;">
@@ -592,6 +593,8 @@
         EDITABLE_RATES = STATE.pricing_rates.map(p => ({ ...p, isNew: false }));
         renderRateScheduleTable();
       }
+      const allZero = (STATE.pricing_rates || []).length > 0 && STATE.pricing_rates.every(r => !(Number(r.unit_price) > 0));
+      document.getElementById('zeroRatesHint').hidden = !allZero;
       renderInvoicesList();
       renderRolodexDirectory();
       renderRecallsList();
@@ -778,10 +781,18 @@
             <div class="rec-actions">
               <a class="secondary" href="/api/pdf/invoice/${inv.id}" target="_blank">📄 PDF</a>
               <button class="secondary" onclick="sendPickupSms('${inv.customer_name.replace(/'/g, "\\'")}', '${escHtml(inv.customer_phone || '')}', 1, '${inv.invoice_no}: $${Number(inv.total_amount).toFixed(2)}')">📲 Text</button>
-              ${inv.status !== 'PAID' ? `<button class="secondary" style="background:#dcfce7;color:#166534;" onclick="markInvoicePaid(${inv.id})">✓ Mark Paid</button>` : ''}
+              ${inv.status !== 'PAID' ? `<button class="secondary" style="background:#dcfce7;color:#166534;" onclick="markInvoicePaid(${inv.id})">✓ Mark Paid</button><button class="secondary" style="color:#b91c1c;" onclick="voidInvoice(${inv.id}, '${inv.invoice_no}')">🗑 Void &amp; Re-Bill</button>` : ''}
             </div>
           </div>`).join('')
         : '<div style="color:var(--muted);font-size:0.86rem;">No matching invoices found.</div>';
+    }
+
+    async function voidInvoice(id, invNo) {
+      if (!confirm(`Void ${invNo} and return its cylinders back to Create Invoice for re-billing?`)) return;
+      const res = await fetch(`/api/invoices/${id}`, { method: 'DELETE' });
+      if (!res.ok) { alert((await res.json()).detail || 'Could not void invoice.'); return; }
+      await loadOfficeState();
+      loadUnbilledItems();
     }
 
     async function markInvoicePaid(id) {

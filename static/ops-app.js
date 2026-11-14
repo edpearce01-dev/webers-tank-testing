@@ -32,6 +32,7 @@ let BENCH_VIS = {};
 let EDIT_VIS = {};
 let BENCH_SUBMITTING = false;
 let LAST_SEARCH_ROWS = [];
+let SHOW_ALL_SHELF_CUSTS = false;
 let DEFERRED_PWA = null;
 let DEEP_LINK_APPLIED = false;
 
@@ -346,7 +347,7 @@ async function loadState(rebuildLadder = false) {
   const queued = STATE.records.filter(r => r.status === 'QUEUED');
   const doneToday = STATE.records.filter(r => r.status === 'COMPLETED');
   const openSched = (STATE.schedule_jobs || []).filter(j => j.status !== 'COMPLETED');
-  const waitingDrops = (STATE.dropoffs || []).filter(d => d.status === 'IN_BACKROOM' || d.status === 'PICKUP_LOGGED');
+  const waitingDrops = (STATE.dropoffs || []).filter(d => ((d.status === 'IN_BACKROOM' || d.status === 'CHECKED_IN') && (d.imported_count || 0) < d.bottle_count) || d.status === 'PICKUP_LOGGED');
   const needsFinish = (STATE.in_shop_post_test || []).filter(r => r.shop_stage !== 'READY_BACKROOM' && r.shop_stage !== 'PICKED_UP').length + STATE.active_valves.length;
   const totalUnbilled = STATE.customers_summary.reduce((s, c) => s + (c.unbilled_count || 0), 0);
 
@@ -608,7 +609,7 @@ function renderBackroomInbox() {
             ${isPickup
               ? `Picked up by: <strong>${escHtml(d.picked_up_by || d.customer_name)}</strong>${d.pickup_ticket_ref ? ' • Ref: ' + escHtml(d.pickup_ticket_ref) : ''}`
               : `${escHtml(d.service_requested)}${d.promised_date ? ` • Est Ready: <strong>${escHtml(d.promised_date)}</strong>` : ''}${d.tank_summary ? ' • ' + escHtml(d.tank_summary) : ''}`
-            }${d.customer_phone ? ' • 📞 ' + escHtml(d.customer_phone) : ''}
+            }${d.contact_person ? ' • 👤 By: <strong>' + escHtml(d.contact_person) + '</strong>' : ''}${d.customer_phone ? ' • 📞 ' + escHtml(d.customer_phone) : ''}
           </div>
           ${d.notes ? `<div style="font-size:0.77rem;color:#92400e;margin-top:2px;">Note: ${escHtml(d.notes)}</div>` : ''}
         </div>
@@ -1393,8 +1394,13 @@ function renderFinishValvesAndCustomers() {
       </div>`).join('')
     : '<div style="color:var(--muted);font-size:0.86rem;">All reusable valve &amp; HPA regulator tags are clear.</div>';
 
-  document.getElementById('customersListArea').innerHTML = STATE.customers_summary.length
-    ? STATE.customers_summary.map(c => {
+  const activeCusts = STATE.customers_summary.filter(c => c.ready_backroom_count || c.needs_stamp_count || c.unbilled_count);
+  const shownCusts = SHOW_ALL_SHELF_CUSTS ? STATE.customers_summary : activeCusts;
+  const toggleBtnHtml = STATE.customers_summary.length > activeCusts.length
+    ? `<div style="margin-bottom:8px;"><button class="secondary" onclick="SHOW_ALL_SHELF_CUSTS=!SHOW_ALL_SHELF_CUSTS;renderFinishValvesAndCustomers()">${SHOW_ALL_SHELF_CUSTS ? 'Show Active Shelf/Unbilled Only' : `Show All Past Customers (${STATE.customers_summary.length})`}</button></div>`
+    : '';
+  document.getElementById('customersListArea').innerHTML = toggleBtnHtml + (shownCusts.length
+    ? shownCusts.map(c => {
         const safeC = c.customer_name.replace(/'/g, "\\'");
         return `
           <div class="rec-item">
@@ -1417,7 +1423,7 @@ function renderFinishValvesAndCustomers() {
             </div>
           </div>`;
       }).join('')
-    : '<div style="color:var(--muted);font-size:0.86rem;">No customer records yet.</div>';
+    : '<div style="color:var(--muted);font-size:0.86rem;">No active shelf or unbilled batches right now.</div>');
 }
 
 async function filterCustomerHistory(cust) {

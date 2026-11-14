@@ -864,7 +864,7 @@ def build_backroom_poster_pdf(
     return buf.getvalue()
 
 
-def build_invoice_pdf(invoice: dict, items: list[dict], phone: str = "724-266-8008", dot_rin: str = "B386") -> bytes:
+def build_invoice_pdf(invoice: dict, items: list[dict], phone: str = "724-266-8008", dot_rin: str = "B386", customer_profile: dict | None = None) -> bytes:
     """Clean Printable Customer Invoice PDF with Address, Hours, Multi-Page & Payment Method Support."""
     buf = io.BytesIO()
     W, H = letter
@@ -905,11 +905,28 @@ def build_invoice_pdf(invoice: dict, items: list[dict], phone: str = "724-266-80
 
     c.line(45, H - 106, W - 45, H - 106)
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(45, H - 124, f"Bill To: {invoice.get('customer_name')}")
-    c.setFont("Helvetica", 10)
-    cust_ph = str(invoice.get("customer_phone") or "").strip()
+    c.drawString(45, H - 121, f"Bill To: {invoice.get('customer_name')}")
+    prof = customer_profile or {}
+    if prof.get("payment_terms") == "NET_30":
+        c.setFont("Helvetica-Bold", 9.5)
+        c.drawRightString(W - 45, H - 121, "Terms: Net-30 Dept / Fleet")
+    c.setFont("Helvetica", 9.4)
+    addr_bits = []
+    if prof.get("contact_person"):
+        addr_bits.append(f"Attn: {prof['contact_person']}")
+    city_st = " ".join(filter(None, [prof.get("city"), prof.get("state"), prof.get("zip_code")])).strip()
+    full_addr = ", ".join(filter(None, [prof.get("street_address"), city_st])).strip()
+    if full_addr:
+        addr_bits.append(full_addr)
+    if prof.get("email"):
+        addr_bits.append(str(prof["email"]))
+    y_svc = H - 136
+    if addr_bits:
+        c.drawString(45, H - 135, "   |   ".join(addr_bits)[:92])
+        y_svc = H - 149
+    cust_ph = str(invoice.get("customer_phone") or prof.get("phone") or "").strip()
     svc_line = f"Service / Test Date: {invoice.get('work_date')}" + (f"   |   Phone: {cust_ph}" if cust_ph else "")
-    c.drawString(45, H - 139, svc_line)
+    c.drawString(45, y_svc, svc_line)
 
     cy = draw_table_header(H - 166)
     c.setFont("Helvetica", 9.5)

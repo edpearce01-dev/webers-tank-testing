@@ -9,6 +9,7 @@ import os
 import re
 import ssl
 import urllib.error
+import urllib.parse
 import urllib.request
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta, timezone
@@ -162,13 +163,14 @@ def clean_phone(raw: Optional[str]) -> str:
 
 
 def upsert_rolodex_from_activity(
-    conn, customer_name: str, phone: str = "", account_type: str = ""
+    conn, customer_name: str, phone: str = "", account_type: str = "", contact_person: str = ""
 ) -> None:
     """Automatically creates or enriches a Customer Rolodex entry whenever a job or tank is logged."""
     cname = (customer_name or "").strip()
     if not cname:
         return
     ph = clean_phone(phone)
+    cp = (contact_person or "").strip()[:60]
     up = cname.upper()
     is_dept = account_type.upper() == "FIRE_EMS" or any(k in up for k in DEPT_KEYWORDS)
     eff_acct = account_type.upper() if account_type else ("FIRE_EMS" if is_dept else "WALK_IN")
@@ -177,18 +179,24 @@ def upsert_rolodex_from_activity(
     ts = now_eastern().strftime("%Y-%m-%d %I:%M %p")
 
     existing = conn.execute(
-        "SELECT id, phone, account_type FROM customers WHERE UPPER(customer_name)=UPPER(?);",
+        "SELECT id, phone, contact_person, account_type FROM customers WHERE UPPER(customer_name)=UPPER(?);",
         (cname,),
     ).fetchone()
     if not existing:
         conn.execute(
             """INSERT OR IGNORE INTO customers
-               (customer_name, account_type, phone, payment_terms, tax_exempt, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?);""",
-            (cname, eff_acct, ph, terms, tax_ex, ts),
+               (customer_name, account_type, contact_person, phone, payment_terms, tax_exempt, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?);""",
+            (cname, eff_acct, cp, ph, terms, tax_ex, ts),
         )
-    elif ph and not existing["phone"]:
-        conn.execute("UPDATE customers SET phone=?, updated_at=? WHERE id=?;", (ph, ts, existing["id"]))
+    else:
+        new_ph = ph if (ph and not existing["phone"]) else existing["phone"]
+        new_cp = cp if (cp and not existing["contact_person"]) else existing["contact_person"]
+        if new_ph != existing["phone"] or new_cp != existing["contact_person"]:
+            conn.execute(
+                "UPDATE customers SET phone=?, contact_person=?, updated_at=? WHERE id=?;",
+                (new_ph, new_cp, ts, existing["id"]),
+            )
 
 
 def get_compliance_alerts(s_map: dict, ref_today: str) -> list[dict]:
@@ -842,6 +850,7 @@ class PublicDropoffInput(BaseModel):
     entry_type: str = "DROPOFF"
     account_type: str = "WALK_IN"
     po_station: str = ""
+    contact_person: str = ""
     customer_name: str
     customer_phone: str = ""
     bottle_count: int = 1
@@ -881,6 +890,7 @@ class ScheduleJobInput(BaseModel):
     job_type: str = "SHOP_BATCH"
     account_type: str = "WALK_IN"
     po_station: str = ""
+    contact_person: str = ""
     customer_name: str
     customer_phone: str = ""
     location_notes: str = ""
@@ -902,6 +912,7 @@ class ScheduleJobPatchInput(BaseModel):
     job_type: Optional[str] = None
     account_type: Optional[str] = None
     po_station: Optional[str] = None
+    contact_person: Optional[str] = None
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
     location_notes: Optional[str] = None
@@ -1331,9 +1342,17 @@ def track_public_ticket(ticket: str = "", phone_last4: str = ""):
             (did,),
         ).fetchall()
     ]
+    if not recs and d["entry_type"] == "DROPOFF":
+        recs = [
+            dict(r)
+            for r in conn.execute(
+                "SELECT status, shop_stage, rin_marked, hydro_disposition FROM cylinder_records WHERE UPPER(customer_name)=UPPER(?) AND work_date >= ?;",
+                (d["customer_name"], d["work_date"]),
+            ).fetchall()
+        ]
     conn.close()
 
-    expected = int(d["bottle_count"] or 1)
+    expected = max(int(d["bottle_count"] or 1), len(recs))
     scanned = len(recs)
     tested = sum(1 for r in recs if r["status"] == "COMPLETED")
     ready_shelf = sum(1 for r in recs if r["shop_stage"] == "READY_BACKROOM")
@@ -1387,10 +1406,15 @@ def submit_public_dropoff(payload: PublicDropoffInput):
     is_rush = 1 if (payload.rush_requested or "RUSH" in svc_txt.upper()) else 0
     acct = (payload.account_type or "WALK_IN").strip().upper()
     po_st = payload.po_station.strip()[:60]
+    contact_p = payload.contact_person.strip()[:60]
+    if etype == "DROPOFF" and acct in ("FIRE_EMS", "COMMERCIAL") and len(contact_p) < 2:
+        raise HTTPException(400, "Please enter the individual's name in 'Dropped Off By' for department or commercial accounts.")
     picked_by = payload.picked_up_by.strip()[:60]
     tkt_ref = payload.pickup_ticket_ref.strip().upper()[:24]
 
     note_parts = []
+    if contact_p:
+        note_parts.append(f"Dropped by: {contact_p}")
     if po_st:
         note_parts.append(f"PO/Sta: {po_st}")
     if etype == "DROPOFF":
@@ -1406,19 +1430,19 @@ def submit_public_dropoff(payload: PublicDropoffInput):
     w_date = est.date().isoformat()
 
     conn = get_conn()
-    upsert_rolodex_from_activity(conn, cust, ph_clean, acct)
+    upsert_rolodex_from_activity(conn, cust, ph_clean, acct, contact_p)
     quote = calculate_turnaround_quote(conn, cnt)
     promised = quote["rush_promise_date"] if is_rush else quote["standard_promise_date"]
 
     cur = conn.cursor()
     cur.execute(
         """INSERT INTO dropoffs
-           (created_at, work_date, entry_type, account_type, po_station, customer_name, customer_phone,
+           (created_at, work_date, entry_type, account_type, po_station, contact_person, customer_name, customer_phone,
             bottle_count, tank_summary, service_requested, valves_attached, needs_air_fill,
             rush_requested, promised_date, holding_zone, picked_up_by, pickup_ticket_ref, notes, status, synced)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ZONE_A_BACKROOM', ?, ?, ?, ?, 0);""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ZONE_A_BACKROOM', ?, ?, ?, ?, 0);""",
         (
-            ts, w_date, etype, acct, po_st, cust, ph_clean,
+            ts, w_date, etype, acct, po_st, contact_p, cust, ph_clean,
             cnt, payload.tank_summary.strip()[:140], svc_txt,
             1 if payload.valves_attached else 0,
             0,
@@ -1576,16 +1600,17 @@ def create_schedule_job(payload: ScheduleJobInput):
     ts = now_eastern().strftime("%Y-%m-%d %I:%M %p")
     pri = "RUSH" if payload.rush_fee else payload.priority.strip().upper()
 
+    contact_p = payload.contact_person.strip()[:60]
     conn = get_conn()
-    upsert_rolodex_from_activity(conn, cust, ph, acct)
+    upsert_rolodex_from_activity(conn, cust, ph, acct, contact_p)
     cur = conn.cursor()
     cur.execute(
         """INSERT INTO schedule_jobs
-           (created_at, scheduled_date, due_date, job_type, account_type, po_station,
+           (created_at, scheduled_date, due_date, job_type, account_type, po_station, contact_person,
             customer_name, customer_phone, location_notes, bottle_count, tank_summary,
             valves_attached, needs_air_fill, priority, rush_fee, holding_zone,
             prep_status, status, notes, synced)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0);""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0);""",
         (
             ts,
             payload.scheduled_date.strip(),
@@ -1593,6 +1618,7 @@ def create_schedule_job(payload: ScheduleJobInput):
             payload.job_type.strip().upper(),
             acct,
             payload.po_station.strip()[:60],
+            contact_p,
             cust,
             ph,
             payload.location_notes.strip()[:140],
@@ -1681,7 +1707,7 @@ def ping_version():
         "(SELECT COUNT(*) FROM crew_feedback WHERE synced=0);"
     ).fetchone()[0]
     backroom_waiting = conn.execute(
-        "SELECT COUNT(*) FROM dropoffs WHERE status IN ('IN_BACKROOM', 'PICKUP_LOGGED');"
+        "SELECT COUNT(*) FROM dropoffs WHERE (status IN ('IN_BACKROOM', 'CHECKED_IN') AND COALESCE(imported_count,0) < bottle_count) OR status='PICKUP_LOGGED';"
     ).fetchone()[0]
     low_stock_count = conn.execute("SELECT COUNT(*) FROM shop_supplies WHERE low_stock=1;").fetchone()[0]
     conn.close()
@@ -1776,7 +1802,7 @@ def get_tv_leaderboard(work_date: Optional[str] = None):
         dict(r)
         for r in conn.execute(
             """SELECT * FROM dropoffs
-               WHERE (status='IN_BACKROOM' AND COALESCE(imported_count,0) < bottle_count)
+               WHERE (status IN ('IN_BACKROOM', 'CHECKED_IN') AND COALESCE(imported_count,0) < bottle_count)
                   OR status='PICKUP_LOGGED'
                ORDER BY rush_requested DESC, id DESC LIMIT 16;"""
         ).fetchall()
@@ -3570,6 +3596,25 @@ def set_invoice_status(inv_id: int, payload: InvoiceStatusInput):
     return {"updated": True}
 
 
+@app.delete("/api/invoices/{inv_id}")
+def void_and_delete_invoice(inv_id: int):
+    conn = get_conn()
+    inv = conn.execute("SELECT id, invoice_no, status FROM invoices WHERE id=?;", (inv_id,)).fetchone()
+    if not inv:
+        conn.close()
+        raise HTTPException(404, "Invoice not found.")
+    if inv["status"] == "PAID":
+        conn.close()
+        raise HTTPException(400, f"Invoice {inv['invoice_no']} is marked PAID and cannot be deleted.")
+    conn.execute("UPDATE cylinder_records SET invoice_id=NULL, synced=0 WHERE invoice_id=?;", (inv_id,))
+    conn.execute("DELETE FROM invoice_items WHERE invoice_id=?;", (inv_id,))
+    conn.execute("DELETE FROM invoices WHERE id=?;", (inv_id,))
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"voided": inv_id}
+
+
 # --- CREW FEEDBACK & PDF ENDPOINTS ---
 @app.get("/api/feedback")
 def list_crew_feedback():
@@ -3717,7 +3762,7 @@ def download_shelf_claim_slip_pdf(customer: str, work_date: str = ""):
         payment_terms=terms,
         phone=s_map.get("phone", "724-266-8008"),
         dot_rin=s_map.get("dot_rin", "B386"),
-        pickup_url="https://weberstanktesting.com/#dropoff",
+        pickup_url=f"https://weberstanktesting.com/?mode=pickup&customer={urllib.parse.quote(customer)}#dropoff",
     )
     safe_c = re.sub(r"[^A-Za-z0-9_-]", "_", customer)[:24]
     return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="ZoneE_Claim_Slip_{safe_c}.pdf"'})
@@ -3731,8 +3776,9 @@ def download_invoice_pdf(inv_id: int):
         conn.close()
         raise HTTPException(404, "Invoice not found.")
     items = [dict(r) for r in conn.execute("SELECT * FROM invoice_items WHERE invoice_id=? ORDER BY id;", (inv_id,)).fetchall()]
+    rolo = conn.execute("SELECT * FROM customers WHERE UPPER(customer_name)=UPPER(?) LIMIT 1;", (inv["customer_name"],)).fetchone()
     conn.close()
-    pdf_bytes = build_invoice_pdf(dict(inv), items)
+    pdf_bytes = build_invoice_pdf(dict(inv), items, customer_profile=dict(rolo) if rolo else None)
     return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="{inv["invoice_no"]}.pdf"'})
 
 
