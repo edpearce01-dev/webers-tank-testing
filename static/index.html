@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1b4332" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/icon.svg" />
+  <title>Weber's Tank Testing | DOT B386</title>
+  <style>
+    :root { --green: #1b4332; --accent: #2d6a4f; --bg: #f3f4f6; --card: #ffffff; --danger: #b91c1c; --ok: #15803d; }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body { margin: 0; background: var(--bg); color: #111827; }
+    header { background: var(--green); color: #fff; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    header h1 { margin: 0; font-size: 1.15rem; }
+    .hdr-btns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .crew-select { background: #fff; color: #111827; border: none; padding: 7px 10px; border-radius: 8px; font-weight: 700; font-size: 0.88rem; width: auto; }
+    .btn-help { background: #fbbf24; color: #111827; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.85rem; }
+    .badge { background: rgba(255,255,255,0.2); padding: 6px 10px; border-radius: 999px; font-size: 0.8rem; cursor: pointer; }
+    .status-strip { background: #e5e7eb; padding: 8px 16px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; font-size: 0.84rem; font-weight: 700; }
+    .pill { padding: 4px 10px; border-radius: 6px; background: #fff; }
+    .pill.ready { background: #dcfce7; color: #166534; }
+    .pill.wait { background: #fef3c7; color: #92400e; }
+    nav { display: flex; background: #fff; border-bottom: 2px solid #e5e7eb; overflow-x: auto; }
+    nav button { flex: 1; padding: 13px 9px; border: none; background: none; font-size: 0.9rem; font-weight: 700; cursor: pointer; border-bottom: 4px solid transparent; white-space: nowrap; }
+    nav button.active { color: var(--green); border-bottom-color: var(--green); background: #f0fdf4; }
+    main { max-width: 1060px; margin: 16px auto; padding: 0 12px 54px; }
+    .card { background: var(--card); border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.09); }
+    .card h3 { margin-top: 0; }
+    .hint-box { background: #ecfdf5; border: 1px solid #6ee7b7; color: #065f46; padding: 11px; border-radius: 8px; margin-bottom: 12px; font-weight: 600; }
+    .hint-box.bad { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 12px; }
+    label { display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; color: #374151; }
+    input, select { width: 100%; padding: 9px; border: 1px solid #9ca3af; border-radius: 6px; font-size: 0.95rem; }
+    button.primary { background: var(--green); color: #fff; border: none; padding: 12px 16px; border-radius: 8px; font-size: 0.98rem; font-weight: 700; cursor: pointer; width: 100%; margin-top: 12px; }
+    button.scan-trigger { background: #047857; color: #fff; border: none; padding: 14px; border-radius: 10px; font-size: 1.02rem; font-weight: 800; cursor: pointer; width: 100%; }
+    button.secondary { background: #e5e7eb; color: #111827; border: none; padding: 9px 13px; border-radius: 8px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; }
+    button.pdf-btn { background: #1e3a8a; color: #fff; border: none; padding: 13px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.95rem; text-align: left; }
+    .tag-chip { display: inline-block; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.84rem; }
+    .tag-chip.done { background: #dcfce7; color: #166534; border-color: #22c55e; }
+    .ladder-row { display: grid; grid-template-columns: 120px 1fr 150px 135px; gap: 10px; align-items: center; padding: 10px; border: 2px solid #e5e7eb; border-radius: 8px; margin-bottom: 8px; }
+    .ladder-row.active-step { border-color: var(--green); background: #f0fdf4; }
+    .ladder-row.locked-step { opacity: 0.5; background: #f9fafb; }
+    @media (max-width: 640px) { .ladder-row { grid-template-columns: 1fr; } }
+    .cam-box { background: #000; border-radius: 12px; overflow: hidden; position: relative; margin-top: 12px; }
+    .cam-box video { width: 100%; max-height: 400px; object-fit: cover; display: block; }
+    .cam-guide { position: absolute; inset: 12% 10% 24% 10%; border: 2px dashed rgba(251,191,36,0.9); border-radius: 10px; pointer-events: none; }
+    .cam-controls { display: flex; gap: 8px; padding: 12px; background: #111827; flex-wrap: wrap; }
+    .shutter-btn { flex: 1 1 150px; background: #fbbf24; color: #111827; border: none; padding: 12px; border-radius: 8px; font-size: 0.95rem; font-weight: 800; cursor: pointer; }
+    .shutter-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .pass { color: var(--ok); font-weight: 700; }
+    .fail { color: var(--danger); font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #e5e7eb; }
+    .hidden { display: none !important; }
+    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+    .modal { background: #fff; max-width: 740px; width: 100%; max-height: 90vh; overflow-y: auto; border-radius: 12px; padding: 20px; }
+    .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, #1b4332 0%, #081c15 100%); padding: 18px; }
+    .login-card { background: #fff; max-width: 420px; width: 100%; border-radius: 14px; padding: 26px; text-align: center; box-shadow: 0 12px 30px rgba(0,0,0,0.35); }
+  </style>
+</head>
+<body>
+  <!-- PUBLIC DOMAIN LANDING + CREW PIN LOGIN GATE -->
+  <div id="loginScreen" class="login-wrap hidden">
+    <div class="login-card">
+      <img src="/icon.svg" alt="Weber's Tank Testing" style="width:72px;height:72px;margin-bottom:8px;" />
+      <h2 style="margin:4px 0;color:var(--green);">Weber's Tank Testing</h2>
+      <p style="margin:0 0 18px;color:#4b5563;font-size:0.9rem;">
+        DOT Hydrostatic Cylinder Requalification &amp; Visual Inspection<br />
+        <strong>DOT RIN: B386</strong> • Beaver County, PA • 724-266-8008
+      </p>
+      <div style="text-align:left;">
+        <label>Crew Access PIN</label>
+        <input type="password" inputmode="numeric" id="loginPinInput" placeholder="Enter Shop PIN (Default: 0386)" onkeydown="if(event.key==='Enter')submitLoginPin()" style="text-align:center;font-size:1.25rem;letter-spacing:4px;" />
+      </div>
+      <div id="loginError" class="hint-box bad hidden" style="margin-top:10px;">Incorrect Shop PIN.</div>
+      <button class="primary" onclick="submitLoginPin()">Unlock Shop Operations</button>
+    </div>
+  </div>
+
+  <!-- AUTHENTICATED CREW APPLICATION -->
+  <div id="appShell" class="hidden">
+    <header>
+      <div>
+        <h1>Weber's Tank Testing</h1>
+        <small>DOT RIN: B386 • Live Multi-Crew Cloud Sync</small>
+      </div>
+      <div class="hdr-btns">
+        <button id="btnInstallPwa" class="btn-help hidden" onclick="installPwaApp()">📲 Install App</button>
+        <select id="activeCrew" class="crew-select" onchange="saveActiveCrew()" title="Active Operator on This Device"></select>
+        <span class="badge" id="syncBadge" onclick="triggerManualSync()" title="Click to push to Google Sheets now">Syncing...</span>
+        <button class="btn-help" onclick="toggleGuide(true)">? Guide &amp; Settings</button>
+      </div>
+    </header>
+
+    <div class="status-strip">
+      <span>Working Date:</span>
+      <input type="date" id="globalDate" style="width:auto;padding:4px 8px;font-weight:700;" onchange="changeWorkingDate()" />
+      <span class="pill" id="pillShort">Short Jacket</span>
+      <span class="pill" id="pillTall">Tall Jacket</span>
+      <span class="pill" id="pillQueue">Queued: 0</span>
+      <span class="pill" id="pillValves">Valves Out: 0</span>
+    </div>
+
+    <nav>
+      <button class="active" onclick="showTab('cal', this)">1. Calibrate</button>
+      <button onclick="showTab('intake', this)">2. Scan / Intake</button>
+      <button onclick="showTab('bench', this)">3. Test Stand</button>
+      <button onclick="showTab('logs', this)">4. Daily Log &amp; Valves</button>
+      <button onclick="showTab('print', this)">5. Print Center</button>
+      <button onclick="showTab('billing', this)">6. Billing &amp; Rates</button>
+    </nav>
+
+    <main>
+      <!-- TAB 1: CALIBRATE -->
+      <section id="tab-cal">
+        <div class="card">
+          <h3>Morning Stepped Calibration — Cyl <span id="calSerialLabel">1SF11904</span> (7,500#)</h3>
+          <div class="grid" style="margin-bottom:14px;">
+            <div>
+              <label>1. Water Jacket</label>
+              <select id="calJacket" onchange="buildCalibrationLadder()">
+                <option value="Short Jacket">Short Jacket</option>
+                <option value="Tall Jacket">Tall Jacket</option>
+              </select>
+            </div>
+            <div>
+              <label>2. Highest Pressure Reaching Today</label>
+              <select id="calMaxPsi" onchange="buildCalibrationLadder()"></select>
+            </div>
+          </div>
+          <div class="hint-box">Start at 2,000 PSI and lock each burette step in succession up to your max pressure.</div>
+          <div id="ladderSteps"></div>
+          <div id="releaseSection" class="card hidden" style="background:#f0fdf4;border:2px solid var(--green);margin-top:12px;">
+            <label>Final Step: Release Pressure to 0 — Permanent Expansion (cc)</label>
+            <input type="number" step="0.1" id="calFinalPerm" value="0" style="max-width:220px;" />
+            <button class="primary" onclick="submitCalibrationLadder()">Certify Jacket Calibration Ladder</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Calibrations on Selected Date</h3>
+          <table>
+            <thead><tr><th>Time</th><th>Jacket</th><th>Step PSI</th><th>Chart (A)</th><th>Burette (B)</th><th>Perm</th><th>% Off</th><th>By</th><th>Result</th></tr></thead>
+            <tbody id="calTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 2: MULTI-USER SCAN / INTAKE + VALVE TAG BY SERIAL -->
+      <section id="tab-intake" class="hidden">
+        <div class="card">
+          <h3>1. Batch Customer &amp; Live Bottle Scanner</h3>
+          <div class="grid" style="margin-bottom:12px;">
+            <div>
+              <label>Customer / Fire Dept (Or Auto-Read)</label>
+              <input id="inCustomer" list="customerSuggest" placeholder="e.g. Crescent Twp FD / A-K Supply" />
+              <datalist id="customerSuggest"></datalist>
+            </div>
+            <div>
+              <label>Valve Tag # (Optional at Scan)</label>
+              <input id="inScanValveTag" placeholder="e.g. 14 (or assign below)" />
+            </div>
+            <div>
+              <label>Service Mode</label>
+              <select id="inMode">
+                <option value="HYDRO_AND_VISUAL">Shop Hydro + Visual</option>
+                <option value="VISUAL_ONLY">Road / Visual Inspection Only</option>
+              </select>
+            </div>
+            <div>
+              <label>CGA Steel Preset (Optional Size)</label>
+              <select id="cgaPreset" onchange="applyPreset()">
+                <option value="">-- None / Read From Stamp --</option>
+              </select>
+            </div>
+          </div>
+
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer;">
+            <input type="checkbox" id="autoImportChk" checked style="width:18px;height:18px;" />
+            Auto-import straight into live Test Stand queue (syncs across all crew devices)
+          </label>
+
+          <canvas id="camCanvas" class="hidden"></canvas>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="scan-trigger" id="btnOpenCam" style="flex:2;" onclick="openLiveCamera()">📷 Scan Bottle (Open Live Camera)</button>
+            <label class="secondary" style="flex:1;display:flex;align-items:center;justify-content:center;cursor:pointer;text-align:center;">
+              🖼 Upload / Test Photos
+              <input type="file" accept="image/*" multiple class="hidden" onchange="uploadSavedAngles(this)" />
+            </label>
+          </div>
+
+          <div id="camContainer" class="cam-box hidden">
+            <video id="camVideo" autoplay playsinline muted></video>
+            <div class="cam-guide"></div>
+            <div id="thumbStrip" style="display:flex;gap:8px;padding:8px 12px;background:#1f2937;overflow-x:auto;align-items:center;min-height:42px;"></div>
+            <div class="cam-controls">
+              <button class="shutter-btn" id="btnQuickOne" style="background:#3b82f6;color:#fff;" onclick="quickSingleShot()">⚡ 1-Shot Scan</button>
+              <button class="shutter-btn" id="btnSnapAngle" onclick="captureAngle()">📸 + Add Angle (0)</button>
+              <button class="shutter-btn" id="btnReadAll" style="background:#10b981;color:#fff;" onclick="sendCapturedAngles()" disabled>✅ Read Angles</button>
+              <button class="secondary" onclick="clearAngles()">🗑 Clear</button>
+              <button class="secondary" onclick="switchCamera()">🔄 Flip</button>
+              <button class="secondary hidden" id="btnTorch" onclick="toggleTorch()">🔦 Light</button>
+              <button class="secondary" onclick="closeLiveCamera()">✖ Close</button>
+            </div>
+          </div>
+          <div id="scanFeedback" class="hint-box hidden" style="margin-top:12px;"></div>
+        </div>
+
+        <!-- QUICK ASSIGN VALVE TAG BY SERIAL NUMBER -->
+        <div class="card" style="border-left:5px solid #f59e0b;">
+          <h3>🏷️ Assign Valve Tag # by Cylinder Serial Number</h3>
+          <datalist id="serialSuggest"></datalist>
+          <div class="grid" style="align-items:end;">
+            <div>
+              <label>Cylinder Serial Number</label>
+              <input id="quickTagSerial" list="serialSuggest" placeholder="Pick or type Serial #" />
+            </div>
+            <div>
+              <label>Valve Tag #</label>
+              <input id="quickTagNum" placeholder="e.g. 14" onkeydown="if(event.key==='Enter')assignTagBySerial('quickTagSerial','quickTagNum')" />
+            </div>
+            <div>
+              <button class="primary" style="margin-top:0;" onclick="assignTagBySerial('quickTagSerial','quickTagNum')">Assign Valve Tag</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>2. Manual Entry / Edit Bottle Details</h3>
+          <div class="grid">
+            <div><label>Serial Number</label><input id="inSerial" placeholder="Serial #" /></div>
+            <div><label>Valve Tag #</label><input id="inValveTag" placeholder="e.g. 14" /></div>
+            <div><label>MFG ID</label><input id="inMfg" placeholder="e.g. LUXFER / WK / M8004" /></div>
+            <div><label>MFG Date</label><input id="inMfgDate" placeholder="MM-YY" /></div>
+            <div><label>Gas Service</label><input id="inGas" value="AIR" /></div>
+            <div><label>DOT / Permit Spec</label><input id="inSpec" placeholder="3AA / 3AL / SP14387" /></div>
+            <div><label>Service Pressure (PSI)</label><input type="number" id="inSvcPsi" oninput="calcFiveThirds()" /></div>
+            <div><label>Test Pressure (Auto 5/3 or Edit)</label><input type="number" id="inTestPsi" /></div>
+            <div><label>Outside Diameter (in)</label><input id="inDia" placeholder="e.g. 7.3" /></div>
+            <div><label>Length (in)</label><input id="inLen" placeholder="e.g. 23" /></div>
+            <div><label>REE Limit (cc, if SP/Composite)</label><input type="number" step="0.1" id="inRee" /></div>
+          </div>
+          <button class="primary" onclick="submitIntake()">Add Bottle to Live Queue</button>
+        </div>
+
+        <div class="card">
+          <h3>Live Intake Queue (Type Valve Tag # Inline Anytime)</h3>
+          <table>
+            <thead><tr><th>Customer</th><th>Serial</th><th style="width:110px;">Valve Tag #</th><th>Spec</th><th>Size</th><th>Test PSI</th><th>Action</th></tr></thead>
+            <tbody id="queuePreviewTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 3: TEST STAND -->
+      <section id="tab-bench" class="hidden">
+        <div class="card">
+          <h3>Select Queued Bottle on Stand</h3>
+          <select id="benchSelect" onchange="renderBenchForm()"></select>
+          <div id="benchArea" style="margin-top:14px;"></div>
+        </div>
+
+        <div class="card">
+          <h3>Completed on Selected Date</h3>
+          <table>
+            <thead><tr><th>Owner</th><th>Serial</th><th>Valve Tag</th><th>Spec</th><th>Test PSI</th><th>Total</th><th>Perm</th><th>Elastic</th><th>% Perm</th><th>Disp</th></tr></thead>
+            <tbody id="doneTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 4: DAILY LOG & VALVE TAG TRACKER (UNCLUTTERED) -->
+      <section id="tab-logs" class="hidden">
+        <div class="card" style="border-left:5px solid #f59e0b;">
+          <h3>🏷️ Active Valve Tag Bench Tracker (Date: <span id="valveDateLabel"></span>)</h3>
+          <div class="grid" style="align-items:end;margin-bottom:12px;">
+            <div>
+              <label>Assign / Update by Serial #</label>
+              <input id="logTagSerial" list="serialSuggest" placeholder="Cylinder Serial #" />
+            </div>
+            <div>
+              <label>Valve Tag #</label>
+              <input id="logTagNum" placeholder="Tag #" onkeydown="if(event.key==='Enter')assignTagBySerial('logTagSerial','logTagNum')" />
+            </div>
+            <div>
+              <button class="primary" style="margin-top:0;" onclick="assignTagBySerial('logTagSerial','logTagNum')">Save Tag Assignment</button>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>Valve Tag #</th><th>Matches Cylinder Serial</th><th>Customer</th><th>Gas / Spec</th><th>Bottle Status</th><th>Valve Reinstalled?</th></tr></thead>
+            <tbody id="valveTrackerTable"></tbody>
+          </table>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Work History By Date (Click Any Day)</h3>
+            <table>
+              <thead><tr><th>Date</th><th>Customers</th><th>Completed / Total</th><th>Open</th></tr></thead>
+              <tbody id="datesListTable"></tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <h3>Categorized By Customer</h3>
+            <table>
+              <thead><tr><th>Customer</th><th>Bottles</th><th>Unbilled</th><th>Last Date</th><th>View</th></tr></thead>
+              <tbody id="customersListTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Detailed Bottle Log &amp; Search (By Client, Serial #, Valve Tag #, or Date)</h3>
+          <input id="searchBox" placeholder="Type customer, serial #, valve tag #, DOT spec, or YYYY-MM-DD..." oninput="runSearch()" />
+          <table style="margin-top:10px;">
+            <thead><tr><th>Date</th><th>Sheet#</th><th>Owner</th><th>Serial</th><th>Valve Tag</th><th>Spec</th><th>Total/Perm</th><th>%Perm</th><th>Disp</th><th>Op</th></tr></thead>
+            <tbody id="searchTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 5: DEDICATED PRINT CENTER -->
+      <section id="tab-print" class="hidden">
+        <div class="card">
+          <h3>1. Select Date &amp; Customer Scope for Printing (Active Date: <span id="pdfDateLabel"></span>)</h3>
+          <div class="grid">
+            <div>
+              <label>Filter PDFs by Customer (Blank = Entire Day's Run)</label>
+              <select id="pdfCustomerFilter"><option value="">-- All Customers on This Date --</option></select>
+            </div>
+            <div>
+              <label>Starting Retest Sheet # (Top-Right Corner)</label>
+              <input type="number" id="pdfSheetNo" value="8095" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>2. Official DOT Audit &amp; Shop Forms</h3>
+          <div class="grid">
+            <button class="pdf-btn" onclick="openPdf('retest')">📄 Print DOT Retest Data Sheet<br /><small style="font-weight:400;opacity:0.9;">Exact 12-row Hydro-Test Form replica</small></button>
+            <button class="pdf-btn" onclick="openPdf('verification')">📄 Print Daily Verification Sheet<br /><small style="font-weight:400;opacity:0.9;">Method B morning calibration log</small></button>
+            <button class="pdf-btn" onclick="openPdf('visual')">📄 Print 7-Pt Visual Inspection Log<br /><small style="font-weight:400;opacity:0.9;">DOT/ICC visual requalification sheet</small></button>
+            <button class="pdf-btn" style="background:#92400e;" onclick="openPdf('valvetags')">🏷️ Print Valve Tag Match Sheet<br /><small style="font-weight:400;opacity:0.9;">Bench checklist: Tag # to Serial #</small></button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>3. B386 Retest Laser Stickers (3×10 Mailing Label Sheet)</h3>
+          <div class="grid" style="align-items:end;">
+            <div>
+              <label>Number of Stickers to Print</label>
+              <input type="number" id="stickerCount" value="12" />
+            </div>
+            <div>
+              <label>Skip Already-Used Label Slots on Sheet (0–29)</label>
+              <input type="number" id="stickerSkip" value="0" />
+            </div>
+            <div>
+              <button class="pdf-btn" style="background:#047857;width:100%;text-align:center;" onclick="openPdf('stickers')">🏷️ Generate B386 Laser Stickers PDF</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 6: BILLING, INVOICES & EDITABLE PRICING -->
+      <section id="tab-billing" class="hidden">
+        <div class="card">
+          <h3>1. Create Customer Invoice From Completed Bottles</h3>
+          <div class="grid">
+            <div>
+              <label>Service Date</label>
+              <input type="date" id="billDate" onchange="loadUnbilledItems()" />
+            </div>
+            <div>
+              <label>Customer</label>
+              <select id="billCustomer" onchange="loadUnbilledItems()"></select>
+            </div>
+            <div>
+              <label>Tax %</label>
+              <input type="number" step="0.01" id="billTax" value="0" oninput="recalcInvoiceDraft()" />
+            </div>
+            <div>
+              <label>Invoice Status</label>
+              <select id="billStatus"><option value="DRAFT">DRAFT</option><option value="SENT">SENT</option><option value="PAID">PAID</option></select>
+            </div>
+          </div>
+
+          <table style="margin-top:12px;">
+            <thead><tr><th>Line Item Description</th><th style="width:80px;">Qty</th><th style="width:120px;">Unit Price ($)</th><th style="width:110px;">Total</th></tr></thead>
+            <tbody id="draftInvoiceRows"></tbody>
+          </table>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:10px;">
+            <button class="secondary" onclick="addCustomInvoiceLine()">+ Add Custom Fee / Air Fill Line</button>
+            <strong id="draftTotalLabel" style="font-size:1.1rem;">Draft Total: $0.00</strong>
+          </div>
+          <input id="billNotes" placeholder="Optional invoice notes / PO#..." style="margin-top:10px;" />
+          <button class="primary" onclick="submitInvoice()">Generate &amp; Save Invoice</button>
+        </div>
+
+        <div class="card">
+          <h3>2. Saved Invoices</h3>
+          <table>
+            <thead><tr><th>Invoice #</th><th>Customer</th><th>Work Date</th><th>Total</th><th>By</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="invoicesTable"></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <h3>3. Master Service Price List</h3>
+          <table>
+            <thead><tr><th>Code</th><th>Service Description</th><th style="width:150px;">Default Rate ($)</th></tr></thead>
+            <tbody id="pricingTable"></tbody>
+          </table>
+          <button class="primary" onclick="savePricingRates()">Save Master Pricing Rates</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- GUIDE, CREW & SETTINGS MODAL -->
+  <div id="guideModal" class="modal-bg hidden" onclick="if(event.target===this)toggleGuide(false)">
+    <div class="modal">
+      <h2>Crew Roster, Domain Security &amp; Cloud Sync</h2>
+
+      <h3>1. Add Crew / Inspector (Brothers &amp; Visual Helpers)</h3>
+      <div class="grid" style="margin-bottom:10px;">
+        <input id="newCrewName" placeholder="Full Name (e.g. Brady)" />
+        <input id="newCrewInit" placeholder="Initials (e.g. BP)" maxlength="4" />
+        <input id="newCrewRole" placeholder="Role (e.g. Visual Inspector)" />
+      </div>
+      <button class="secondary" onclick="addCrew()">+ Add Crew Member to Dropdown</button>
+
+      <h3 style="margin-top:18px;">2. Google Sheets Auto-Sync Webhook URL</h3>
+      <input id="webhookInput" placeholder="[https://script.google.com/macros/s/.../exec](https://script.google.com/macros/s/.../exec)" style="margin-bottom:10px;" />
+
+      <h3>3. Security PIN, Gemini AI Key &amp; Facility Defaults</h3>
+      <p style="font-size:0.85rem;margin-top:0;">Gemini Key Status: <strong id="keyStatusText"></strong></p>
+      <div class="grid">
+        <div><label>Change Crew Login PIN</label><input type="password" id="editShopPin" placeholder="Leave blank to keep current PIN" /></div>
+        <div><label>Update Gemini API Key</label><input type="password" id="apiKeyInput" placeholder="Leave blank to keep current key" /></div>
+        <div><label>Calibrated Cyl Serial #</label><input id="editCalSerial" value="1SF11904" /></div>
+        <div><label>Starting Retest Sheet #</label><input type="number" id="editSheetNo" value="8095" /></div>
+      </div>
+      <button class="btn-help" style="margin-top:12px;width:100%;" onclick="saveAllSettings()">Save Settings</button>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;gap:10px;">
+        <button class="secondary" onclick="logoutCrew()">🔒 Lock / Sign Out This Device</button>
+        <button class="primary" style="width:auto;margin:0;" onclick="toggleGuide(false)">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let STATE = { crew: [], calibration_targets: [], cga_specs: [], records: [], verifications: [], jacket_ceilings: {}, pricing_rates: [], invoices: [], dates_summary: [], customers_summary: [], db_version: 0 };
+    let LADDER = [];
+    let ACTIVE_STEP = 0;
+    let MEDIA_STREAM = null;
+    let FACING_MODE = 'environment';
+    let TORCH_ON = false;
+    let CAPTURED_B64 = [];
+    let DRAFT_ITEMS = [];
+    let DEFERRED_PWA = null;
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      DEFERRED_PWA = e;
+      document.getElementById('btnInstallPwa').classList.remove('hidden');
+    });
+
+    async function installPwaApp() {
+      if (!DEFERRED_PWA) return;
+      DEFERRED_PWA.prompt();
+      await DEFERRED_PWA.userChoice;
+      DEFERRED_PWA = null;
+      document.getElementById('btnInstallPwa').classList.add('hidden');
+    }
+
+    function fmtPctTenth(val) {
+      if (val === null || val === undefined || val === '') return '-';
+      return Number(val).toFixed(1) + '%';
+    }
+
+    async function checkAuthAndBoot() {
+      const res = await fetch('/api/auth/status');
+      const data = await res.json();
+      if (!data.authenticated) {
+        document.getElementById('loginScreen').classList.remove('hidden');
+        document.getElementById('appShell').classList.add('hidden');
+        document.getElementById('loginPinInput').focus();
+      } else {
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('appShell').classList.remove('hidden');
+        loadState(true);
+      }
+    }
+
+    async function submitLoginPin() {
+      const pin = document.getElementById('loginPinInput').value;
+      const err = document.getElementById('loginError');
+      const res = await fetch('/api/auth/login', {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ pin })
+      });
+      if (!res.ok) { err.classList.remove('hidden'); return; }
+      err.classList.add('hidden');
+      document.getElementById('loginPinInput').value = '';
+      checkAuthAndBoot();
+    }
+
+    async function logoutCrew() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      toggleGuide(false);
+      checkAuthAndBoot();
+    }
+
+    function toggleGuide(show) {
+      document.getElementById('guideModal').classList.toggle('hidden', !show);
+    }
+
+    function showTab(name, btn) {
+      if (name !== 'intake') closeLiveCamera();
+      document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+      document.getElementById('tab-' + name).classList.remove('hidden');
+      document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (name === 'logs') runSearch();
+      if (name === 'billing') loadUnbilledItems();
+    }
+
+    function getCurrentCrew() {
+      const sel = document.getElementById('activeCrew');
+      return STATE.crew.find(c => c.initials === sel.value) || STATE.crew[0] || { full_name: 'Ryan Pearce', initials: 'RP' };
+    }
+
+    function saveActiveCrew() {
+      localStorage.setItem('webers_active_crew', document.getElementById('activeCrew').value);
+    }
+
+    function changeWorkingDate() {
+      const d = document.getElementById('globalDate').value;
+      document.getElementById('billDate').value = d;
+      loadState(true);
+    }
+
+    async function loadState(rebuildLadder = false) {
+      const wDate = document.getElementById('globalDate').value || '';
+      const res = await fetch('/api/bootstrap' + (wDate ? `?work_date=${encodeURIComponent(wDate)}` : ''));
+      if (res.status === 401) { checkAuthAndBoot(); return; }
+      const prevVer = STATE.db_version;
+      STATE = await res.json();
+
+      if (!document.getElementById('globalDate').value) {
+        document.getElementById('globalDate').value = STATE.selected_date;
+        document.getElementById('billDate').value = STATE.selected_date;
+      }
+      document.getElementById('pdfDateLabel').textContent = STATE.selected_date;
+      document.getElementById('valveDateLabel').textContent = STATE.selected_date;
+      document.getElementById('pdfSheetNo').value = STATE.starting_sheet_no;
+      document.getElementById('editSheetNo').value = STATE.starting_sheet_no;
+      document.getElementById('calSerialLabel').textContent = STATE.calibrated_serial;
+      document.getElementById('editCalSerial').value = STATE.calibrated_serial;
+      document.getElementById('webhookInput').value = STATE.sheets_webhook_url || '';
+      document.getElementById('keyStatusText').textContent = STATE.has_gemini_key ? 'Configured & Ready' : 'Not Set';
+
+      document.getElementById('syncBadge').textContent = STATE.has_sheets_webhook
+        ? (STATE.unsynced_count ? `↻ Sync Pending (${STATE.unsynced_count})` : '☁ Sheets Synced')
+        : `Local Saved (${STATE.unsynced_count} unsynced)`;
+
+      const savedCrew = localStorage.getItem('webers_active_crew') || 'RP';
+      document.getElementById('activeCrew').innerHTML = STATE.crew.map(c =>
+        `<option value="${c.initials}" ${c.initials === savedCrew ? 'selected' : ''}>👤 ${c.full_name} (${c.initials})</option>`
+      ).join('');
+
+      const sCeil = STATE.jacket_ceilings['Short Jacket'] || { max_calibrated_psi: 0, max_allowed_test_psi: 0 };
+      const tCeil = STATE.jacket_ceilings['Tall Jacket'] || { max_calibrated_psi: 0, max_allowed_test_psi: 0 };
+      const pShort = document.getElementById('pillShort');
+      const pTall = document.getElementById('pillTall');
+      pShort.textContent = sCeil.max_calibrated_psi ? `Short: ≤${sCeil.max_allowed_test_psi} PSI` : 'Short: Uncalibrated';
+      pShort.className = 'pill ' + (sCeil.max_calibrated_psi ? 'ready' : 'wait');
+      pTall.textContent = tCeil.max_calibrated_psi ? `Tall: ≤${tCeil.max_allowed_test_psi} PSI` : 'Tall: Uncalibrated';
+      pTall.className = 'pill ' + (tCeil.max_calibrated_psi ? 'ready' : 'wait');
+
+      const queued = STATE.records.filter(r => r.status === 'QUEUED');
+      const done = STATE.records.filter(r => r.status === 'COMPLETED');
+      const valvesOut = STATE.records.filter(r => r.valve_tag && !r.valve_reinstalled);
+      document.getElementById('pillQueue').textContent = `Queued: ${queued.length} • Done: ${done.length}`;
+      const pValves = document.getElementById('pillValves');
+      pValves.textContent = `Valves Out: ${valvesOut.length}`;
+      pValves.className = 'pill ' + (valvesOut.length ? 'wait' : 'ready');
+
+      document.getElementById('stickerCount').value = Math.max(1, done.filter(r => r.hydro_disposition === 'A').length);
+
+      // Serial autocomplete for quick valve-tag assignment
+      document.getElementById('serialSuggest').innerHTML = STATE.records.map(r =>
+        `<option value="${r.serial_number}">${r.customer_name} (${r.dot_spec}${r.service_psi})${r.valve_tag ? ' — Tag #' + r.valve_tag : ''}</option>`
+      ).join('');
+
+      const maxSel = document.getElementById('calMaxPsi');
+      const curMax = maxSel.value || '4000';
+      maxSel.innerHTML = STATE.calibration_targets.map((t, idx) => {
+        const allow = t.pressure_psi >= 3000 ? t.pressure_psi + 500 : Math.round(t.pressure_psi * 1.1);
+        return `<option value="${t.pressure_psi}" ${String(t.pressure_psi)===String(curMax)?'selected':''}>${t.pressure_psi} PSI (${idx + 1} steps → tests ≤ ${allow} PSI)</option>`;
+      }).join('');
+      if (rebuildLadder || !LADDER.length) buildCalibrationLadder();
+
+      document.getElementById('calTable').innerHTML = STATE.verifications.map(v => `
+        <tr>
+          <td>${v.test_time}</td><td>${v.jacket_type}</td><td>${v.target_pressure_psi}</td>
+          <td>${v.expected_cc}</td><td>${v.actual_total_cc}</td><td>${v.permanent_cc}</td>
+          <td>${v.percent_deviation}%</td><td>${v.operator_initials || 'RP'}</td>
+          <td class="${v.passed ? 'pass' : 'fail'}">${v.passed ? 'PASS' : 'FAIL'}</td>
+        </tr>`).join('');
+
+      document.getElementById('cgaPreset').innerHTML = '<option value="">-- None / Read From Stamp --</option>' +
+        STATE.cga_specs.map((s, idx) => `<option value="${idx}">${s.category}: ${s.label} (${s.dot_spec}${s.service_psi} | ${s.outside_dia}x${s.length_in})</option>`).join('');
+      document.getElementById('customerSuggest').innerHTML = STATE.customers_summary.map(c => `<option value="${c.customer_name}">`).join('');
+
+      const activeTagInput = document.activeElement && document.activeElement.classList.contains('inline-vtag');
+      if (!activeTagInput) {
+        document.getElementById('queuePreviewTable').innerHTML = queued.map(r => `
+          <tr>
+            <td>${r.customer_name}</td>
+            <td><strong>${r.serial_number}</strong></td>
+            <td>
+              <input class="inline-vtag" value="${r.valve_tag || ''}" placeholder="Tag #"
+                style="padding:5px 7px;width:90px;font-weight:700;"
+                onchange="saveInlineValveTag(${r.id}, this.value)" />
+            </td>
+            <td>${r.dot_spec}${r.service_psi}</td><td>${r.physical_size || '-'}</td><td>${r.test_psi}</td>
+            <td><button class="secondary" onclick="removeQueued(${r.id})">Remove</button></td>
+          </tr>`).join('');
+      }
+
+      const benchSel = document.getElementById('benchSelect');
+      const prevBenchId = benchSel.value;
+      const activeId = document.activeElement ? document.activeElement.id : '';
+      const typingOnBench = ['bTotal', 'bPerm', 'bValveTag', 'bNotes'].includes(activeId);
+      benchSel.innerHTML = queued.length
+        ? queued.map(r => `<option value="${r.id}" ${String(r.id)===String(prevBenchId)?'selected':''}>[${r.customer_name}] SN: ${r.serial_number}${r.valve_tag ? ' (Valve Tag #' + r.valve_tag + ')' : ''} — ${r.test_psi} PSI</option>`).join('')
+        : '<option value="">No bottles waiting in queue</option>';
+      if (!typingOnBench || benchSel.value !== prevBenchId) renderBenchForm();
+
+      document.getElementById('doneTable').innerHTML = done.map(r => `
+        <tr>
+          <td>${r.customer_name}</td><td><strong>${r.serial_number}</strong></td>
+          <td>${r.valve_tag ? `<span class="tag-chip ${r.valve_reinstalled ? 'done' : ''}">#${r.valve_tag}${r.valve_reinstalled ? ' ✓' : ''}</span>` : '-'}</td>
+          <td>${r.dot_spec}${r.service_psi}</td>
+          <td>${r.test_psi}</td><td>${r.total_cc ?? '-'}</td><td>${r.permanent_cc ?? '-'}</td>
+          <td>${r.elastic_cc ?? '-'}</td><td>${fmtPctTenth(r.percent_permanent)}</td>
+          <td class="${r.hydro_disposition === 'A' ? 'pass' : 'fail'}">${r.hydro_disposition}</td>
+        </tr>`).join('');
+
+      // Valve Tracker Table on Tab 4
+      const taggedToday = STATE.records.filter(r => r.valve_tag);
+      document.getElementById('valveTrackerTable').innerHTML = taggedToday.length
+        ? taggedToday.map(r => `
+          <tr>
+            <td><span class="tag-chip ${r.valve_reinstalled ? 'done' : ''}">Tag #${r.valve_tag}</span></td>
+            <td><strong>${r.serial_number}</strong></td>
+            <td>${r.customer_name}</td>
+            <td>${r.gas_service} • ${r.dot_spec}${r.service_psi}</td>
+            <td>${r.status}</td>
+            <td>
+              <button class="secondary" style="${r.valve_reinstalled ? 'background:#dcfce7;color:#166534;' : ''}"
+                onclick="toggleValveReinstalled(${r.id}, ${r.valve_reinstalled ? 'false' : 'true'})">
+                ${r.valve_reinstalled ? '✓ Reinstalled' : 'Mark Reinstalled'}
+              </button>
+            </td>
+          </tr>`).join('')
+        : '<tr><td colspan="6">No valve tags assigned on this date yet.</td></tr>';
+
+      const allDayCustomers = [...new Set(STATE.records.map(r => r.customer_name))];
+      document.getElementById('pdfCustomerFilter').innerHTML = '<option value="">-- All Customers on This Date --</option>' +
+        allDayCustomers.map(c => `<option value="${c}">${c}</option>`).join('');
+
+      document.getElementById('datesListTable').innerHTML = STATE.dates_summary.map(d => `
+        <tr>
+          <td><strong>${d.work_date}</strong></td><td>${d.customer_count}</td>
+          <td>${d.completed_bottles} / ${d.total_bottles}</td>
+          <td><button class="secondary" onclick="jumpToDate('${d.work_date}')">Load Day</button></td>
+        </tr>`).join('');
+
+      document.getElementById('customersListTable').innerHTML = STATE.customers_summary.map(c => `
+        <tr>
+          <td><strong>${c.customer_name}</strong></td><td>${c.total_bottles}</td>
+          <td>${c.unbilled_count}</td><td>${c.last_date}</td>
+          <td><button class="secondary" onclick="filterCustomerHistory('${c.customer_name.replace(/'/g, "\\'")}')">Bottles</button></td>
+        </tr>`).join('');
+
+      const prevBillCust = document.getElementById('billCustomer').value;
+      document.getElementById('billCustomer').innerHTML = STATE.customers_summary.map(c =>
+        `<option value="${c.customer_name}" ${c.customer_name===prevBillCust?'selected':''}>${c.customer_name} (${c.unbilled_count} unbilled)</option>`
+      ).join('');
+
+      if (prevVer !== STATE.db_version) {
+        document.getElementById('pricingTable').innerHTML = STATE.pricing_rates.map(p => `
+          <tr>
+            <td><strong>${p.code}</strong></td><td>${p.description}</td>
+            <td><input type="number" step="0.01" data-rate-code="${p.code}" value="${p.unit_price}" /></td>
+          </tr>`).join('');
+      }
+
+      document.getElementById('invoicesTable').innerHTML = STATE.invoices.map(inv => `
+        <tr>
+          <td><strong>${inv.invoice_no}</strong></td><td>${inv.customer_name}</td><td>${inv.work_date}</td>
+          <td>$${Number(inv.total_amount).toFixed(2)}</td><td>${inv.created_by}</td><td>${inv.status}</td>
+          <td style="display:flex;gap:6px;">
+            <a class="secondary" href="/api/pdf/invoice/${inv.id}" target="_blank">PDF</a>
+            ${inv.status !== 'PAID' ? `<button class="secondary" onclick="markInvoicePaid(${inv.id})">Mark Paid</button>` : ''}
+          </td>
+        </tr>`).join('');
+    }
+
+    setInterval(async () => {
+      if (document.getElementById('appShell').classList.contains('hidden')) return;
+      try {
+        const res = await fetch('/api/ping');
+        if (!res.ok) return;
+        const p = await res.json();
+        if (p.db_version !== STATE.db_version) loadState(false);
+      } catch (_) {}
+    }, 3500);
+
+    async function assignTagBySerial(serialInputId, tagInputId) {
+      const sn = document.getElementById(serialInputId).value.trim();
+      const vtag = document.getElementById(tagInputId).value.trim();
+      if (!sn) { alert('Enter or select a Cylinder Serial Number.'); return; }
+      const res = await fetch('/api/valve-tag', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ serial_number: sn, work_date: STATE.selected_date, valve_tag: vtag, valve_reinstalled: false })
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.detail); return; }
+      document.getElementById(serialInputId).value = '';
+      document.getElementById(tagInputId).value = '';
+      loadState(false);
+    }
+
+    async function saveInlineValveTag(recordId, vtag) {
+      const res = await fetch('/api/valve-tag', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ record_id: recordId, valve_tag: vtag })
+      });
+      if (!res.ok) { alert((await res.json()).detail); }
+      loadState(false);
+    }
+
+    async function toggleValveReinstalled(recordId, stateBool) {
+      const res = await fetch('/api/valve-tag', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ record_id: recordId, valve_reinstalled: stateBool })
+      });
+      if (!res.ok) { alert((await res.json()).detail); return; }
+      loadState(false);
+    }
+
+    function jumpToDate(d) {
+      document.getElementById('globalDate').value = d;
+      document.getElementById('billDate').value = d;
+      loadState(true);
+      document.getElementById('searchBox').value = d;
+      runSearch();
+    }
+
+    async function filterCustomerHistory(cust) {
+      const res = await fetch('/api/search?customer=' + encodeURIComponent(cust));
+      renderSearchRows(await res.json());
+    }
+
+    function openPdf(kind) {
+      const d = STATE.selected_date;
+      const cust = document.getElementById('pdfCustomerFilter').value;
+      const sheetNo = document.getElementById('pdfSheetNo').value || '8095';
+      const cnt = document.getElementById('stickerCount').value || '12';
+      const skip = document.getElementById('stickerSkip').value || '0';
+      let url = `/api/pdf/${kind}?work_date=${encodeURIComponent(d)}`;
+      if (cust) url += `&customer=${encodeURIComponent(cust)}`;
+      if (kind === 'retest') url += `&sheet_no=${encodeURIComponent(sheetNo)}`;
+      if (kind === 'stickers') url += `&count=${encodeURIComponent(cnt)}&skip=${encodeURIComponent(skip)}`;
+      window.open(url, '_blank');
+    }
+
+    async function triggerManualSync() {
+      const res = await fetch('/api/sync-now', { method: 'POST' });
+      const data = await res.json();
+      alert(res.ok ? (data.synced ? `Synced ${data.pushed} record(s) to Google Sheets!` : data.reason) : data.detail);
+      loadState(false);
+    }
+
+    async function addCrew() {
+      const full_name = document.getElementById('newCrewName').value;
+      const initials = document.getElementById('newCrewInit').value;
+      const role = document.getElementById('newCrewRole').value || 'Inspector';
+      if (!full_name || !initials) { alert('Enter Name and Initials.'); return; }
+      await fetch('/api/crew', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ full_name, initials, role }) });
+      document.getElementById('newCrewName').value = '';
+      document.getElementById('newCrewInit').value = '';
+      loadState(false);
+    }
+
+    async function saveAllSettings() {
+      const body = {
+        calibrated_serial: document.getElementById('editCalSerial').value,
+        starting_sheet_no: parseInt(document.getElementById('editSheetNo').value || '8095', 10),
+        gemini_api_key: document.getElementById('apiKeyInput').value || null,
+        sheets_webhook_url: document.getElementById('webhookInput').value,
+        shop_pin: document.getElementById('editShopPin').value || null,
+      };
+      await fetch('/api/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+      document.getElementById('apiKeyInput').value = '';
+      document.getElementById('editShopPin').value = '';
+      alert('Settings saved!');
+      loadState(true);
+    }
+
+    function buildCalibrationLadder() {
+      const maxPsi = parseInt(document.getElementById('calMaxPsi').value || '4000', 10);
+      LADDER = STATE.calibration_targets.filter(t => t.pressure_psi <= maxPsi).map(t => ({ ...t, actual: '', locked: false }));
+      ACTIVE_STEP = 0;
+      renderLadder();
+    }
+
+    function renderLadder() {
+      document.getElementById('ladderSteps').innerHTML = LADDER.map((step, i) => {
+        const minP = (Math.ceil(step.expected_cc * 0.99 * 10) / 10).toFixed(1);
+        const maxP = (Math.floor(step.expected_cc * 1.01 * 10) / 10).toFixed(1);
+        const isActive = i === ACTIVE_STEP;
+        const isLocked = i > ACTIVE_STEP;
+        let statusHtml = `<small>Pass: ${minP}–${maxP} cc</small>`;
+        if (step.actual !== '') {
+          const dev = (((step.expected_cc - parseFloat(step.actual)) / step.expected_cc) * 100).toFixed(2);
+          const ok = Math.abs(parseFloat(dev)) <= 1.0;
+          statusHtml = `<span class="${ok ? 'pass' : 'fail'}">${ok ? 'PASS' : 'OUT'} (${dev}%)</span>`;
+        }
+        return `
+          <div class="ladder-row ${isActive ? 'active-step' : ''} ${isLocked ? 'locked-step' : ''}">
+            <div><strong>Step ${i + 1}: ${step.pressure_psi} PSI</strong></div>
+            <div>Chart: <strong>${step.expected_cc} cc</strong> (${minP}–${maxP})</div>
+            <div>
+              <input type="number" step="0.1" id="stepIn_${i}" value="${step.actual}"
+                placeholder="Burette cc" ${isLocked || step.locked ? 'disabled' : ''}
+                oninput="LADDER[${i}].actual=this.value"
+                onkeydown="if(event.key==='Enter')lockLadderStep(${i})" />
+            </div>
+            <div>
+              ${isActive && !step.locked
+                ? `<button class="secondary" style="width:100%;background:#1b4332;color:#fff;" onclick="lockLadderStep(${i})">Lock &amp; Next ↓</button>`
+                : statusHtml}
+            </div>
+          </div>`;
+      }).join('');
+      const allDone = LADDER.length > 0 && LADDER.every(s => s.locked);
+      document.getElementById('releaseSection').classList.toggle('hidden', !allDone);
+    }
+
+    function lockLadderStep(idx) {
+      const step = LADDER[idx];
+      if (step.actual === '' || isNaN(parseFloat(step.actual))) { alert('Enter burette reading.'); return; }
+      const dev = Math.abs(((step.expected_cc - parseFloat(step.actual)) / step.expected_cc) * 100);
+      if (dev > 1.0 && !confirm(`Off by ${dev.toFixed(2)}% (>1% limit). Click OK to record anyway or Cancel to re-read.`)) return;
+      step.locked = true;
+      if (idx + 1 < LADDER.length) ACTIVE_STEP = idx + 1;
+      renderLadder();
+    }
+
+    async function submitCalibrationLadder() {
+      const crew = getCurrentCrew();
+      const body = {
+        test_date: STATE.selected_date,
+        jacket_type: document.getElementById('calJacket').value,
+        max_target_psi: parseInt(document.getElementById('calMaxPsi').value, 10),
+        steps: LADDER.map(s => ({ pressure_psi: s.pressure_psi, actual_total_cc: parseFloat(s.actual) })),
+        permanent_cc: parseFloat(document.getElementById('calFinalPerm').value || '0'),
+        operator_name: crew.full_name,
+        operator_initials: crew.initials,
+      };
+      const res = await fetch('/api/verify-ladder', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) { alert(data.detail); return; }
+      alert(data.passed ? `CERTIFIED up to ${data.max_allowed_test_psi} PSI!` : 'Calibration FAILED — check rig.');
+      loadState(true);
+    }
+
+    async function openLiveCamera() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Live camera requires HTTPS (weberstanktesting.com or localhost).');
+        return;
+      }
+      closeLiveCamera();
+      try {
+        MEDIA_STREAM = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: FACING_MODE }, width: { ideal: 1600 }, height: { ideal: 1200 } },
+          audio: false
+        });
+        document.getElementById('camVideo').srcObject = MEDIA_STREAM;
+        document.getElementById('camContainer').classList.remove('hidden');
+        document.getElementById('btnOpenCam').classList.add('hidden');
+        clearAngles();
+        const caps = MEDIA_STREAM.getVideoTracks()[0].getCapabilities ? MEDIA_STREAM.getVideoTracks()[0].getCapabilities() : {};
+        document.getElementById('btnTorch').classList.toggle('hidden', !caps.torch);
+      } catch (err) { alert('Camera error: ' + err.message); }
+    }
+
+    function closeLiveCamera() {
+      if (MEDIA_STREAM) { MEDIA_STREAM.getTracks().forEach(t => t.stop()); MEDIA_STREAM = null; }
+      document.getElementById('camContainer').classList.add('hidden');
+      document.getElementById('btnOpenCam').classList.remove('hidden');
+    }
+
+    function switchCamera() { FACING_MODE = FACING_MODE === 'environment' ? 'user' : 'environment'; openLiveCamera(); }
+    async function toggleTorch() {
+      if (!MEDIA_STREAM) return;
+      TORCH_ON = !TORCH_ON;
+      await MEDIA_STREAM.getVideoTracks()[0].applyConstraints({ advanced: [{ torch: TORCH_ON }] });
+    }
+
+    function clearAngles() {
+      CAPTURED_B64 = [];
+      document.getElementById('thumbStrip').innerHTML = '<small style="color:#d1d5db;">Curved shoulder? Tap "+ Add Angle" 2–5 times around neck, then tap "Read Angles".</small>';
+      document.getElementById('btnSnapAngle').textContent = '📸 + Add Angle (0)';
+      document.getElementById('btnReadAll').disabled = true;
+      document.getElementById('btnReadAll').textContent = '✅ Read Angles';
+    }
+
+    function grabVideoBase64() {
+      const video = document.getElementById('camVideo');
+      const canvas = document.getElementById('camCanvas');
+      if (!video.videoWidth) return null;
+      const scale = Math.min(1, 1400 / Math.max(video.videoWidth, video.videoHeight));
+      canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+      canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      return { dataUrl, b64: dataUrl.split(',')[1] };
+    }
+
+    function fileToResizedBase64(file) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          const canvas = document.getElementById('camCanvas');
+          const scale = Math.min(1, 1400 / Math.max(img.width, img.height));
+          canvas.width = Math.max(1, Math.round(img.width * scale));
+          canvas.height = Math.max(1, Math.round(img.height * scale));
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load error')); };
+        img.src = url;
+      });
+    }
+
+    async function quickSingleShot() {
+      const s = grabVideoBase64();
+      if (s) await sendBase64Batch([s.b64]);
+    }
+
+    function captureAngle() {
+      if (CAPTURED_B64.length >= 6) return;
+      const s = grabVideoBase64();
+      if (!s) return;
+      CAPTURED_B64.push(s.b64);
+      const strip = document.getElementById('thumbStrip');
+      if (CAPTURED_B64.length === 1) strip.innerHTML = '';
+      const img = document.createElement('img');
+      img.src = s.dataUrl;
+      img.style.cssText = 'height:52px;border-radius:6px;border:2px solid #fbbf24;';
+      strip.appendChild(img);
+      document.getElementById('btnSnapAngle').textContent = `📸 + Add Angle (${CAPTURED_B64.length})`;
+      document.getElementById('btnReadAll').disabled = false;
+      document.getElementById('btnReadAll').textContent = `✅ Read Angles (${CAPTURED_B64.length})`;
+    }
+
+    async function uploadSavedAngles(input) {
+      const files = Array.from(input.files || []).slice(0, 6);
+      input.value = '';
+      if (!files.length) return;
+      const b64s = [];
+      for (const f of files) b64s.push(await fileToResizedBase64(f));
+      await sendBase64Batch(b64s);
+    }
+
+    async function sendCapturedAngles() {
+      if (CAPTURED_B64.length) await sendBase64Batch(CAPTURED_B64);
+    }
+
+    async function sendBase64Batch(b64List) {
+      const crew = getCurrentCrew();
+      const fb = document.getElementById('scanFeedback');
+      fb.classList.remove('hidden');
+      fb.className = 'hint-box';
+      fb.textContent = `⏳ Reading ${b64List.length} angle(s) with Gemini AI...`;
+
+      const res = await fetch('/api/scan-bottle', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          images_b64: b64List,
+          work_date: STATE.selected_date,
+          customer_name: document.getElementById('inCustomer').value,
+          valve_tag: document.getElementById('inScanValveTag').value,
+          service_mode: document.getElementById('inMode').value,
+          gas_service: document.getElementById('inGas').value,
+          outside_dia: document.getElementById('inDia').value,
+          length_in: document.getElementById('inLen').value,
+          intake_by: crew.initials,
+          auto_import: document.getElementById('autoImportChk').checked,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        fb.className = 'hint-box bad';
+        fb.textContent = data.detail || 'Scan failed.';
+      } else if (data.imported) {
+        const r = data.record;
+        if (!document.getElementById('inCustomer').value && r.customer_name) document.getElementById('inCustomer').value = r.customer_name;
+        document.getElementById('inScanValveTag').value = '';
+        fb.className = 'hint-box';
+        fb.textContent = `✅ Queued [${r.customer_name}] SN ${r.serial_number}${r.valve_tag ? ' (Valve Tag #' + r.valve_tag + ')' : ''} → ${r.test_psi} PSI!`;
+        clearAngles();
+        loadState(false);
+      } else {
+        const d = data.extracted || {};
+        if (d.detected_customer && !document.getElementById('inCustomer').value) document.getElementById('inCustomer').value = d.detected_customer;
+        if (d.serial_number) document.getElementById('inSerial').value = d.serial_number;
+        if (document.getElementById('inScanValveTag').value) document.getElementById('inValveTag').value = document.getElementById('inScanValveTag').value;
+        if (d.mfg_id) document.getElementById('inMfg').value = d.mfg_id;
+        if (d.mfg_date) document.getElementById('inMfgDate').value = d.mfg_date;
+        if (d.gas_service) document.getElementById('inGas').value = d.gas_service;
+        if (d.dot_spec) document.getElementById('inSpec').value = d.dot_spec;
+        if (d.service_psi) { document.getElementById('inSvcPsi').value = d.service_psi; calcFiveThirds(); }
+        if (d.ree_limit) document.getElementById('inRee').value = d.ree_limit;
+        fb.className = 'hint-box bad';
+        fb.textContent = `Complete missing field(s) below: ${(data.missing || []).join(', ')}`;
+        clearAngles();
+      }
+    }
+
+    function applyPreset() {
+      const idx = document.getElementById('cgaPreset').value;
+      if (idx === '') return;
+      const s = STATE.cga_specs[idx];
+      document.getElementById('inSpec').value = s.dot_spec;
+      document.getElementById('inSvcPsi').value = s.service_psi;
+      document.getElementById('inTestPsi').value = s.test_psi;
+      document.getElementById('inDia').value = s.outside_dia;
+      document.getElementById('inLen').value = s.length_in;
+      document.getElementById('inRee').value = s.ree_limit ?? '';
+    }
+
+    function calcFiveThirds() {
+      const svc = parseInt(document.getElementById('inSvcPsi').value || '0', 10);
+      if (svc > 0) document.getElementById('inTestPsi').value = Math.round((svc * 5) / 3);
+    }
+
+    async function submitIntake() {
+      const crew = getCurrentCrew();
+      const res = await fetch('/api/intake', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          work_date: STATE.selected_date,
+          customer_name: document.getElementById('inCustomer').value,
+          service_mode: document.getElementById('inMode').value,
+          serial_number: document.getElementById('inSerial').value,
+          valve_tag: document.getElementById('inValveTag').value,
+          mfg_id: document.getElementById('inMfg').value,
+          mfg_date: document.getElementById('inMfgDate').value,
+          gas_service: document.getElementById('inGas').value,
+          dot_spec: document.getElementById('inSpec').value,
+          service_psi: parseInt(document.getElementById('inSvcPsi').value, 10),
+          test_psi: parseInt(document.getElementById('inTestPsi').value, 10),
+          outside_dia: document.getElementById('inDia').value,
+          length_in: document.getElementById('inLen').value,
+          ree_limit: document.getElementById('inRee').value ? parseFloat(document.getElementById('inRee').value) : null,
+          intake_by: crew.initials,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.detail || 'Check Customer, Serial, Spec, and Pressure.'); return; }
+      document.getElementById('inSerial').value = '';
+      document.getElementById('inValveTag').value = '';
+      document.getElementById('inSerial').focus();
+      loadState(false);
+    }
+
+    async function removeQueued(id) {
+      await fetch(`/api/records/${id}`, { method: 'DELETE' });
+      loadState(false);
+    }
+
+    function renderBenchForm() {
+      const id = parseInt(document.getElementById('benchSelect').value || '0', 10);
+      const area = document.getElementById('benchArea');
+      const rec = STATE.records.find(r => r.id === id);
+      if (!rec) { area.innerHTML = '<p>Queue clear—newly scanned bottles appear here automatically.</p>'; return; }
+
+      const isHydro = rec.service_mode === 'HYDRO_AND_VISUAL';
+      const tallOk = (STATE.jacket_ceilings['Tall Jacket']?.max_calibrated_psi || 0) > 0;
+      const defaultJacket = tallOk ? 'Tall Jacket' : 'Short Jacket';
+
+      area.innerHTML = `
+        <div class="hint-box" id="benchPreview">
+          Testing [${rec.customer_name}] SN <strong>${rec.serial_number}</strong> at <strong>${rec.test_psi} PSI</strong>${rec.valve_tag ? ` • 🏷️ Valve Tag #<strong>${rec.valve_tag}</strong>` : ''}${rec.ree_limit ? ` (REE Limit: ${rec.ree_limit} cc)` : ''}.
+        </div>
+        <div class="grid">
+          ${isHydro ? `
+            <div><label>Water Jacket</label>
+              <select id="bJacket">
+                <option value="Short Jacket" ${defaultJacket==='Short Jacket'?'selected':''}>Short Jacket</option>
+                <option value="Tall Jacket" ${defaultJacket==='Tall Jacket'?'selected':''}>Tall Jacket</option>
+              </select>
+            </div>
+            <div><label>Total Expansion (cc)</label><input type="number" step="0.1" id="bTotal" oninput="previewBenchMath(${rec.ree_limit || 'null'})" /></div>
+            <div><label>Permanent Expansion (cc)</label><input type="number" step="0.1" id="bPerm" value="0" oninput="previewBenchMath(${rec.ree_limit || 'null'})" /></div>
+          ` : ''}
+          <div><label>🏷️ Valve Tag #</label><input id="bValveTag" value="${rec.valve_tag || ''}" placeholder="Assign/verify Tag #" /></div>
+          <div><label>Coating Condition</label><select id="bCoat"><option>Excellent</option><option selected>Good</option><option>Fair</option><option>Poor</option></select></div>
+          <div><label>Relief Valve Changed?</label><select id="bValve"><option>No</option><option>Yes</option></select></div>
+          <div><label>Corrosion</label><select id="cCorr"><option>OK</option><option>FAIL</option></select></div>
+          <div><label>Dents / Dings</label><select id="cDent"><option>OK</option><option>FAIL</option></select></div>
+          <div><label>Cuts / Gouges</label><select id="cCut"><option>OK</option><option>FAIL</option></select></div>
+          <div><label>Leaks</label><select id="cLeak"><option>OK</option><option>FAIL</option></select></div>
+          <div><label>Fire Damage</label><select id="cFire"><option>OK</option><option>FAIL</option></select></div>
+          <div><label>Bulges</label><select id="cBulg"><option>OK</option><option>FAIL</option></select></div>
+          <div><label>Neck Defects</label><select id="cNeck"><option>OK</option><option>FAIL</option></select></div>
+          <div><label>Notes (Prints on Retest Row)</label><input id="bNotes" placeholder="Optional row note..." /></div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer;">
+          <input type="checkbox" id="bValveReinst" ${rec.valve_reinstalled ? 'checked' : ''} style="width:18px;height:18px;" />
+          Matching Valve Reinstalled on Bottle
+        </label>
+        <button class="primary" onclick="completeBottle(${rec.id}, ${isHydro})">Save Completed Test Record</button>
+      `;
+    }
+
+    function previewBenchMath(reeLimit) {
+      const tot = parseFloat(document.getElementById('bTotal').value || '0');
+      const perm = parseFloat(document.getElementById('bPerm').value || '0');
+      const box = document.getElementById('benchPreview');
+      if (tot <= 0) return;
+      const elastic = (tot - perm).toFixed(2);
+      const pct = ((perm / tot) * 100).toFixed(1);
+      const bad = (reeLimit !== null && parseFloat(elastic) > reeLimit) || parseFloat(pct) > 10.0;
+      box.className = bad ? 'hint-box bad' : 'hint-box';
+      box.textContent = `Elastic: ${elastic} cc | % Permanent: ${pct}% — ${bad ? 'EXCEEDS LIMIT (CONDEMN)' : 'PASS (Disposition A)'}`;
+    }
+
+    async function completeBottle(id, isHydro) {
+      const crew = getCurrentCrew();
+      const res = await fetch(`/api/records/${id}/complete`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          jacket_type: isHydro ? document.getElementById('bJacket').value : 'Road/Visual',
+          total_cc: isHydro ? parseFloat(document.getElementById('bTotal').value) : null,
+          permanent_cc: isHydro ? parseFloat(document.getElementById('bPerm').value) : null,
+          valve_tag: document.getElementById('bValveTag').value,
+          valve_reinstalled: document.getElementById('bValveReinst').checked,
+          coating_condition: document.getElementById('bCoat').value,
+          relief_valve_changed: document.getElementById('bValve').value,
+          chk_corrosion: document.getElementById('cCorr').value,
+          chk_dents_dings: document.getElementById('cDent').value,
+          chk_cuts_gouges: document.getElementById('cCut').value,
+          chk_leaks: document.getElementById('cLeak').value,
+          chk_fire_damage: document.getElementById('cFire').value,
+          chk_bulges: document.getElementById('cBulg').value,
+          chk_neck_defects: document.getElementById('cNeck').value,
+          operator_name: crew.full_name,
+          operator_initials: crew.initials,
+          notes: document.getElementById('bNotes').value,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.detail); return; }
+      loadState(false);
+    }
+
+    async function runSearch() {
+      const q = document.getElementById('searchBox').value;
+      const res = await fetch('/api/search?q=' + encodeURIComponent(q));
+      renderSearchRows(await res.json());
+    }
+
+    function renderSearchRows(rows) {
+      document.getElementById('searchTable').innerHTML = rows.map(r => `
+        <tr>
+          <td>${r.work_date}</td><td>${r.sheet_no || '-'}</td><td>${r.customer_name}</td>
+          <td><strong>${r.serial_number}</strong></td>
+          <td>${r.valve_tag ? `<span class="tag-chip ${r.valve_reinstalled ? 'done' : ''}">#${r.valve_tag}${r.valve_reinstalled ? ' ✓' : ''}</span>` : '-'}</td>
+          <td>${r.dot_spec}${r.service_psi}</td>
+          <td>${r.total_cc ?? '-'} / ${r.permanent_cc ?? '-'}</td>
+          <td>${fmtPctTenth(r.percent_permanent)}</td>
+          <td>${r.hydro_disposition}</td><td>${r.operator_initials || 'RP'}</td>
+        </tr>`).join('');
+    }
+
+    function getRate(code) {
+      const found = STATE.pricing_rates.find(r => r.code === code);
+      return found ? Number(found.unit_price) : 0;
+    }
+
+    async function loadUnbilledItems() {
+      const d = document.getElementById('billDate').value || STATE.selected_date;
+      const cust = document.getElementById('billCustomer').value;
+      if (!cust) { DRAFT_ITEMS = []; renderDraftInvoice(); return; }
+      const res = await fetch(`/api/unbilled?work_date=${encodeURIComponent(d)}&customer_name=${encodeURIComponent(cust)}`);
+      const recs = await res.json();
+      DRAFT_ITEMS = [];
+      for (const r of recs) {
+        const isSp = (r.dot_spec || '').startsWith('SP') || (r.dot_spec || '').startsWith('E-');
+        const code = r.service_mode === 'VISUAL_ONLY' ? 'VISUAL_ONLY' : (isSp ? 'HYDRO_SCBA' : 'HYDRO_STD');
+        DRAFT_ITEMS.push({
+          record_id: r.id,
+          description: `SN ${r.serial_number} (${r.dot_spec}${r.service_psi} ${r.gas_service}) - ${r.service_mode === 'VISUAL_ONLY' ? 'Visual Insp' : 'Hydro + Visual'} [${r.hydro_disposition}]`,
+          qty: 1,
+          unit_price: getRate(code),
+        });
+        if (r.relief_valve_changed === 'Yes') {
+          DRAFT_ITEMS.push({ record_id: null, description: `SN ${r.serial_number} - Relief Valve Replacement`, qty: 1, unit_price: getRate('VALVE_RELIEF') });
+        }
+      }
+      renderDraftInvoice();
+    }
+
+    function addCustomInvoiceLine() {
+      DRAFT_ITEMS.push({ record_id: null, description: 'Custom Service / Air Fill', qty: 1, unit_price: 0 });
+      renderDraftInvoice();
+    }
+
+    function renderDraftInvoice() {
+      document.getElementById('draftInvoiceRows').innerHTML = DRAFT_ITEMS.map((it, i) => `
+        <tr>
+          <td><input value="${it.description}" oninput="DRAFT_ITEMS[${i}].description=this.value" /></td>
+          <td><input type="number" step="1" value="${it.qty}" oninput="DRAFT_ITEMS[${i}].qty=parseFloat(this.value||0);recalcInvoiceDraft()" /></td>
+          <td><input type="number" step="0.01" value="${it.unit_price}" oninput="DRAFT_ITEMS[${i}].unit_price=parseFloat(this.value||0);recalcInvoiceDraft()" /></td>
+          <td id="lineTot_${i}">$${(it.qty * it.unit_price).toFixed(2)}</td>
+        </tr>`).join('');
+      recalcInvoiceDraft();
+    }
+
+    function recalcInvoiceDraft() {
+      let sub = 0;
+      DRAFT_ITEMS.forEach((it, i) => {
+        const lt = (it.qty || 0) * (it.unit_price || 0);
+        sub += lt;
+        const cell = document.getElementById('lineTot_' + i);
+        if (cell) cell.textContent = '$' + lt.toFixed(2);
+      });
+      const taxPct = parseFloat(document.getElementById('billTax').value || '0');
+      const tot = sub + sub * (taxPct / 100);
+      document.getElementById('draftTotalLabel').textContent = `Draft Total: $${tot.toFixed(2)}`;
+    }
+
+    async function submitInvoice() {
+      const crew = getCurrentCrew();
+      const cust = document.getElementById('billCustomer').value;
+      if (!cust || !DRAFT_ITEMS.length) { alert('Select a customer with line items.'); return; }
+      const res = await fetch('/api/invoices', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          work_date: document.getElementById('billDate').value || STATE.selected_date,
+          customer_name: cust,
+          tax_rate: parseFloat(document.getElementById('billTax').value || '0'),
+          status: document.getElementById('billStatus').value,
+          created_by: crew.initials,
+          notes: document.getElementById('billNotes').value,
+          items: DRAFT_ITEMS,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.detail); return; }
+      window.open(`/api/pdf/invoice/${data.id}`, '_blank');
+      loadState(false);
+      loadUnbilledItems();
+    }
+
+    async function markInvoicePaid(id) {
+      await fetch(`/api/invoices/${id}/status`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ status: 'PAID' }) });
+      loadState(false);
+    }
+
+    async function savePricingRates() {
+      const inputs = Array.from(document.querySelectorAll('[data-rate-code]'));
+      const payload = inputs.map(el => ({ code: el.getAttribute('data-rate-code'), unit_price: parseFloat(el.value || '0') }));
+      await fetch('/api/pricing', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+      alert('Master pricing saved!');
+      loadState(false);
+    }
+
+    checkAuthAndBoot();
+  </script>
+</body>
+</html>
