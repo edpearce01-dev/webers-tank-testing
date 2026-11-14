@@ -1109,7 +1109,7 @@ def build_shelf_claim_slip_pdf(
     c.setFillColor(colors.HexColor("#334155"))
     c.setFont("Helvetica", 9.0)
     c.drawString(128, foot_y + 45, "1. Verify cylinder count above matches your group on the Zone E Pickup Shelf.")
-    c.drawString(128, foot_y + 30, "2. Scan QR code -> tap 'Logging Completed Pickup' -> enter your name so we log release.")
+    c.drawString(128, foot_y + 30, "2. Scan QR code -> tap 'PICK UP CYLINDERS' -> enter your name to confirm pickup.")
     c.setFont("Helvetica-Bold", 8.5)
     c.drawString(128, foot_y + 13, f"NOTE: Testing facility only - cylinders are returned clean, dry & depressurized.  |  {phone}")
 
