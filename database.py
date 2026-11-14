@@ -30,22 +30,28 @@ def bump_db_version(conn: sqlite3.Connection) -> None:
 
 
 def wipe_all_operational_data(conn: sqlite3.Connection) -> None:
-    """Clears all test/operational records & practice drop-offs while preserving keys, crew, feedback, rates, and settings."""
+    """Clears all practice/test records while preserving API keys, crew, feedback, rates, and settings."""
     cur = conn.cursor()
     cur.execute("DELETE FROM invoice_items;")
     cur.execute("DELETE FROM invoices;")
     cur.execute("DELETE FROM cylinder_records;")
     cur.execute("DELETE FROM daily_verifications;")
     cur.execute("DELETE FROM dropoffs;")
+    cur.execute("DELETE FROM schedule_jobs;")
+    cur.execute("DELETE FROM shop_day_plans;")
     cur.execute(
         """DELETE FROM sqlite_sequence
-           WHERE name IN ('invoice_items', 'invoices', 'cylinder_records', 'daily_verifications', 'dropoffs');"""
+           WHERE name IN ('invoice_items', 'invoices', 'cylinder_records',
+                          'daily_verifications', 'dropoffs', 'schedule_jobs');"""
     )
+    start_sh = cur.execute("SELECT value FROM settings WHERE key='starting_sheet_no';").fetchone()
+    base_no = start_sh["value"] if start_sh else "8095"
+    cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('current_sheet_no', ?);", (base_no,))
+    cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('current_sheet_used_rows', '0');")
     bump_db_version(conn)
 
 
 DEFAULT_CGA_SPECS = [
-    # (category, label, dot_spec, service_psi, test_psi, outside_dia, length_in, ree_limit)
     # --- Paintball / Airsoft HPA ---
     ("Paintball / HPA", "13ci / 3000 Aluminum HPA", "3AL", 3000, 5000, "2.0", "8.5", None),
     ("Paintball / HPA", "26ci / 3000 Aluminum HPA", "3AL", 3000, 5000, "2.5", "10.5", None),
@@ -183,6 +189,39 @@ def init_db() -> None:
     """)
     ensure_column(cur, "pricing_rates", "sort_order", "INTEGER DEFAULT 100")
 
+    # Role-based daily operating schedule (never prints personal names)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS shop_day_plans (
+            work_date TEXT PRIMARY KEY,
+            shift_mode TEXT NOT NULL DEFAULT 'FULL_HYDRO',
+            bottle_capacity INTEGER NOT NULL DEFAULT 24,
+            day_notes TEXT DEFAULT ''
+        );
+    """)
+
+    # Wall calendar replacement: road pickups, deliveries, & scheduled shop batches
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS schedule_jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at TEXT NOT NULL,
+            scheduled_date TEXT NOT NULL,
+            due_date TEXT DEFAULT '',
+            job_type TEXT NOT NULL DEFAULT 'SHOP_BATCH',
+            customer_name TEXT NOT NULL,
+            customer_phone TEXT DEFAULT '',
+            location_notes TEXT DEFAULT '',
+            bottle_count INTEGER NOT NULL DEFAULT 1,
+            tank_summary TEXT DEFAULT '',
+            priority TEXT NOT NULL DEFAULT 'STANDARD',
+            rush_fee INTEGER DEFAULT 0,
+            holding_zone TEXT DEFAULT 'ZONE_A_BACKROOM',
+            prep_status TEXT DEFAULT 'WAITING',
+            status TEXT NOT NULL DEFAULT 'OPEN',
+            notes TEXT DEFAULT '',
+            synced INTEGER DEFAULT 0
+        );
+    """)
+
     cur.execute("""
         CREATE TABLE IF NOT EXISTS dropoffs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -194,12 +233,18 @@ def init_db() -> None:
             bottle_count INTEGER NOT NULL DEFAULT 1,
             tank_summary TEXT DEFAULT '',
             service_requested TEXT DEFAULT 'Hydro + Visual',
+            rush_requested INTEGER DEFAULT 0,
+            promised_date TEXT DEFAULT '',
+            holding_zone TEXT DEFAULT 'ZONE_A_BACKROOM',
             notes TEXT DEFAULT '',
             status TEXT NOT NULL DEFAULT 'IN_BACKROOM',
             imported_count INTEGER DEFAULT 0,
             synced INTEGER DEFAULT 0
         );
     """)
+    ensure_column(cur, "dropoffs", "rush_requested", "INTEGER DEFAULT 0")
+    ensure_column(cur, "dropoffs", "promised_date", "TEXT DEFAULT ''")
+    ensure_column(cur, "dropoffs", "holding_zone", "TEXT DEFAULT 'ZONE_A_BACKROOM'")
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS invoices (
@@ -242,13 +287,21 @@ def init_db() -> None:
         CREATE TABLE IF NOT EXISTS cylinder_records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             work_date TEXT NOT NULL,
+            intake_at TEXT DEFAULT '',
             sheet_no INTEGER DEFAULT 8095,
             customer_name TEXT NOT NULL,
             customer_phone TEXT DEFAULT '',
             dropoff_id INTEGER,
+            schedule_job_id INTEGER,
+            priority TEXT DEFAULT 'STANDARD',
+            rush_fee INTEGER DEFAULT 0,
+            promised_date TEXT DEFAULT '',
+            holding_zone TEXT DEFAULT 'ZONE_C_READY_RACK',
             serial_number TEXT NOT NULL,
             valve_tag TEXT DEFAULT '',
             valve_reinstalled INTEGER DEFAULT 0,
+            rin_marked INTEGER DEFAULT 0,
+            rin_mark_type TEXT DEFAULT '',
             mfg_id TEXT DEFAULT '',
             mfg_date TEXT DEFAULT '',
             gas_service TEXT DEFAULT 'AIR',
@@ -292,11 +345,19 @@ def init_db() -> None:
             FOREIGN KEY (verification_id) REFERENCES daily_verifications(id)
         );
     """)
+    ensure_column(cur, "cylinder_records", "intake_at", "TEXT DEFAULT ''")
     ensure_column(cur, "cylinder_records", "sheet_no", "INTEGER DEFAULT 8095")
     ensure_column(cur, "cylinder_records", "customer_phone", "TEXT DEFAULT ''")
     ensure_column(cur, "cylinder_records", "dropoff_id", "INTEGER")
+    ensure_column(cur, "cylinder_records", "schedule_job_id", "INTEGER")
+    ensure_column(cur, "cylinder_records", "priority", "TEXT DEFAULT 'STANDARD'")
+    ensure_column(cur, "cylinder_records", "rush_fee", "INTEGER DEFAULT 0")
+    ensure_column(cur, "cylinder_records", "promised_date", "TEXT DEFAULT ''")
+    ensure_column(cur, "cylinder_records", "holding_zone", "TEXT DEFAULT 'ZONE_C_READY_RACK'")
     ensure_column(cur, "cylinder_records", "valve_tag", "TEXT DEFAULT ''")
     ensure_column(cur, "cylinder_records", "valve_reinstalled", "INTEGER DEFAULT 0")
+    ensure_column(cur, "cylinder_records", "rin_marked", "INTEGER DEFAULT 0")
+    ensure_column(cur, "cylinder_records", "rin_mark_type", "TEXT DEFAULT ''")
     ensure_column(cur, "cylinder_records", "shop_stage", "TEXT DEFAULT 'IN_SHOP'")
     ensure_column(cur, "cylinder_records", "intake_by", "TEXT DEFAULT 'RP'")
     ensure_column(cur, "cylinder_records", "tested_by", "TEXT DEFAULT 'RP'")
@@ -329,6 +390,9 @@ def init_db() -> None:
             ("manager", "Ryan Pearce"),
             ("calibrated_serial", "1SF11904"),
             ("starting_sheet_no", "8095"),
+            ("current_sheet_no", "8095"),
+            ("current_sheet_used_rows", "0"),
+            ("daily_hydro_capacity", "24"),
             ("gemini_api_key", ""),
             ("sheets_webhook_url", ""),
             ("feedback_webhook_url", ""),
@@ -348,7 +412,7 @@ def init_db() -> None:
             ("Eric Pearce", "EP", "Operations / Intake & Tech"),
             ("Adam Pearce", "AP", "Billing / Visual Inspection"),
             ("Alex Pearce", "AX", "Intake / Visual Inspection"),
-            ("Kenny", "KN", "Visual Inspection / Invoicing"),
+            ("Kenny", "KN", "Garage Prep / Devalve & Revalve"),
         ],
     )
 
@@ -359,6 +423,7 @@ def init_db() -> None:
             ("HYDRO_SCBA", "Carbon Fiber / Special Permit Hydro Test", 0.0, "SCBA / SP composite cylinder", 20),
             ("HYDRO_PAINTBALL", "Paintball / Airsoft HPA Tank Hydro Test", 0.0, "3000# Alum or 4500# Carbon HPA", 25),
             ("VISUAL_ONLY", "Visual Inspection Only (Shop or Road)", 0.0, "7-point visual requalification", 30),
+            ("RUSH_FEE", "Priority / Rush Turnaround Service", 0.0, "Expedited queue placement", 35),
             ("VALVE_RELIEF", "Relief Valve / Burst Disc Replacement", 0.0, "Safety relief device changed", 40),
             ("REG_SERVICE", "Paintball Regulator Removal / Reinstall", 0.0, "HPA bonnet & O-ring check", 45),
             ("AIR_FILL", "Breathing Air / HPA / Gas Fill", 0.0, "Post-test cylinder fill", 50),
@@ -386,9 +451,8 @@ def init_db() -> None:
             ],
         )
 
-    # Idempotent v5 migration: adds Paintball HPA presets & strips false REE limits from 3A/3AA/3AL
-    v5_done = cur.execute("SELECT value FROM settings WHERE key='schema_v5_paintball_dropoffs';").fetchone()
-    if not v5_done or cur.execute("SELECT COUNT(*) FROM cga_specs;").fetchone()[0] < len(DEFAULT_CGA_SPECS):
+    v6_done = cur.execute("SELECT value FROM settings WHERE key='schema_v6_dispatch_schedule';").fetchone()
+    if not v6_done or cur.execute("SELECT COUNT(*) FROM cga_specs;").fetchone()[0] < len(DEFAULT_CGA_SPECS):
         cur.execute("DELETE FROM cga_specs;")
         cur.executemany(
             """INSERT INTO cga_specs
@@ -396,12 +460,7 @@ def init_db() -> None:
                VALUES (?, ?, ?, ?, ?, ?, ?, ?);""",
             DEFAULT_CGA_SPECS,
         )
-        cur.execute(
-            """UPDATE cylinder_records
-               SET ree_limit = NULL
-               WHERE status = 'QUEUED' AND UPPER(dot_spec) IN ('3A', '3AA', '3AL') AND ree_limit = 7.2;"""
-        )
-        cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('schema_v5_paintball_dropoffs', '1');")
+        cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('schema_v6_dispatch_schedule', '1');")
         bump_db_version(conn)
 
     conn.commit()
