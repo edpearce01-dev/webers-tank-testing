@@ -331,6 +331,25 @@
               </div>
 
               <div style="grid-column:1/-1;">
+                <label>Billing / Mailing Street Address (For Invoices &amp; 5-Yr Re-Cert Notice) *</label>
+                <input id="dropStreet" placeholder="e.g. 123 State St" autocomplete="street-address" />
+              </div>
+              <div style="grid-column:1/-1;display:grid;grid-template-columns:1.5fr 74px 1fr;gap:8px;">
+                <div>
+                  <label>City *</label>
+                  <input id="dropCity" placeholder="e.g. Baden" autocomplete="address-level2" />
+                </div>
+                <div>
+                  <label>State</label>
+                  <input id="dropState" value="PA" maxlength="2" autocomplete="address-level1" />
+                </div>
+                <div>
+                  <label>ZIP Code *</label>
+                  <input id="dropZip" inputmode="numeric" maxlength="10" placeholder="15005" autocomplete="postal-code" />
+                </div>
+              </div>
+
+              <div style="grid-column:1/-1;">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                   <label style="margin:0;">Cylinder Types / Notes (Tap to Add or Type)</label>
                   <button type="button" onclick="resetPubTankChips()" style="border:none;background:none;color:var(--green);font-weight:800;font-size:0.74rem;cursor:pointer;">Reset</button>
@@ -419,8 +438,22 @@
                 <input id="trkEmail" type="email" placeholder="chief@dept.org" />
               </div>
               <div style="grid-column:1/-1;">
-                <label>Pickup / Delivery Street Address &amp; Town *</label>
-                <input id="trkAddress" placeholder="e.g. 123 State St, Baden, PA 15005 (Bay door / access notes)" />
+                <label>Pickup / Delivery Street Address *</label>
+                <input id="trkAddress" placeholder="e.g. 123 State St (Bay door / access notes)" autocomplete="street-address" />
+              </div>
+              <div style="grid-column:1/-1;display:grid;grid-template-columns:1.5fr 74px 1fr;gap:8px;">
+                <div>
+                  <label>City / Town *</label>
+                  <input id="trkCity" placeholder="e.g. Baden" autocomplete="address-level2" />
+                </div>
+                <div>
+                  <label>State</label>
+                  <input id="trkState" value="PA" maxlength="2" autocomplete="address-level1" />
+                </div>
+                <div>
+                  <label>ZIP Code *</label>
+                  <input id="trkZip" inputmode="numeric" maxlength="10" placeholder="15005" autocomplete="postal-code" />
+                </div>
               </div>
               <div>
                 <label>Preferred Pickup Date</label>
@@ -710,6 +743,10 @@
       const contact = document.getElementById('dropContact').value.trim();
       const phone = document.getElementById('dropPhone').value.trim();
       const email = document.getElementById('dropEmail').value.trim();
+      const street = document.getElementById('dropStreet').value.trim();
+      const city = document.getElementById('dropCity').value.trim();
+      const state = (document.getElementById('dropState').value.trim() || 'PA').toUpperCase();
+      const zip = document.getElementById('dropZip').value.trim();
       const summary = document.getElementById('dropSummary').value.trim();
       const cnt = Math.max(1, parseInt(document.getElementById('dropCount').value || '1', 10));
 
@@ -720,6 +757,11 @@
       if (PUB_ACCT !== 'WALK_IN' && contact.length < 2) {
         alert('Please enter your individual name in Dropped Off By.');
         document.getElementById('dropContact').focus();
+        return;
+      }
+      if (street.length < 3 || city.length < 2 || zip.length < 5) {
+        alert('Please enter your Billing / Mailing Street Address, City, and ZIP Code.');
+        document.getElementById('dropStreet').focus();
         return;
       }
 
@@ -740,6 +782,10 @@
             customer_name: name,
             customer_phone: phone,
             customer_email: email,
+            street_address: street,
+            city: city,
+            state: state,
+            zip_code: zip,
             bottle_count: cnt,
             service_requested: svc,
             tank_summary: summary,
@@ -752,11 +798,11 @@
         const data = await res.json();
         if (!res.ok) { alert(data.detail || 'Drop-off check-in failed.'); return; }
 
-        ['dropName', 'dropContact', 'dropPo', 'dropSummary'].forEach(id => { document.getElementById(id).value = ''; });
+        ['dropName', 'dropContact', 'dropPo', 'dropStreet', 'dropCity', 'dropZip', 'dropSummary'].forEach(id => { document.getElementById(id).value = ''; });
         document.getElementById('dropRush').checked = false;
         PUB_TANK_COUNTS = {};
         document.getElementById('dropCount').value = 1;
-        showDigitalTicketCard(data, { mode: 'DROPOFF', name, phone, email, bottle_count: cnt });
+        showDigitalTicketCard(data, { mode: 'DROPOFF', name, phone, email, address: `${street}, ${city}, ${state} ${zip}`, bottle_count: cnt });
       } finally {
         btn.disabled = false;
       }
@@ -807,13 +853,17 @@
       const contact = document.getElementById('trkContact').value.trim();
       const phone = document.getElementById('trkPhone').value.trim();
       const email = document.getElementById('trkEmail').value.trim();
-      const address = document.getElementById('trkAddress').value.trim();
+      const street = document.getElementById('trkAddress').value.trim();
+      const city = document.getElementById('trkCity').value.trim();
+      const state = (document.getElementById('trkState').value.trim() || 'PA').toUpperCase();
+      const zip = document.getElementById('trkZip').value.trim();
+      const address = [street, city, `${state} ${zip}`.trim()].filter(Boolean).join(', ');
       const prefDate = document.getElementById('trkPrefDate').value;
       const summary = document.getElementById('trkSummary').value.trim();
       const cnt = Math.max(1, parseInt(document.getElementById('trkCount').value || '1', 10));
 
-      if (!name || !contact || phone.replace(/\D/g, '').length < 10 || address.length < 5) {
-        alert('Please enter Dept/Business Name, Contact Name, 10-Digit Phone, and Street Address.');
+      if (!name || !contact || phone.replace(/\D/g, '').length < 10 || street.length < 3 || city.length < 2) {
+        alert('Please enter Dept/Business Name, Contact Name, 10-Digit Phone, Street Address, and City.');
         return;
       }
 
@@ -835,6 +885,10 @@
             customer_phone: phone,
             customer_email: email,
             pickup_address: address,
+            street_address: street,
+            city: city,
+            state: state,
+            zip_code: zip,
             preferred_date: prefDate,
             truck_mode: trkMode,
             bottle_count: cnt,
@@ -847,7 +901,7 @@
         const data = await res.json();
         if (!res.ok) { alert(data.detail || 'Truck request failed.'); return; }
 
-        ['trkCustName', 'trkContact', 'trkAddress', 'trkSummary'].forEach(id => { document.getElementById(id).value = ''; });
+        ['trkCustName', 'trkContact', 'trkAddress', 'trkCity', 'trkZip', 'trkSummary'].forEach(id => { document.getElementById(id).value = ''; });
         document.getElementById('trkRush').checked = false;
         showDigitalTicketCard(data, { mode: 'TRUCK_REQUEST', name, phone, email, address, bottle_count: cnt });
       } finally {

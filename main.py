@@ -163,6 +163,31 @@ def clean_phone(raw: Optional[str]) -> str:
     return raw.strip()[:20]
 
 
+def split_mailing_address(raw_addr: str, city: str = "", state: str = "", zip_code: str = "") -> tuple[str, str, str, str]:
+    """Splits a combined '123 Main St, Baden, PA 15005' string or explicit fields into (street, city, state, zip)."""
+    st_line = (raw_addr or "").strip()
+    c_val = (city or "").strip()
+    s_val = (state or "").strip().upper()[:4]
+    z_val = (zip_code or "").strip()[:12]
+
+    if st_line and not c_val and "," in st_line:
+        parts = [p.strip() for p in st_line.split(",") if p.strip()]
+        if len(parts) >= 2:
+            st_line = parts[0]
+            tail = " ".join(parts[1:])
+            m_zip = re.search(r"\b(\d{5}(?:-\d{4})?)\b", tail)
+            if m_zip and not z_val:
+                z_val = m_zip.group(1)
+                tail = (tail[:m_zip.start()] + tail[m_zip.end():]).strip(" ,")
+            m_st = re.search(r"\b([A-Za-z]{2})\s*$", tail)
+            if m_st and not s_val:
+                s_val = m_st.group(1).upper()
+                tail = tail[:m_st.start()].strip(" ,")
+            c_val = tail.strip(" ,")
+
+    return (st_line[:120], c_val[:60], s_val or "PA", z_val)
+
+
 def upsert_rolodex_from_activity(
     conn,
     customer_name: str,
@@ -171,15 +196,19 @@ def upsert_rolodex_from_activity(
     contact_person: str = "",
     email: str = "",
     street_address: str = "",
+    city: str = "",
+    state: str = "",
+    zip_code: str = "",
 ) -> None:
-    """Automatically creates or enriches a Customer Rolodex entry whenever a job or tank is logged."""
+    """Automatically creates or enriches a Customer Rolodex entry (including mailing address) whenever a job or tank is logged."""
     cname = (customer_name or "").strip()
     if not cname:
         return
     ph = clean_phone(phone)
     cp = (contact_person or "").strip()[:60]
     em = (email or "").strip()[:100]
-    addr = (street_address or "").strip()[:120]
+    st_clean, ci_clean, st_abbr, zp_clean = split_mailing_address(street_address, city, state, zip_code)
+
     up = cname.upper()
     is_dept = account_type.upper() == "FIRE_EMS" or any(k in up for k in DEPT_KEYWORDS)
     eff_acct = account_type.upper() if account_type else ("FIRE_EMS" if is_dept else "WALK_IN")
@@ -188,26 +217,35 @@ def upsert_rolodex_from_activity(
     ts = now_eastern().strftime("%Y-%m-%d %I:%M %p")
 
     existing = conn.execute(
-        "SELECT id, phone, contact_person, email, street_address, account_type FROM customers WHERE UPPER(customer_name)=UPPER(?);",
+        "SELECT id, phone, contact_person, email, street_address, city, state, zip_code, account_type FROM customers WHERE UPPER(customer_name)=UPPER(?);",
         (cname,),
     ).fetchone()
     if not existing:
         conn.execute(
             """INSERT OR IGNORE INTO customers
-               (customer_name, account_type, contact_person, phone, email, street_address, payment_terms, tax_exempt, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);""",
-            (cname, eff_acct, cp, ph, em, addr, terms, tax_ex, ts),
+               (customer_name, account_type, contact_person, phone, email, street_address, city, state, zip_code, payment_terms, tax_exempt, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);""",
+            (cname, eff_acct, cp, ph, em, st_clean, ci_clean, st_abbr, zp_clean, terms, tax_ex, ts),
         )
     else:
-        new_ph = ph if (ph and not existing["phone"]) else existing["phone"]
-        new_cp = cp if (cp and not existing["contact_person"]) else existing["contact_person"]
-        new_em = em if (em and not existing["email"]) else existing["email"]
-        new_ad = addr if (addr and not existing["street_address"]) else existing["street_address"]
-        if (new_ph, new_cp, new_em, new_ad) != (existing["phone"], existing["contact_person"], existing["email"], existing["street_address"]):
+        new_ph = ph or existing["phone"]
+        new_cp = cp or existing["contact_person"]
+        new_em = em or existing["email"]
+        new_st = st_clean or existing["street_address"]
+        new_ci = ci_clean or existing["city"]
+        new_sa = (state.strip().upper()[:4] if state.strip() else "") or existing["state"] or "PA"
+        new_zp = zp_clean or existing["zip_code"]
+        if (new_ph, new_cp, new_em, new_st, new_ci, new_sa, new_zp) != (
+            existing["phone"], existing["contact_person"], existing["email"],
+            existing["street_address"], existing["city"], existing["state"], existing["zip_code"]
+        ):
             conn.execute(
-                "UPDATE customers SET phone=?, contact_person=?, email=?, street_address=?, updated_at=? WHERE id=?;",
-                (new_ph, new_cp, new_em, new_ad, ts, existing["id"]),
+                """UPDATE customers
+                   SET phone=?, contact_person=?, email=?, street_address=?, city=?, state=?, zip_code=?, updated_at=?
+                   WHERE id=?;""",
+                (new_ph, new_cp, new_em, new_st, new_ci, new_sa, new_zp, ts, existing["id"]),
             )
+
 
 def get_compliance_alerts(s_map: dict, ref_today: str) -> list[dict]:
     """Tracks DOT RIN B386 5-Year Renewal and Master Pressure Gauge Calibration Cert deadlines."""
@@ -1243,6 +1281,18 @@ class CrewFeedbackInput(BaseModel):
 class FeedbackStatusInput(BaseModel):
     status: str
 
+class HelpChatTurn(BaseModel):
+    role: str
+    text: str
+
+
+class HelpAssistantInput(BaseModel):
+    message: str
+    current_page: str = "/ops"
+    current_tab: str = ""
+    submitted_by: str = "RP"
+    history: list[HelpChatTurn] = []
+
 
 # --- WORKSPACE PAGE ROUTES ---
 @app.get("/")
@@ -1496,11 +1546,18 @@ def submit_public_dropoff(payload: PublicDropoffInput):
     po_st = payload.po_station.strip()[:60]
     contact_p = payload.contact_person.strip()[:60]
     em_clean = payload.customer_email.strip()[:100]
-    addr_clean = payload.pickup_address.strip()[:140]
+    full_mail_str = ", ".join(filter(None, [
+        payload.street_address.strip(),
+        payload.city.strip(),
+        f"{payload.state.strip() or 'PA'} {payload.zip_code.strip()}".strip(),
+    ]))
+    addr_clean = (payload.pickup_address.strip() or full_mail_str)[:140]
     pref_date = payload.preferred_date.strip()[:16]
 
     if etype == "DROPOFF" and acct in ("FIRE_EMS", "COMMERCIAL") and len(contact_p) < 2:
         raise HTTPException(400, "Please enter your individual name in 'Dropped Off By'.")
+    if etype == "DROPOFF" and len(payload.street_address.strip() or addr_clean) < 4:
+        raise HTTPException(400, "Please enter your Billing / Mailing Street Address & City.")
     if etype == "TRUCK_REQUEST" and len(addr_clean) < 5:
         raise HTTPException(400, "Please enter the street / station address for Truck Pickup & Delivery.")
 
@@ -1526,7 +1583,7 @@ def submit_public_dropoff(payload: PublicDropoffInput):
     sched_date = pref_date if re.match(r"^\d{4}-\d{2}-\d{2}$", pref_date) else w_date
 
     conn = get_conn()
-    upsert_rolodex_from_activity(conn, cust, ph_clean, acct, contact_p, em_clean, addr_clean)
+    upsert_rolodex_from_activity(conn, cust, ph_clean, acct, contact_p, em_clean, payload.street_address.strip() or addr_clean, payload.city.strip(), payload.state.strip(), payload.zip_code.strip())
     quote = calculate_turnaround_quote(conn, cnt)
     promised = quote["rush_promise_date"] if is_rush else quote["standard_promise_date"]
     zone = "OUTBOUND_TRUCK" if etype == "TRUCK_REQUEST" else "ZONE_A_BACKROOM"
@@ -1745,7 +1802,7 @@ def create_schedule_job(payload: ScheduleJobInput):
 
     contact_p = payload.contact_person.strip()[:60]
     conn = get_conn()
-    upsert_rolodex_from_activity(conn, cust, ph, acct, contact_p, '', payload.location_notes.strip()[:120])
+    upsert_rolodex_from_activity(conn, cust, ph, acct, contact_p, '', payload.street_address.strip() or payload.location_notes.strip()[:120], payload.city.strip(), payload.state.strip(), payload.zip_code.strip())
     cur = conn.cursor()
     cur.execute(
         """INSERT INTO schedule_jobs
@@ -3756,6 +3813,184 @@ def void_and_delete_invoice(inv_id: int):
     conn.commit()
     conn.close()
     return {"voided": inv_id}
+
+
+
+SHOP_HELP_SYSTEM_GUIDE = """You are the built-in Shop Operations & Troubleshooting AI Assistant for Weber's Tank Testing (U.S. D.O.T. RIN B386) at 3086 Legionville Rd, Baden, PA 15005 (Phone: 724-266-8008).
+You assist Facility Manager Ryan Pearce (RP), Kenny, and the shop crew. Keep answers straight to the point, practical, friendly, and brief (bullet points or 2-4 short steps).
+
+EXACT SYSTEM MAP & RULES:
+1. PUBLIC SITE (weberstanktesting.com):
+   - Has 3 buttons under #dropoff: '📥 BACKROOM DROP-OFF' (captures Name, Contact, Phone, Email, Billing/Mailing Address, Bottle Count & Types), '✅ BACKROOM PICK-UP', and '🚚 TRUCK PICKUP & DELIVERY'.
+   - Issues a digital BR-XXXX ticket card + downloadable PDF receipt + live 5-step tracker. Every address & email auto-saves to the Customer Rolodex for billing, newsletters, and 5-year re-cert notices.
+   - TESTING FACILITY ONLY: Weber's NEVER refills cylinders. Passing tanks return clean, heated-air dried, revalved, and depressurized.
+2. SHOP OPS (/ops — 4 Stations on Left Menu):
+   - '1. Start & Cal': Shows active 12-row Form 393-001 Retest Sheet # (assigns ONLY when a hydro test completes, never when queued). Calibrates Short Jacket (usually 3000 PSI -> covers test PSI up to 3500#) and Tall Jacket (Method B +-1.0% with Master Cyl 1SF11904). Official DOT PDFs always sign off under Ryan Pearce (RP).
+   - '2. Prep & Scan': Import waiting 24/7 Backroom Door batches or Scheduled jobs via 'Lock & Scan Batch'. Turn ON 'Lock Batch Specs' for multi-bottle batches so specs stay locked while Serial # and random Valve Tag # reset blank after each bottle.
+   - RANDOM VALVE TAGS: Tags (#47, #12, etc.) are grabbed randomly from the bin. If blocked by 'Valve Tag #X is currently active on SN...', go to '4. Finish & Shelf' -> 'Active Valve & Regulator Tags' and click 'Reinstall & Free #X' (or pick another tag).
+   - '3. Hydro Stand': Tap any queued cylinder pill at top -> enter Total Expansion (cc) & Permanent Expansion (cc). If >10% perm, >REE, or visual fail, it flips to Code D Condemned and asks for PHMSA legal disposition.
+   - '4. Finish & Shelf': Passing tanks CANNOT move to Zone E Pickup Shelf until marked 'Stamped' or 'Stickered' (B386). Tap '+ Neck O-Ring', '+ Burst Disc', or '+ Tumble/Clean' here so parts auto-add to the invoice. Click 'Claim Slip' to print the Zone E slip (QR code auto-opens PICK-UP sign-out).
+3. SCHEDULE (/schedule — 4 Left-Menu Tabs):
+   - '1. Month Calendar': Full Sunday-Saturday month grid. Use 'Prev / Next', month picker, or yellow 'Jump to Today' (also 'Prev | Today | Next' date stepper in top-right bar of every page). Click any day square to set Operating Window (Full Hydro, Prep Only, Road Run, or 24/7 Backroom Only) & bottle capacity.
+   - '2. Book & Quote': Full booking form + Phone Turnaround Calculator.
+   - '3. Active Runs & Prep' & '4. Backroom Door'.
+4. OFFICE & PRINT (/office — 7 Left-Menu Tabs):
+   - '📞 Call: Shop Drop-Off': Fast 45-second phone logger when caller is bringing tanks to the shop/backroom. Auto-fills repeat customers & addresses from Rolodex and gives a green wrap-up sentence to read & hang up.
+   - '🚚 Dispatch: Truck Run': Dedicated fast-call logger for Weber's truck (Round-Trip Pickup & Return Delivery, Pickup Only, or Return Delivery Only) with Google Maps address & driver read-back script.
+   - '💲 Create Invoice' & '📄 Saved Invoices': Click any Unbilled Customer Pill to auto-build invoice (auto-sets 0% PA tax-exempt & Net-30 for Fire/EMS, and prints Rolodex mailing address on PDF). If prices show $0.00, set prices once in '⚙️ Service Rates'. Mistake unpaid invoices can be unlocked via 'Void & Re-Bill' in Saved Invoices.
+   - '📇 Customer Rolodex': Contact/mailing list, CSV export for mailers/newsletters, and 5-Yr Hydro / 1-Yr Visual Recall list.
+   - '🖨️ DOT & Claim PDFs': Retest Sheet, Daily Verification, Visual Log, Active Valve Tags, 24/7 Door QR Sign, Zone E Claim Slip, and Avery 5160 B386 Stickers (30 Standard or 60 Mini 2-up HPA + 'Skip Used Slots').
+   - '📦 Reorder Supplies': Flag items 'Low' or click 'Order Now'.
+
+HOW TO HANDLE INPUT ERRORS VS. REAL SYSTEM BUGS:
+- Check the LIVE SHOP SNAPSHOT provided below first! If Ryan's issue is caused by uncalibrated jacket, wrong selected date (not Today), active duplicate valve tag, unmarked B386 stamp gate, or $0.00 Service Rates, point out the exact live cause and how to fix it in 1-2 clicks.
+- BE CANDID & HUMBLE ABOUT BUGS/UPDATES: If Ryan reports an actual software bug, layout glitch, something confusing/clunky, or a feature change needed from Eric, DO NOT make excuses or blame Ryan. Clearly validate it ("Good catch — that's a system bug / layout quirk that needs a code update from Eric"), set log_ticket=true, and summarize it cleanly in ticket_summary so it gets logged automatically to Eric's update queue!
+"""
+
+
+def call_gemini_help_assistant(api_key: str, prompt_parts: list[dict]) -> dict:
+    candidates: list[str] = []
+    if CACHED_VISION_MODEL:
+        candidates.append(CACHED_VISION_MODEL)
+    try:
+        for d in discover_vision_models(api_key):
+            if d not in candidates:
+                candidates.append(d)
+    except Exception:
+        pass
+    for fb in ("gemini-2.5-flash", "gemini-3-flash-preview", "gemini-2.0-flash"):
+        if fb not in candidates:
+            candidates.append(fb)
+
+    schema = {
+        "type": "OBJECT",
+        "properties": {
+            "reply": {"type": "STRING"},
+            "log_ticket": {"type": "BOOLEAN"},
+            "ticket_category": {"type": "STRING", "nullable": True},
+            "ticket_priority": {"type": "STRING", "nullable": True},
+            "ticket_summary": {"type": "STRING", "nullable": True},
+        },
+        "required": ["reply", "log_ticket"],
+    }
+
+    ctx = ssl.create_default_context()
+    last_err = "No Gemini model available."
+    for model_name in candidates[:4]:
+        gen_cfg: dict = {
+            "temperature": 0.25,
+            "responseMimeType": "application/json",
+            "responseSchema": schema,
+        }
+        body_bytes = json.dumps({
+            "system_instruction": {"parts": [{"text": SHOP_HELP_SYSTEM_GUIDE}]},
+            "contents": prompt_parts,
+            "generationConfig": gen_cfg,
+        }).encode("utf-8")
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        req = urllib.request.Request(url, data=body_bytes, headers={"Content-Type": "application/json"}, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=35, context=ctx) as resp:
+                resp_json = json.loads(resp.read().decode("utf-8"))
+                cand_parts = resp_json["candidates"][0]["content"]["parts"]
+                raw_text = next(
+                    (p["text"].strip() for p in reversed(cand_parts) if "text" in p and not p.get("thought")),
+                    cand_parts[-1].get("text", "").strip(),
+                )
+                if raw_text.startswith("```"):
+                    raw_text = re.sub(r"^```(?:json)?|```$", "", raw_text, flags=re.MULTILINE).strip()
+                return json.loads(raw_text)
+        except Exception as exc:
+            last_err = f"{model_name}: {exc}"
+            continue
+    raise RuntimeError(last_err)
+
+
+@app.post("/api/assistant/chat")
+async def chat_with_shop_assistant(payload: HelpAssistantInput):
+    msg = payload.message.strip()
+    if not msg:
+        raise HTTPException(400, "Ask a question or describe what happened first.")
+
+    est_today = today_eastern()
+    conn = get_conn()
+    s_map = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings;").fetchall()}
+    api_key = (os.getenv("GEMINI_API_KEY") or s_map.get("gemini_api_key") or "").strip()
+
+    binder = get_binder_status(conn, s_map)
+    short_cal = conn.execute(
+        "SELECT COALESCE(MAX(target_pressure_psi), 0) FROM daily_verifications WHERE test_date=? AND jacket_type='Short Jacket' AND passed=1;",
+        (est_today,),
+    ).fetchone()[0]
+    tall_cal = conn.execute(
+        "SELECT COALESCE(MAX(target_pressure_psi), 0) FROM daily_verifications WHERE test_date=? AND jacket_type='Tall Jacket' AND passed=1;",
+        (est_today,),
+    ).fetchone()[0]
+    queued_cnt = conn.execute("SELECT COUNT(*) FROM cylinder_records WHERE status='QUEUED';").fetchone()[0]
+    active_tags = [
+        f"#{r['valve_tag']}->SN {r['serial_number']} ({r['customer_name']})"
+        for r in conn.execute("SELECT valve_tag, serial_number, customer_name FROM cylinder_records WHERE valve_tag!='' AND valve_reinstalled=0 LIMIT 25;").fetchall()
+    ]
+    unmarked_cnt = conn.execute(
+        "SELECT COUNT(*) FROM cylinder_records WHERE status='COMPLETED' AND hydro_disposition='A' AND COALESCE(rin_marked,0)=0 AND shop_stage!='PICKED_UP';"
+    ).fetchone()[0]
+    zero_rates = conn.execute("SELECT COUNT(*) FROM pricing_rates WHERE unit_price <= 0;").fetchone()[0]
+    open_trucks = conn.execute("SELECT COUNT(*) FROM schedule_jobs WHERE status!='COMPLETED' AND job_type LIKE 'ROAD_%';").fetchone()[0]
+    conn.close()
+
+    if not api_key:
+        raise HTTPException(503, "Gemini API Key is not set yet. Open Settings (⚙️) on Shop Ops and paste your Gemini key.")
+
+    live_context = (
+        f"[LIVE SHOP SNAPSHOT — Today Eastern: {est_today} | User is viewing: {payload.current_page} (tab: {payload.current_tab or 'main'}) | Crew: {payload.submitted_by}]\n"
+        f"- Short Jacket Today: {'Calibrated to ' + str(short_cal) + ' PSI (allows <=' + str(dot_max_allowed_test_psi(int(short_cal))) + ' PSI)' if short_cal else 'NOT CALIBRATED TODAY'}\n"
+        f"- Tall Jacket Today: {'Calibrated to ' + str(tall_cal) + ' PSI (allows <=' + str(dot_max_allowed_test_psi(int(tall_cal))) + ' PSI)' if tall_cal else 'NOT CALIBRATED TODAY'}\n"
+        f"- Active DOT Retest Sheet: #{binder['active_sheet_no']} (Next Row #{binder['next_row_number']} of 12)\n"
+        f"- Queued Cylinders Waiting for Stand: {queued_cnt} | Needs B386 Stamp/Sticker: {unmarked_cnt} | Open Truck Runs: {open_trucks}\n"
+        f"- Active Valve Tags Currently In Use: {', '.join(active_tags) if active_tags else 'None'}\n"
+        f"- Service Rate Codes still at $0.00: {zero_rates}"
+    )
+
+    contents: list[dict] = []
+    for turn in payload.history[-8:]:
+        role = "model" if turn.role == "assistant" else "user"
+        contents.append({"role": role, "parts": [{"text": turn.text[:1200]}]})
+    contents.append({"role": "user", "parts": [{"text": f"{live_context}\n\nCREW QUESTION / REPORT:\n{msg}"}]})
+
+    try:
+        result = await asyncio.wait_for(
+            asyncio.to_thread(call_gemini_help_assistant, api_key, contents),
+            timeout=38.0,
+        )
+    except Exception as exc:
+        raise HTTPException(502, f"Help AI temporarily unavailable: {exc}")
+
+    logged_ticket_id = None
+    if result.get("log_ticket"):
+        ts = now_eastern().strftime("%Y-%m-%d %I:%M %p")
+        by = (payload.submitted_by or "RP").strip().upper()[:4] or "RP"
+        cat = (result.get("ticket_category") or "Bug / Fix").strip()[:30]
+        prio = (result.get("ticket_priority") or "High").strip()[:16]
+        summary = (result.get("ticket_summary") or msg).strip()[:360]
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute(
+            """INSERT INTO crew_feedback (created_at, submitted_by, category, page_tab, priority, message, status, synced)
+               VALUES (?, ?, ?, ?, ?, ?, 'OPEN', 0);""",
+            (ts, by, f"🤖 {cat}", f"{payload.current_page}:{payload.current_tab}", prio, summary),
+        )
+        logged_ticket_id = cur.lastrowid
+        bump_db_version(conn)
+        conn.commit()
+        conn.close()
+        trigger_sheets_sync_bg()
+
+    return {
+        "reply": result.get("reply") or "Let me know what happened on screen and I can walk you through it or log a fix for Eric.",
+        "logged_ticket": bool(logged_ticket_id),
+        "ticket_id": logged_ticket_id,
+        "ticket_summary": result.get("ticket_summary") or "",
+    }
 
 
 # --- CREW FEEDBACK & PDF ENDPOINTS ---

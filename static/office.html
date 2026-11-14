@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b2219" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/static/ops.css?v=8.4" />
+  <link rel="stylesheet" href="/static/ops.css?v=8.5" />
   <title>Weber's Tank Testing — Office, Rolodex, Printouts &amp; Supplies | RIN B386</title>
 </head>
 <body>
@@ -135,6 +135,10 @@
                 <div id="qsPoWrap" hidden>
                   <label>Station # / PO # (Optional)</label>
                   <input id="qsPo" placeholder="e.g. Station 47 / PO #104" />
+  
+                <div style="grid-column:1/-1;">
+                  <label>Billing / Mailing Address (Street, City, PA ZIP — For Invoices &amp; 5-Yr Recalls)</label>
+                  <input id="qsMailAddr" placeholder="e.g. 123 State St, Baden, PA 15005 (auto-fills for repeat callers)" />
                 </div>
               </div>
 
@@ -748,7 +752,7 @@
       await loadOfficeState();
       await fetchQsQuote();
       await fetchTdQuote();
-      if (CURRENT_TAB === 'quick') document.getElementById('qsCustomer')?.focus();
+      switchOfficeTab(CURRENT_TAB);
     }
 
     async function submitLoginPin() {
@@ -931,7 +935,9 @@
         if (match.contact_person) document.getElementById('qsContact').value = match.contact_person;
         if (match.account_type) setQsAcct(match.account_type);
         if (match.street_address) {
-          document.getElementById('qsAddress').value = [match.street_address, match.city, match.state].filter(Boolean).join(', ');
+          const fullA = [match.street_address, match.city, `${match.state || 'PA'} ${match.zip_code || ''}`.trim()].filter(Boolean).join(', ');
+          document.getElementById('qsAddress').value = fullA;
+          document.getElementById('qsMailAddr').value = fullA;
         }
       } else {
         badge.hidden = true;
@@ -1108,6 +1114,7 @@
             rush_fee: isRush,
             holding_zone: QS_ARRIVE === 'ROAD_PICKUP' ? 'OUTBOUND_TRUCK' : 'ZONE_A_BACKROOM',
             location_notes: addr,
+            street_address: document.getElementById('qsMailAddr').value.trim() || addr,
             notes: fullNotes,
           }),
         });
@@ -1126,7 +1133,7 @@
           window.location.href = `sms:${digits}${sep}body=${encodeURIComponent(smsTxt)}`;
         }
 
-        ['qsCustomer', 'qsPhone', 'qsContact', 'qsPo', 'qsSummary', 'qsAddress', 'qsNotes'].forEach(id => {
+        ['qsCustomer', 'qsPhone', 'qsContact', 'qsPo', 'qsMailAddr', 'qsSummary', 'qsAddress', 'qsNotes'].forEach(id => {
           document.getElementById(id).value = '';
         });
         document.getElementById('qsRush').checked = false;
@@ -1880,5 +1887,6 @@
 
     bootOffice();
   </script>
+  <script src="/static/help-bot.js?v=8.5"></script>
 </body>
 </html>
