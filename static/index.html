@@ -7,7 +7,7 @@
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/icon.svg" />
-  <link rel="stylesheet" href="/static/ops.css?v=8.1" />
+  <link rel="stylesheet" href="/static/ops.css?v=8.2" />
   <title>Weber's Tank Testing — Shop Floor Ops | DOT B386</title>
 </head>
 <body>
@@ -102,6 +102,7 @@
         </div>
 
         <div class="rail-footer">
+          <a class="secondary" href="/office?tab=quick" style="width:100%;background:#fef3c7;color:#92400e;border-color:#f59e0b;">📞 Quick Phone Schedule</a>
           <a class="secondary" href="/schedule" style="width:100%;">📅 Month Calendar &amp; Runs</a>
           <a class="secondary" href="/office" style="width:100%;">💲 Billing &amp; DOT Printouts</a>
           <a class="secondary" href="/office?tab=rolodex" style="width:100%;">📇 Customer Rolodex</a>
@@ -219,12 +220,12 @@
                 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
                   <div>
                     <strong style="font-size:0.9rem;" id="batchLockStatusTxt">🔓 Single-Bottle Mode (Unlocks All Fields After Queue)</strong>
-                    <div style="font-size:0.77rem;color:var(--muted);">Lock when intaking multiple identical cylinders so you only enter <strong>Serial #</strong> &amp; <strong>Tag #</strong>.</div>
+                    <div style="font-size:0.77rem;color:var(--muted);">Lock for identical batches — specs stay locked while <strong>Serial #</strong> &amp; random <strong>Valve Tag #</strong> clear each bottle.</div>
                   </div>
                   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                     <label class="inline-check" style="font-size:0.8rem;">
-                      <input type="checkbox" id="chkAutoIncTag" checked />
-                      <span>Auto +1 Tag #</span>
+                      <input type="checkbox" id="chkAutoIncTag" />
+                      <span>Seq +1 Tag (Off = Random)</span>
                     </label>
                     <button type="button" class="secondary" id="btnBatchLock" onclick="toggleBatchLock()">🔒 Lock Batch Specs</button>
                   </div>
@@ -329,7 +330,7 @@
 
                 <div class="grid" id="intakeFieldsGrid">
                   <div><label>Serial # *</label><input id="fSerial" placeholder="e.g. GTS-0291277" onkeydown="if(event.key==='Enter')document.getElementById('fValveTag').focus()" /></div>
-                  <div><label>🏷️ Valve / Reg Tag #</label><input id="fValveTag" placeholder="e.g. 14" onkeydown="if(event.key==='Enter')submitIntake(false)" /></div>
+                  <div><label>🏷️ Valve / Reg Tag #</label><input id="fValveTag" placeholder="Any tag # (e.g. 47)" onkeydown="if(event.key==='Enter')submitIntake(false)" /></div>
                   <div><label>Customer / Owner *</label><input id="fCustomer" list="customerSuggest" placeholder="Dept or Name" oninput="prefillPhoneFromRolodex('fCustomer','fPhone')" /></div>
                   <div><label>Cell Phone</label><input id="fPhone" type="tel" placeholder="724-555-0199" /></div>
                   <div><label>DOT / Permit Spec *</label><input id="fSpec" placeholder="3AA / 3AL / SP14387" oninput="autoMatchSpecDimensions()" /></div>
@@ -373,7 +374,7 @@
                 <datalist id="serialSuggest"></datalist>
                 <div class="grid" style="align-items:end;">
                   <div><label>Serial #</label><input id="quickTagSerial" list="serialSuggest" placeholder="Select Serial #" /></div>
-                  <div><label>Tag #</label><input id="quickTagNum" placeholder="e.g. 14" onkeydown="if(event.key==='Enter')assignTagBySerial('quickTagSerial','quickTagNum')" /></div>
+                  <div><label>Tag #</label><input id="quickTagNum" placeholder="Any tag # (e.g. 47)" onkeydown="if(event.key==='Enter')assignTagBySerial('quickTagSerial','quickTagNum')" /></div>
                   <div><button class="primary" style="margin-top:0;" onclick="assignTagBySerial('quickTagSerial','quickTagNum')">Assign Tag</button></div>
                 </div>
               </div>
@@ -482,6 +483,7 @@
         <small style="color:var(--muted);font-size:0.74rem;">Official DOT forms always sign off as Ryan Pearce (RP).</small>
       </div>
       <button id="btnInstallPwa" class="primary" style="margin:0;background:#d97706;" onclick="installPwaApp()" hidden>📲 Install Ops App on Device</button>
+      <a class="secondary" href="/office?tab=quick" style="padding:11px;justify-content:flex-start;background:#fef3c7;color:#92400e;border-color:#f59e0b;">📞 Quick Phone Schedule (Fast Call)</a>
       <a class="secondary" href="/schedule" style="padding:11px;justify-content:flex-start;">📅 Full Month Calendar &amp; Quotes</a>
       <a class="secondary" href="/office?tab=invoice" style="padding:11px;justify-content:flex-start;">💲 Billing, Invoices &amp; Payments</a>
       <a class="secondary" href="/office?tab=rolodex" style="padding:11px;justify-content:flex-start;">📇 Customer Rolodex &amp; Recalls</a>
@@ -666,7 +668,7 @@
     </div>
   </div>
 
-  <script src="/static/ops-camera.js?v=8.1"></script>
-  <script src="/static/ops-app.js?v=8.1"></script>
+  <script src="/static/ops-camera.js?v=8.2"></script>
+  <script src="/static/ops-app.js?v=8.2"></script>
 </body>
 </html>

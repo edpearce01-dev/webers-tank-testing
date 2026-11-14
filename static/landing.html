@@ -268,124 +268,120 @@
     <div class="wrap">
       <div class="sec-hdr">
         <small>Open 24 Hours • 3086 Legionville Rd, Baden, PA</small>
-        <h2>24/7 Self-Serve Backroom Drop-Off &amp; Verified Pickup</h2>
+        <h2>24/7 Self-Serve Backroom Drop-Off &amp; Pick-Up</h2>
       </div>
       <div class="portal-grid">
         <div class="box-card">
           <h3 style="margin-top:0;color:var(--green);">How Our 24/7 Backroom Works</h3>
           <ol style="padding-left:18px;font-size:0.9rem;color:#334155;line-height:1.7;">
             <li><strong>Arrive Anytime:</strong> Pull around to our self-serve cylinder room at <strong>3086 Legionville Rd, Baden, PA 15005</strong>—even after hours.</li>
-            <li><strong>Check In Below (20 Seconds):</strong> Group your cylinders neatly in <strong>Zone A</strong> and submit the form to receive your <strong>BR-XXXX</strong> tracking ticket.</li>
-            <li><strong>Ready SMS &amp; Zone E Pickup:</strong> Once certified, dried, and marked <code>B386</code>, we text your cell. When picking up, tap <em>Logging Completed Pickup</em> so we record release.</li>
+            <li><strong>Dropping Off:</strong> Select <strong>DROP OFF CYLINDERS</strong>, group your tanks neatly in <strong>Zone A</strong>, and grab your <strong>BR-XXXX</strong> ticket #.</li>
+            <li><strong>Picking Up:</strong> Once we text you that your batch is ready on our <strong>Zone E Shelf</strong>, select <strong>PICK UP CYLINDERS</strong> to sign them out in 10 seconds.</li>
           </ol>
           <div class="alert-box alert-ok" style="font-size:0.83rem;margin-top:10px;">
-            ℹ️ <strong>Testing Facility Note:</strong> Weber's performs DOT hydrostatic &amp; visual testing only—<strong>we do not refill cylinders</strong>. All passing tanks are returned clean, heated-air dried, revalved, and depressurized ready for your fill station.
+            ℹ️ <strong>Testing Facility Only:</strong> Weber's performs DOT hydrostatic &amp; visual testing only—<strong>we do not refill cylinders</strong>. Passing tanks return clean, heated-air dried, revalved, and depressurized.
           </div>
           <div class="alert-box alert-warn" style="font-size:0.83rem;">
-            ⚠️ <strong>Safety Reminder:</strong> Never leave actively leaking cylinders inside the enclosed room. Call <a href="tel:7242668008" style="color:#92400e;">724-266-8008</a> for leaking valve assistance.
+            ⚠️ <strong>Safety Reminder:</strong> Never leave actively leaking cylinders inside the enclosed room. Call <a href="tel:7242668008" style="color:#92400e;">724-266-8008</a> for assistance.
           </div>
         </div>
 
         <div class="box-card">
           <div class="mode-tabs">
-            <button type="button" class="mode-tab active" id="tabDrop" onclick="setCheckinMode('DROPOFF')">📥 Dropping Off Cylinders</button>
-            <button type="button" class="mode-tab" id="tabPick" onclick="setCheckinMode('PICKUP_NOTICE')">🚚 Logging Completed Pickup</button>
+            <button type="button" class="mode-tab active" id="tabDrop" onclick="setCheckinMode('DROPOFF')" style="letter-spacing:0.4px;font-weight:900;">DROP OFF CYLINDERS</button>
+            <button type="button" class="mode-tab" id="tabPick" onclick="setCheckinMode('PICKUP_NOTICE')" style="letter-spacing:0.4px;font-weight:900;">PICK UP CYLINDERS</button>
           </div>
           <input type="text" id="hpField" style="display:none;" tabindex="-1" autocomplete="off" />
 
-          <!-- ACCOUNT TYPE PILLS (DROP-OFF MODE) -->
-          <div id="acctTypeSection">
+          <!-- FORM 1: LEAN CYLINDER DROP-OFF FORM -->
+          <div id="formDropoff">
             <label>Account Type</label>
             <div class="acct-pills" id="pubAcctBar">
-              <button type="button" class="acct-pill active" data-acct="WALK_IN" onclick="setPubAcct('WALK_IN')">👤 Walk-In / Player</button>
-              <button type="button" class="acct-pill" data-acct="FIRE_EMS" onclick="setPubAcct('FIRE_EMS')">🚒 Fire Dept / EMS</button>
-              <button type="button" class="acct-pill" data-acct="COMMERCIAL" onclick="setPubAcct('COMMERCIAL')">🏢 Commercial / Fleet</button>
+              <button type="button" class="acct-pill active" data-acct="WALK_IN" onclick="setPubAcct('WALK_IN')">👤 Walk-In</button>
+              <button type="button" class="acct-pill" data-acct="FIRE_EMS" onclick="setPubAcct('FIRE_EMS')">🚒 Fire / EMS</button>
+              <button type="button" class="acct-pill" data-acct="COMMERCIAL" onclick="setPubAcct('COMMERCIAL')">🏢 Commercial</button>
             </div>
+
+            <div class="form-grid">
+              <div>
+                <label id="lblDropName">Your Full Name *</label>
+                <input id="dropName" placeholder="e.g. John Smith" />
+              </div>
+              <div id="dropContactWrap" hidden>
+                <label>Dropped Off By (Your Name) *</label>
+                <input id="dropContact" placeholder="e.g. Capt. Mike Miller" />
+              </div>
+              <div>
+                <label>10-Digit Cell / Contact Phone *</label>
+                <input id="dropPhone" type="tel" placeholder="724-555-0199" oninput="formatPubPhone(this)" />
+              </div>
+              <div>
+                <label>How Many Cylinders? *</label>
+                <input type="number" id="dropCount" min="1" max="250" value="1" oninput="refreshPublicSla(this.value)" />
+              </div>
+              <div id="dropPoWrap" style="grid-column:1/-1;" hidden>
+                <label>Station # or PO # (Optional)</label>
+                <input id="dropPo" placeholder="e.g. Station 47 / PO #204" />
+              </div>
+
+              <div style="grid-column:1/-1;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <label style="margin:0;">Cylinder Types / Notes (Tap to Add or Type)</label>
+                  <button type="button" onclick="resetPubTankChips()" style="border:none;background:none;color:var(--green);font-weight:800;font-size:0.74rem;cursor:pointer;">Reset</button>
+                </div>
+                <div class="chip-row">
+                  <button type="button" class="quick-chip" onclick="addPubTankChip('SCBA')">+ SCBA</button>
+                  <button type="button" class="quick-chip" onclick="addPubTankChip('Paintball HPA')">+ Paintball HPA</button>
+                  <button type="button" class="quick-chip" onclick="addPubTankChip('Scuba')">+ Scuba</button>
+                  <button type="button" class="quick-chip" onclick="addPubTankChip('CO2')">+ CO2</button>
+                  <button type="button" class="quick-chip" onclick="addPubTankChip('Medical O2')">+ Medical O2</button>
+                  <button type="button" class="quick-chip" onclick="addPubTankChip('Welding/Ind')">+ Welding/Ind</button>
+                </div>
+                <input id="dropSummary" placeholder="e.g. 2x Ninja 68/4500 HPA, or any special notes..." />
+              </div>
+
+              <div style="grid-column:1/-1;background:#fef2f2;border:1px solid #fca5a5;padding:9px 12px;border-radius:8px;">
+                <label style="display:flex;align-items:center;gap:9px;margin:0;text-transform:none;font-size:0.86rem;color:#991b1b;cursor:pointer;">
+                  <input type="checkbox" id="dropRush" style="width:18px;height:18px;accent-color:#dc2626;" />
+                  <span>🔥 <strong>Request Paid Rush Turnaround</strong> (Est. Ready: <span id="formRushSla">soonest window</span>)</span>
+                </label>
+              </div>
+            </div>
+
+            <button type="button" class="btn-submit" id="btnSubmitDrop" onclick="submitDropoffForm()">📥 Submit Cylinder Drop-Off</button>
           </div>
 
-          <div class="form-grid">
-            <div>
-              <label id="lblCustName">Your Full Name *</label>
-              <input id="ciName" placeholder="e.g. John Smith" />
-            </div>
-            <div id="ciContactWrap" hidden>
-              <label>Dropped Off By (Your Name) *</label>
-              <input id="ciContactPerson" placeholder="e.g. Capt. Mike Miller / Driver Name" />
-            </div>
-            <div>
-              <label>10-Digit Cell / Station Phone *</label>
-              <input id="ciPhone" type="tel" placeholder="724-555-0199" oninput="formatPubPhone(this)" />
-            </div>
-
-            <!-- DEPT / COMMERCIAL PO FIELD -->
-            <div id="ciPoWrap" hidden>
-              <label>Station # / PO # (Optional)</label>
-              <input id="ciPoStation" placeholder="e.g. Station 47 / PO #204" />
-            </div>
-
-            <!-- VERIFIED PICKUP FIELDS -->
-            <div id="ciTicketRefWrap" hidden>
-              <label>Ticket # (If Known)</label>
-              <input id="ciTicketRef" placeholder="e.g. BR-0004" />
-            </div>
-            <div id="ciPickedByWrap" hidden>
-              <label>Picked Up By (Individual's Name) *</label>
-              <input id="ciPickedBy" placeholder="Full name signing out tanks" />
-            </div>
-
-            <div>
-              <label id="lblCylCount">Total Cylinder Count *</label>
-              <input type="number" id="ciCount" min="1" max="250" value="1" oninput="refreshPublicSla(this.value)" />
-            </div>
-
-            <div id="ciSvcWrap">
-              <label>Service Requested</label>
-              <select id="ciService">
-                <option value="Hydro + Visual">Hydrostatic Test + Visual</option>
-                <option value="Paintball HPA Hydro">Paintball / Airsoft HPA Hydro</option>
-                <option value="Visual Inspection Only">Annual Visual Inspection Only</option>
-              </select>
-            </div>
-
-            <!-- QUICK TANK BUILDER CHIPS -->
-            <div id="ciTankBuilderWrap" style="grid-column:1/-1;">
-              <div style="display:flex;justify-content:space-between;align-items:center;">
-                <label style="margin:0;">Tap Cylinder Types to Build Summary (Or Type Below)</label>
-                <button type="button" onclick="resetPubTankChips()" style="border:none;background:none;color:var(--green);font-weight:800;font-size:0.74rem;cursor:pointer;">Reset</button>
+          <!-- FORM 2: LEAN CYLINDER PICK-UP SIGN-OUT FORM -->
+          <div id="formPickup" hidden>
+            <p style="margin:0 0 12px;font-size:0.86rem;color:var(--muted);font-weight:600;">
+              Picking up finished cylinders from our <strong>Zone E Shelf</strong>? Sign them out below:
+            </p>
+            <div class="form-grid">
+              <div>
+                <label>Customer / Dept Name on Batch *</label>
+                <input id="pickCustName" placeholder="e.g. Baden VFD or John Smith" />
               </div>
-              <div class="chip-row">
-                <button type="button" class="quick-chip" onclick="addPubTankChip('SCBA 4500#')">+ SCBA</button>
-                <button type="button" class="quick-chip" onclick="addPubTankChip('Paintball HPA')">+ Paintball HPA</button>
-                <button type="button" class="quick-chip" onclick="addPubTankChip('Scuba')">+ Scuba</button>
-                <button type="button" class="quick-chip" onclick="addPubTankChip('CO2')">+ CO2</button>
-                <button type="button" class="quick-chip" onclick="addPubTankChip('Medical O2')">+ Medical O2</button>
-                <button type="button" class="quick-chip" onclick="addPubTankChip('Welding/Ind')">+ Welding/Ind</button>
+              <div>
+                <label>Picked Up By (Your Full Name) *</label>
+                <input id="pickPersonName" placeholder="Who is taking the cylinders today" />
               </div>
-              <input id="ciSummary" placeholder="e.g. 2x Ninja 68/4500 HPA, 1x 20lb CO2" />
+              <div>
+                <label>10-Digit Cell / Contact Phone *</label>
+                <input id="pickPhone" type="tel" placeholder="724-555-0199" oninput="formatPubPhone(this)" />
+              </div>
+              <div>
+                <label>Cylinders Picked Up *</label>
+                <input type="number" id="pickCount" min="1" max="250" value="1" />
+              </div>
+              <div style="grid-column:1/-1;">
+                <label>Ticket # from Text or Claim Slip (Optional)</label>
+                <input id="pickTicket" placeholder="e.g. BR-0004" />
+              </div>
             </div>
 
-            <div id="ciValvesWrap" style="grid-column:1/-1;">
-              <label>Valve / HPA Regulator Hardware Status</label>
-              <select id="ciValves">
-                <option value="1">Valves / HPA Regulators Attached (Shop Will Tag &amp; Reinstall)</option>
-                <option value="0">Bare Cylinders Only (Valves Already Removed by Owner)</option>
-              </select>
-            </div>
-
-            <div id="ciRushWrap" style="grid-column:1/-1;background:#fef2f2;border:1px solid #fca5a5;padding:9px 12px;border-radius:8px;">
-              <label style="display:flex;align-items:center;gap:9px;margin:0;text-transform:none;font-size:0.86rem;color:#991b1b;cursor:pointer;">
-                <input type="checkbox" id="ciRush" style="width:18px;height:18px;accent-color:#dc2626;" />
-                <span>🔥 <strong>Request Priority / Paid Rush Turnaround</strong> (Est. Ready: <span id="formRushSla">soonest window</span>)</span>
-              </label>
-            </div>
-
-            <div style="grid-column:1/-1;">
-              <label>Additional Notes (Optional)</label>
-              <input id="ciNotes" placeholder="Contact person, burst disc issue, special instructions..." />
-            </div>
+            <button type="button" class="btn-submit" id="btnSubmitPick" style="background:#0369a1;" onclick="submitPickupForm()">✅ Confirm Cylinder Pick-Up</button>
           </div>
 
-          <button class="btn-submit" id="btnCheckinSubmit" onclick="submitPublicCheckin()">Complete Backroom Drop-Off Check-In</button>
           <div id="ciConfirm" hidden></div>
         </div>
       </div>
@@ -454,12 +450,12 @@
   </footer>
 
   <script>
-    let CHECKIN_MODE = 'DROPOFF';
     let PUB_ACCT = 'WALK_IN';
     let PUB_TANK_COUNTS = {};
 
     function esc(s) {
-      return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
+      return String(s ?? '').replace(/[&<>"]/g, m => map[m]);
     }
 
     function formatPubPhone(el) {
@@ -468,32 +464,48 @@
       else if (d.length >= 4) el.value = `${d.slice(0,3)}-${d.slice(3)}`;
     }
 
+    function setCheckinMode(mode) {
+      const isDrop = mode === 'DROPOFF';
+      const tabDrop = document.getElementById('tabDrop');
+      const tabPick = document.getElementById('tabPick');
+      tabDrop.classList.toggle('active', isDrop);
+      tabPick.classList.toggle('active', !isDrop);
+      tabPick.style.background = !isDrop ? '#0369a1' : '#f8fafc';
+      tabPick.style.borderColor = !isDrop ? '#075985' : '#cbd5e1';
+      tabPick.style.color = !isDrop ? '#ffffff' : 'var(--slate)';
+
+      document.getElementById('formDropoff').hidden = !isDrop;
+      document.getElementById('formPickup').hidden = isDrop;
+      document.getElementById('ciConfirm').hidden = true;
+    }
+
     function setPubAcct(acct) {
       PUB_ACCT = acct;
       document.querySelectorAll('#pubAcctBar .acct-pill').forEach(b => {
         b.classList.toggle('active', b.getAttribute('data-acct') === acct);
       });
-      document.getElementById('ciPoWrap').hidden = (acct === 'WALK_IN' || CHECKIN_MODE !== 'DROPOFF');
-      document.getElementById('ciContactWrap').hidden = (acct === 'WALK_IN' || CHECKIN_MODE !== 'DROPOFF');
-      const lbl = document.getElementById('lblCustName');
-      const inp = document.getElementById('ciName');
-      if (acct === 'FIRE_EMS') { lbl.textContent = 'Fire Dept / EMS Agency *'; inp.placeholder = 'e.g. Baden VFD Station 47'; }
-      else if (acct === 'COMMERCIAL') { lbl.textContent = 'Company / Organization *'; inp.placeholder = 'e.g. Beaver Valley Welding'; }
+      const isOrg = acct !== 'WALK_IN';
+      document.getElementById('dropContactWrap').hidden = !isOrg;
+      document.getElementById('dropPoWrap').hidden = !isOrg;
+      const lbl = document.getElementById('lblDropName');
+      const inp = document.getElementById('dropName');
+      if (acct === 'FIRE_EMS') { lbl.textContent = 'Fire Dept / EMS Agency *'; inp.placeholder = 'e.g. Baden VFD'; }
+      else if (acct === 'COMMERCIAL') { lbl.textContent = 'Company / Fleet Name *'; inp.placeholder = 'e.g. Beaver Valley Welding'; }
       else { lbl.textContent = 'Your Full Name *'; inp.placeholder = 'e.g. John Smith'; }
     }
 
     function addPubTankChip(label) {
       PUB_TANK_COUNTS[label] = (PUB_TANK_COUNTS[label] || 0) + 1;
       const total = Object.values(PUB_TANK_COUNTS).reduce((a, b) => a + b, 0);
-      document.getElementById('ciCount').value = total;
-      document.getElementById('ciSummary').value = Object.entries(PUB_TANK_COUNTS).map(([k, v]) => `${v}x ${k}`).join(', ');
+      document.getElementById('dropCount').value = total;
+      document.getElementById('dropSummary').value = Object.entries(PUB_TANK_COUNTS).map(([k, v]) => `${v}x ${k}`).join(', ');
       refreshPublicSla(total);
     }
 
     function resetPubTankChips() {
       PUB_TANK_COUNTS = {};
-      document.getElementById('ciSummary').value = '';
-      document.getElementById('ciCount').value = 1;
+      document.getElementById('dropSummary').value = '';
+      document.getElementById('dropCount').value = 1;
       refreshPublicSla(1);
     }
 
@@ -533,82 +545,101 @@
         </div>`;
     }
 
-    function setCheckinMode(mode) {
-      CHECKIN_MODE = mode;
-      const isDrop = mode === 'DROPOFF';
-      document.getElementById('tabDrop').classList.toggle('active', isDrop);
-      document.getElementById('tabPick').classList.toggle('active', !isDrop);
-      document.getElementById('acctTypeSection').hidden = !isDrop;
-      document.getElementById('ciPoWrap').hidden = (!isDrop || PUB_ACCT === 'WALK_IN');
-      document.getElementById('ciContactWrap').hidden = (!isDrop || PUB_ACCT === 'WALK_IN');
-      document.getElementById('ciSvcWrap').hidden = !isDrop;
-      document.getElementById('ciTankBuilderWrap').hidden = !isDrop;
-      document.getElementById('ciValvesWrap').hidden = !isDrop;
-      document.getElementById('ciRushWrap').hidden = !isDrop;
-      document.getElementById('ciTicketRefWrap').hidden = isDrop;
-      document.getElementById('ciPickedByWrap').hidden = isDrop;
-      document.getElementById('lblCustName').textContent = isDrop ? (PUB_ACCT === 'WALK_IN' ? 'Your Full Name *' : 'Dept / Company Name *') : 'Customer / Dept Name *';
-      document.getElementById('lblCylCount').textContent = isDrop ? 'Total Cylinder Count *' : 'Cylinders Picked Up *';
-      document.getElementById('btnCheckinSubmit').textContent = isDrop ? 'Complete Backroom Drop-Off Check-In' : 'Verify & Log Completed Pickup';
-    }
+    async function submitDropoffForm() {
+      const name = document.getElementById('dropName').value.trim();
+      const contact = document.getElementById('dropContact').value.trim();
+      const phone = document.getElementById('dropPhone').value.trim();
+      const summary = document.getElementById('dropSummary').value.trim();
 
-    async function submitPublicCheckin() {
-      const name = document.getElementById('ciName').value.trim();
-      const contactPerson = document.getElementById('ciContactPerson').value.trim();
-      const phone = document.getElementById('ciPhone').value.trim();
-      const phoneDigits = phone.replace(/\D/g, '');
-      const pickedBy = document.getElementById('ciPickedBy').value.trim();
-
-      if (!name || phoneDigits.length < 10) {
-        alert('Please enter your Name/Department and a valid 10-digit Phone Number.');
+      if (!name || phone.replace(/\D/g, '').length < 10) {
+        alert('Please enter your Name/Department and a 10-digit Phone Number.');
         return;
       }
-      if (CHECKIN_MODE === 'DROPOFF' && PUB_ACCT !== 'WALK_IN' && contactPerson.length < 2) {
-        alert("Please enter your individual name in 'Dropped Off By' so our shop knows who dropped off the cylinders.");
-        document.getElementById('ciContactPerson').focus();
-        return;
-      }
-      if (CHECKIN_MODE === 'PICKUP_NOTICE' && !pickedBy) {
-        alert('Please enter the name of the person picking up the cylinders.');
+      if (PUB_ACCT !== 'WALK_IN' && contact.length < 2) {
+        alert('Please enter your individual name in Dropped Off By.');
+        document.getElementById('dropContact').focus();
         return;
       }
 
-      const btn = document.getElementById('btnCheckinSubmit');
+      const sumUp = summary.toUpperCase();
+      const svc = sumUp.includes('VISUAL ONLY') ? 'Visual Inspection Only'
+        : ((sumUp.includes('PAINTBALL') || sumUp.includes('HPA')) ? 'Paintball HPA Hydro' : 'Hydro + Visual');
+
+      const btn = document.getElementById('btnSubmitDrop');
       btn.disabled = true;
       try {
         const res = await fetch('/api/public/dropoff', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            entry_type: CHECKIN_MODE,
+            entry_type: 'DROPOFF',
             account_type: PUB_ACCT,
-            po_station: document.getElementById('ciPoStation').value,
-            contact_person: contactPerson,
+            po_station: document.getElementById('dropPo').value.trim(),
+            contact_person: contact,
             customer_name: name,
             customer_phone: phone,
-            bottle_count: parseInt(document.getElementById('ciCount').value || '1', 10),
-            service_requested: document.getElementById('ciService').value,
-            tank_summary: document.getElementById('ciSummary').value,
-            valves_attached: document.getElementById('ciValves').value === '1',
+            bottle_count: Math.max(1, parseInt(document.getElementById('dropCount').value || '1', 10)),
+            service_requested: svc,
+            tank_summary: summary,
+            valves_attached: true,
             needs_air_fill: false,
-            rush_requested: document.getElementById('ciRush').checked,
-            picked_up_by: pickedBy,
-            pickup_ticket_ref: document.getElementById('ciTicketRef').value,
-            notes: document.getElementById('ciNotes').value,
+            rush_requested: document.getElementById('dropRush').checked,
+            notes: '',
             website_hp: document.getElementById('hpField').value,
           }),
         });
         const data = await res.json();
-        if (!res.ok) { alert(data.detail || 'Check-in failed.'); return; }
+        if (!res.ok) { alert(data.detail || 'Drop-off check-in failed.'); return; }
+
         const box = document.getElementById('ciConfirm');
         box.hidden = false;
         box.className = 'alert-box alert-ok';
-        box.innerHTML = CHECKIN_MODE === 'DROPOFF'
-          ? `✅ <strong>Checked In! Your Ticket # is ${esc(data.ticket_no)}</strong><br />Estimated Ready Date: <strong>${esc(data.estimated_ready)}</strong>. Save your Ticket # to track status anytime above—we'll text ${esc(phone)} when your cylinders hit the Zone E pickup shelf!`
-          : `✅ <strong>Verified Pickup Logged (${esc(data.ticket_no)})!</strong>${data.released_bottles ? ` (${data.released_bottles} cylinder(s) marked picked up.)` : ''} Thank you for trusting Weber's Tank Testing.`;
-        if (CHECKIN_MODE === 'DROPOFF') document.getElementById('trkTicket').value = data.ticket_no;
-        ['ciName', 'ciContactPerson', 'ciPoStation', 'ciSummary', 'ciNotes', 'ciTicketRef', 'ciPickedBy'].forEach(id => { document.getElementById(id).value = ''; });
-        document.getElementById('ciRush').checked = false;
+        box.innerHTML = `✅ <strong>Drop-Off Logged! Your Ticket # is ${esc(data.ticket_no)}</strong><br />Estimated Ready Date: <strong>${esc(data.estimated_ready)}</strong>. Save your Ticket # to track status anytime above—we will text ${esc(phone)} when your cylinders hit our Zone E pickup shelf!`;
+        document.getElementById('trkTicket').value = data.ticket_no;
+        ['dropName', 'dropContact', 'dropPo', 'dropSummary'].forEach(id => { document.getElementById(id).value = ''; });
+        document.getElementById('dropRush').checked = false;
         PUB_TANK_COUNTS = {};
+        document.getElementById('dropCount').value = 1;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function submitPickupForm() {
+      const custName = document.getElementById('pickCustName').value.trim();
+      const personName = document.getElementById('pickPersonName').value.trim();
+      const phone = document.getElementById('pickPhone').value.trim();
+      const ticket = document.getElementById('pickTicket').value.trim();
+
+      if (!custName || !personName || phone.replace(/\D/g, '').length < 10) {
+        alert('Please enter the Customer/Dept Name, Your Full Name, and a 10-digit Phone Number.');
+        return;
+      }
+
+      const btn = document.getElementById('btnSubmitPick');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/public/dropoff', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entry_type: 'PICKUP_NOTICE',
+            account_type: 'WALK_IN',
+            customer_name: custName,
+            customer_phone: phone,
+            bottle_count: Math.max(1, parseInt(document.getElementById('pickCount').value || '1', 10)),
+            picked_up_by: personName,
+            pickup_ticket_ref: ticket,
+            website_hp: document.getElementById('hpField').value,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.detail || 'Pick-up sign-out failed.'); return; }
+
+        const box = document.getElementById('ciConfirm');
+        box.hidden = false;
+        box.className = 'alert-box alert-ok';
+        box.innerHTML = `✅ <strong>Pick-Up Confirmed (${esc(data.ticket_no)})!</strong>${data.released_bottles ? ` (${data.released_bottles} cylinder(s) marked picked up by ${esc(personName)}.)` : ''} Thank you for trusting Weber's Tank Testing!`;
+        ['pickCustName', 'pickPersonName', 'pickTicket'].forEach(id => { document.getElementById(id).value = ''; });
+        document.getElementById('pickCount').value = 1;
       } finally {
         btn.disabled = false;
       }
@@ -646,8 +677,11 @@
       const params = new URLSearchParams(location.search);
       if (params.get('mode') === 'pickup') {
         setCheckinMode('PICKUP_NOTICE');
-        if (params.get('customer')) document.getElementById('ciName').value = params.get('customer');
-        setTimeout(() => document.getElementById('dropoff')?.scrollIntoView({ behavior: 'smooth' }), 150);
+        if (params.get('customer')) document.getElementById('pickCustName').value = params.get('customer');
+        setTimeout(() => {
+          document.getElementById('dropoff')?.scrollIntoView({ behavior: 'smooth' });
+          document.getElementById('pickPersonName')?.focus();
+        }, 150);
       }
     })();
     refreshPublicSla(4);
