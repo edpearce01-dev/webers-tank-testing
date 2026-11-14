@@ -1,4 +1,4 @@
-// Weber's Tank Testing — Pure 4-Station Shop Floor Controller (v7.0)
+// Weber's Tank Testing — Pure 4-Station Shop Floor Controller (v8.0)
 const VIS_FIELDS = [
   { key: 'chk_corrosion', label: 'Corrosion' },
   { key: 'chk_dents_dings', label: 'Dents / Dings' },
@@ -10,10 +10,12 @@ const VIS_FIELDS = [
 ];
 
 var STATE = {
-  testing_mode: true, shop_phone: '724-266-8008', calibration_targets: [], cga_specs: [],
-  records: [], in_shop_post_test: [], active_valves: [], dropoffs: [], schedule_jobs: [],
-  day_plans: [], binder_state: {}, huddle: {}, verifications: [], jacket_ceilings: {},
-  customers_summary: [], crew: [], feedback_items: [], default_tax_rate: 0,
+  testing_mode: true, shop_phone: '724-266-8008', today: '', selected_date: '',
+  calibration_targets: [], cga_specs: [], records: [], in_shop_post_test: [],
+  active_valves: [], dropoffs: [], schedule_jobs: [], day_plans: [],
+  binder_state: {}, huddle: {}, verifications: [], jacket_ceilings: {},
+  customers_summary: [], customers_rolodex: [], compliance_alerts: [],
+  low_stock_count: 0, crew: [], feedback_items: [], default_tax_rate: 6.0,
   daily_hydro_capacity: 24, db_version: 0,
 };
 window.ACTIVE_DROPOFF_ID = null;
@@ -22,6 +24,8 @@ window.ACTIVE_SCHEDULE_JOB_ID = null;
 let CURRENT_TAB = 'cal';
 let CAL_FORCE_EXPANDED = false;
 let BATCH_LOCKED = false;
+let LOCKED_SNAPSHOT = null;
+let LAST_CAL_DATE = '';
 let LADDER = [];
 let ACTIVE_STEP = 0;
 let BENCH_VIS = {};
@@ -71,15 +75,16 @@ function dwellBadgeHtml(days, prefix = '⏳') {
 }
 
 function stageBadgeHtml(r) {
+  if (r.status === 'QUEUED') return '<span class="stage-chip">🔧 Queued</span>';
   const st = r.shop_stage || 'IN_SHOP';
   if (st === 'READY_BACKROOM') return '<span class="stage-chip ready">📦 Zone E Shelf</span>';
-  if (st === 'PICKED_UP') return '<span class="stage-chip">✓ Picked Up</span>';
+  if (st === 'PICKED_UP') return `<span class="stage-chip">✓ Picked Up${r.picked_up_by ? ' (' + escHtml(r.picked_up_by) + ')' : ''}</span>`;
+  if (st === 'CONDEMNED_HOLD' || r.hydro_disposition === 'D') return '<span class="stage-chip" style="background:#fee2e2;color:#991b1b;">⛔ Condemned</span>';
   if (st === 'STAMPED_STICKERED' || r.rin_marked) {
     const lbl = r.rin_mark_type === 'STICKERED' ? '🏷️ B386 Stickered' : '🔨 Stamped B386';
     return `<span class="stage-chip stamped">${lbl}</span>`;
   }
   if (st === 'DRYING') return '<span class="stage-chip drying">💨 Drying / Needs Mark</span>';
-  if (st === 'CONDEMNED_HOLD') return '<span class="stage-chip" style="background:#fee2e2;color:#991b1b;">⛔ Condemned</span>';
   return '<span class="stage-chip">🔧 In Shop</span>';
 }
 
@@ -105,6 +110,44 @@ function getNextFreeValveTag(curTag) {
   let cand = n + 1;
   while (busy.has(String(cand)) && cand < n + 500) cand++;
   return String(cand);
+}
+
+// --- ◀ [TODAY] ▶ TOPBAR DATE STEPPER ---
+function stepWorkingDate(deltaDays) {
+  const el = document.getElementById('globalDate');
+  const cur = el.value || STATE.selected_date || STATE.today;
+  if (!cur) return;
+  const [y, m, d] = cur.split('-').map(Number);
+  const dt = new Date(y, m - 1, d + deltaDays);
+  const iso = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+  el.value = iso;
+  changeWorkingDate();
+}
+
+function jumpWorkingDateToday() {
+  const el = document.getElementById('globalDate');
+  if (STATE.today) {
+    el.value = STATE.today;
+  } else {
+    el.value = '';
+  }
+  changeWorkingDate();
+}
+
+// --- ROLODEX PHONE AUTO-FILL ---
+function prefillPhoneFromRolodex(custInputId, phoneInputId, mirrorCustId = null, mirrorPhoneId = null) {
+  const nameVal = (document.getElementById(custInputId).value || '').trim();
+  if (mirrorCustId && !document.getElementById(mirrorCustId).value) {
+    document.getElementById(mirrorCustId).value = nameVal;
+  }
+  if (!nameVal) return;
+  const match = (STATE.customers_rolodex || []).find(c => c.customer_name.toUpperCase() === nameVal.toUpperCase())
+    || (STATE.customers_summary || []).find(c => c.customer_name.toUpperCase() === nameVal.toUpperCase());
+  const foundPhone = match ? (match.phone || match.customer_phone || '') : '';
+  if (foundPhone) {
+    document.getElementById(phoneInputId).value = foundPhone;
+    if (mirrorPhoneId) document.getElementById(mirrorPhoneId).value = foundPhone;
+  }
 }
 
 // --- AUTH, DEEP LINKS & STATION NAVIGATION ---
@@ -209,7 +252,7 @@ function updateCalCollapseUI() {
 }
 
 async function eraseAllTestData() {
-  if (!confirm('ERASE ALL PRACTICE / TEST DATA?\n\nWipes practice calibrations, bottles, drop-offs, schedule jobs, valve tags, and invoices while keeping API keys, crew, and rates intact.')) return;
+  if (!confirm('ERASE ALL PRACTICE / TEST DATA?\n\nWipes practice calibrations, bottles, drop-offs, schedule jobs, valve tags, and invoices while keeping API keys, Rolodex, supplies, crew, and rates intact.')) return;
   const res = await fetch('/api/admin/wipe-test-data', { method: 'POST' });
   const data = await res.json();
   if (!res.ok) { alert(data.detail || 'Wipe failed.'); return; }
@@ -226,15 +269,34 @@ async function loadState(rebuildLadder = false) {
   if (res.status === 401) { checkAuthAndBoot(); return; }
   STATE = await res.json();
 
-  if (!document.getElementById('globalDate').value) {
-    document.getElementById('globalDate').value = STATE.selected_date;
-  }
+  document.getElementById('globalDate').value = STATE.selected_date;
 
   document.getElementById('testModeChip').hidden = !STATE.testing_mode;
   document.getElementById('drawerWipeBtn').hidden = !STATE.testing_mode;
   document.getElementById('testingModeChk').checked = STATE.testing_mode;
   if (STATE.testing_mode && !sessionStorage.getItem('webers_disclaimer_ack')) {
     document.getElementById('disclaimerModal').hidden = false;
+  }
+
+  // Render RIN B386 & Master Gauge Compliance Countdown Warnings
+  const urgentCerts = (STATE.compliance_alerts || []).filter(a => a.level === 'EXPIRED' || a.level === 'WARN');
+  const certBanner = document.getElementById('complianceAlertBanner');
+  if (urgentCerts.length) {
+    certBanner.hidden = false;
+    certBanner.innerHTML = urgentCerts.map(a => `
+      <div class="notice ${a.level === 'EXPIRED' ? 'bad' : 'warn'}" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span>${a.level === 'EXPIRED' ? '⛔ EXPIRED:' : '⚠️ DUE SOON:'} <strong>${escHtml(a.title)}</strong> (${escHtml(a.expires_date)} — ${a.days_remaining < 0 ? Math.abs(a.days_remaining) + 'd overdue' : a.days_remaining + 'd remaining'})</span>
+        <button class="secondary" onclick="toggleGuide(true)">Update Cert Date</button>
+      </div>`).join('');
+  } else {
+    certBanner.hidden = true;
+  }
+
+  const supLink = document.getElementById('railSupplyLink');
+  if (supLink) {
+    supLink.innerHTML = STATE.low_stock_count
+      ? `📦 Reorder Supplies <span class="nav-badge amber">⚠️ ${STATE.low_stock_count}</span>`
+      : `📦 Reorder Shop Supplies`;
   }
 
   const savedCrew = localStorage.getItem('webers_active_crew') || 'RP';
@@ -251,7 +313,9 @@ async function loadState(rebuildLadder = false) {
 
   document.getElementById('editSheetNo').value = STATE.starting_sheet_no;
   document.getElementById('editDailyCap').value = STATE.daily_hydro_capacity || 24;
-  document.getElementById('editDefaultTax').value = STATE.default_tax_rate ?? 0;
+  document.getElementById('editDefaultTax').value = STATE.default_tax_rate ?? 6.0;
+  document.getElementById('editRinExp').value = STATE.rin_expires_date || '';
+  document.getElementById('editGaugeExp').value = STATE.gauge_cert_expires_date || '';
   document.getElementById('calSerialLabel').textContent = STATE.calibrated_serial;
   document.getElementById('editCalSerial').value = STATE.calibrated_serial;
   document.getElementById('webhookInput').value = STATE.sheets_webhook_url || '';
@@ -264,7 +328,6 @@ async function loadState(rebuildLadder = false) {
   document.getElementById('railSyncChip').textContent = syncTxt;
   document.getElementById('drawerSyncBtn').textContent = syncTxt;
 
-  // Jacket Pills & Workspace / Nav Badges
   const sCeil = STATE.jacket_ceilings['Short Jacket'] || { max_calibrated_psi: 0, max_allowed_test_psi: 0 };
   const tCeil = STATE.jacket_ceilings['Tall Jacket'] || { max_calibrated_psi: 0, max_allowed_test_psi: 0 };
   const pShort = document.getElementById('pillShort'), pTall = document.getElementById('pillTall');
@@ -288,7 +351,7 @@ async function loadState(rebuildLadder = false) {
   const totalUnbilled = STATE.customers_summary.reduce((s, c) => s + (c.unbilled_count || 0), 0);
 
   document.getElementById('wsSchedBadge').textContent = openSched.length ? `(${openSched.length})` : '';
-  document.getElementById('wsBillBadge').textContent = totalUnbilled ? `(${totalUnbilled})` : '';
+  document.getElementById('wsBillBadge').textContent = (totalUnbilled + STATE.low_stock_count) ? `(${totalUnbilled || '!'})` : '';
 
   document.getElementById('navBadgeCal').textContent = (sCeil.max_calibrated_psi && tCeil.max_calibrated_psi) ? '✓' : '!';
   document.getElementById('navBadgeCal').className = 'nav-badge ' + ((sCeil.max_calibrated_psi && tCeil.max_calibrated_psi) ? 'green' : 'amber');
@@ -334,8 +397,6 @@ setInterval(async () => {
     }
   } catch (_) {}
 }, 3500);
-let LAST_CAL_DATE = '';
-let LOCKED_SNAPSHOT = null;
 
 // --- STATION 1: START-OF-DAY HUDDLE & CALIBRATION LADDER ---
 function renderStartOfDayHuddle(queued, openSched, waitingDrops) {
@@ -373,9 +434,8 @@ function renderStartOfDayHuddle(queued, openSched, waitingDrops) {
     <div class="huddle-kpi"><small>Zone E Shelf</small><strong>${hud.ready_shelf_count || 0} Ready</strong></div>`;
 
   const todayRuns = openSched.filter(j => j.scheduled_date <= STATE.selected_date);
-  if (todayRuns.length) {
-    document.getElementById('huddleLineupList').innerHTML =
-      `<small style="font-weight:800;color:var(--muted);display:block;margin-bottom:4px;">TODAY'S SCHEDULED BATCHES &amp; ROAD RUNS:</small>` +
+  document.getElementById('huddleLineupList').innerHTML = todayRuns.length
+    ? `<small style="font-weight:800;color:var(--muted);display:block;margin-bottom:4px;">TODAY'S SCHEDULED BATCHES &amp; ROAD RUNS:</small>` +
       todayRuns.slice(0, 4).map(j => {
         const ico = j.job_type === 'ROAD_PICKUP' ? '🚚 Pickup' : (j.job_type === 'ROAD_DELIVERY' ? '🚚 Delivery' : '📌 Batch');
         return `
@@ -389,42 +449,31 @@ function renderStartOfDayHuddle(queued, openSched, waitingDrops) {
               <a class="secondary" href="/schedule">📅 Calendar</a>
             </div>
           </div>`;
-      }).join('');
-  } else {
-    document.getElementById('huddleLineupList').innerHTML = '';
-  }
+      }).join('')
+    : '';
 }
 
 async function advanceToFreshSheet() {
   const b = STATE.binder_state || {};
   const nextNo = (b.active_sheet_no || 8095) + ((b.rows_used_on_active || 0) > 0 ? 1 : 0);
   if ((b.rows_used_on_active || 0) > 0 && !confirm(`Close out Sheet #${b.active_sheet_no} at Row ${b.rows_used_on_active}/12 and start fresh on Sheet #${nextNo} (Row 1)?`)) return;
-  await fetch('/api/binder', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'fresh_next' }),
-  });
+  await fetch('/api/binder', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'fresh_next' }) });
   loadState(false);
 }
 
 async function setCustomBinderSheet() {
   const val = parseInt(document.getElementById('customBinderInput').value || '0', 10);
   if (!val || val < 1) { alert('Enter a valid Retest Sheet # first.'); return; }
-  await fetch('/api/binder', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'set_custom', sheet_no: val }),
-  });
+  await fetch('/api/binder', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'set_custom', sheet_no: val }) });
   document.getElementById('customBinderInput').value = '';
   loadState(false);
 }
 
 function renderCalibrationControls() {
-  if (LAST_CAL_DATE !== STATE.selected_date) {
-    LAST_CAL_DATE = STATE.selected_date;
-    LADDER = [];
-  }
+  if (LAST_CAL_DATE !== STATE.selected_date) { LAST_CAL_DATE = STATE.selected_date; LADDER = []; }
   const recCal = STATE.huddle?.recommended_cal_psi || 0;
   const recBadge = document.getElementById('calRecommendedBadge');
-  recBadge.textContent = recCal
-    ? `Queue Max: ${STATE.huddle.max_queued_test_psi}# → Calibrate to ${recCal} PSI`
-    : '49 CFR §180.215 (±1.0%)';
+  recBadge.textContent = recCal ? `Queue Max: ${STATE.huddle.max_queued_test_psi}# → Calibrate to ${recCal} PSI` : '49 CFR §180.215 (±1.0%)';
   recBadge.className = recCal ? 'sub-badge ai-verified' : 'sub-badge';
 
   const maxSel = document.getElementById('calMaxPsi');
@@ -451,9 +500,7 @@ function renderCalibrationControls() {
 function buildCalibrationLadder() {
   const jacket = document.getElementById('calJacket').value;
   const maxSel = document.getElementById('calMaxPsi');
-  if (jacket === 'Short Jacket' && !LADDER.length && maxSel.querySelector('option[value="3000"]')) {
-    maxSel.value = '3000';
-  }
+  if (jacket === 'Short Jacket' && !LADDER.length && maxSel.querySelector('option[value="3000"]')) maxSel.value = '3000';
   const maxPsi = parseInt(maxSel.value || '4000', 10);
   LADDER = STATE.calibration_targets.filter(t => t.pressure_psi <= maxPsi).map(t => ({ ...t, actual: '', locked: false }));
   ACTIVE_STEP = 0;
@@ -534,7 +581,6 @@ async function submitCalibrationLadder() {
     btn.disabled = false;
   }
 }
-
 // --- STATION 2: BACKROOM INBOX, BATCH LOCK & INTAKE QUEUE ---
 function renderBackroomInbox() {
   const active = STATE.dropoffs || [];
@@ -543,17 +589,26 @@ function renderBackroomInbox() {
   document.getElementById('backroomInboxList').innerHTML = active.map(d => {
     const isPickup = d.entry_type === 'PICKUP_NOTICE' || d.status === 'PICKUP_LOGGED';
     const rem = Math.max(0, d.bottle_count - (d.imported_count || 0));
+    const acctBadge = d.account_type && d.account_type !== 'WALK_IN'
+      ? `<span class="acct-tag ${escHtml(d.account_type)}">${d.account_type === 'FIRE_EMS' ? '🚒 Fire/EMS' : '🏢 Commercial'}</span>`
+      : '';
     return `
       <div class="dropoff-card ${isPickup ? 'pickup' : ''}">
         <div>
           <div style="font-weight:800;font-size:0.91rem;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-            <span>${isPickup ? '🚚 PICKUP NOTICE:' : '📥 DROP-OFF:'} ${escHtml(d.customer_name)}</span>
+            <span>${isPickup ? '🚚 VERIFIED PICKUP:' : '📥 DROP-OFF:'} ${escHtml(d.customer_name)}</span>
+            ${acctBadge}
             <span class="tag-chip">${isPickup ? d.bottle_count + ' Cyl' : rem + ' of ' + d.bottle_count + ' Left'}</span>
             ${d.rush_requested ? '<span class="rush-badge">🔥 RUSH</span>' : ''}
+            
+            ${!isPickup && d.valves_attached === 0 ? '<span class="stage-chip">🔧 Bare / No Valves</span>' : ''}
             ${dwellBadgeHtml(d.dwell_days)}
           </div>
           <div style="font-size:0.79rem;color:var(--muted);margin-top:2px;">
-            ${escHtml(d.service_requested)}${d.promised_date ? ` • Est Ready: <strong>${escHtml(d.promised_date)}</strong>` : ''}${d.tank_summary ? ' • ' + escHtml(d.tank_summary) : ''}${d.customer_phone ? ' • 📞 ' + escHtml(d.customer_phone) : ''}
+            ${isPickup
+              ? `Picked up by: <strong>${escHtml(d.picked_up_by || d.customer_name)}</strong>${d.pickup_ticket_ref ? ' • Ref: ' + escHtml(d.pickup_ticket_ref) : ''}`
+              : `${escHtml(d.service_requested)}${d.promised_date ? ` • Est Ready: <strong>${escHtml(d.promised_date)}</strong>` : ''}${d.tank_summary ? ' • ' + escHtml(d.tank_summary) : ''}`
+            }${d.customer_phone ? ' • 📞 ' + escHtml(d.customer_phone) : ''}
           </div>
           ${d.notes ? `<div style="font-size:0.77rem;color:#92400e;margin-top:2px;">Note: ${escHtml(d.notes)}</div>` : ''}
         </div>
@@ -676,7 +731,14 @@ function renderIntakeAndQueue(queued) {
   const prevPreset = presetSel.value;
   presetSel.innerHTML = '<option value="">-- Auto-Detect or Pick Size --</option>' +
     STATE.cga_specs.map((s, idx) => `<option value="${idx}" ${String(idx) === String(prevPreset) ? 'selected' : ''}>${escHtml(s.category)}: ${escHtml(s.label)} (${s.dot_spec}-${s.service_psi})</option>`).join('');
-  document.getElementById('customerSuggest').innerHTML = STATE.customers_summary.map(c => `<option value="${escHtml(c.customer_name)}">`).join('');
+
+  // Merge Customer Rolodex + Summary for instant autocomplete
+  const allNames = [...new Set([
+    ...(STATE.customers_rolodex || []).map(c => c.customer_name),
+    ...(STATE.customers_summary || []).map(c => c.customer_name),
+  ])].sort((a, b) => a.localeCompare(b));
+  document.getElementById('customerSuggest').innerHTML = allNames.map(n => `<option value="${escHtml(n)}">`).join('');
+
   document.getElementById('serialSuggest').innerHTML = STATE.records.map(r =>
     `<option value="${escHtml(r.serial_number)}">${escHtml(r.customer_name)} (${r.dot_spec}-${r.service_psi})</option>`
   ).join('');
@@ -714,7 +776,7 @@ function renderIntakeAndQueue(queued) {
       : '<div style="color:var(--muted);font-size:0.86rem;padding:8px 0;">Priority queue is clear.</div>';
   }
 }
-// --- INTAKE HELPERS, BATCH LOCK & 15-YEAR COMPOSITE GUARD ---
+
 function checkIntakeLifespanLive(serverLife = null) {
   const box = document.getElementById('compositeAlertBox');
   const sp = (document.getElementById('fSpec').value || '').trim().toUpperCase().replace('SP-', 'SP');
@@ -944,7 +1006,7 @@ async function removeRecord(id) {
   loadState(false);
 }
 
-// --- STATION 3: HYDRO STAND (1-TAP PILLS + SMART CALIBRATED JACKET MATCH) ---
+// --- STATION 3: HYDRO STAND (1-TAP PILLS + ADD-ON PARTS + CODE D CONDEMN LOG) ---
 function loadBottleToStand(recordId) {
   jumpToTab('bench');
   selectStandBottle(recordId);
@@ -982,7 +1044,7 @@ function renderStandPillsAndBench(queued) {
   const benchSel = document.getElementById('benchSelect');
   const prevBenchId = benchSel.value;
   const activeId = document.activeElement ? document.activeElement.id : '';
-  const typingOnBench = BENCH_SUBMITTING || ['bJacket', 'bTotal', 'bPerm', 'bValveTag', 'bCoat', 'bValve', 'bNotes', 'bValveReinst', 'bRinType'].includes(activeId);
+  const typingOnBench = BENCH_SUBMITTING || ['bJacket', 'bTotal', 'bPerm', 'bValveTag', 'bCoat', 'bNotes', 'bValveReinst', 'bRinType', 'bCondemnAct', 'bOring', 'bBurstDisc', 'bClean'].includes(activeId);
 
   benchSel.innerHTML = queued.length
     ? queued.map(r => `<option value="${r.id}" ${String(r.id) === String(prevBenchId) ? 'selected' : ''}>${escHtml(r.serial_number)}</option>`).join('')
@@ -1057,7 +1119,6 @@ function renderBenchForm() {
       ` : ''}
       <div><label>🏷️ Valve / Reg Tag #</label><input id="bValveTag" value="${rec.valve_tag && !rec.valve_reinstalled ? escHtml(rec.valve_tag) : ''}" placeholder="Tag #" /></div>
       <div><label>Coating</label><select id="bCoat"><option>Excellent</option><option selected>Good</option><option>Fair</option><option>Poor</option></select></div>
-      <div><label>Relief Changed?</label><select id="bValve"><option>No</option><option>Yes</option></select></div>
       <div>
         <label>RIN Mark (If Done Now)</label>
         <select id="bRinType">
@@ -1066,28 +1127,51 @@ function renderBenchForm() {
           <option value="STICKERED">🏷️ B386 Sticker Applied</option>
         </select>
       </div>
-      <div><label>Row Notes</label><input id="bNotes" value="${escHtml(rec.notes || '')}" placeholder="Optional DOT note..." /></div>
+      <div style="grid-column:1/-1;"><label>Row Notes</label><input id="bNotes" value="${escHtml(rec.notes || '')}" placeholder="Optional DOT note..." /></div>
     </div>
+
+    <div id="bCondemnWrap" class="card" style="background:#fef2f2;border:1.5px solid #f87171;margin-top:10px;padding:10px;" ${rec.composite_expired ? '' : 'hidden'}>
+      <label style="color:#991b1b;">⛔ PHMSA Code D Condemned Legal Disposition (49 CFR §180.205(i))</label>
+      <select id="bCondemnAct">
+        <option value="STAMPED_CONDEMNED">CONDEMNED Stamped Over DOT Markings</option>
+        <option value="DEVALVED_UNSERVICEABLE">Returned Devalved / Threads Rendered Unserviceable</option>
+        <option value="EXPIRED_15YR" ${rec.composite_expired ? 'selected' : ''}>Retired: >15-Year Composite Service Life</option>
+        <option value="CUSTOMER_SCRAP">Retained for Scrap per Owner Authorization</option>
+      </select>
+    </div>
+
     <label style="margin-top:11px;">7-Point Visual Inspection (Tap Any Pill to Toggle)</label>
     <div id="benchVisGrid" class="vis-pills-grid">${renderVisPillsHtml(BENCH_VIS, 'toggleBenchVis')}</div>
-    <label class="inline-check" style="margin-top:11px;">
-      <input type="checkbox" id="bValveReinst" />
-      <span>Valve / HPA regulator already reinstalled (frees reusable Tag #)</span>
-    </label>
+
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:11px;padding:9px 11px;background:#f8fafc;border-radius:8px;border:1px solid var(--border-soft);">
+      <label class="inline-check"><input type="checkbox" id="bOring" ${rec.addon_oring ? 'checked' : ''} /><span>+ Neck O-Ring</span></label>
+      <label class="inline-check"><input type="checkbox" id="bBurstDisc" ${(rec.addon_burst_disc || rec.relief_valve_changed === 'Yes') ? 'checked' : ''} /><span>+ Burst Disc / Relief</span></label>
+      <label class="inline-check"><input type="checkbox" id="bClean" ${rec.addon_clean ? 'checked' : ''} /><span>+ Internal Clean</span></label>
+      <label class="inline-check"><input type="checkbox" id="bValveReinst" /><span>Valve Reinstalled</span></label>
+    </div>
+
     <button class="primary" id="btnCompleteBench" onclick="completeBottle(${rec.id}, ${isHydro})">Certify &amp; Advance to Next Cylinder (RP)</button>`;
 }
 
 function previewBenchMath(reeLimit) {
   const box = document.getElementById('benchPreview');
   const totEl = document.getElementById('bTotal');
+  const condemnWrap = document.getElementById('bCondemnWrap');
   const visFailed = Object.values(BENCH_VIS).some(v => v !== 'OK');
-  if (!totEl) return;
+  if (!totEl) {
+    if (condemnWrap) condemnWrap.hidden = !visFailed;
+    return;
+  }
   const tot = parseFloat(totEl.value || '0'), perm = parseFloat(document.getElementById('bPerm').value || '0');
-  if (tot <= 0) return;
+  if (tot <= 0) {
+    if (condemnWrap) condemnWrap.hidden = !visFailed;
+    return;
+  }
   const elastic = (tot - perm).toFixed(2), pct = ((perm / tot) * 100).toFixed(1);
   const bad = visFailed || (reeLimit !== null && parseFloat(elastic) > reeLimit) || parseFloat(pct) > 10.0;
   box.className = bad ? 'notice bad' : 'notice';
-  box.textContent = `Elastic: ${elastic} cc | % Perm: ${pct}%${visFailed ? ' | VISUAL FAIL' : ''} — ${bad ? 'CONDEMN (CODE D)' : 'PASS (Code A)'}`;
+  box.textContent = `Elastic: ${elastic} cc | % Perm: ${pct}%${visFailed ? ' | VISUAL FAIL' : ''} — ${bad ? 'CONDEMN (CODE D) — Select Legal Action Below' : 'PASS (Code A)'}`;
+  if (condemnWrap) condemnWrap.hidden = !bad;
 }
 
 async function completeBottle(id, isHydro) {
@@ -1099,6 +1183,9 @@ async function completeBottle(id, isHydro) {
   }
   const btn = document.getElementById('btnCompleteBench');
   const rinType = document.getElementById('bRinType').value;
+  const burstChecked = document.getElementById('bBurstDisc').checked;
+  const condemnHidden = document.getElementById('bCondemnWrap').hidden;
+
   BENCH_SUBMITTING = true;
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Certifying...'; }
   try {
@@ -1114,7 +1201,11 @@ async function completeBottle(id, isHydro) {
         rin_marked: Boolean(rinType),
         rin_mark_type: rinType,
         coating_condition: document.getElementById('bCoat').value,
-        relief_valve_changed: document.getElementById('bValve').value,
+        relief_valve_changed: burstChecked ? 'Yes' : 'No',
+        addon_oring: document.getElementById('bOring').checked,
+        addon_burst_disc: burstChecked,
+        addon_clean: document.getElementById('bClean').checked,
+        condemn_action: condemnHidden ? '' : document.getElementById('bCondemnAct').value,
         tested_by: getActiveCrew(),
         notes: document.getElementById('bNotes').value,
         ...BENCH_VIS,
@@ -1129,7 +1220,7 @@ async function completeBottle(id, isHydro) {
   const nextTot = document.getElementById('bTotal');
   if (nextTot) nextTot.focus();
 }
-
+// --- COMPLETED TODAY & 1-TAP REVALVE ADD-ON CHIPS ---
 function renderCompletedSection(done) {
   document.getElementById('doneCountBadge').textContent = `${done.length} Done`;
   const custs = [...new Set(done.map(r => r.customer_name))];
@@ -1143,6 +1234,7 @@ function renderCompletedSection(done) {
         <div style="display:flex;gap:5px;flex-wrap:wrap;">
           <button class="secondary" onclick="stageCustomerBatch('${safeC}', 'STAMPED_STICKERED', 'MARKED')">🔨 Mark Batch B386</button>
           <button class="secondary" onclick="stageCustomerBatch('${safeC}', 'READY_BACKROOM', '')">📦 Revalve &amp; Shelf</button>
+          <button class="secondary" onclick="openClaimSlipPdf('${safeC}')">🏷️ Claim Slip</button>
           <button class="secondary" onclick="sendPickupSms('${safeC}', '${escHtml(ph)}', ${cRows.length}, '')">📲 Text</button>
         </div>
       </div>`;
@@ -1157,6 +1249,16 @@ function recordFinishRowHtml(r) {
   const isPass = r.hydro_disposition === 'A';
   const isComp = (r.dot_spec || '').toUpperCase().startsWith('SP');
   const defMark = isComp ? 'STICKERED' : 'STAMPED';
+  const hasBurst = Boolean(r.addon_burst_disc || r.relief_valve_changed === 'Yes');
+
+  const addonsHtml = r.shop_stage !== 'PICKED_UP' ? `
+    <div class="addon-bar">
+      <button type="button" class="addon-chip ${r.addon_oring ? 'on' : ''}" onclick="toggleRecordAddon(${r.id}, 'addon_oring', ${!r.addon_oring})">${r.addon_oring ? '✓' : '+'} Neck O-Ring</button>
+      <button type="button" class="addon-chip ${hasBurst ? 'on' : ''}" onclick="toggleRecordAddon(${r.id}, 'addon_burst_disc', ${!hasBurst})">${hasBurst ? '✓' : '+'} Burst Disc</button>
+      <button type="button" class="addon-chip ${r.addon_clean ? 'on' : ''}" onclick="toggleRecordAddon(${r.id}, 'addon_clean', ${!r.addon_clean})">${r.addon_clean ? '✓' : '+'} Tumble/Clean</button>
+      ${!isPass && r.condemn_action ? `<span class="acct-tag FIRE_EMS">⛔ ${escHtml(r.condemn_action.replace(/_/g, ' '))}</span>` : ''}
+    </div>` : '';
+
   return `
     <div class="rec-item">
       <div class="rec-main">
@@ -1169,20 +1271,33 @@ function recordFinishRowHtml(r) {
           ${r.valve_tag && !r.valve_reinstalled ? `<span class="tag-chip">#${escHtml(r.valve_tag)}</span>` : ''}
         </div>
         <div class="rec-sub">${escHtml(r.customer_name)} • ${escHtml(r.dot_spec)}-${r.service_psi} • Sheet #${r.sheet_no} • Perm: ${fmtPctTenth(r.percent_permanent)}</div>
+        ${addonsHtml}
       </div>
       <div class="rec-actions">
         ${isPass && !r.rin_marked && r.shop_stage !== 'PICKED_UP'
           ? `<button class="secondary" style="background:#ede9fe;color:#5b21b6;border-color:#c4b5fd;" onclick="setRecordStage(${r.id}, 'STAMPED_STICKERED', '${defMark}')">${isComp ? '🏷️ Stickered' : '🔨 Stamped'}</button>`
           : ''}
-        ${r.shop_stage !== 'READY_BACKROOM' && r.shop_stage !== 'PICKED_UP'
+        ${isPass && r.shop_stage !== 'READY_BACKROOM' && r.shop_stage !== 'PICKED_UP'
           ? `<button class="secondary" style="background:#dcfce7;color:#166534;border-color:#86efac;" onclick="setRecordStage(${r.id}, 'READY_BACKROOM', '${defMark}')">📦 Revalve &amp; Shelf</button>`
           : ''}
-        ${r.shop_stage === 'READY_BACKROOM'
-          ? `<button class="secondary" onclick="setRecordStage(${r.id}, 'PICKED_UP', '')">✓ Picked Up</button>`
+        ${r.shop_stage === 'READY_BACKROOM' || (!isPass && r.shop_stage !== 'PICKED_UP')
+          ? `<button class="secondary" onclick="setRecordStage(${r.id}, 'PICKED_UP', '')">✓ Released</button>`
           : ''}
         <button class="secondary" onclick="openEditModal(${r.id})">Edit</button>
       </div>
     </div>`;
+}
+
+async function toggleRecordAddon(recordId, field, nextVal) {
+  await fetch(`/api/records/${recordId}/addons`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ [field]: nextVal }),
+  });
+  loadState(false);
+}
+
+function openClaimSlipPdf(custName) {
+  window.open(`/api/pdf/claim-slip?customer=${encodeURIComponent(custName)}&work_date=${encodeURIComponent(STATE.selected_date)}`, '_blank');
 }
 
 async function setRecordStage(id, stage, markType = '', force = false) {
@@ -1193,6 +1308,11 @@ async function setRecordStage(id, stage, markType = '', force = false) {
   }
   if (stage === 'READY_BACKROOM' || stage === 'PICKED_UP') {
     body.valve_reinstalled = true;
+  }
+  if (stage === 'PICKED_UP') {
+    const who = prompt('Picked up / received by (leave blank for customer name):', '');
+    if (who === null) return;
+    if (who.trim()) body.picked_up_by = who.trim();
   }
   const res = await fetch(`/api/records/${id}/stage`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -1210,11 +1330,18 @@ async function setRecordStage(id, stage, markType = '', force = false) {
 }
 
 async function stageCustomerBatch(cust, stage, markType = '', allDates = false) {
+  let pickedBy = undefined;
+  if (stage === 'PICKED_UP') {
+    const who = prompt(`Log pickup for ${cust} — Picked up by (optional):`, cust);
+    if (who === null) return;
+    pickedBy = who.trim() || cust;
+  }
   const payload = {
     work_date: allDates ? null : STATE.selected_date,
     customer_name: cust,
     shop_stage: stage,
     rin_mark_type: markType || undefined,
+    picked_up_by: pickedBy,
     release_valves: stage === 'READY_BACKROOM' || stage === 'PICKED_UP',
   };
   const res = await fetch('/api/batch/stage', {
@@ -1233,7 +1360,7 @@ async function stageCustomerBatch(cust, stage, markType = '', allDates = false) 
   loadState(false);
 }
 
-// --- STATION 4: FINISH LANE, ACTIVE TAGS, PICKUP SHELF & SEARCH ---
+// --- STATION 4: FINISH LANE, ACTIVE TAGS, ZONE E CLAIM SLIPS & MASTER LOOKUP ---
 function sendPickupSms(custName, phone, count, invExtra) {
   let ph = (phone || '').trim();
   if (!ph) {
@@ -1241,7 +1368,7 @@ function sendPickupSms(custName, phone, count, invExtra) {
     if (!ph.trim()) return;
   }
   const cleanDigits = ph.replace(/\D/g, '');
-  const msg = `Weber's Tank Testing (RIN B386): Hi ${custName}, your ${count} cylinder(s) are tested, stamped/labeled, and ready on our backroom pickup shelf at 3086 Legionville Rd${invExtra ? ' (' + invExtra + ')' : ''}. Questions? Call/text ${STATE.shop_phone || '724-266-8008'}.`;
+  const msg = `Weber's Tank Testing (RIN B386): Hi ${custName}, your ${count} cylinder(s) are tested, stamped/labeled, and ready on our Zone E backroom pickup shelf at 3086 Legionville Rd${invExtra ? ' (' + invExtra + ')' : ''}. Questions? Call/text ${STATE.shop_phone || '724-266-8008'}.`;
   const sep = /iPad|iPhone|iPod/i.test(navigator.userAgent) ? '&' : '?';
   window.location.href = `sms:${cleanDigits}${sep}body=${encodeURIComponent(msg)}`;
 }
@@ -1260,7 +1387,7 @@ function renderFinishValvesAndCustomers() {
       <div class="rec-item">
         <div class="rec-main">
           <div class="rec-title"><span class="tag-chip">Tag #${escHtml(r.valve_tag)}</span> <span>→ SN ${escHtml(r.serial_number)}</span></div>
-          <div class="rec-sub">${escHtml(r.customer_name)} • ${escHtml(r.dot_spec)}-${r.service_psi} (${r.status})</div>
+          <div class="rec-sub">${escHtml(r.customer_name)} • ${escHtml(r.dot_spec)}-${r.service_psi} (${escHtml(r.status)})</div>
         </div>
         <button class="secondary" style="background:#dcfce7;color:#166534;border-color:#86efac;" onclick="releaseValveTag(${r.id})">✓ Reinstall &amp; Free #${escHtml(r.valve_tag)}</button>
       </div>`).join('')
@@ -1274,6 +1401,7 @@ function renderFinishValvesAndCustomers() {
             <div class="rec-main">
               <div class="rec-title">
                 <span>${escHtml(c.customer_name)}</span>
+                ${c.tax_exempt ? '<span class="tax-exempt-pill">Tax-Exempt</span>' : ''}
                 ${c.needs_stamp_count ? `<span class="stage-chip drying">🔨 ${c.needs_stamp_count} Need Mark</span>` : ''}
                 ${c.ready_backroom_count ? `<span class="stage-chip ready">📦 ${c.ready_backroom_count} Zone E</span>` : ''}
                 ${c.shelf_dwell_days >= 2 ? dwellBadgeHtml(c.shelf_dwell_days, '📦') : ''}
@@ -1281,9 +1409,10 @@ function renderFinishValvesAndCustomers() {
               <div class="rec-sub">${c.total_bottles} total • ${c.unbilled_count} unbilled • Last: ${escHtml(c.last_date)}</div>
             </div>
             <div class="rec-actions">
+              ${(c.ready_backroom_count || c.needs_stamp_count) ? `<button class="secondary" onclick="openClaimSlipPdf('${safeC}')" title="Print Zone E Shelf Claim Slip">🏷️ Claim Slip</button>` : ''}
               ${c.ready_backroom_count ? `<button class="secondary" onclick="stageCustomerBatch('${safeC}', 'PICKED_UP', '', true)">✓ Picked Up</button>` : ''}
               <button class="secondary" onclick="sendPickupSms('${safeC}', '${escHtml(c.customer_phone || '')}', ${c.ready_backroom_count || c.total_bottles}, '')">📲 Text</button>
-              ${c.unbilled_count ? `<a class="secondary" href="/office?customer=${encodeURIComponent(c.customer_name)}">💲 Bill (${c.unbilled_count})</a>` : ''}
+              ${c.unbilled_count ? `<a class="secondary" href="/office?tab=invoice&customer=${encodeURIComponent(c.customer_name)}">💲 Bill (${c.unbilled_count})</a>` : ''}
               <button class="secondary" onclick="filterCustomerHistory('${safeC}')">History</button>
             </div>
           </div>`;
@@ -1306,24 +1435,29 @@ async function runSearch(activeTagOnly = false) {
 function renderSearchRows(rows) {
   LAST_SEARCH_ROWS = rows;
   document.getElementById('searchResultsList').innerHTML = rows.length
-    ? rows.map(r => `
-      <div class="rec-item">
-        <div class="rec-main">
-          <div class="rec-title">
-            <span>${escHtml(r.serial_number)}</span>
-            ${priorityBadgeHtml(r)}
-            <span class="${r.hydro_disposition === 'A' ? 'pass' : 'fail'}">${escHtml(r.hydro_disposition || r.status)}</span>
-            ${stageBadgeHtml(r)}
-            ${r.valve_tag && !r.valve_reinstalled ? `<span class="tag-chip">#${escHtml(r.valve_tag)}</span>` : ''}
-          </div>
-          <div class="rec-sub">${escHtml(r.work_date)} • ${escHtml(r.customer_name)} • ${escHtml(r.dot_spec)}-${r.service_psi} • Sheet #${r.sheet_no || 'Queued'} • Perm: ${fmtPctTenth(r.percent_permanent)}</div>
-        </div>
-        <button class="secondary" onclick="openEditModal(${r.id})">Edit</button>
-      </div>`).join('')
+    ? rows.map(r => {
+        const isQueued = r.status === 'QUEUED';
+        const dispTxt = isQueued ? 'QUEUED' : (r.hydro_disposition || r.status);
+        const dispCls = isQueued ? 'sub-badge' : (r.hydro_disposition === 'A' ? 'pass' : 'fail');
+        return `
+          <div class="rec-item">
+            <div class="rec-main">
+              <div class="rec-title">
+                <span>${escHtml(r.serial_number)}</span>
+                ${priorityBadgeHtml(r)}
+                <span class="${dispCls}">${escHtml(dispTxt)}</span>
+                ${stageBadgeHtml(r)}
+                ${r.valve_tag && !r.valve_reinstalled ? `<span class="tag-chip">#${escHtml(r.valve_tag)}</span>` : ''}
+              </div>
+              <div class="rec-sub">${escHtml(r.work_date)} • ${escHtml(r.customer_name)} • ${escHtml(r.dot_spec)}-${r.service_psi} • ${isQueued ? 'Awaiting Stand' : 'Sheet #' + r.sheet_no} • Perm: ${fmtPctTenth(r.percent_permanent)}</div>
+            </div>
+            <button class="secondary" onclick="openEditModal(${r.id})">Edit</button>
+          </div>`;
+      }).join('')
     : '<div style="color:var(--muted);font-size:0.86rem;padding:8px 0;">No matching cylinder records found.</div>';
 }
 
-// --- EDIT MODAL, SYNC, CREW & SETTINGS ---
+// --- EDIT MODAL, SYNC, CREW & FACILITY SETTINGS ---
 function toggleEditVis(key) {
   EDIT_VIS[key] = EDIT_VIS[key] === 'OK' ? 'FAIL' : 'OK';
   document.getElementById('erVisPills').innerHTML = renderVisPillsHtml(EDIT_VIS, 'toggleEditVis');
@@ -1358,9 +1492,12 @@ function openEditModal(recordId) {
   document.getElementById('erTotal').value = rec.total_cc ?? '';
   document.getElementById('erPerm').value = rec.permanent_cc ?? '';
   document.getElementById('erCoat').value = rec.coating_condition || 'Good';
-  document.getElementById('erValveChg').value = rec.relief_valve_changed || 'No';
   document.getElementById('erDispOvr').value = '';
+  document.getElementById('erCondemnAct').value = rec.condemn_action || '';
   document.getElementById('erNotes').value = rec.notes || '';
+  document.getElementById('erOring').checked = Boolean(rec.addon_oring);
+  document.getElementById('erBurstDisc').checked = Boolean(rec.addon_burst_disc || rec.relief_valve_changed === 'Yes');
+  document.getElementById('erClean').checked = Boolean(rec.addon_clean);
   document.getElementById('erReinst').checked = Boolean(rec.valve_reinstalled);
 
   EDIT_VIS = {};
@@ -1375,6 +1512,7 @@ async function saveEditedRecord() {
   const id = document.getElementById('erId').value;
   const pri = document.getElementById('erPriority').value;
   const rinType = document.getElementById('erRinType').value;
+  const burstChecked = document.getElementById('erBurstDisc').checked;
   const res = await fetch(`/api/records/${id}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -1402,7 +1540,11 @@ async function saveEditedRecord() {
       total_cc: document.getElementById('erTotal').value !== '' ? parseFloat(document.getElementById('erTotal').value) : null,
       permanent_cc: document.getElementById('erPerm').value !== '' ? parseFloat(document.getElementById('erPerm').value) : null,
       coating_condition: document.getElementById('erCoat').value,
-      relief_valve_changed: document.getElementById('erValveChg').value,
+      relief_valve_changed: burstChecked ? 'Yes' : 'No',
+      addon_oring: document.getElementById('erOring').checked,
+      addon_burst_disc: burstChecked,
+      addon_clean: document.getElementById('erClean').checked,
+      condemn_action: document.getElementById('erCondemnAct').value,
       hydro_disposition_override: document.getElementById('erDispOvr').value || null,
       notes: document.getElementById('erNotes').value,
       ...EDIT_VIS,
@@ -1479,7 +1621,9 @@ async function saveAllSettings() {
     calibrated_serial: document.getElementById('editCalSerial').value,
     starting_sheet_no: parseInt(document.getElementById('editSheetNo').value || '8095', 10),
     daily_hydro_capacity: parseInt(document.getElementById('editDailyCap').value || '24', 10),
-    default_tax_rate: parseFloat(document.getElementById('editDefaultTax').value || '0'),
+    default_tax_rate: parseFloat(document.getElementById('editDefaultTax').value || '6.0'),
+    rin_expires_date: document.getElementById('editRinExp').value || '',
+    gauge_cert_expires_date: document.getElementById('editGaugeExp').value || '',
     gemini_api_key: document.getElementById('apiKeyInput').value || null,
     sheets_webhook_url: document.getElementById('webhookInput').value,
     feedback_webhook_url: document.getElementById('fbWebhookInput').value,
@@ -1489,7 +1633,7 @@ async function saveAllSettings() {
   await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   document.getElementById('apiKeyInput').value = '';
   document.getElementById('editShopPin').value = '';
-  alert('Facility settings saved!');
+  alert('Facility settings & compliance dates saved!');
   loadState(true);
 }
 

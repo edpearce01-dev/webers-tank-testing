@@ -14,6 +14,13 @@ PDF_AUTHOR = "Weber's Tank Testing (DOT RIN B386)"
 SHOP_ADDRESS = "3086 Legionville Rd, Baden, PA 15005"
 SHOP_HOURS = "Mon & Fri 9AM-4PM  |  Tue-Thu 9AM-2PM  |  24/7 Backroom Drop-Off"
 
+CONDEMN_LABELS = {
+    "STAMPED_CONDEMNED": "CONDEMNED stamped over DOT marks",
+    "DEVALVED_UNSERVICEABLE": "Returned devalved / threads rendered unserviceable",
+    "EXPIRED_15YR": "Retired: 15-yr composite service life exceeded",
+    "CUSTOMER_SCRAP": "Condemned & retained for scrap per owner",
+}
+
 
 def _set_pdf_meta(c: canvas.Canvas, title: str) -> None:
     c.setTitle(title)
@@ -67,6 +74,26 @@ def _clean_ree_for_print(rec: dict):
     if spec in ("3A", "3AA", "3AL") and ree == 7.2:
         return None
     return ree
+
+
+def _format_dot_row_notes(rec: dict) -> str:
+    parts = []
+    c_act = (rec.get("condemn_action") or "").strip().upper()
+    if c_act and (rec.get("hydro_disposition") == "D" or not rec.get("visual_pass", 1)):
+        parts.append(f"[CONDEMNED: {CONDEMN_LABELS.get(c_act, c_act)}]")
+    addons = []
+    if rec.get("addon_oring"):
+        addons.append("Neck O-Ring")
+    if rec.get("addon_burst_disc") or rec.get("relief_valve_changed") == "Yes":
+        addons.append("Burst Disc/Relief")
+    if rec.get("addon_clean"):
+        addons.append("Internal Clean")
+    if addons:
+        parts.append("Svc: " + ", ".join(addons))
+    raw_note = str(rec.get("notes") or "").strip()
+    if raw_note:
+        parts.append(raw_note)
+    return " | ".join(parts)
 
 
 def build_retest_datasheet_pdf(
@@ -259,13 +286,13 @@ def build_retest_datasheet_pdf(
                 c.drawCentredString((col_x[16] + col_x[17]) / 2, y_val, rec.get("hydro_disposition") or "A")
                 c.drawCentredString((col_x[17] + col_x[18]) / 2, y_val, PRIMARY_INITIALS)
 
-                if rec.get("notes"):
-                    c.setFont("Helvetica", 7.2)
-                    c.drawString(col_x[1] + 28, r_bot + 4, str(rec["notes"])[:110])
+                row_note = _format_dot_row_notes(rec)
+                if row_note:
+                    c.setFont("Helvetica", 7.1)
+                    c.drawString(col_x[1] + 28, r_bot + 4, row_note[:115])
 
             cur_top = r_bot
 
-        # Non-overlapping 3-column footer layout
         fy = cur_top - 15
         c.setFont("Times-Roman", 7.4)
         c.drawString(left_x + 8, fy, "I hereby certify that all of the above tests were made under my supervision and")
@@ -456,8 +483,8 @@ def build_visual_log_pdf(work_date: str, records: list[dict], dot_rin: str = "B3
                     r.get("chk_fire_damage", "OK"),
                     r.get("chk_bulges", "OK"),
                     r.get("chk_neck_defects", "OK"),
-                    r.get("visual_disposition", "OK"),
-                    r.get("relief_valve_changed", "No"),
+                    "SC" if r.get("hydro_disposition") == "D" else r.get("visual_disposition", "OK"),
+                    "Yes" if (r.get("relief_valve_changed") == "Yes" or r.get("addon_burst_disc")) else "No",
                     PRIMARY_INITIALS,
                 ]
                 for i, v in enumerate(vals):
@@ -472,8 +499,6 @@ def build_visual_log_pdf(work_date: str, records: list[dict], dot_rin: str = "B3
 
     c.save()
     return buf.getvalue()
-
-
 def _draw_mini_rin_badge(
     c: canvas.Canvas,
     bx: float,
@@ -669,9 +694,9 @@ def build_valve_tags_pdf(work_date: str, records: list[dict], dot_rin: str = "B3
     c = canvas.Canvas(buf, pagesize=letter)
     _set_pdf_meta(c, f"Active Valve Tag Clipboard Sheet - {work_date}")
 
-    headers = ["Tag #", "Cylinder Serial #", "Customer / Owner", "Spec & PSI", "Size", "Relief Chg?", "Reinstalled"]
-    widths = [58, 106, 146, 78, 60, 56, 58]
-    x0 = 25
+    headers = ["Tag #", "Cylinder Serial #", "Customer / Owner", "Spec & PSI", "Size", "Parts / Relief", "Reinstalled"]
+    widths = [54, 104, 142, 76, 56, 68, 58]
+    x0 = 26
     xs = [x0]
     for w in widths:
         xs.append(xs[-1] + w)
@@ -697,7 +722,7 @@ def build_valve_tags_pdf(work_date: str, records: list[dict], dot_rin: str = "B3
         c.setFillColor(colors.Color(0.93, 0.95, 0.94))
         c.rect(x0, y - 22, xs[-1] - x0, 22, fill=1, stroke=1)
         c.setFillColor(colors.black)
-        c.setFont("Helvetica-Bold", 8.3)
+        c.setFont("Helvetica-Bold", 8.2)
         for i, h_txt in enumerate(headers):
             c.drawCentredString((xs[i] + xs[i + 1]) / 2, y - 15, h_txt)
             c.line(xs[i], y, xs[i], y - 22)
@@ -716,13 +741,18 @@ def build_valve_tags_pdf(work_date: str, records: list[dict], dot_rin: str = "B3
                 c.drawCentredString((xs[0] + xs[1]) / 2, cy - 16, f"#{r.get('valve_tag')}")
                 c.drawCentredString((xs[1] + xs[2]) / 2, cy - 16, str(r.get("serial_number") or "")[:15])
                 c.setFont("Helvetica", 8.5)
-                c.drawString(xs[2] + 4, cy - 16, str(r.get("customer_name") or "")[:24])
+                c.drawString(xs[2] + 4, cy - 16, str(r.get("customer_name") or "")[:23])
                 c.drawCentredString(
                     (xs[3] + xs[4]) / 2, cy - 16,
                     _fmt_spec_psi(r.get("dot_spec", ""), int(r.get("service_psi") or 0))[:12],
                 )
                 c.drawCentredString((xs[4] + xs[5]) / 2, cy - 16, str(r.get("physical_size") or "")[:9])
-                c.drawCentredString((xs[5] + xs[6]) / 2, cy - 16, str(r.get("relief_valve_changed") or "No"))
+                p_list = []
+                if r.get("addon_oring"):
+                    p_list.append("O-Ring")
+                if r.get("addon_burst_disc") or r.get("relief_valve_changed") == "Yes":
+                    p_list.append("Burst")
+                c.drawCentredString((xs[5] + xs[6]) / 2, cy - 16, ",".join(p_list) if p_list else "Std")
             c.setFont("Helvetica", 8.5)
             c.drawCentredString((xs[6] + xs[7]) / 2, cy - 16, "[     ]")
             cy -= rh
@@ -803,9 +833,9 @@ def build_backroom_poster_pdf(
     c.roundRect(box_x, box_y, box_w, box_h, 10, fill=1, stroke=1)
 
     steps = [
-        ("1. SCAN QR CODE WITH YOUR PHONE CAMERA", "Opens our instant check-in form - no app download or login needed."),
-        ("2. ENTER NAME / DEPT, CELL #, & TANK COUNT", "Receive a live Ticket # and get texted as soon as your tanks hit our pickup shelf."),
-        ("3. GROUP YOUR TANKS NEATLY IN DROP-OFF ZONE", "Every removed valve & paintball HPA regulator is numbered & matched to its serial #."),
+        ("1. SCAN QR CODE WITH YOUR PHONE CAMERA", "Opens our instant check-in & verified pickup form - no app download needed."),
+        ("2. ENTER NAME / DEPT, CELL #, & TANK DETAILS", "Receive a live Ticket # (BR-XXXX) and get texted when your tanks hit Zone E."),
+        ("3. GROUP TANKS NEATLY IN DESIGNATED ZONE", "Every removed valve & paintball HPA regulator is numbered & matched to its serial #."),
     ]
     sy = box_y + box_h - 32
     for title_txt, sub_txt in steps:
@@ -902,7 +932,8 @@ def build_invoice_pdf(invoice: dict, items: list[dict], phone: str = "724-266-80
     c.drawRightString(W - 125, cy, "Subtotal:")
     c.drawRightString(W - 52, cy, f"${float(invoice.get('subtotal', 0)):.2f}")
     cy -= 16
-    c.drawRightString(W - 125, cy, f"Tax ({invoice.get('tax_rate', 0)}%):")
+    tax_lbl = "Tax (Exempt):" if float(invoice.get("tax_rate", 0)) == 0 else f"Tax ({invoice.get('tax_rate', 0)}%):"
+    c.drawRightString(W - 125, cy, tax_lbl)
     c.drawRightString(W - 52, cy, f"${float(invoice.get('tax_amount', 0)):.2f}")
     cy -= 20
     c.setFont("Helvetica-Bold", 12.5)
@@ -923,6 +954,147 @@ def build_invoice_pdf(invoice: dict, items: list[dict], phone: str = "724-266-80
     c.setFillColor(colors.HexColor("#64748b"))
     c.setFont("Helvetica", 8.5)
     c.drawCentredString(W / 2, 34, f"Thank you for trusting Weber's Tank Testing  |  {SHOP_ADDRESS}  |  {phone}")
+
+    c.save()
+    return buf.getvalue()
+
+
+def build_shelf_claim_slip_pdf(
+    customer_name: str,
+    customer_phone: str,
+    records: list[dict],
+    invoice: dict | None = None,
+    payment_terms: str = "DUE_AT_PICKUP",
+    phone: str = "724-266-8008",
+    dot_rin: str = "B386",
+    pickup_url: str = "https://weberstanktesting.com/#dropoff",
+) -> bytes:
+    """Printable Zone E Backroom Pickup Shelf Claim Slip & Batch Test Summary."""
+    buf = io.BytesIO()
+    W, H = letter
+    c = canvas.Canvas(buf, pagesize=letter)
+    _set_pdf_meta(c, f"Zone E Pickup Claim Slip - {customer_name}")
+
+    total_cnt = len(records)
+    pass_cnt = sum(1 for r in records if r.get("hydro_disposition") == "A")
+    fail_cnt = total_cnt - pass_cnt
+
+    # Bold Zone E Header Banner (easy to read across the backroom)
+    c.setFillColor(colors.HexColor("#0f291e"))
+    c.rect(36, H - 108, W - 72, 72, fill=1, stroke=0)
+    c.setFillColor(colors.HexColor("#fbbf24"))
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(50, H - 54, f"ZONE E BACKROOM PICKUP SHELF  |  WEBER'S TANK TESTING (DOT RIN {dot_rin})")
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 22)
+    c.drawString(50, H - 80, (customer_name or "CUSTOMER BATCH")[:32].upper())
+    c.setFont("Helvetica", 9.5)
+    c.setFillColor(colors.HexColor("#cbd5e1"))
+    c.drawString(50, H - 97, f"Phone: {customer_phone or 'On File'}   |   Shop: {phone}   |   {SHOP_ADDRESS}")
+
+    # Summary KPI Boxes + Payment Status
+    y_box = H - 170
+    c.setStrokeColor(colors.HexColor("#cbd5e1"))
+    c.setFillColor(colors.HexColor("#f8fafc"))
+    c.roundRect(36, y_box, 290, 50, 8, fill=1, stroke=1)
+    c.setFillColor(colors.HexColor("#0f172a"))
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(48, y_box + 31, f"BATCH TOTAL: {total_cnt} CYLINDER(S)")
+    c.setFont("Helvetica-Bold", 9.5)
+    c.setFillColor(colors.HexColor("#15803d"))
+    c.drawString(48, y_box + 13, f"PASSED (Code A): {pass_cnt}")
+    if fail_cnt > 0:
+        c.setFillColor(colors.HexColor("#b91c1c"))
+        c.drawString(180, y_box + 13, f"CONDEMNED (Code D): {fail_cnt}")
+
+    # Billing Box
+    c.setFillColor(colors.HexColor("#ecfdf5") if (invoice and invoice.get("status") == "PAID") else colors.HexColor("#fffbeb"))
+    c.setStrokeColor(colors.HexColor("#10b981") if (invoice and invoice.get("status") == "PAID") else colors.HexColor("#f59e0b"))
+    c.roundRect(338, y_box, W - 374, 50, 8, fill=1, stroke=1)
+    c.setFillColor(colors.HexColor("#0f172a"))
+    c.setFont("Helvetica-Bold", 10.5)
+    if invoice:
+        inv_st = str(invoice.get("status") or "DRAFT").upper()
+        amt = float(invoice.get("total_amount") or 0.0)
+        c.drawString(350, y_box + 31, f"INVOICE {invoice.get('invoice_no')}: {'PAID IN FULL' if inv_st == 'PAID' else f'DUE ${amt:.2f}'}")
+        c.setFont("Helvetica", 9)
+        c.drawString(350, y_box + 13, f"Status: {inv_st}" + (f" ({invoice.get('payment_method')})" if invoice.get("payment_method") else ""))
+    else:
+        terms_txt = "NET-30 DEPT / FLEET ACCOUNT" if payment_terms == "NET_30" else "INVOICE PENDING / PAY AT PICKUP"
+        c.drawString(350, y_box + 31, terms_txt)
+        c.setFont("Helvetica", 9)
+        c.drawString(350, y_box + 13, f"Questions on balance? Text/Call {phone}")
+
+    # Cylinder Serial Breakdown Table
+    ty = y_box - 18
+    c.setFillColor(colors.HexColor("#e2e8f0"))
+    c.rect(36, ty - 20, W - 72, 20, fill=1, stroke=1)
+    c.setFillColor(colors.black)
+    c.setFont("Helvetica-Bold", 8.5)
+    c.drawString(44, ty - 14, "Serial Number")
+    c.drawString(165, ty - 14, "DOT Spec & PSI")
+    c.drawString(265, ty - 14, "Test Date")
+    c.drawString(340, ty - 14, "Result & Mark")
+    c.drawString(445, ty - 14, "Service / Disposition Notes")
+
+    cy = ty - 20
+    c.setFont("Helvetica", 8.6)
+    for r in records[:20]:
+        cy -= 19
+        c.setStrokeColor(colors.HexColor("#cbd5e1"))
+        c.line(36, cy, W - 36, cy)
+        c.setFillColor(colors.black)
+        c.setFont("Helvetica-Bold", 8.8)
+        c.drawString(44, cy + 5, str(r.get("serial_number") or "")[:18])
+        c.setFont("Helvetica", 8.5)
+        c.drawString(165, cy + 5, _fmt_spec_psi(r.get("dot_spec", ""), int(r.get("service_psi") or 0))[:15])
+        c.drawString(265, cy + 5, str(r.get("work_date") or "")[:10])
+        is_pass = r.get("hydro_disposition") == "A"
+        c.setFillColor(colors.HexColor("#15803d") if is_pass else colors.HexColor("#b91c1c"))
+        c.setFont("Helvetica-Bold", 8.5)
+        mark_txt = "PASS (B386)" if is_pass else f"CONDEMN ({r.get('hydro_disposition')})"
+        c.drawString(340, cy + 5, mark_txt)
+        c.setFillColor(colors.HexColor("#334155"))
+        c.setFont("Helvetica", 7.8)
+        note_bits = []
+        if r.get("addon_oring"):
+            note_bits.append("New O-Ring")
+        if r.get("addon_burst_disc") or r.get("relief_valve_changed") == "Yes":
+            note_bits.append("New Burst Disc")
+        if r.get("addon_clean"):
+            note_bits.append("Cleaned")
+        if r.get("condemn_action"):
+            note_bits.append(CONDEMN_LABELS.get(r["condemn_action"], r["condemn_action"]))
+        c.drawString(445, cy + 5, (", ".join(note_bits) or "Hydro + 7-Pt Visual")[:28])
+
+    if len(records) > 20:
+        cy -= 18
+        c.setFont("Helvetica-Oblique", 8.2)
+        c.drawString(44, cy + 4, f"+ {len(records) - 20} additional cylinder(s) included in this batch.")
+
+    # Bottom QR Check-Out Box
+    foot_y = 48
+    c.setFillColor(colors.HexColor("#f8fafc"))
+    c.setStrokeColor(colors.HexColor("#94a3b8"))
+    c.roundRect(36, foot_y, W - 72, 86, 9, fill=1, stroke=1)
+
+    qr_widget = qr.QrCodeWidget(pickup_url)
+    bounds = qr_widget.getBounds()
+    qw = bounds[2] - bounds[0]
+    qh = bounds[3] - bounds[1]
+    d = Drawing(68, 68, transform=[68 / qw, 0, 0, 68 / qh, 0, 0])
+    d.add(qr_widget)
+    renderPDF.draw(d, c, 48, foot_y + 9)
+
+    c.setFillColor(colors.HexColor("#0f291e"))
+    c.setFont("Helvetica-Bold", 10.5)
+    c.drawString(128, foot_y + 62, "SELF-SERVE 24/7 PICKUP CHECK-OUT (TAKES 10 SECONDS)")
+    c.setFillColor(colors.HexColor("#334155"))
+    c.setFont("Helvetica", 9.0)
+    c.drawString(128, foot_y + 45, "1. Verify cylinder count above matches your group on the Zone E Pickup Shelf.")
+    c.drawString(128, foot_y + 30, "2. Scan QR code -> tap 'Logging Completed Pickup' -> enter your name so we log release.")
+    c.setFont("Helvetica-Bold", 8.5)
+    c.drawString(128, foot_y + 13, f"NOTE: Testing facility only - cylinders are returned clean, dry & depressurized.  |  {phone}")
 
     c.save()
     return buf.getvalue()

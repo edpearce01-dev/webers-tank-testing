@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#0b2219" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/static/ops.css?v=7.0" />
-  <title>Weber's Tank Testing — Billing, Payments &amp; DOT Printouts | RIN B386</title>
+  <link rel="stylesheet" href="/static/ops.css?v=8.0" />
+  <title>Weber's Tank Testing — Office, Rolodex, Printouts &amp; Supplies | RIN B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
@@ -15,7 +15,7 @@
     <div class="login-card">
       <img src="/static/images/logo-crest.jpg" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Office &amp; Print Center</h2>
-      <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter Crew PIN for Billing, Payments &amp; Official DOT Forms</p>
+      <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter Crew PIN for Billing, Rolodex, DOT Forms &amp; Supplies</p>
       <div style="text-align:left;">
         <label>Crew Access PIN</label>
         <input type="password" inputmode="numeric" id="loginPinInput" placeholder="••••"
@@ -23,18 +23,18 @@
           style="text-align:center;font-size:1.35rem;letter-spacing:6px;font-weight:800;" />
       </div>
       <div id="loginError" class="notice bad" style="margin-top:12px;" hidden>Incorrect Shop PIN.</div>
-      <button class="primary" onclick="submitLoginPin()">Unlock Office &amp; Printouts</button>
+      <button class="primary" onclick="submitLoginPin()">Unlock Office Workspace</button>
     </div>
   </div>
 
-  <!-- AUTHENTICATED OFFICE & PRINTOUTS SHELL -->
+  <!-- AUTHENTICATED OFFICE SHELL -->
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
         <img src="/static/images/logo-crest.jpg" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>OFFICE &amp; PRINT</h1>
-          <small>RIN B386 • Billing &amp; DOT Forms</small>
+          <small>RIN B386 • Billing, Rolodex &amp; Supply</small>
         </div>
       </a>
 
@@ -46,28 +46,60 @@
       </nav>
 
       <div class="top-controls">
-        <input type="date" id="globalDate" class="top-date" onchange="changeOfficeDate()" />
+        <div class="date-stepper">
+          <button type="button" class="step-btn" onclick="stepOfficeDate(-1)" title="Previous Day">◀</button>
+          <button type="button" class="today-btn" onclick="jumpOfficeToday()" title="Jump Back to Today">Today</button>
+          <input type="date" id="globalDate" class="top-date" onchange="changeOfficeDate()" />
+          <button type="button" class="step-btn" onclick="stepOfficeDate(1)" title="Next Day">▶</button>
+        </div>
         <button class="menu-pill" id="syncBtnTop" onclick="triggerManualSync()">☁ Sync</button>
         <button class="menu-pill" onclick="logoutCrew()" title="Sign Out">🔒</button>
       </div>
     </header>
 
-    <main class="ops-single-workspace">
-      <!-- QUICK SECTION FILTER PILLS -->
-      <div class="pill-selector-bar">
-        <button class="tap-pill active" data-sec="all" onclick="setOfficeSection('all')">📋 Show All Office Tools</button>
-        <button class="tap-pill" data-sec="billing" onclick="setOfficeSection('billing')">💲 Invoicing &amp; Payments</button>
-        <button class="tap-pill" data-sec="print" onclick="setOfficeSection('print')">🖨️ DOT Sheets &amp; B386 Stickers</button>
-        <button class="tap-pill" data-sec="rates" onclick="setOfficeSection('rates')">⚙️ Master Service Rates</button>
-      </div>
+    <div class="ops-layout">
+      <!-- UNIFIED LEFT SIDEBAR MENU -->
+      <aside class="side-rail">
+        <div class="rail-nav">
+          <div class="rail-section-lbl">Office &amp; Admin</div>
+          <button class="rail-btn active" data-tab="invoice" onclick="switchOfficeTab('invoice')">
+            <span>1. Create Invoice</span><span class="nav-badge amber" id="navBadgeUnbilled">0</span>
+          </button>
+          <button class="rail-btn" data-tab="saved" onclick="switchOfficeTab('saved')">
+            <span>2. Saved Invoices</span><span class="nav-badge" id="navBadgeSaved">0</span>
+          </button>
+          <button class="rail-btn" data-tab="rolodex" onclick="switchOfficeTab('rolodex')">
+            <span>3. Customer Rolodex</span><span class="nav-badge" id="navBadgeRolo">0</span>
+          </button>
+          <button class="rail-btn" data-tab="print" onclick="switchOfficeTab('print')">
+            <span>4. DOT &amp; Claim PDFs</span><span class="nav-badge green">🖨️</span>
+          </button>
+          <button class="rail-btn" data-tab="supplies" onclick="switchOfficeTab('supplies')">
+            <span>5. Reorder Supplies</span><span class="nav-badge" id="navBadgeSupplies">✓</span>
+          </button>
+          <button class="rail-btn" data-tab="rates" onclick="switchOfficeTab('rates')">
+            <span>6. Service Rates</span><span class="nav-badge">⚙️</span>
+          </button>
+        </div>
 
-      <!-- SECTION 1: INVOICING, BILLING & PAYMENTS -->
-      <div id="sec-billing">
-        <div class="split-2">
+        <div class="rail-footer">
+          <a class="secondary" href="/ops" style="width:100%;">🔧 Back to Shop Ops</a>
+          <a class="secondary" href="/schedule" style="width:100%;">📅 Month Calendar</a>
+          <a class="secondary" href="/api/customers/export.csv" style="width:100%;">📥 Export Mailing CSV</a>
+        </div>
+      </aside>
+
+      <!-- SINGLE-SCREEN FOCUSED WORKSPACE -->
+      <main class="ops-workspace">
+        <!-- TAB 1: CREATE CUSTOMER INVOICE -->
+        <section id="tab-invoice">
           <div class="card" style="border-top:4px solid var(--green);">
             <div class="card-hdr">
-              <h3>💲 Create Customer Invoice</h3>
-              <span class="sub-badge" id="draftTotalLabel">Draft Total: $0.00</span>
+              <h3>💲 Create Customer Invoice (Auto-Loads Parts &amp; Tax Status)</h3>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <span id="billTaxExemptBadge" class="tax-exempt-pill" hidden>✓ PA Tax-Exempt Account</span>
+                <span class="sub-badge" id="draftTotalLabel">Draft Total: $0.00</span>
+              </div>
             </div>
 
             <div id="unbilledPillsWrap" style="margin-bottom:10px;"></div>
@@ -77,9 +109,9 @@
                 <label>Customer / Department</label>
                 <select id="billCustomer" onchange="loadUnbilledItems()"></select>
               </div>
-              <div><label>Customer Cell #</label><input id="billPhone" type="tel" placeholder="724-555-0199" /></div>
+              <div><label>Customer Cell #</label><input id="billPhone" type="tel" placeholder="724-555-0199" oninput="formatPhoneLive(this)" /></div>
               <div><label>Invoice / Service Date</label><input type="date" id="billDate" onchange="loadUnbilledItems()" /></div>
-              <div><label>Tax %</label><input type="number" step="0.01" id="billTax" value="0" oninput="recalcInvoiceDraft()" /></div>
+              <div><label>PA Sales Tax %</label><input type="number" step="0.01" id="billTax" value="6.0" oninput="recalcInvoiceDraft()" /></div>
               <div>
                 <label>Payment Status</label>
                 <select id="billStatus">
@@ -107,132 +139,338 @@
 
             <div id="draftInvoiceList"></div>
 
-            <div style="display:flex;gap:8px;margin:10px 0;flex-wrap:wrap;">
-              <button class="secondary" onclick="addCustomInvoiceLine()">+ Add Air Fill / Valve / Custom Fee</button>
+            <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;">
+              <button class="secondary" onclick="addCustomInvoiceLine('INTERNAL_CLEAN', 'Internal Cylinder Tumble / Cleaning')">+ Add Tumble / Clean</button>
+              <button class="secondary" onclick="addCustomInvoiceLine('NECK_ORING', 'Neck / Valve O-Ring Replacement')">+ Add O-Ring</button>
+              <button class="secondary" onclick="addCustomInvoiceLine('VALVE_RELIEF', 'Burst Disc / Relief Assembly')">+ Add Burst Disc</button>
+              <button class="secondary" onclick="openSelectedClaimSlip()">🏷️ Print Zone E Claim Slip</button>
               <button class="secondary" onclick="sendCustomerPickupSmsFromBilling()">📲 Text Ready + Total</button>
             </div>
 
-            <label>Invoice Footer Notes (Optional)</label>
+            <label>Invoice Footer Notes / PO # (Optional)</label>
             <input id="billNotes" placeholder="PO #, check #, burst disc note, thank you..." />
             <button class="primary" onclick="submitInvoice()">💾 Save &amp; Open Printable Invoice PDF</button>
           </div>
+        </section>
 
+        <!-- TAB 2: SAVED INVOICES & PAYMENT LEDGER -->
+        <section id="tab-saved" hidden>
           <div class="card">
             <div class="card-hdr">
-              <h3>Saved Customer Invoices &amp; Payment Status</h3>
-              <span class="sub-badge" id="invCountBadge">0 Saved</span>
+              <h3>📄 Saved Customer Invoices &amp; Payment Status</h3>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button class="secondary" onclick="setInvFilter('ALL')">All</button>
+                <button class="secondary" onclick="setInvFilter('OPEN')">Unpaid / Net-30</button>
+                <button class="secondary" onclick="setInvFilter('PAID')">Paid</button>
+              </div>
             </div>
             <div id="invoicesList"></div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <!-- SECTION 2: OFFICIAL DOT PRINTOUTS, STICKERS & QR POSTER -->
-      <div id="sec-print">
-        <div class="split-2">
-          <div class="card" style="border-top:4px solid #1e3a8a;">
-            <div class="card-hdr">
-              <h3>🖨️ Official DOT Compliance Sheets (<span id="pdfDateLabel">Selected Date</span>)</h3>
-              <span class="sub-badge">Signed Off: Ryan Pearce (RP)</span>
-            </div>
-            <div class="grid" style="margin-bottom:12px;">
-              <div>
-                <label>Filter Customer (Optional)</label>
-                <select id="pdfCustomerFilter"></select>
-              </div>
-              <div>
-                <label>Retest Sheet # Override</label>
-                <input type="number" id="pdfSheetNo" value="8095" />
-              </div>
-            </div>
-            <div class="grid-2">
-              <button class="pdf-card-btn" onclick="openPdf('retest')">📄 1. DOT Retest Data Sheet<br /><small style="font-weight:500;opacity:0.85;">12-Row Landscape Form 393-001</small></button>
-              <button class="pdf-card-btn" onclick="openPdf('verification')">📊 2. Daily Verification Sheet<br /><small style="font-weight:500;opacity:0.85;">Method B Calibration Ladder (±1.0%)</small></button>
-              <button class="pdf-card-btn" onclick="openPdf('visual')">🔍 3. 7-Point Visual Log<br /><small style="font-weight:500;opacity:0.85;">CGA External / Internal Inspection</small></button>
-              <button class="pdf-card-btn" style="background:#92400e;" onclick="openPdf('valvetags')">🏷️ 4. Active Valve Tag Sheet<br /><small style="font-weight:500;opacity:0.85;">Shop Clipboard Match Grid</small></button>
-            </div>
-            <button class="pdf-card-btn" style="width:100%;margin-top:10px;background:#0f291e;border:2px solid var(--gold);" onclick="openPdf('poster')">
-              🚪 5. Printable 24/7 Backroom Drop-Off &amp; Pickup QR Wall Sign (8.5×11)
-            </button>
+        <!-- TAB 3: CUSTOMER ROLODEX, MAILING ADDRESSES & 5-YR / 1-YR RECALLS -->
+        <section id="tab-rolodex" hidden>
+          <div class="pill-selector-bar">
+            <button class="tap-pill active" id="subBtnDir" onclick="toggleRolodexSub('dir')">📇 Customer &amp; Dept Directory</button>
+            <button class="tap-pill" id="subBtnRecall" onclick="toggleRolodexSub('recall')">🔔 5-Yr Hydro &amp; 1-Yr Visual Recall List</button>
+            <a class="secondary" href="/api/customers/export.csv" style="margin-left:auto;">📥 Download Mailing CSV</a>
           </div>
 
-          <div>
-            <div class="card" style="border-top:4px solid #7c3aed;">
+          <div id="roloDirPane" class="split-2">
+            <!-- ADD / EDIT ROLODEX PROFILE -->
+            <div class="card" style="border-top:4px solid var(--green);">
               <div class="card-hdr">
-                <h3>🏷️ Monthly &amp; Custom B386 Retest Stickers</h3>
-                <span class="sub-badge">49 CFR §180.213 • Avery 5160</span>
+                <h3 id="roloFormTitle">➕ Add / Update Customer Profile</h3>
+                <button class="secondary" onclick="resetRolodexForm()">Clear Form</button>
               </div>
-              <p style="margin:0 0 10px;font-size:0.83rem;color:var(--muted);">
-                Pre-print a full sheet on the 1st of the month for Zone D, or print exact counts skipping already-peeled label slots:
-              </p>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-                <button class="secondary" style="flex:1;padding:10px;background:#ede9fe;color:#5b21b6;border-color:#c4b5fd;" onclick="preprintFullSheet(false)">🖨️ Full Sheet: 30 Standard SCBA</button>
-                <button class="secondary" style="flex:1;padding:10px;background:#fef3c7;color:#92400e;border-color:#fcd34d;" onclick="preprintFullSheet(true)">🖨️ Full Sheet: 60 Mini Paintball HPA</button>
+              <input type="hidden" id="rcId" />
+              <div class="grid">
+                <div style="grid-column:1/-1;"><label>Customer / Fire Dept / Company Name *</label><input id="rcName" placeholder="e.g. Baden Volunteer Fire Dept" /></div>
+                <div>
+                  <label>Account Type</label>
+                  <select id="rcType" onchange="onRoloTypeChange()">
+                    <option value="WALK_IN">👤 Walk-In / Individual</option>
+                    <option value="FIRE_EMS">🚒 Fire Dept / EMS Agency</option>
+                    <option value="COMMERCIAL">🏢 Commercial / Welding / Dive</option>
+                  </select>
+                </div>
+                <div><label>Primary Contact / Chief</label><input id="rcContact" placeholder="Chief / Contact Name" /></div>
+                <div><label>Phone (Cell or Station)</label><input id="rcPhone" type="tel" placeholder="724-555-0199" oninput="formatPhoneLive(this)" /></div>
+                <div><label>Email (Invoices / Recalls)</label><input id="rcEmail" type="email" placeholder="chief@dept.org" /></div>
+                <div style="grid-column:1/-1;"><label>Street / Mailing Address</label><input id="rcStreet" placeholder="123 State St" /></div>
+                <div><label>City</label><input id="rcCity" placeholder="Baden" /></div>
+                <div><label>State</label><input id="rcState" value="PA" maxlength="2" /></div>
+                <div><label>ZIP Code</label><input id="rcZip" placeholder="15005" /></div>
+                <div>
+                  <label>Payment Terms</label>
+                  <select id="rcTerms">
+                    <option value="DUE_AT_PICKUP">Due at Pickup</option>
+                    <option value="NET_30">Net-30 Municipal / Fleet</option>
+                  </select>
+                </div>
               </div>
-              <div class="grid" style="align-items:end;">
-                <div><label>Sticker Count</label><input type="number" id="stickerCount" min="1" value="12" /></div>
-                <div><label>Skip Used Slots (0–29)</label><input type="number" id="stickerSkip" min="0" max="29" value="0" /></div>
-              </div>
-              <label class="inline-check" style="margin-top:10px;">
-                <input type="checkbox" id="stickerCompact" />
-                <span><strong>Compact 2-Up Mini Paintball HPA Mode</strong> (2 mini labels per 1"×2-5/8" slot)</span>
+              <label class="inline-check" style="margin-top:11px;">
+                <input type="checkbox" id="rcTaxExempt" />
+                <span><strong>PA Sales-Tax Exempt</strong> (Auto-sets Invoice Tax % to 0% for Fire/EMS/Gov)</span>
               </label>
-              <button class="primary" style="background:#5b21b6;" onclick="openPdf('stickers')">Open Custom B386 Sticker PDF</button>
+              <div style="margin-top:10px;">
+                <label>Account / Thread / Adapter Notes</label>
+                <input id="rcNotes" placeholder="Tax-exempt ID, PO required, preferred delivery door..." />
+              </div>
+              <button class="primary" onclick="saveCustomerProfile()">Save to Customer Rolodex</button>
             </div>
 
+            <!-- ROLODEX SEARCHABLE LIST -->
             <div class="card">
-              <div class="card-hdr"><h3>Past Test Dates Quick-Jump</h3></div>
-              <div class="table-wrap">
-                <table>
-                  <thead><tr><th>Work Date</th><th>Customers</th><th>Completed</th><th>Load</th></tr></thead>
-                  <tbody id="datesListTable"></tbody>
-                </table>
+              <div class="card-hdr">
+                <h3>Saved Customers &amp; Departments</h3>
+                <span class="sub-badge" id="roloCountBadge">0</span>
+              </div>
+              <input id="roloSearch" placeholder="Search name, contact, town, or phone..." oninput="renderRolodexDirectory()" style="margin-bottom:10px;" />
+              <div id="rolodexList"></div>
+            </div>
+          </div>
+
+          <!-- 5-YEAR HYDRO & 1-YEAR VISUAL RECALL PANE -->
+          <div id="roloRecallPane" hidden>
+            <div class="card" style="border-top:4px solid var(--amber);">
+              <div class="card-hdr">
+                <h3>🔔 Cylinder Retest Recall Tracker (5-Yr Hydro / 10-Yr Star / 1-Yr Visual)</h3>
+                <div style="display:flex;gap:6px;">
+                  <button class="secondary" onclick="setRecallFilter('DUE')">Due Soon / Overdue (≤120d)</button>
+                  <button class="secondary" onclick="setRecallFilter('ALL')">All Tracked Cylinders</button>
+                </div>
+              </div>
+              <div id="recallsList"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 4: DOT COMPLIANCE SHEETS, STICKERS & ZONE E CLAIM SLIPS -->
+        <section id="tab-print" hidden>
+          <div class="split-2">
+            <div>
+              <div class="card" style="border-top:4px solid #1e3a8a;">
+                <div class="card-hdr">
+                  <h3>🖨️ Official DOT Compliance Sheets (<span id="pdfDateLabel">Selected Date</span>)</h3>
+                  <span class="sub-badge">Signed Off: Ryan Pearce (RP)</span>
+                </div>
+                <div class="grid" style="margin-bottom:12px;">
+                  <div>
+                    <label>Filter Customer (Optional)</label>
+                    <select id="pdfCustomerFilter"></select>
+                  </div>
+                  <div>
+                    <label>Retest Sheet # Override</label>
+                    <input type="number" id="pdfSheetNo" value="8095" />
+                  </div>
+                </div>
+                <div class="grid-2">
+                  <button class="pdf-card-btn" onclick="openPdf('retest')">📄 1. DOT Retest Data Sheet<br /><small style="font-weight:500;opacity:0.85;">12-Row Landscape Form 393-001</small></button>
+                  <button class="pdf-card-btn" onclick="openPdf('verification')">📊 2. Daily Verification Sheet<br /><small style="font-weight:500;opacity:0.85;">Method B Calibration Ladder (±1.0%)</small></button>
+                  <button class="pdf-card-btn" onclick="openPdf('visual')">🔍 3. 7-Point Visual Log<br /><small style="font-weight:500;opacity:0.85;">CGA External / Internal Inspection</small></button>
+                  <button class="pdf-card-btn" style="background:#92400e;" onclick="openPdf('valvetags')">🏷️ 4. Active Valve Tag Sheet<br /><small style="font-weight:500;opacity:0.85;">Shop Clipboard Match Grid</small></button>
+                </div>
+                <button class="pdf-card-btn" style="width:100%;margin-top:10px;background:#0f291e;border:2px solid var(--gold);" onclick="openPdf('poster')">
+                  🚪 5. Printable 24/7 Backroom Drop-Off &amp; Pickup QR Wall Sign (8.5×11)
+                </button>
+              </div>
+
+              <div class="card" style="border-left:4px solid #10b981;">
+                <div class="card-hdr">
+                  <h3>🏷️ Zone E Backroom Shelf Claim Slip</h3>
+                  <span class="sub-badge">Tape to Lead Tank</span>
+                </div>
+                <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
+                  <div style="flex:1;min-width:180px;">
+                    <label>Select Customer Batch</label>
+                    <select id="claimSlipCustomerSel"></select>
+                  </div>
+                  <button class="primary" style="width:auto;margin:0;padding:10px 16px;" onclick="printClaimSlipFromTab()">🖨️ Open Claim Slip PDF</button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="card" style="border-top:4px solid #7c3aed;">
+                <div class="card-hdr">
+                  <h3>🏷️ Monthly &amp; Custom B386 Retest Stickers</h3>
+                  <span class="sub-badge">49 CFR §180.213 • Avery 5160</span>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+                  <button class="secondary" style="flex:1;padding:10px;background:#ede9fe;color:#5b21b6;border-color:#c4b5fd;" onclick="preprintFullSheet(false)">🖨️ Full Sheet: 30 Standard SCBA</button>
+                  <button class="secondary" style="flex:1;padding:10px;background:#fef3c7;color:#92400e;border-color:#fcd34d;" onclick="preprintFullSheet(true)">🖨️ Full Sheet: 60 Mini Paintball HPA</button>
+                </div>
+                <div class="grid" style="align-items:end;">
+                  <div><label>Sticker Count</label><input type="number" id="stickerCount" min="1" value="12" /></div>
+                  <div><label>Skip Used Slots (0–29)</label><input type="number" id="stickerSkip" min="0" max="29" value="0" /></div>
+                </div>
+                <label class="inline-check" style="margin-top:10px;">
+                  <input type="checkbox" id="stickerCompact" />
+                  <span><strong>Compact 2-Up Mini Paintball HPA Mode</strong> (2 mini labels per 1"×2-5/8" slot)</span>
+                </label>
+                <button class="primary" style="background:#5b21b6;" onclick="openPdf('stickers')">Open Custom B386 Sticker PDF</button>
+              </div>
+
+              <div class="card">
+                <div class="card-hdr"><h3>Past Test Dates Quick-Jump</h3></div>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>Work Date</th><th>Customers</th><th>Completed</th><th>Load</th></tr></thead>
+                    <tbody id="datesListTable"></tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <!-- SECTION 3: MASTER SERVICE RATE SCHEDULE -->
-      <div id="sec-rates">
-        <div class="card">
-          <div class="card-hdr">
-            <h3>⚙️ Master Service Rate Schedule</h3>
-            <span class="sub-badge">Auto-Fills Customer Invoices</span>
+        <!-- TAB 5: 1-CLICK REORDER SHOP SUPPLIES HUB -->
+        <section id="tab-supplies" hidden>
+          <div class="card">
+            <div class="card-hdr">
+              <h3>📦 1-Click Reorder Shop Supplies Hub</h3>
+              <button class="primary" style="width:auto;margin:0;padding:8px 14px;" onclick="openSupplyModal(null)">➕ Add Supply Item / Link</button>
+            </div>
+            <div class="pill-selector-bar" id="supplyCatBar">
+              <button class="tap-pill active" data-cat="ALL" onclick="setSupplyCat('ALL')">All Supplies</button>
+              <button class="tap-pill" data-cat="LOW" onclick="setSupplyCat('LOW')">⚠️ Running Low</button>
+              <button class="tap-pill" data-cat="Marking & Labels" onclick="setSupplyCat('Marking & Labels')">Marking &amp; Labels</button>
+              <button class="tap-pill" data-cat="Valves, O-Rings & Lube" onclick="setSupplyCat('Valves, O-Rings & Lube')">Valves, O-Rings &amp; Lube</button>
+              <button class="tap-pill" data-cat="Stand & Inspection" onclick="setSupplyCat('Stand & Inspection')">Stand &amp; Tags</button>
+              <button class="tap-pill" data-cat="Office & Printer" onclick="setSupplyCat('Office & Printer')">Office &amp; Ink</button>
+            </div>
+            <div class="supply-grid" id="suppliesGrid"></div>
           </div>
-          <div id="pricingList"></div>
-          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-            <button class="secondary" onclick="addRateScheduleRow()">+ Add Custom Rate Code</button>
-            <button class="primary" style="width:auto;margin:0;padding:10px 20px;" onclick="savePricingRates()">Save Master Pricing Rates</button>
+        </section>
+
+        <!-- TAB 6: MASTER SERVICE RATE SCHEDULE -->
+        <section id="tab-rates" hidden>
+          <div class="card">
+            <div class="card-hdr">
+              <h3>⚙️ Master Service Rate Schedule</h3>
+              <span class="sub-badge">Auto-Fills Cylinders &amp; Revalve Add-Ons</span>
+            </div>
+            <div id="pricingList"></div>
+            <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+              <button class="secondary" onclick="addRateScheduleRow()">+ Add Custom Rate Code</button>
+              <button class="primary" style="width:auto;margin:0;padding:10px 20px;" onclick="savePricingRates()">Save Master Pricing Rates</button>
+            </div>
           </div>
-        </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- PHONE BOTTOM NAVIGATION BAR -->
+    <nav class="bottom-nav">
+      <button class="bnav-btn active" data-tab="invoice" onclick="switchOfficeTab('invoice')">
+        <span class="ico">💲</span><span>Bill</span><span class="bnav-dot" id="mobBadgeUnbilled" hidden>0</span>
+      </button>
+      <button class="bnav-btn" data-tab="saved" onclick="switchOfficeTab('saved')"><span class="ico">📄</span><span>Invoices</span></button>
+      <button class="bnav-btn" data-tab="rolodex" onclick="switchOfficeTab('rolodex')"><span class="ico">📇</span><span>Rolodex</span></button>
+      <button class="bnav-btn" data-tab="print" onclick="switchOfficeTab('print')"><span class="ico">🖨️</span><span>Print</span></button>
+      <button class="bnav-btn" data-tab="supplies" onclick="switchOfficeTab('supplies')">
+        <span class="ico">📦</span><span>Supplies</span><span class="bnav-dot" id="mobBadgeSupplies" hidden>0</span>
+      </button>
+      <button class="bnav-btn" data-tab="rates" onclick="switchOfficeTab('rates')"><span class="ico">⚙️</span><span>Rates</span></button>
+    </nav>
+  </div>
+
+  <!-- ADD / EDIT SHOP SUPPLY LINK MODAL -->
+  <div id="supplyModal" class="modal-bg" onclick="if(event.target===this)closeSupplyModal()" hidden>
+    <div class="modal" style="max-width:540px;">
+      <div class="card-hdr">
+        <h3 id="supplyModalTitle">Edit Shop Supply Link</h3>
+        <button class="secondary" onclick="closeSupplyModal()">✖ Close</button>
       </div>
-    </main>
+      <input type="hidden" id="supId" />
+      <div class="grid">
+        <div>
+          <label>Category</label>
+          <select id="supCat">
+            <option value="Marking & Labels">Marking &amp; Labels</option>
+            <option value="Valves, O-Rings & Lube">Valves, O-Rings &amp; Lube</option>
+            <option value="Stand & Inspection">Stand &amp; Inspection</option>
+            <option value="Office & Printer">Office &amp; Printer</option>
+          </select>
+        </div>
+        <div><label>Vendor Name</label><input id="supVendor" placeholder="Amazon / McMaster-Carr / Hydro-Test" /></div>
+        <div style="grid-column:1/-1;"><label>Item Name *</label><input id="supName" placeholder="e.g. Kano AeroKroil 10 oz Can" /></div>
+        <div style="grid-column:1/-1;"><label>Part # / Size / Spec Note</label><input id="supNote" placeholder="e.g. Avery 5160 or Viton -112 O-Ring" /></div>
+        <div style="grid-column:1/-1;"><label>Direct 1-Click Reorder URL (Paste Exact Product Page)</label><input id="supUrl" placeholder="https://www.amazon.com/..." /></div>
+      </div>
+      <label class="inline-check" style="margin-top:11px;">
+        <input type="checkbox" id="supLow" />
+        <span>⚠️ Currently Running Low (Flag for Reorder)</span>
+      </label>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="primary" style="margin:0;flex:3;" onclick="saveSupplyItem()">Save Supply Item</button>
+        <button class="danger-btn" id="btnDelSupply" style="flex:1;" onclick="deleteSupplyItem()" hidden>🗑 Delete</button>
+      </div>
+    </div>
   </div>
 
   <script>
-    let STATE = { db_version: 0, pricing_rates: [], customers_summary: [], invoices: [] };
+    let STATE = {
+      db_version: 0, today: '', selected_date: '', default_tax_rate: 6.0,
+      pricing_rates: [], customers_summary: [], customers_rolodex: [],
+      recalls: [], shop_supplies: [], invoices: [],
+    };
+    let CURRENT_TAB = 'invoice';
     let DRAFT_ITEMS = [];
     let EDITABLE_RATES = [];
+    let INV_FILTER = 'ALL';
+    let RECALL_FILTER = 'DUE';
+    let SUPPLY_CAT = 'ALL';
     let INITIAL_BOOT = true;
 
     function escHtml(s) {
       return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
     }
 
-    function setOfficeSection(sec) {
-      document.querySelectorAll('.pill-selector-bar .tap-pill').forEach(b => {
-        b.classList.toggle('active', b.getAttribute('data-sec') === sec);
+    function formatPhoneLive(el) {
+      const d = el.value.replace(/\D/g, '').slice(0, 10);
+      if (d.length >= 7) el.value = `${d.slice(0,3)}-${d.slice(3,6)}-${d.slice(6)}`;
+      else if (d.length >= 4) el.value = `${d.slice(0,3)}-${d.slice(3)}`;
+    }
+
+    function switchOfficeTab(tab) {
+      CURRENT_TAB = tab;
+      document.querySelectorAll('main.ops-workspace > section').forEach(s => { s.hidden = true; });
+      const target = document.getElementById('tab-' + tab);
+      if (target) target.hidden = false;
+      document.querySelectorAll('.rail-btn, .bnav-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-tab') === tab);
       });
-      ['billing', 'print', 'rates'].forEach(k => {
-        document.getElementById('sec-' + k).hidden = (sec !== 'all' && sec !== k);
-      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function stepOfficeDate(delta) {
+      const cur = document.getElementById('globalDate').value || STATE.selected_date || STATE.today;
+      if (!cur) return;
+      const [y, m, d] = cur.split('-').map(Number);
+      const dt = new Date(y, m - 1, d + delta);
+      const iso = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+      document.getElementById('globalDate').value = iso;
+      changeOfficeDate();
+    }
+
+    function jumpOfficeToday() {
+      document.getElementById('globalDate').value = STATE.today || '';
+      changeOfficeDate();
     }
 
     async function bootOffice() {
       const params = new URLSearchParams(location.search);
       if (params.get('date')) document.getElementById('globalDate').value = params.get('date');
-      if (params.get('sec')) setOfficeSection(params.get('sec'));
+      const tabParam = params.get('tab') || params.get('sec');
+      if (tabParam) {
+        const mapLegacy = { billing: 'invoice', print: 'print', rates: 'rates' };
+        const cleanTab = mapLegacy[tabParam] || tabParam;
+        if (['invoice', 'saved', 'rolodex', 'print', 'supplies', 'rates'].includes(cleanTab)) {
+          switchOfficeTab(cleanTab);
+        }
+      }
 
       const res = await fetch('/api/auth/status');
       const auth = await res.json();
@@ -281,9 +519,8 @@
       const prevVer = STATE.db_version;
       STATE = await res.json();
 
-      if (!document.getElementById('globalDate').value) document.getElementById('globalDate').value = STATE.selected_date;
+      document.getElementById('globalDate').value = STATE.selected_date;
       if (!document.getElementById('billDate').value) document.getElementById('billDate').value = STATE.selected_date;
-      if (INITIAL_BOOT) document.getElementById('billTax').value = STATE.default_tax_rate ?? 0;
 
       document.getElementById('pdfDateLabel').textContent = STATE.selected_date;
       document.getElementById('pdfSheetNo').value = STATE.binder_state?.active_sheet_no || STATE.starting_sheet_no;
@@ -296,15 +533,32 @@
       const doneToday = (STATE.records || []).filter(r => r.status === 'COMPLETED');
       const openSched = (STATE.schedule_jobs || []).filter(j => j.status !== 'COMPLETED');
       const totalUnbilled = (STATE.customers_summary || []).reduce((s, c) => s + (c.unbilled_count || 0), 0);
+      const lowCnt = STATE.low_stock_count || 0;
+
       document.getElementById('wsOpsBadge').textContent = queued.length ? `(${queued.length})` : '';
       document.getElementById('wsSchedBadge').textContent = openSched.length ? `(${openSched.length})` : '';
       document.getElementById('wsBillBadge').textContent = totalUnbilled ? `(${totalUnbilled})` : '';
+
+      document.getElementById('navBadgeUnbilled').textContent = String(totalUnbilled);
+      document.getElementById('navBadgeSaved').textContent = String(STATE.invoices.length);
+      document.getElementById('navBadgeRolo').textContent = String(STATE.customers_rolodex.length);
+      document.getElementById('navBadgeSupplies').textContent = lowCnt ? `⚠️ ${lowCnt}` : '✓';
+      document.getElementById('navBadgeSupplies').className = 'nav-badge ' + (lowCnt ? 'amber' : 'green');
+
+      document.getElementById('mobBadgeUnbilled').hidden = !totalUnbilled;
+      document.getElementById('mobBadgeUnbilled').textContent = totalUnbilled;
+      document.getElementById('mobBadgeSupplies').hidden = !lowCnt;
+      document.getElementById('mobBadgeSupplies').textContent = lowCnt;
 
       document.getElementById('stickerCount').value = Math.max(1, doneToday.filter(r => r.hydro_disposition === 'A').length);
 
       const allDayCusts = [...new Set((STATE.records || []).map(r => r.customer_name))];
       document.getElementById('pdfCustomerFilter').innerHTML = '<option value="">-- All Customers on Selected Date --</option>' +
         allDayCusts.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
+
+      document.getElementById('claimSlipCustomerSel').innerHTML = STATE.customers_summary.length
+        ? STATE.customers_summary.map(c => `<option value="${escHtml(c.customer_name)}">${escHtml(c.customer_name)} (${c.ready_backroom_count || c.total_bottles} cyl)</option>`).join('')
+        : '<option value="">No customer batches yet</option>';
 
       document.getElementById('datesListTable').innerHTML = (STATE.dates_summary || []).length
         ? STATE.dates_summary.map(d => `
@@ -315,7 +569,6 @@
           </tr>`).join('')
         : '<tr><td colspan="4">No test dates recorded yet.</td></tr>';
 
-      // 1-Tap Unbilled Customer Pills + Smart Default Selection
       const params = new URLSearchParams(location.search);
       const urlCust = params.get('customer');
       const billSel = document.getElementById('billCustomer');
@@ -324,7 +577,7 @@
 
       billSel.innerHTML = STATE.customers_summary.length
         ? STATE.customers_summary.map(c =>
-            `<option value="${escHtml(c.customer_name)}" ${c.customer_name === targetCust ? 'selected' : ''}>${escHtml(c.customer_name)} (${c.unbilled_count} unbilled)</option>`
+            `<option value="${escHtml(c.customer_name)}" ${c.customer_name === targetCust ? 'selected' : ''}>${escHtml(c.customer_name)} (${c.unbilled_count} unbilled)${c.tax_exempt ? ' • Tax-Exempt' : ''}</option>`
           ).join('')
         : '<option value="">No customers yet</option>';
 
@@ -340,12 +593,17 @@
         renderRateScheduleTable();
       }
       renderInvoicesList();
+      renderRolodexDirectory();
+      renderRecallsList();
+      renderSuppliesGrid();
+
       if (INITIAL_BOOT) {
         INITIAL_BOOT = false;
         await loadUnbilledItems();
       }
     }
 
+    // --- TAB 1: BILLING + AUTO REVALVE ADD-ONS + TAX-EXEMPT ---
     function selectBillingCustomer(cust) {
       document.getElementById('billCustomer').value = cust;
       loadUnbilledItems();
@@ -368,8 +626,19 @@
       const d = document.getElementById('billDate').value || STATE.selected_date;
       const allDates = document.getElementById('billAllDatesChk').checked;
       const cust = document.getElementById('billCustomer').value;
+      const rolo = (STATE.customers_rolodex || []).find(c => c.customer_name.toUpperCase() === (cust || '').toUpperCase());
       const custMeta = STATE.customers_summary.find(c => c.customer_name === cust);
-      document.getElementById('billPhone').value = custMeta?.customer_phone || '';
+
+      document.getElementById('billPhone').value = rolo?.phone || custMeta?.customer_phone || '';
+      const isTaxExempt = Boolean(rolo?.tax_exempt || custMeta?.tax_exempt);
+      document.getElementById('billTaxExemptBadge').hidden = !isTaxExempt;
+      document.getElementById('billTax').value = isTaxExempt ? 0 : (STATE.default_tax_rate ?? 6.0);
+
+      if (rolo?.payment_terms === 'NET_30' || custMeta?.payment_terms === 'NET_30') {
+        document.getElementById('billPayMethod').value = 'Net-30 Municipal';
+        document.getElementById('billStatus').value = 'SENT';
+      }
+
       if (!cust) { DRAFT_ITEMS = []; renderDraftInvoice(); return; }
 
       const res = await fetch(`/api/unbilled?customer_name=${encodeURIComponent(cust)}&work_date=${encodeURIComponent(d)}&all_dates=${allDates}`);
@@ -389,15 +658,21 @@
         if (r.rush_fee || r.priority === 'RUSH') {
           DRAFT_ITEMS.push({ record_id: null, description: `SN ${r.serial_number} - Priority / Rush Turnaround Service`, qty: 1, unit_price: getRate('RUSH_FEE') });
         }
-        if (r.relief_valve_changed === 'Yes') {
+        if (r.addon_oring) {
+          DRAFT_ITEMS.push({ record_id: null, description: `SN ${r.serial_number} - Neck / Valve O-Ring Replacement`, qty: 1, unit_price: getRate('NECK_ORING') });
+        }
+        if (r.addon_burst_disc || r.relief_valve_changed === 'Yes') {
           DRAFT_ITEMS.push({ record_id: null, description: `SN ${r.serial_number} - Relief / Burst Disc Replacement`, qty: 1, unit_price: getRate('VALVE_RELIEF') });
+        }
+        if (r.addon_clean) {
+          DRAFT_ITEMS.push({ record_id: null, description: `SN ${r.serial_number} - Internal Cylinder Tumble / Cleaning`, qty: 1, unit_price: getRate('INTERNAL_CLEAN') });
         }
       }
       renderDraftInvoice();
     }
 
-    function addCustomInvoiceLine() {
-      DRAFT_ITEMS.push({ record_id: null, description: 'Breathing Air / HPA Fill', qty: 1, unit_price: getRate('AIR_FILL') });
+    function addCustomInvoiceLine(code, desc) {
+      DRAFT_ITEMS.push({ record_id: null, description: desc, qty: 1, unit_price: getRate(code) });
       renderDraftInvoice();
     }
 
@@ -438,9 +713,8 @@
       const cust = document.getElementById('billCustomer').value;
       if (!cust || !DRAFT_ITEMS.length) { alert('Select a customer with completed bottles or add a custom line.'); return; }
       const zeroLines = DRAFT_ITEMS.filter(it => !(Number(it.unit_price) > 0)).length;
-      if (zeroLines > 0 && !confirm(`${zeroLines} line item(s) currently have a $0.00 unit price.\n\nSave this invoice with $0.00 item(s) anyway, or press Cancel to enter prices / update Master Service Rates?`)) {
-        return;
-      }
+      if (zeroLines > 0 && !confirm(`${zeroLines} line item(s) currently have a $0.00 unit price.\n\nSave this invoice anyway, or press Cancel to enter prices / update Service Rates?`)) return;
+
       const res = await fetch('/api/invoices', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -462,11 +736,17 @@
       loadUnbilledItems();
     }
 
+    function openSelectedClaimSlip() {
+      const cust = document.getElementById('billCustomer').value;
+      if (!cust) { alert('Select a customer first.'); return; }
+      window.open(`/api/pdf/claim-slip?customer=${encodeURIComponent(cust)}&work_date=${encodeURIComponent(STATE.selected_date)}`, '_blank');
+    }
+
     function sendPickupSms(custName, phone, count, invExtra) {
       let ph = (phone || '').trim() || prompt(`Enter cell phone number for ${custName}:`, '') || '';
       if (!ph.trim()) return;
       const cleanDigits = ph.replace(/\D/g, '');
-      const msg = `Weber's Tank Testing (RIN B386): Hi ${custName}, your ${count} cylinder(s) are tested, stamped/labeled, and ready on our backroom pickup shelf at 3086 Legionville Rd${invExtra ? ' (' + invExtra + ')' : ''}. Questions? Call/text ${STATE.shop_phone || '724-266-8008'}.`;
+      const msg = `Weber's Tank Testing (RIN B386): Hi ${custName}, your ${count} cylinder(s) are tested, stamped/labeled, and ready on our Zone E backroom pickup shelf at 3086 Legionville Rd${invExtra ? ' (' + invExtra + ')' : ''}. Questions? Call/text ${STATE.shop_phone || '724-266-8008'}.`;
       const sep = /iPad|iPhone|iPod/i.test(navigator.userAgent) ? '&' : '?';
       window.location.href = `sms:${cleanDigits}${sep}body=${encodeURIComponent(msg)}`;
     }
@@ -478,17 +758,22 @@
       sendPickupSms(cust, document.getElementById('billPhone').value, Math.max(1, DRAFT_ITEMS.filter(x => x.record_id).length || DRAFT_ITEMS.length), `Total: $${tot}`);
     }
 
+    // --- TAB 2: SAVED INVOICES ---
+    function setInvFilter(f) { INV_FILTER = f; renderInvoicesList(); }
+
     function renderInvoicesList() {
-      document.getElementById('invCountBadge').textContent = `${STATE.invoices.length} Saved`;
-      document.getElementById('invoicesList').innerHTML = STATE.invoices.length
-        ? STATE.invoices.map(inv => `
+      let rows = STATE.invoices || [];
+      if (INV_FILTER === 'OPEN') rows = rows.filter(i => i.status !== 'PAID');
+      if (INV_FILTER === 'PAID') rows = rows.filter(i => i.status === 'PAID');
+      document.getElementById('invoicesList').innerHTML = rows.length
+        ? rows.map(inv => `
           <div class="rec-item">
             <div class="rec-main">
               <div class="rec-title">
                 <span>${escHtml(inv.invoice_no)} — ${escHtml(inv.customer_name)}</span>
-                <span class="${inv.status === 'PAID' ? 'pass' : ''}">$${Number(inv.total_amount).toFixed(2)} (${escHtml(inv.status)}${inv.payment_method ? ' • ' + escHtml(inv.payment_method) : ''})</span>
+                <span class="${inv.status === 'PAID' ? 'pass' : 'dwell-badge'}">$${Number(inv.total_amount).toFixed(2)} (${escHtml(inv.status)}${inv.payment_method ? ' • ' + escHtml(inv.payment_method) : ''})</span>
               </div>
-              <div class="rec-sub">Service Date: ${escHtml(inv.work_date)}${inv.customer_phone ? ' • 📞 ' + escHtml(inv.customer_phone) : ''}</div>
+              <div class="rec-sub">Service Date: ${escHtml(inv.work_date)}${inv.customer_phone ? ' • 📞 ' + escHtml(inv.customer_phone) : ''}${inv.notes ? ' • ' + escHtml(inv.notes) : ''}</div>
             </div>
             <div class="rec-actions">
               <a class="secondary" href="/api/pdf/invoice/${inv.id}" target="_blank">📄 PDF</a>
@@ -496,7 +781,7 @@
               ${inv.status !== 'PAID' ? `<button class="secondary" style="background:#dcfce7;color:#166534;" onclick="markInvoicePaid(${inv.id})">✓ Mark Paid</button>` : ''}
             </div>
           </div>`).join('')
-        : '<div style="color:var(--muted);font-size:0.86rem;">No invoices generated yet.</div>';
+        : '<div style="color:var(--muted);font-size:0.86rem;">No matching invoices found.</div>';
     }
 
     async function markInvoicePaid(id) {
@@ -509,9 +794,159 @@
       loadOfficeState();
     }
 
+    // --- TAB 3: CUSTOMER ROLODEX & 5-YR / 1-YR RECALL ENGINE ---
+    function toggleRolodexSub(which) {
+      document.getElementById('roloDirPane').hidden = (which !== 'dir');
+      document.getElementById('roloRecallPane').hidden = (which !== 'recall');
+      document.getElementById('subBtnDir').classList.toggle('active', which === 'dir');
+      document.getElementById('subBtnRecall').classList.toggle('active', which === 'recall');
+    }
+
+    function onRoloTypeChange() {
+      const t = document.getElementById('rcType').value;
+      if (t === 'FIRE_EMS') {
+        document.getElementById('rcTaxExempt').checked = true;
+        document.getElementById('rcTerms').value = 'NET_30';
+      }
+    }
+
+    function resetRolodexForm() {
+      document.getElementById('roloFormTitle').textContent = '➕ Add / Update Customer Profile';
+      ['rcId', 'rcName', 'rcContact', 'rcPhone', 'rcEmail', 'rcStreet', 'rcCity', 'rcZip', 'rcNotes'].forEach(id => { document.getElementById(id).value = ''; });
+      document.getElementById('rcState').value = 'PA';
+      document.getElementById('rcType').value = 'WALK_IN';
+      document.getElementById('rcTerms').value = 'DUE_AT_PICKUP';
+      document.getElementById('rcTaxExempt').checked = false;
+    }
+
+    function editRolodexCustomer(id) {
+      const c = (STATE.customers_rolodex || []).find(x => x.id === id);
+      if (!c) return;
+      document.getElementById('roloFormTitle').textContent = `✎ Editing: ${c.customer_name}`;
+      document.getElementById('rcId').value = c.id;
+      document.getElementById('rcName').value = c.customer_name || '';
+      document.getElementById('rcType').value = c.account_type || 'WALK_IN';
+      document.getElementById('rcContact').value = c.contact_person || '';
+      document.getElementById('rcPhone').value = c.phone || '';
+      document.getElementById('rcEmail').value = c.email || '';
+      document.getElementById('rcStreet').value = c.street_address || '';
+      document.getElementById('rcCity').value = c.city || '';
+      document.getElementById('rcState').value = c.state || 'PA';
+      document.getElementById('rcZip').value = c.zip_code || '';
+      document.getElementById('rcTerms').value = c.payment_terms || 'DUE_AT_PICKUP';
+      document.getElementById('rcTaxExempt').checked = Boolean(c.tax_exempt);
+      document.getElementById('rcNotes').value = c.notes || '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function saveCustomerProfile() {
+      const name = document.getElementById('rcName').value.trim();
+      if (!name) { alert('Enter Customer or Department name first.'); return; }
+      const idVal = document.getElementById('rcId').value;
+      const res = await fetch('/api/customers', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: idVal ? parseInt(idVal, 10) : null,
+          customer_name: name,
+          account_type: document.getElementById('rcType').value,
+          contact_person: document.getElementById('rcContact').value,
+          phone: document.getElementById('rcPhone').value,
+          email: document.getElementById('rcEmail').value,
+          street_address: document.getElementById('rcStreet').value,
+          city: document.getElementById('rcCity').value,
+          state: document.getElementById('rcState').value,
+          zip_code: document.getElementById('rcZip').value,
+          payment_terms: document.getElementById('rcTerms').value,
+          tax_exempt: document.getElementById('rcTaxExempt').checked,
+          notes: document.getElementById('rcNotes').value,
+        }),
+      });
+      if (!res.ok) { alert((await res.json()).detail || 'Save failed.'); return; }
+      resetRolodexForm();
+      loadOfficeState();
+    }
+
+    async function deleteRolodexCustomer(id, name) {
+      if (!confirm(`Remove "${name}" from the Rolodex directory? (Existing test logs are unaffected.)`)) return;
+      await fetch(`/api/customers/${id}`, { method: 'DELETE' });
+      loadOfficeState();
+    }
+
+    function renderRolodexDirectory() {
+      const q = (document.getElementById('roloSearch')?.value || '').trim().toLowerCase();
+      const rows = (STATE.customers_rolodex || []).filter(c => {
+        if (!q) return true;
+        return [c.customer_name, c.contact_person, c.phone, c.email, c.city, c.street_address].some(v => (v || '').toLowerCase().includes(q));
+      });
+      document.getElementById('roloCountBadge').textContent = `${rows.length} Profiles`;
+      document.getElementById('rolodexList').innerHTML = rows.length
+        ? rows.map(c => {
+            const addr = [c.street_address, c.city, c.state, c.zip_code].filter(Boolean).join(', ');
+            const typeLbl = c.account_type === 'FIRE_EMS' ? '🚒 Fire/EMS' : (c.account_type === 'COMMERCIAL' ? '🏢 Commercial' : '👤 Walk-In');
+            return `
+              <div class="rec-item">
+                <div class="rec-main">
+                  <div class="rec-title">
+                    <span>${escHtml(c.customer_name)}</span>
+                    <span class="acct-tag ${escHtml(c.account_type)}">${typeLbl}</span>
+                    ${c.tax_exempt ? '<span class="tax-exempt-pill">Tax-Exempt</span>' : ''}
+                    ${c.payment_terms === 'NET_30' ? '<span class="zone-badge">Net-30</span>' : ''}
+                  </div>
+                  <div class="rec-sub">
+                    ${c.contact_person ? `👤 ${escHtml(c.contact_person)} • ` : ''}${c.phone ? `📞 ${escHtml(c.phone)} • ` : ''}${c.email ? `✉️ ${escHtml(c.email)} • ` : ''}${addr ? `📍 ${escHtml(addr)}` : 'No mailing address yet'}
+                  </div>
+                  ${c.notes ? `<div style="font-size:0.74rem;color:#92400e;margin-top:2px;">Note: ${escHtml(c.notes)}</div>` : ''}
+                </div>
+                <div class="rec-actions">
+                  <button class="secondary" onclick="editRolodexCustomer(${c.id})">✎ Edit</button>
+                  <button class="secondary" style="color:#b91c1c;" onclick="deleteRolodexCustomer(${c.id}, '${c.customer_name.replace(/'/g, "\\'")}')">✕</button>
+                </div>
+              </div>`;
+          }).join('')
+        : '<div style="color:var(--muted);font-size:0.86rem;">No matching Rolodex profiles yet.</div>';
+    }
+
+    function setRecallFilter(f) { RECALL_FILTER = f; renderRecallsList(); }
+
+    function sendRecallSms(custName, phone, sn, spec, dueLbl, cycleLbl) {
+      let ph = (phone || '').trim() || prompt(`Enter cell phone for ${custName}:`, '') || '';
+      if (!ph.trim()) return;
+      const digits = ph.replace(/\D/g, '');
+      const msg = `Weber's Tank Testing (RIN B386): Friendly reminder for ${custName} — cylinder SN ${sn} (${spec}) is due for its ${cycleLbl} around ${dueLbl}. Drop off 24/7 at 3086 Legionville Rd, Baden or call/text ${STATE.shop_phone || '724-266-8008'}.`;
+      const sep = /iPad|iPhone|iPod/i.test(navigator.userAgent) ? '&' : '?';
+      window.location.href = `sms:${digits}${sep}body=${encodeURIComponent(msg)}`;
+    }
+
+    function renderRecallsList() {
+      let rows = STATE.recalls || [];
+      if (RECALL_FILTER === 'DUE') rows = rows.filter(r => r.status_bucket !== 'FUTURE');
+      document.getElementById('recallsList').innerHTML = rows.length
+        ? rows.map(r => `
+          <div class="rec-item">
+            <div class="rec-main">
+              <div class="rec-title">
+                <span>${escHtml(r.customer_name)} — SN ${escHtml(r.serial_number)}</span>
+                <span class="recall-pill ${r.status_bucket}">${r.status_bucket === 'OVERDUE' ? '⛔ OVERDUE' : (r.status_bucket === 'DUE_SOON' ? '⚠️ DUE SOON' : '✓ ' + escHtml(r.due_month_label))}</span>
+              </div>
+              <div class="rec-sub">${escHtml(r.spec_label)} • ${escHtml(r.cycle_label)} • Last Tested: ${escHtml(r.last_test_date)} • Due: <strong>${escHtml(r.due_date)}</strong>${r.phone ? ' • 📞 ' + escHtml(r.phone) : ''}</div>
+            </div>
+            <div class="rec-actions">
+              <button class="secondary" onclick="sendRecallSms('${r.customer_name.replace(/'/g, "\\'")}', '${escHtml(r.phone)}', '${escHtml(r.serial_number)}', '${escHtml(r.spec_label)}', '${escHtml(r.due_month_label)}', '${escHtml(r.cycle_label)}')">📲 Text Reminder</button>
+            </div>
+          </div>`).join('')
+        : '<div style="color:var(--muted);font-size:0.86rem;">No cylinders due within 120 days right now — click <strong>All Tracked Cylinders</strong> to see upcoming 1-yr &amp; 5-yr dates.</div>';
+    }
+
+    // --- TAB 4: DOT PDFS, STICKERS & ZONE E CLAIM SLIPS ---
     function preprintFullSheet(compact) {
       const d = STATE.today || STATE.selected_date;
       window.open(`/api/pdf/stickers?work_date=${encodeURIComponent(d)}&count=${compact ? 60 : 30}&skip=0&compact=${compact}`, '_blank');
+    }
+
+    function printClaimSlipFromTab() {
+      const c = document.getElementById('claimSlipCustomerSel').value;
+      if (!c) { alert('No customer batch available yet.'); return; }
+      window.open(`/api/pdf/claim-slip?customer=${encodeURIComponent(c)}&work_date=${encodeURIComponent(STATE.selected_date)}`, '_blank');
     }
 
     function openPdf(kind) {
@@ -532,6 +967,102 @@
       window.open(url, '_blank');
     }
 
+    // --- TAB 5: 1-CLICK REORDER SHOP SUPPLIES HUB ---
+    function setSupplyCat(cat) {
+      SUPPLY_CAT = cat;
+      document.querySelectorAll('#supplyCatBar .tap-pill').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-cat') === cat);
+      });
+      renderSuppliesGrid();
+    }
+
+    function renderSuppliesGrid() {
+      let items = STATE.shop_supplies || [];
+      if (SUPPLY_CAT === 'LOW') items = items.filter(s => s.low_stock);
+      else if (SUPPLY_CAT !== 'ALL') items = items.filter(s => s.category === SUPPLY_CAT);
+
+      document.getElementById('suppliesGrid').innerHTML = items.length
+        ? items.map(s => {
+            const href = (s.reorder_url && s.reorder_url.trim())
+              ? s.reorder_url
+              : `https://www.amazon.com/s?k=${encodeURIComponent(s.item_name)}`;
+            return `
+              <div class="supply-card ${s.low_stock ? 'is-low' : ''}">
+                <div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px;">
+                    <span class="sub-badge" style="font-size:0.67rem;">${escHtml(s.category)}</span>
+                    ${s.low_stock ? '<span class="rush-badge">⚠️ RUNNING LOW</span>' : `<span style="font-size:0.7rem;color:var(--muted);font-weight:700;">${escHtml(s.vendor_name || 'Vendor')}</span>`}
+                  </div>
+                  <strong style="font-size:0.94rem;display:block;margin-bottom:3px;">${escHtml(s.item_name)}</strong>
+                  <div style="font-size:0.78rem;color:var(--muted);">${escHtml(s.spec_note || '')}</div>
+                  ${s.last_ordered_date ? `<div style="font-size:0.71rem;color:#15803d;font-weight:700;margin-top:4px;">✓ Last Ordered: ${escHtml(s.last_ordered_date)}</div>` : ''}
+                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                  <a class="order-link-btn" style="flex:1;" href="${escHtml(href)}" target="_blank" rel="noopener">🛒 Order Now ↗</a>
+                  ${s.low_stock
+                    ? `<button class="secondary" style="background:#dcfce7;color:#166534;border-color:#86efac;" onclick="toggleSupplyStock(${s.id}, false, true)">✓ Ordered</button>`
+                    : `<button class="secondary" onclick="toggleSupplyStock(${s.id}, true, false)" title="Flag Running Low">⚠️ Low</button>`}
+                  <button class="secondary" onclick="openSupplyModal(${s.id})" title="Edit Link / Details">✎</button>
+                </div>
+              </div>`;
+          }).join('')
+        : '<div style="color:var(--muted);font-size:0.86rem;">No supply items in this filter.</div>';
+    }
+
+    async function toggleSupplyStock(id, lowStock, markOrderedToday) {
+      await fetch(`/api/supplies/${id}/stock`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ low_stock: lowStock, mark_ordered_today: markOrderedToday }),
+      });
+      loadOfficeState();
+    }
+
+    function openSupplyModal(id) {
+      const s = id ? (STATE.shop_supplies || []).find(x => x.id === id) : null;
+      document.getElementById('supplyModalTitle').textContent = s ? '✎ Edit Supply Item & Link' : '➕ Add Shop Supply Item';
+      document.getElementById('supId').value = s ? s.id : '';
+      document.getElementById('supCat').value = s ? s.category : 'Marking & Labels';
+      document.getElementById('supVendor').value = s ? (s.vendor_name || 'Amazon') : 'Amazon';
+      document.getElementById('supName').value = s ? s.item_name : '';
+      document.getElementById('supNote').value = s ? (s.spec_note || '') : '';
+      document.getElementById('supUrl').value = s ? (s.reorder_url || '') : '';
+      document.getElementById('supLow').checked = Boolean(s && s.low_stock);
+      document.getElementById('btnDelSupply').hidden = !s;
+      document.getElementById('supplyModal').hidden = false;
+    }
+
+    function closeSupplyModal() { document.getElementById('supplyModal').hidden = true; }
+
+    async function saveSupplyItem() {
+      const name = document.getElementById('supName').value.trim();
+      if (!name) { alert('Enter item name first.'); return; }
+      const idVal = document.getElementById('supId').value;
+      const res = await fetch('/api/supplies', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: idVal ? parseInt(idVal, 10) : null,
+          category: document.getElementById('supCat').value,
+          vendor_name: document.getElementById('supVendor').value,
+          item_name: name,
+          spec_note: document.getElementById('supNote').value,
+          reorder_url: document.getElementById('supUrl').value,
+          low_stock: document.getElementById('supLow').checked,
+        }),
+      });
+      if (!res.ok) { alert((await res.json()).detail || 'Save failed.'); return; }
+      closeSupplyModal();
+      loadOfficeState();
+    }
+
+    async function deleteSupplyItem() {
+      const idVal = document.getElementById('supId').value;
+      if (!idVal || !confirm('Remove this supply item from the Reorder Hub?')) return;
+      await fetch(`/api/supplies/${idVal}`, { method: 'DELETE' });
+      closeSupplyModal();
+      loadOfficeState();
+    }
+
+    // --- TAB 6: MASTER SERVICE RATES ---
     function renderRateScheduleTable() {
       document.getElementById('pricingList').innerHTML = EDITABLE_RATES.map((p, i) => `
         <div class="rate-edit-row">
@@ -579,6 +1110,17 @@
       alert(res.ok ? (data.synced ? `Synced ${data.pushed} item(s) to Google Sheets!` : data.reason) : data.detail);
       loadOfficeState();
     }
+
+    setInterval(async () => {
+      if (document.getElementById('appShell').hidden) return;
+      try {
+        const res = await fetch('/api/ping');
+        if (res.ok) {
+          const p = await res.json();
+          if (p.db_version !== STATE.db_version) loadOfficeState();
+        }
+      } catch (_) {}
+    }, 4000);
 
     bootOffice();
   </script>

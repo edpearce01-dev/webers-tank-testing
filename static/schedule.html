@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#0b2219" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/static/ops.css?v=7.0" />
-  <title>Weber's Tank Testing — Wall Schedule &amp; Dispatch | DOT B386</title>
+  <link rel="stylesheet" href="/static/ops.css?v=8.0" />
+  <title>Weber's Tank Testing — Month Schedule &amp; Dispatch | DOT B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
@@ -15,7 +15,7 @@
     <div class="login-card">
       <img src="/static/images/logo-crest.jpg" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Schedule &amp; Dispatch</h2>
-      <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter Crew PIN to open the Shop Wall Calendar</p>
+      <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter Crew PIN to open the Full Month Calendar</p>
       <div style="text-align:left;">
         <label>Crew Access PIN</label>
         <input type="password" inputmode="numeric" id="loginPinInput" placeholder="••••"
@@ -23,18 +23,18 @@
           style="text-align:center;font-size:1.35rem;letter-spacing:6px;font-weight:800;" />
       </div>
       <div id="loginError" class="notice bad" style="margin-top:12px;" hidden>Incorrect Shop PIN.</div>
-      <button class="primary" onclick="submitLoginPin()">Unlock Wall Calendar</button>
+      <button class="primary" onclick="submitLoginPin()">Unlock Schedule</button>
     </div>
   </div>
 
-  <!-- AUTHENTICATED SCHEDULE SHELL -->
+  <!-- AUTHENTICATED SCHEDULE WORKSPACE -->
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
         <img src="/static/images/logo-crest.jpg" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>WALL SCHEDULE</h1>
-          <small>RIN B386 • Dispatch &amp; Capacity</small>
+          <small>RIN B386 • Calendar &amp; Dispatch</small>
         </div>
       </a>
 
@@ -46,147 +46,306 @@
       </nav>
 
       <div class="top-controls">
-        <input type="date" id="globalDate" class="top-date" onchange="loadScheduleState()" />
-        <a href="/ops?tab=cal" class="j-dot wait" id="pillShort" title="Short Jacket Status">S: Uncal</a>
-        <a href="/ops?tab=cal" class="j-dot wait" id="pillTall" title="Tall Jacket Status">T: Uncal</a>
+        <div class="date-stepper">
+          <button type="button" class="step-btn" onclick="stepSelectedDate(-1)" title="Previous Day">◀</button>
+          <button type="button" class="today-btn" onclick="jumpToToday()" title="Jump Back to Today">Today</button>
+          <input type="date" id="globalDate" class="top-date" onchange="onGlobalDateInput()" />
+          <button type="button" class="step-btn" onclick="stepSelectedDate(1)" title="Next Day">▶</button>
+        </div>
+        <a href="/ops?tab=cal" class="j-dot wait" id="pillShort">S: <span class="full-lbl">Uncal</span></a>
+        <a href="/ops?tab=cal" class="j-dot wait" id="pillTall">T: <span class="full-lbl">Uncal</span></a>
         <button class="menu-pill" onclick="logoutCrew()" title="Sign Out">🔒</button>
       </div>
     </header>
 
-    <main class="ops-single-workspace">
-      <!-- 14-DAY INTERACTIVE SHOP WALL CALENDAR -->
-      <div class="card">
-        <div class="card-hdr">
-          <h3>📅 14-Day Shop Wall Calendar — Tap Any Day to Set Shift Mode or Book Runs</h3>
-          <span class="sub-badge" id="backlogSummaryBadge">Checking backlog...</span>
-        </div>
-        <div class="cal-grid-14" id="calStripGrid"></div>
-      </div>
-
-      <div class="split-2">
-        <!-- LEFT COLUMN: DAY SHIFT PLANNER + PHONE PROMISE-DATE CALCULATOR -->
-        <div>
-          <div class="card" style="border-left:4px solid var(--green);">
-            <div class="card-hdr">
-              <h3>Operating Window for <span id="planDateLabel">Selected Date</span></h3>
-              <span class="sub-badge" id="planBookedBadge">0 Booked</span>
-            </div>
-            <div class="grid" style="align-items:end;">
-              <div>
-                <label>Shop Operating Mode</label>
-                <select id="planShiftMode" onchange="autoFillPlanCap()">
-                  <option value="FULL_HYDRO">🟢 Full Hydro &amp; Prep Window</option>
-                  <option value="PREP_ONLY">🔧 Prep, Devalve &amp; Drop-Off Only</option>
-                  <option value="ROAD_RUN">🚚 Road Pickup / Delivery &amp; Partial Hydro</option>
-                  <option value="BACKROOM_ONLY">🚪 24/7 Backroom Self-Drop Only</option>
-                </select>
-              </div>
-              <div>
-                <label>Daily Hydro Bottle Capacity</label>
-                <input type="number" id="planCapacity" min="0" max="150" value="24" />
-              </div>
-              <div style="grid-column:1/-1;">
-                <label>Wall Calendar Day Note (Shows on Live TV)</label>
-                <input id="planNotes" placeholder="e.g. Baden VFD 18x SCBA, afternoon road deliveries..." />
-              </div>
-            </div>
-            <button class="primary" onclick="saveDayPlan()">Save Day Operating Plan</button>
-          </div>
-
-          <div class="card" style="border-left:4px solid #0284c7;">
-            <div class="card-hdr">
-              <h3>📞 Phone Call Quote — Realistic Promise Date</h3>
-              <span class="sub-badge">Backlog + Hydro Windows</span>
-            </div>
-            <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;">
-              <div style="flex:1;min-width:130px;">
-                <label>Incoming Bottle Count</label>
-                <input type="number" id="quoteCountInput" min="1" max="250" value="6" oninput="fetchLiveTurnaroundQuote()" />
-              </div>
-              <button class="secondary" style="padding:10px 14px;" onclick="fetchLiveTurnaroundQuote()">↻ Recalculate</button>
-            </div>
-            <div class="quote-grid" id="quoteResultArea"></div>
-          </div>
-
-          <div class="card" id="backroomPreviewCard" style="border-left:4px solid #f59e0b;" hidden>
-            <div class="card-hdr">
-              <h3>🚪 Unscanned 24/7 Backroom Check-Ins</h3>
-              <span class="sub-badge" id="backroomCountBadge">0</span>
-            </div>
-            <div id="backroomPreviewList"></div>
-          </div>
+    <div class="ops-layout">
+      <!-- LEFT SIDEBAR MENU -->
+      <aside class="side-rail">
+        <div class="rail-nav">
+          <div class="rail-section-lbl">Schedule &amp; Dispatch</div>
+          <button class="rail-btn active" data-tab="cal" onclick="switchSchedTab('cal')">
+            <span>1. Month Calendar</span><span class="nav-badge green" id="navBadgeMonth">📅</span>
+          </button>
+          <button class="rail-btn" data-tab="book" onclick="switchSchedTab('book')">
+            <span>2. Book &amp; Quote</span><span class="nav-badge" id="navBadgeBacklog">0</span>
+          </button>
+          <button class="rail-btn" data-tab="runs" onclick="switchSchedTab('runs')">
+            <span>3. Active Runs &amp; Prep</span><span class="nav-badge" id="navBadgeRuns">0</span>
+          </button>
+          <button class="rail-btn" data-tab="door" onclick="switchSchedTab('door')">
+            <span>4. Backroom Door</span><span class="nav-badge amber" id="navBadgeDoor">0</span>
+          </button>
         </div>
 
-        <!-- RIGHT COLUMN: BOOK SCHEDULED BATCH / ROAD RUN + ACTIVE DISPATCH LIST -->
-        <div>
-          <div class="card">
-            <div class="card-hdr">
-              <h3>➕ Book Pickup, Delivery, or Scheduled Shop Batch</h3>
-              <span class="sub-badge">Syncs to Ops &amp; TV</span>
-            </div>
-            <datalist id="customerSuggest"></datalist>
-            <div class="grid">
-              <div>
-                <label>Entry Type</label>
-                <select id="sjType">
-                  <option value="SHOP_BATCH">📌 Scheduled Shop Batch</option>
-                  <option value="ROAD_PICKUP">🚚 Outbound Pickup Run</option>
-                  <option value="ROAD_DELIVERY">🚚 Outbound Delivery Run</option>
-                  <option value="ONSITE_VISUAL">🔍 On-Site Visual Inspection</option>
-                </select>
-              </div>
-              <div><label>Scheduled Date</label><input type="date" id="sjDate" /></div>
-              <div><label>Promised Ready Date</label><input type="date" id="sjDueDate" /></div>
-              <div>
-                <label>Priority / Rush</label>
-                <select id="sjPriority">
-                  <option value="STANDARD">Standard Turnaround</option>
-                  <option value="RUSH">🔥 Paid Rush Service (Fee)</option>
-                  <option value="HIGH">⚡ High Priority</option>
-                </select>
-              </div>
-              <div><label>Customer / Fire Dept *</label><input id="sjCustomer" list="customerSuggest" placeholder="e.g. Economy Ambulance" /></div>
-              <div><label>Contact Phone</label><input id="sjPhone" type="tel" placeholder="724-555-0199" /></div>
-              <div><label>Bottle Count</label><input type="number" id="sjCount" min="1" value="6" /></div>
-              <div>
-                <label>Initial Shop Zone</label>
-                <select id="sjZone">
-                  <option value="ZONE_A_BACKROOM">Zone A • Backroom Drop</option>
-                  <option value="ZONE_B_DEVALVE">Zone B • Devalve &amp; Tag</option>
-                  <option value="ZONE_C_READY_RACK">Zone C • Ready Rack</option>
-                  <option value="OUTBOUND_TRUCK">🚚 Truck / Road Stop</option>
-                </select>
-              </div>
-              <div><label>Tank Types / Specs</label><input id="sjSummary" placeholder="e.g. 12x 4500# SCBA, 4x O2" /></div>
-              <div><label>Address / Stop Info (For Road Runs)</label><input id="sjLocation" placeholder="Station #2, Ambridge PA" /></div>
-              <div style="grid-column:1/-1;"><label>Crew Prep / Dispatch Notes</label><input id="sjNotes" placeholder="Pull valves &amp; water-fill ahead of hydro day..." /></div>
-            </div>
-            <button class="primary" onclick="submitScheduleJob()">Add to Wall Calendar &amp; Live TV</button>
-          </div>
+        <div class="rail-footer">
+          <a class="secondary" href="/ops" style="width:100%;">🔧 Back to Shop Ops</a>
+          <a class="secondary" href="/office?tab=rolodex" style="width:100%;">📇 Customer Rolodex</a>
+          <a class="secondary" href="/office?tab=supplies" id="railSupplyBtn" style="width:100%;">📦 Reorder Supplies</a>
+          <a class="secondary" href="/tv" target="_blank" style="width:100%;">📺 Open Live TV</a>
+        </div>
+      </aside>
 
+      <!-- FOCUSED SINGLE-SCREEN WORKSPACE -->
+      <main class="ops-workspace">
+        <!-- TAB 1: FULL MONTH CALENDAR + SELECTED DAY INSPECTOR -->
+        <section id="tab-cal">
+          <div class="split-cal">
+            <div class="card">
+              <div class="month-nav-bar">
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                  <button class="secondary" onclick="shiftCalendarMonth(-1)">◀ Prev</button>
+                  <strong style="font-size:1.08rem;min-width:142px;text-align:center;" id="monthTitleLbl">Month</strong>
+                  <button class="secondary" onclick="shiftCalendarMonth(1)">Next ▶</button>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                  <input type="month" id="jumpMonthInput" style="width:auto;padding:5px 8px;font-size:0.82rem;font-weight:700;" onchange="jumpToPickedMonth(this.value)" />
+                  <button class="secondary" style="background:#fde68a;color:#111827;border-color:#f59e0b;font-weight:900;" onclick="jumpToToday()">📍 Jump to Today</button>
+                </div>
+              </div>
+
+              <div class="month-scroll">
+                <div class="month-dow-grid">
+                  <div class="month-dow-cell">Sun</div>
+                  <div class="month-dow-cell">Mon</div>
+                  <div class="month-dow-cell">Tue</div>
+                  <div class="month-dow-cell">Wed</div>
+                  <div class="month-dow-cell">Thu</div>
+                  <div class="month-dow-cell">Fri</div>
+                  <div class="month-dow-cell">Sat</div>
+                </div>
+                <div class="month-days-grid" id="monthGridCells"></div>
+              </div>
+            </div>
+
+            <!-- RIGHT INSPECTOR: SELECTED DAY PLAN & RUNS -->
+            <div>
+              <div class="card" style="border-top:4px solid var(--green);">
+                <div class="card-hdr">
+                  <h3>Selected Day: <span id="planDateLabel">—</span></h3>
+                  <span class="sub-badge" id="planBookedBadge">0 / 24</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:9px;">
+                  <div>
+                    <label>Operating Window</label>
+                    <select id="planShiftMode" onchange="autoFillPlanCap()">
+                      <option value="FULL_HYDRO">🟢 Full Hydro &amp; Prep Window</option>
+                      <option value="PREP_ONLY">🔧 Prep, Devalve &amp; Drop-Off Only</option>
+                      <option value="ROAD_RUN">🚚 Road Pickup / Delivery &amp; Partial Hydro</option>
+                      <option value="BACKROOM_ONLY">🚪 24/7 Backroom Self-Drop Only</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label>Daily Hydro Bottle Capacity</label>
+                    <input type="number" id="planCapacity" min="0" max="150" value="24" />
+                  </div>
+                  <div>
+                    <label>Day Note (Shows on Wall &amp; Live TV)</label>
+                    <input id="planNotes" placeholder="e.g. Baden VFD 18x SCBA, afternoon road run..." />
+                  </div>
+                </div>
+                <button class="primary" onclick="saveDayPlan()">Save Day Operating Plan</button>
+                <button class="secondary" style="width:100%;margin-top:8px;padding:9px;" onclick="bookForSelectedDate()">➕ Book Pickup or Batch on This Date →</button>
+              </div>
+
+              <div class="card">
+                <div class="card-hdr">
+                  <h3>Jobs on <span id="dayJobsDateLbl">Selected Date</span></h3>
+                  <span class="sub-badge" id="dayJobsCountBadge">0</span>
+                </div>
+                <div id="selectedDayJobsList"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 2: PHONE TURNAROUND CALCULATOR + SHARPENED BOOKING FORM -->
+        <section id="tab-book" hidden>
+          <datalist id="customerSuggest"></datalist>
+          <div class="split-2">
+            <div class="card" style="border-top:4px solid var(--green);">
+              <div class="card-hdr">
+                <h3>➕ Book Pickup, Delivery, or Scheduled Batch</h3>
+                <span class="sub-badge">Syncs to Rolodex, Ops &amp; TV</span>
+              </div>
+
+              <label>Customer / Account Type</label>
+              <div class="pill-selector-bar" id="bookAcctBar">
+                <button type="button" class="tap-pill active" data-acct="WALK_IN" onclick="setBookingAcct('WALK_IN')">👤 Walk-In / Player</button>
+                <button type="button" class="tap-pill" data-acct="FIRE_EMS" onclick="setBookingAcct('FIRE_EMS')">🚒 Fire Dept / EMS</button>
+                <button type="button" class="tap-pill" data-acct="COMMERCIAL" onclick="setBookingAcct('COMMERCIAL')">🏢 Commercial / Fleet</button>
+              </div>
+
+              <div class="grid">
+                <div>
+                  <label>Dispatch Type</label>
+                  <select id="sjType">
+                    <option value="SHOP_BATCH">📌 Scheduled Shop Batch</option>
+                    <option value="ROAD_PICKUP">🚚 Outbound Pickup Run</option>
+                    <option value="ROAD_DELIVERY">🚚 Outbound Delivery Run</option>
+                    <option value="ONSITE_VISUAL">🔍 On-Site Visual Inspection</option>
+                  </select>
+                </div>
+                <div>
+                  <label>Priority / Rush</label>
+                  <select id="sjPriority">
+                    <option value="STANDARD">Standard Turnaround</option>
+                    <option value="RUSH">🔥 Paid Rush Service (Fee)</option>
+                    <option value="HIGH">⚡ High Priority</option>
+                  </select>
+                </div>
+                <div><label>Scheduled Date *</label><input type="date" id="sjDate" /></div>
+                <div><label>Promised Ready Date</label><input type="date" id="sjDueDate" /></div>
+                <div>
+                  <label>Customer / Department *</label>
+                  <input id="sjCustomer" list="customerSuggest" placeholder="Start typing name or dept..." oninput="prefillBookingFromRolodex()" />
+                </div>
+                <div>
+                  <label>Cell / Station Phone *</label>
+                  <input id="sjPhone" type="tel" placeholder="724-555-0199" oninput="formatPhoneLive(this)" />
+                </div>
+                <div id="sjPoWrap" hidden>
+                  <label>PO # / Station #</label>
+                  <input id="sjPoStation" placeholder="e.g. Station #2 / PO-1042" />
+                </div>
+                <div><label>Total Cylinder Count *</label><input type="number" id="sjCount" min="1" value="1" /></div>
+                <div>
+                  <label>Initial Shop Zone</label>
+                  <select id="sjZone">
+                    <option value="ZONE_A_BACKROOM">Zone A • Backroom Drop</option>
+                    <option value="ZONE_B_DEVALVE">Zone B • Devalve &amp; Tag</option>
+                    <option value="ZONE_C_READY_RACK">Zone C • Ready Rack</option>
+                    <option value="OUTBOUND_TRUCK">🚚 Truck / Road Stop</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="margin-top:10px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <label style="margin:0;">1-Tap Tank Category Builder (Adds to Count &amp; Summary)</label>
+                  <button type="button" class="secondary" style="padding:2px 7px;font-size:0.7rem;" onclick="clearTankBuilder()">Clear</button>
+                </div>
+                <div class="tank-chip-bar">
+                  <button type="button" class="tank-chip" onclick="bumpTankType('4500# SCBA')">+ SCBA 4500#</button>
+                  <button type="button" class="tank-chip" onclick="bumpTankType('Paintball HPA')">+ Paintball HPA</button>
+                  <button type="button" class="tank-chip" onclick="bumpTankType('Scuba')">+ Scuba</button>
+                  <button type="button" class="tank-chip" onclick="bumpTankType('Beverage CO2')">+ CO2</button>
+                  <button type="button" class="tank-chip" onclick="bumpTankType('Medical O2')">+ Medical O2</button>
+                  <button type="button" class="tank-chip" onclick="bumpTankType('Welding/Ind')">+ Welding/Ind</button>
+                </div>
+                <input id="sjSummary" placeholder="e.g. 6x 4500# SCBA, 2x Medical O2" />
+              </div>
+
+              <div class="grid" style="margin-top:10px;">
+                <div><label>Road Pickup / Delivery Address</label><input id="sjLocation" placeholder="Street &amp; Town (for Google Maps)" /></div>
+                <div><label>Crew Prep / Gate Notes</label><input id="sjNotes" placeholder="Combo code, adapter note, burst disc..." /></div>
+              </div>
+
+              <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:11px;padding:9px 11px;background:#f8fafc;border-radius:8px;border:1px solid var(--border-soft);">
+                <label class="inline-check"><input type="checkbox" id="sjValvesOn" checked /><span>Valves / HPA Regulators Attached</span></label>
+                <label class="inline-check"><input type="checkbox" id="sjNeedsFill" /><span>💨 Customer Requested Air / Gas Refill</span></label>
+              </div>
+
+              <button class="primary" onclick="submitScheduleJob()">Save to Month Calendar &amp; Live TV</button>
+            </div>
+
+            <!-- PHONE CALL PROMISE-DATE QUOTE CALCULATOR -->
+            <div class="card" style="border-top:4px solid #0284c7;">
+              <div class="card-hdr">
+                <h3>📞 Phone Call Quote — Realistic Promise Date</h3>
+                <span class="sub-badge" id="backlogSummaryBadge">Backlog: 0</span>
+              </div>
+              <p style="margin:0 0 10px;font-size:0.83rem;color:var(--muted);">
+                Calculates realistic Standard vs. Paid Rush ready dates from your active backlog + scheduled hydro windows:
+              </p>
+              <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;">
+                <div style="flex:1;min-width:130px;">
+                  <label>Caller's Bottle Count</label>
+                  <input type="number" id="quoteCountInput" min="1" max="250" value="6" oninput="fetchLiveTurnaroundQuote()" />
+                </div>
+                <button class="secondary" style="padding:10px 14px;" onclick="fetchLiveTurnaroundQuote()">↻ Recalculate</button>
+              </div>
+              <div class="quote-grid" id="quoteResultArea"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 3: ACTIVE RUNS, PICKUPS & SCHEDULED PREP BATCHES -->
+        <section id="tab-runs" hidden>
           <div class="card">
             <div class="card-hdr">
-              <h3>Active Pickups, Deliveries &amp; Prep Batches</h3>
-              <span class="sub-badge" id="schedActiveBadge">0 Active</span>
+              <h3>🚚 Active Pickups, Deliveries &amp; Scheduled Batches</h3>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button class="secondary" onclick="setRunsFilter('ALL')">All Open</button>
+                <button class="secondary" onclick="setRunsFilter('ROAD')">🚚 Road Runs Only</button>
+                <button class="secondary" onclick="setRunsFilter('RUSH')">🔥 Rush Only</button>
+              </div>
             </div>
             <div id="scheduleJobsList"></div>
           </div>
-        </div>
-      </div>
-    </main>
+        </section>
+
+        <!-- TAB 4: 24/7 BACKROOM DOOR INBOX -->
+        <section id="tab-door" hidden>
+          <div class="card" style="border-left:4px solid #f59e0b;">
+            <div class="card-hdr">
+              <h3>🚪 Unscanned 24/7 Backroom Drop-Offs &amp; Verified Pickups</h3>
+              <span class="sub-badge" id="doorCountBadge">0 Waiting</span>
+            </div>
+            <div id="backroomDoorList"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- PHONE BOTTOM NAVIGATION BAR -->
+    <nav class="bottom-nav">
+      <button class="bnav-btn active" data-tab="cal" onclick="switchSchedTab('cal')"><span class="ico">📅</span><span>1. Month</span></button>
+      <button class="bnav-btn" data-tab="book" onclick="switchSchedTab('book')"><span class="ico">➕</span><span>2. Book</span></button>
+      <button class="bnav-btn" data-tab="runs" onclick="switchSchedTab('runs')">
+        <span class="ico">🚚</span><span>3. Runs</span><span class="bnav-dot" id="mobBadgeRuns" hidden>0</span>
+      </button>
+      <button class="bnav-btn" data-tab="door" onclick="switchSchedTab('door')">
+        <span class="ico">🚪</span><span>4. Door</span><span class="bnav-dot" id="mobBadgeDoor" hidden>0</span>
+      </button>
+    </nav>
   </div>
 
   <script>
-    let STATE = { db_version: 0, daily_hydro_capacity: 24 };
-    let LAST_QUOTE = null;
+    let STATE = { db_version: 0, daily_hydro_capacity: 24, today: '', selected_date: '' };
+    let CURRENT_TAB = 'cal';
+    let VIEW_YEAR = null, VIEW_MONTH = null;
+    let MONTH_DATA = null;
+    let BOOK_ACCT = 'WALK_IN';
+    let TANK_COUNTS = {};
+    let RUNS_FILTER = 'ALL';
 
     function escHtml(s) {
       return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
     }
 
+    function formatPhoneLive(el) {
+      const d = el.value.replace(/\D/g, '').slice(0, 10);
+      if (d.length >= 7) el.value = `${d.slice(0,3)}-${d.slice(3,6)}-${d.slice(6)}`;
+      else if (d.length >= 4) el.value = `${d.slice(0,3)}-${d.slice(3)}`;
+    }
+
+    function switchSchedTab(tab) {
+      CURRENT_TAB = tab;
+      document.querySelectorAll('main.ops-workspace > section').forEach(s => { s.hidden = true; });
+      const target = document.getElementById('tab-' + tab);
+      if (target) target.hidden = false;
+      document.querySelectorAll('.rail-btn, .bnav-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-tab') === tab);
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
     async function bootSchedule() {
       const params = new URLSearchParams(location.search);
       if (params.get('date')) document.getElementById('globalDate').value = params.get('date');
+      if (params.get('tab') && ['cal', 'book', 'runs', 'door'].includes(params.get('tab'))) {
+        switchSchedTab(params.get('tab'));
+      }
       const res = await fetch('/api/auth/status');
       const auth = await res.json();
       if (!auth.authenticated) {
@@ -216,123 +375,292 @@
       bootSchedule();
     }
 
-    function selectCalendarDay(isoDate) {
+    // --- DATE STEPPER & FULL MONTH NAVIGATION ---
+    function stepSelectedDate(delta) {
+      const cur = document.getElementById('globalDate').value || STATE.selected_date || STATE.today;
+      if (!cur) return;
+      const [y, m, d] = cur.split('-').map(Number);
+      const dt = new Date(y, m - 1, d + delta);
+      const iso = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+      selectCalendarDay(iso, true);
+    }
+
+    function jumpToToday() {
+      const t = STATE.today || new Date().toISOString().slice(0, 10);
+      const [y, m] = t.split('-').map(Number);
+      VIEW_YEAR = y;
+      VIEW_MONTH = m;
+      document.getElementById('globalDate').value = t;
+      document.getElementById('sjDate').value = t;
+      loadScheduleState();
+    }
+
+    function onGlobalDateInput() {
+      const v = document.getElementById('globalDate').value;
+      if (!v) return;
+      const [y, m] = v.split('-').map(Number);
+      VIEW_YEAR = y;
+      VIEW_MONTH = m;
+      document.getElementById('sjDate').value = v;
+      loadScheduleState();
+    }
+
+    function selectCalendarDay(isoDate, syncMonthIfDifferent = false) {
       document.getElementById('globalDate').value = isoDate;
       document.getElementById('sjDate').value = isoDate;
+      if (syncMonthIfDifferent) {
+        const [y, m] = isoDate.split('-').map(Number);
+        VIEW_YEAR = y;
+        VIEW_MONTH = m;
+      }
       loadScheduleState();
+    }
+
+    async function shiftCalendarMonth(deltaMonths) {
+      if (!MONTH_DATA) return;
+      if (deltaMonths < 0) { VIEW_YEAR = MONTH_DATA.prev_year; VIEW_MONTH = MONTH_DATA.prev_month; }
+      else { VIEW_YEAR = MONTH_DATA.next_year; VIEW_MONTH = MONTH_DATA.next_month; }
+      const res = await fetch(`/api/calendar/month?year=${VIEW_YEAR}&month=${VIEW_MONTH}`);
+      if (res.ok) {
+        MONTH_DATA = await res.json();
+        renderMonthGrid();
+      }
+    }
+
+    async function jumpToPickedMonth(ymVal) {
+      if (!ymVal || !ymVal.includes('-')) return;
+      const [y, m] = ymVal.split('-').map(Number);
+      VIEW_YEAR = y; VIEW_MONTH = m;
+      const res = await fetch(`/api/calendar/month?year=${VIEW_YEAR}&month=${VIEW_MONTH}`);
+      if (res.ok) {
+        MONTH_DATA = await res.json();
+        renderMonthGrid();
+      }
+    }
+
+    function bookForSelectedDate() {
+      document.getElementById('sjDate').value = STATE.selected_date;
+      switchSchedTab('book');
+      document.getElementById('sjCustomer').focus();
     }
 
     async function loadScheduleState() {
       const wDate = document.getElementById('globalDate').value || '';
-      const res = await fetch('/api/bootstrap' + (wDate ? `?work_date=${encodeURIComponent(wDate)}` : ''));
+      const q = new URLSearchParams();
+      if (wDate) q.set('work_date', wDate);
+      if (VIEW_YEAR && VIEW_MONTH) { q.set('cal_year', VIEW_YEAR); q.set('cal_month', VIEW_MONTH); }
+
+      const res = await fetch('/api/bootstrap?' + q.toString());
       if (res.status === 401) { bootSchedule(); return; }
       STATE = await res.json();
+      MONTH_DATA = STATE.month_calendar;
+      VIEW_YEAR = MONTH_DATA.year;
+      VIEW_MONTH = MONTH_DATA.month;
 
-      if (!document.getElementById('globalDate').value) document.getElementById('globalDate').value = STATE.selected_date;
+      document.getElementById('globalDate').value = STATE.selected_date;
       if (!document.getElementById('sjDate').value) document.getElementById('sjDate').value = STATE.selected_date;
 
       const sCeil = STATE.jacket_ceilings['Short Jacket'] || {};
       const tCeil = STATE.jacket_ceilings['Tall Jacket'] || {};
       const pShort = document.getElementById('pillShort'), pTall = document.getElementById('pillTall');
       pShort.className = 'j-dot ' + (sCeil.max_calibrated_psi ? 'ready' : 'wait');
-      pShort.textContent = sCeil.max_calibrated_psi ? `S: ≤${sCeil.max_allowed_test_psi}✓` : 'S: Uncal';
+      pShort.innerHTML = sCeil.max_calibrated_psi ? `S: <span class="full-lbl">≤${sCeil.max_allowed_test_psi}</span>✓` : `S: <span class="full-lbl">Uncal</span>`;
       pTall.className = 'j-dot ' + (tCeil.max_calibrated_psi ? 'ready' : 'wait');
-      pTall.textContent = tCeil.max_calibrated_psi ? `T: ≤${tCeil.max_allowed_test_psi}✓` : 'T: Uncal';
+      pTall.innerHTML = tCeil.max_calibrated_psi ? `T: <span class="full-lbl">≤${tCeil.max_allowed_test_psi}</span>✓` : `T: <span class="full-lbl">Uncal</span>`;
 
       const queued = (STATE.records || []).filter(r => r.status === 'QUEUED');
       const openSched = (STATE.schedule_jobs || []).filter(j => j.status !== 'COMPLETED');
+      const drops = STATE.dropoffs || [];
       const totalUnbilled = (STATE.customers_summary || []).reduce((s, c) => s + (c.unbilled_count || 0), 0);
+
       document.getElementById('wsOpsBadge').textContent = queued.length ? `(${queued.length})` : '';
       document.getElementById('wsSchedBadge').textContent = openSched.length ? `(${openSched.length})` : '';
       document.getElementById('wsBillBadge').textContent = totalUnbilled ? `(${totalUnbilled})` : '';
 
-      document.getElementById('customerSuggest').innerHTML = (STATE.customers_summary || []).map(c =>
-        `<option value="${escHtml(c.customer_name)}">`
-      ).join('');
+      document.getElementById('navBadgeRuns').textContent = String(openSched.length);
+      document.getElementById('navBadgeDoor').textContent = String(drops.length);
+      document.getElementById('mobBadgeRuns').hidden = !openSched.length;
+      document.getElementById('mobBadgeRuns').textContent = openSched.length;
+      document.getElementById('mobBadgeDoor').hidden = !drops.length;
+      document.getElementById('mobBadgeDoor').textContent = drops.length;
 
-      const plans = STATE.day_plans || [];
-      const selDate = STATE.selected_date;
-      const selPlan = plans.find(p => p.work_date === selDate) || STATE.huddle?.selected_day_plan || {};
+      if (STATE.low_stock_count) {
+        document.getElementById('railSupplyBtn').innerHTML = `📦 Supplies <span class="nav-badge amber">⚠️ ${STATE.low_stock_count}</span>`;
+      }
 
-      document.getElementById('planDateLabel').textContent = `${selPlan.weekday || ''} ${selDate}`;
-      document.getElementById('planBookedBadge').textContent = `${selPlan.booked_bottles || 0} / ${selPlan.bottle_capacity || 0} Hydro Slots`;
+      const names = [...new Set([
+        ...(STATE.customers_rolodex || []).map(c => c.customer_name),
+        ...(STATE.customers_summary || []).map(c => c.customer_name),
+      ])].sort((a, b) => a.localeCompare(b));
+      document.getElementById('customerSuggest').innerHTML = names.map(n => `<option value="${escHtml(n)}">`).join('');
+
+      renderMonthGrid();
+      renderSelectedDayInspector(openSched);
+      renderActiveRunsList(openSched);
+      renderBackroomDoorTab(drops);
+    }
+
+    function renderMonthGrid() {
+      if (!MONTH_DATA) return;
+      document.getElementById('monthTitleLbl').textContent = MONTH_DATA.month_label;
+      document.getElementById('jumpMonthInput').value = `${MONTH_DATA.year}-${String(MONTH_DATA.month).padStart(2, '0')}`;
+
+      const sel = STATE.selected_date;
+      document.getElementById('monthGridCells').innerHTML = (MONTH_DATA.days || []).map(d => {
+        const shortMode = d.shift_mode === 'FULL_HYDRO' ? `🟢 ${d.bottle_capacity} cap`
+          : (d.shift_mode === 'PREP_ONLY' ? '🔧 Prep'
+          : (d.shift_mode === 'ROAD_RUN' ? `🚚 Road (${d.bottle_capacity})` : '🚪 24/7'));
+        const pct = d.bottle_capacity > 0 ? Math.min(100, Math.round(((d.booked_bottles || 0) / d.bottle_capacity) * 100)) : 0;
+        const fillCls = pct >= 100 ? 'full' : (pct >= 80 ? 'warn' : '');
+        const jobsHtml = (d.jobs || []).slice(0, 2).map(j => {
+          const isR = Boolean(j.rush_fee || j.priority === 'RUSH');
+          const ico = j.job_type === 'ROAD_PICKUP' ? '🚚' : (j.job_type === 'ROAD_DELIVERY' ? '📦' : '📌');
+          return `<div class="mday-job-pill ${isR ? 'rush' : ''}">${ico} ${escHtml(j.customer_name)} (${j.bottle_count})</div>`;
+        }).join('');
+        const extra = (d.jobs || []).length > 2 ? `<div style="font-size:0.65rem;color:var(--muted);font-weight:800;">+${d.jobs.length - 2} more</div>` : '';
+
+        return `
+          <div class="mday-cell mode-${d.shift_mode} ${d.in_month ? '' : 'out-month'} ${d.is_today ? 'is-today' : ''} ${d.work_date === sel ? 'is-selected' : ''}"
+            onclick="selectCalendarDay('${d.work_date}', ${!d.in_month})">
+            <div>
+              <div class="mday-top">
+                <span>${d.day_num}</span>
+                ${d.is_today ? '<span style="background:var(--gold);color:#111;font-size:0.58rem;padding:1px 5px;border-radius:4px;">TODAY</span>' : `<span style="font-size:0.64rem;color:var(--green);font-weight:800;">${shortMode}</span>`}
+              </div>
+              ${d.bottle_capacity > 0 ? `<div class="cap-bar"><div class="cap-fill ${fillCls}" style="width:${pct}%"></div></div>` : ''}
+              ${jobsHtml}${extra}
+            </div>
+            <div style="font-size:0.64rem;color:var(--muted);display:flex;justify-content:space-between;">
+              <span>${d.bottle_capacity > 0 ? `${d.booked_bottles}/${d.bottle_capacity}` : ''}</span>
+              ${d.completed_bottles ? `<span style="color:#15803d;font-weight:800;">✓${d.completed_bottles}</span>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderSelectedDayInspector(openSched) {
+      const sel = STATE.selected_date;
+      const selPlan = (MONTH_DATA?.days || []).find(d => d.work_date === sel) || STATE.huddle?.selected_day_plan || {};
+      document.getElementById('planDateLabel').textContent = `${selPlan.weekday || ''} ${sel}`;
+      document.getElementById('dayJobsDateLbl').textContent = sel;
+      document.getElementById('planBookedBadge').textContent = `${selPlan.booked_bottles || 0} / ${selPlan.bottle_capacity || 0} Slots`;
+
       if (document.activeElement !== document.getElementById('planShiftMode')) document.getElementById('planShiftMode').value = selPlan.shift_mode || 'FULL_HYDRO';
       if (document.activeElement !== document.getElementById('planCapacity')) document.getElementById('planCapacity').value = selPlan.bottle_capacity ?? 24;
       if (document.activeElement !== document.getElementById('planNotes')) document.getElementById('planNotes').value = selPlan.day_notes || '';
 
-      document.getElementById('calStripGrid').innerHTML = plans.map(p => {
-        const dayJobs = openSched.filter(j => j.scheduled_date === p.work_date);
-        const modeCls = p.shift_mode === 'PREP_ONLY' ? 'prep-mode'
-          : (p.shift_mode === 'ROAD_RUN' ? 'road-mode' : (p.shift_mode === 'FULL_HYDRO' ? 'hydro-mode' : 'closed-mode'));
-        const shortMode = p.shift_mode === 'PREP_ONLY' ? '🔧 Prep Only'
-          : (p.shift_mode === 'ROAD_RUN' ? `🚚 Road (${p.bottle_capacity})`
-          : (p.shift_mode === 'FULL_HYDRO' ? `🟢 Hydro (${p.bottle_capacity})` : '🚪 Backroom'));
-        const rushCnt = dayJobs.filter(j => j.rush_fee || j.priority === 'RUSH').length;
-        const booked = p.booked_bottles || 0;
-        const cap = p.bottle_capacity || 0;
-        const pct = cap > 0 ? Math.min(100, Math.round((booked / cap) * 100)) : 0;
-        const fillCls = pct >= 100 ? 'full' : (pct >= 80 ? 'warn' : '');
-        return `
-          <div class="day-tile ${modeCls} ${p.work_date === selDate ? 'selected' : ''}" onclick="selectCalendarDay('${p.work_date}')">
-            <div>
-              <div style="display:flex;justify-content:space-between;font-weight:900;font-size:0.82rem;">
-                <span>${escHtml(p.weekday)} ${escHtml(p.work_date.slice(5))}</span>
-                ${rushCnt ? '<span class="rush-badge">🔥</span>' : (p.work_date === STATE.today ? '<span class="sub-badge" style="font-size:0.62rem;">TODAY</span>' : '')}
-              </div>
-              <div style="font-size:0.74rem;font-weight:800;color:var(--green);margin-top:3px;">${shortMode}</div>
-            </div>
-            <div>
-              ${cap > 0 ? `<div class="cap-bar"><div class="cap-fill ${fillCls}" style="width:${pct}%"></div></div><div style="font-size:0.68rem;color:var(--muted);margin-top:2px;">${booked}/${cap} cyl booked</div>` : ''}
-              <div style="font-size:0.72rem;color:var(--slate);font-weight:700;margin-top:2px;">
-                ${dayJobs.length ? `${dayJobs.length} job(s)` : (p.day_notes ? escHtml(p.day_notes.slice(0, 20)) : '<span style="color:var(--muted);font-weight:500;">Open</span>')}
-              </div>
-            </div>
-          </div>`;
-      }).join('');
+      const dayJobs = openSched.filter(j => j.scheduled_date === sel || j.due_date === sel);
+      document.getElementById('dayJobsCountBadge').textContent = String(dayJobs.length);
+      document.getElementById('selectedDayJobsList').innerHTML = dayJobs.length
+        ? dayJobs.map(j => jobRowHtml(j)).join('')
+        : '<div style="color:var(--muted);font-size:0.84rem;">No pickups or batches scheduled on this date yet.</div>';
+    }
 
-      const drops = STATE.dropoffs || [];
-      document.getElementById('backroomPreviewCard').hidden = !drops.length;
-      document.getElementById('backroomCountBadge').textContent = String(drops.length);
-      document.getElementById('backroomPreviewList').innerHTML = drops.map(d => `
+    function jobRowHtml(j) {
+      const ico = j.job_type === 'ROAD_PICKUP' ? '🚚 Pickup' : (j.job_type === 'ROAD_DELIVERY' ? '🚚 Delivery' : (j.job_type === 'ONSITE_VISUAL' ? '🔍 On-Site' : '📌 Batch'));
+      const isPrepped = j.prep_status === 'DEVALVED_TAGGED';
+      const mapUrl = j.location_notes ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.location_notes)}` : '';
+      return `
         <div class="rec-item">
           <div class="rec-main">
-            <div class="rec-title"><span>${escHtml(d.customer_name)} (${d.bottle_count - (d.imported_count || 0)} left)</span>${d.rush_requested ? '<span class="rush-badge">🔥 RUSH</span>' : ''}</div>
-            <div class="rec-sub">${escHtml(d.service_requested)}${d.promised_date ? ' • Est: ' + escHtml(d.promised_date) : ''}</div>
+            <div class="rec-title">
+              <span>${ico}: ${escHtml(j.customer_name)} (${j.bottle_count})</span>
+              ${(j.rush_fee || j.priority === 'RUSH') ? '<span class="rush-badge">🔥 RUSH</span>' : ''}
+              
+              ${j.valves_attached === 0 ? '<span class="stage-chip">Bare/No Valves</span>' : ''}
+              ${isPrepped ? '<span class="stage-chip ready">✓ Prepped</span>' : ''}
+            </div>
+            <div class="rec-sub">
+              Sched: <strong>${escHtml(j.scheduled_date)}</strong>${j.due_date ? ` • Due: <strong>${escHtml(j.due_date)}</strong>` : ''}${j.po_station ? ` • ${escHtml(j.po_station)}` : ''}${j.tank_summary ? ` • ${escHtml(j.tank_summary)}` : ''}${j.location_notes ? ` • 📍 ${escHtml(j.location_notes)}` : ''}
+            </div>
+            ${j.notes ? `<div style="font-size:0.75rem;color:#92400e;margin-top:2px;">Note: ${escHtml(j.notes)}</div>` : ''}
           </div>
-          <a class="secondary" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7;" href="/ops?dropoff=${d.id}">↳ Scan in Ops</a>
-        </div>`).join('');
+          <div class="rec-actions">
+            <a class="secondary" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7;" href="/ops?job=${j.id}">↳ Scan in Ops</a>
+            ${mapUrl ? `<a class="secondary" href="${mapUrl}" target="_blank">📍 Map</a>` : ''}
+            ${!isPrepped ? `<button class="secondary" onclick="markJobPrepped(${j.id})">🔧 Prepped</button>` : ''}
+            <button class="secondary" onclick="toggleJobRush(${j.id}, ${Boolean(j.rush_fee)})">🔥</button>
+            <button class="secondary" onclick="completeJob(${j.id})">✓ Done</button>
+            <button class="secondary" style="color:#b91c1c;" onclick="deleteJob(${j.id})">✕</button>
+          </div>
+        </div>`;
+    }
 
-      document.getElementById('schedActiveBadge').textContent = `${openSched.length} Active`;
-      document.getElementById('scheduleJobsList').innerHTML = openSched.length
-        ? openSched.map(j => {
-            const ico = j.job_type === 'ROAD_PICKUP' ? '🚚 Pickup' : (j.job_type === 'ROAD_DELIVERY' ? '🚚 Delivery' : (j.job_type === 'ONSITE_VISUAL' ? '🔍 On-Site' : '📌 Batch'));
-            const isPrepped = j.prep_status === 'DEVALVED_TAGGED';
-            const mapUrl = j.location_notes ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.location_notes)}` : '';
+    function setRunsFilter(f) {
+      RUNS_FILTER = f;
+      renderActiveRunsList((STATE.schedule_jobs || []).filter(j => j.status !== 'COMPLETED'));
+    }
+
+    function renderActiveRunsList(openSched) {
+      let rows = openSched;
+      if (RUNS_FILTER === 'ROAD') rows = openSched.filter(j => j.job_type.startsWith('ROAD_') || j.job_type === 'ONSITE_VISUAL');
+      if (RUNS_FILTER === 'RUSH') rows = openSched.filter(j => j.rush_fee || j.priority === 'RUSH');
+      document.getElementById('scheduleJobsList').innerHTML = rows.length
+        ? rows.map(j => jobRowHtml(j)).join('')
+        : '<div style="color:var(--muted);font-size:0.86rem;padding:8px 0;">No matching open runs or batches.</div>';
+    }
+
+    function renderBackroomDoorTab(drops) {
+      document.getElementById('doorCountBadge').textContent = `${drops.length} Active`;
+      document.getElementById('backroomDoorList').innerHTML = drops.length
+        ? drops.map(d => {
+            const isPickup = d.entry_type === 'PICKUP_NOTICE' || d.status === 'PICKUP_LOGGED';
+            const rem = Math.max(0, d.bottle_count - (d.imported_count || 0));
             return `
-              <div class="rec-item">
-                <div class="rec-main">
-                  <div class="rec-title">
-                    <span>${ico}: ${escHtml(j.customer_name)} (${j.bottle_count})</span>
-                    ${(j.rush_fee || j.priority === 'RUSH') ? '<span class="rush-badge">🔥 RUSH</span>' : (j.priority === 'HIGH' ? '<span class="high-badge">⚡ HIGH</span>' : '')}
-                    ${isPrepped ? '<span class="stage-chip ready">✓ Prepped Zone C</span>' : '<span class="stage-chip">Needs Prep</span>'}
+              <div class="dropoff-card ${isPickup ? 'pickup' : ''}">
+                <div>
+                  <div style="font-weight:800;font-size:0.9rem;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                    <span>${isPickup ? '🚚 VERIFIED PICKUP:' : '📥 DROP-OFF:'} ${escHtml(d.customer_name)}</span>
+                    <span class="tag-chip">${isPickup ? d.bottle_count + ' Cyl' : rem + ' of ' + d.bottle_count + ' Left'}</span>
+                    ${d.rush_requested ? '<span class="rush-badge">🔥 RUSH</span>' : ''}
+                    
                   </div>
-                  <div class="rec-sub">
-                    Sched: <strong>${escHtml(j.scheduled_date)}</strong>${j.due_date ? ` • Due: <strong>${escHtml(j.due_date)}</strong>` : ''} • <span class="zone-badge">${escHtml((j.holding_zone_label || '').split('•')[0])}</span>
-                    ${j.location_notes ? ` • 📍 ${escHtml(j.location_notes)}` : ''}${j.tank_summary ? ` • ${escHtml(j.tank_summary)}` : ''}
+                  <div style="font-size:0.79rem;color:var(--muted);margin-top:2px;">
+                    ${isPickup ? `Picked up by: <strong>${escHtml(d.picked_up_by || d.customer_name)}</strong>` : `${escHtml(d.service_requested)}${d.tank_summary ? ' • ' + escHtml(d.tank_summary) : ''}`}${d.customer_phone ? ' • 📞 ' + escHtml(d.customer_phone) : ''}
                   </div>
-                  ${j.notes ? `<div style="font-size:0.75rem;color:#92400e;margin-top:2px;">Note: ${escHtml(j.notes)}</div>` : ''}
                 </div>
-                <div class="rec-actions">
-                  <a class="secondary" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7;" href="/ops?job=${j.id}">↳ Lock &amp; Scan</a>
-                  ${mapUrl ? `<a class="secondary" href="${mapUrl}" target="_blank">📍 Map</a>` : ''}
-                  ${!isPrepped ? `<button class="secondary" onclick="markJobPrepped(${j.id})">🔧 Prepped</button>` : ''}
-                  <button class="secondary" title="Toggle Paid Rush" onclick="toggleJobRush(${j.id}, ${Boolean(j.rush_fee)})">🔥</button>
-                  <button class="secondary" onclick="completeJob(${j.id})">✓ Done</button>
-                  <button class="secondary" style="color:#b91c1c;" onclick="deleteJob(${j.id})">✕</button>
+                <div style="display:flex;gap:6px;">
+                  ${!isPickup ? `<a class="secondary" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7;" href="/ops?dropoff=${d.id}">↳ Scan in Ops</a>` : ''}
+                  <button class="secondary" onclick="clearDoorEntry(${d.id})">✓ Clear</button>
                 </div>
               </div>`;
           }).join('')
-        : '<div style="color:var(--muted);font-size:0.86rem;padding:8px 0;">No open pickups, deliveries, or scheduled batches yet.</div>';
+        : '<div style="color:var(--muted);font-size:0.86rem;">No unscanned backroom drop-offs waiting.</div>';
+    }
+
+    // --- SHARPENED BOOKING HELPERS ---
+    function setBookingAcct(acct) {
+      BOOK_ACCT = acct;
+      document.querySelectorAll('#bookAcctBar .tap-pill').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-acct') === acct);
+      });
+      document.getElementById('sjPoWrap').hidden = (acct === 'WALK_IN');
+    }
+
+    function prefillBookingFromRolodex() {
+      const val = (document.getElementById('sjCustomer').value || '').trim();
+      if (!val) return;
+      const m = (STATE.customers_rolodex || []).find(c => c.customer_name.toUpperCase() === val.toUpperCase());
+      if (m) {
+        if (m.phone) document.getElementById('sjPhone').value = m.phone;
+        if (m.account_type) setBookingAcct(m.account_type);
+        if (m.street_address && !document.getElementById('sjLocation').value) {
+          document.getElementById('sjLocation').value = [m.street_address, m.city, m.state].filter(Boolean).join(', ');
+        }
+      }
+    }
+
+    function bumpTankType(label) {
+      TANK_COUNTS[label] = (TANK_COUNTS[label] || 0) + 1;
+      const total = Object.values(TANK_COUNTS).reduce((a, b) => a + b, 0);
+      document.getElementById('sjCount').value = total;
+      document.getElementById('sjSummary').value = Object.entries(TANK_COUNTS).map(([k, v]) => `${v}x ${k}`).join(', ');
+    }
+
+    function clearTankBuilder() {
+      TANK_COUNTS = {};
+      document.getElementById('sjSummary').value = '';
+      document.getElementById('sjCount').value = 1;
     }
 
     function autoFillPlanCap() {
@@ -358,20 +686,21 @@
       const cnt = Math.max(1, parseInt(document.getElementById('quoteCountInput').value || '1', 10));
       const res = await fetch(`/api/schedule/quote?bottles=${cnt}`);
       if (!res.ok) return;
-      LAST_QUOTE = await res.json();
-      document.getElementById('backlogSummaryBadge').textContent = `Shop Backlog: ${LAST_QUOTE.total_backlog_bottles} Cyl (${LAST_QUOTE.rush_backlog_bottles} Rush)`;
+      const q = await res.json();
+      document.getElementById('backlogSummaryBadge').textContent = `Backlog: ${q.total_backlog_bottles} Cyl`;
+      document.getElementById('navBadgeBacklog').textContent = String(q.total_backlog_bottles);
       document.getElementById('quoteResultArea').innerHTML = `
         <div class="quote-card std">
           <div style="font-size:0.74rem;font-weight:900;color:#166534;">🟢 STANDARD TURNAROUND</div>
-          <div style="font-size:1.18rem;font-weight:900;margin:3px 0;">Ready: ${escHtml(LAST_QUOTE.standard_promise_label)}</div>
-          <div style="font-size:0.76rem;color:var(--muted);">Clears ${LAST_QUOTE.total_backlog_bottles} cyl backlog + dry/stamp</div>
-          <button class="secondary" style="width:100%;margin-top:7px;" onclick="prefillFromQuote(false, '${LAST_QUOTE.standard_promise_date}', ${LAST_QUOTE.requested_bottles})">➕ Book Standard</button>
+          <div style="font-size:1.15rem;font-weight:900;margin:3px 0;">Ready: ${escHtml(q.standard_promise_label)}</div>
+          <div style="font-size:0.75rem;color:var(--muted);">Clears ${q.total_backlog_bottles} cyl backlog + dry/stamp</div>
+          <button class="secondary" style="width:100%;margin-top:7px;" onclick="prefillFromQuote(false, '${q.standard_promise_date}', ${q.requested_bottles})">➕ Use Standard Date</button>
         </div>
         <div class="quote-card rush">
           <div style="font-size:0.74rem;font-weight:900;color:#991b1b;">🔥 PAID RUSH SERVICE</div>
-          <div style="font-size:1.18rem;font-weight:900;margin:3px 0;">Ready: ${escHtml(LAST_QUOTE.rush_promise_label)}</div>
-          <div style="font-size:0.76rem;color:var(--muted);">Ahead of standard (${LAST_QUOTE.rush_backlog_bottles} rush ahead)</div>
-          <button class="secondary" style="width:100%;margin-top:7px;background:#fee2e2;color:#991b1b;border-color:#fca5a5;" onclick="prefillFromQuote(true, '${LAST_QUOTE.rush_promise_date}', ${LAST_QUOTE.requested_bottles})">➕ Book Paid Rush</button>
+          <div style="font-size:1.15rem;font-weight:900;margin:3px 0;">Ready: ${escHtml(q.rush_promise_label)}</div>
+          <div style="font-size:0.75rem;color:var(--muted);">Ahead of standard (${q.rush_backlog_bottles} rush ahead)</div>
+          <button class="secondary" style="width:100%;margin-top:7px;background:#fee2e2;color:#991b1b;border-color:#fca5a5;" onclick="prefillFromQuote(true, '${q.rush_promise_date}', ${q.requested_bottles})">➕ Use Rush Date</button>
         </div>`;
     }
 
@@ -387,11 +716,14 @@
       const cust = document.getElementById('sjCustomer').value.trim();
       if (!cust) { alert('Enter Customer / Fire Dept name first.'); return; }
       const pri = document.getElementById('sjPriority').value;
+      const schedD = document.getElementById('sjDate').value || STATE.selected_date;
       const res = await fetch('/api/schedule/jobs', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           job_type: document.getElementById('sjType').value,
-          scheduled_date: document.getElementById('sjDate').value || STATE.selected_date,
+          account_type: BOOK_ACCT,
+          po_station: document.getElementById('sjPoStation').value,
+          scheduled_date: schedD,
           due_date: document.getElementById('sjDueDate').value || '',
           customer_name: cust,
           customer_phone: document.getElementById('sjPhone').value,
@@ -400,14 +732,17 @@
           rush_fee: pri === 'RUSH',
           holding_zone: document.getElementById('sjZone').value,
           tank_summary: document.getElementById('sjSummary').value,
+          valves_attached: document.getElementById('sjValvesOn').checked,
+          needs_air_fill: false,
           location_notes: document.getElementById('sjLocation').value,
           notes: document.getElementById('sjNotes').value,
         }),
       });
       if (!res.ok) { alert((await res.json()).detail || 'Could not save entry.'); return; }
-      ['sjCustomer', 'sjPhone', 'sjSummary', 'sjLocation', 'sjNotes'].forEach(id => { document.getElementById(id).value = ''; });
-      await loadScheduleState();
-      fetchLiveTurnaroundQuote();
+      ['sjCustomer', 'sjPhone', 'sjPoStation', 'sjSummary', 'sjLocation', 'sjNotes'].forEach(id => { document.getElementById(id).value = ''; });
+            TANK_COUNTS = {};
+      selectCalendarDay(schedD, true);
+      switchSchedTab('cal');
     }
 
     async function markJobPrepped(id) {
@@ -436,6 +771,13 @@
     async function deleteJob(id) {
       if (!confirm('Remove this entry from the schedule?')) return;
       await fetch(`/api/schedule/jobs/${id}`, { method: 'DELETE' });
+      loadScheduleState();
+    }
+
+    async function clearDoorEntry(id) {
+      await fetch(`/api/dropoffs/${id}/status`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'ARCHIVED' }),
+      });
       loadScheduleState();
     }
 
