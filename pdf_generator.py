@@ -7,6 +7,13 @@ from reportlab.pdfgen import canvas
 
 PRIMARY_MANAGER = "Ryan Pearce"
 PRIMARY_INITIALS = "RP"
+PDF_AUTHOR = "Weber's Tank Testing (DOT RIN B386)"
+
+
+def _set_pdf_meta(c: canvas.Canvas, title: str) -> None:
+    c.setTitle(title)
+    c.setAuthor(PDF_AUTHOR)
+    c.setSubject(title)
 
 
 def _fmt_num(val) -> str:
@@ -49,6 +56,14 @@ def _fmt_slash_date(iso_date: str) -> tuple[str, str, str]:
         return "", "", iso_date
 
 
+def _clean_ree_for_print(rec: dict):
+    spec = (rec.get("dot_spec") or "").strip().upper()
+    ree = rec.get("ree_limit")
+    if spec in ("3A", "3AA", "3AL") and ree == 7.2:
+        return None
+    return ree
+
+
 def build_retest_datasheet_pdf(
     work_date: str,
     records: list[dict],
@@ -60,6 +75,7 @@ def build_retest_datasheet_pdf(
     buf = io.BytesIO()
     W, H = landscape(letter)
     c = canvas.Canvas(buf, pagesize=(W, H))
+    _set_pdf_meta(c, f"DOT Retest Data Sheet - {work_date} (RIN {dot_rin})")
 
     hydro_rows = [r for r in records if r.get("service_mode") == "HYDRO_AND_VISUAL"] or [None]
     chunks = [hydro_rows[i : i + 12] for i in range(0, len(hydro_rows), 12)]
@@ -225,7 +241,7 @@ def build_retest_datasheet_pdf(
                 c.drawCentredString((col_x[10] + col_x[11]) / 2, y_val, _fmt_num(rec.get("permanent_cc")))
                 c.drawCentredString((col_x[11] + col_x[12]) / 2, y_val, _fmt_num(rec.get("elastic_cc")))
                 c.drawCentredString((col_x[12] + col_x[13]) / 2, y_val, _fmt_pct(rec.get("percent_permanent")))
-                c.drawCentredString((col_x[13] + col_x[14]) / 2, y_val, _fmt_num(rec.get("ree_limit")))
+                c.drawCentredString((col_x[13] + col_x[14]) / 2, y_val, _fmt_num(_clean_ree_for_print(rec)))
 
                 vis_ok = bool(rec.get("visual_pass", 1))
                 chk_col = 14 if vis_ok else 15
@@ -247,7 +263,7 @@ def build_retest_datasheet_pdf(
 
         fy = cur_top - 16
         c.setFont("Times-Roman", 7.5)
-        c.drawString(left_x + 10, fy, "I hereby certify that all of the above test were made under my supervision and")
+        c.drawString(left_x + 10, fy, "I hereby certify that all of the above tests were made under my supervision and")
         c.drawString(left_x + 10, fy - 9, "in accordance with DOT and/or TC regulations.")
 
         c.setFont("Times-Italic", 10)
@@ -273,9 +289,9 @@ def build_retest_datasheet_pdf(
 
         c.setFont("Times-Roman", 6.2)
         c.drawRightString(right_x, fy - 12, "This form meets the requirements for recording of")
-        c.drawRightString(right_x, fy - 20, "cylinder re-qualification under CFR Title49 §180.215")
+        c.drawRightString(right_x, fy - 20, "cylinder re-qualification under CFR Title 49 §180.215")
         c.setFont("Times-Bold", 6.2)
-        c.drawRightString(right_x, fy - 30, f" Weber's Tank Testing • RIN {dot_rin}")
+        c.drawRightString(right_x, fy - 30, f"Weber's Tank Testing • RIN {dot_rin}")
 
     c.save()
     return buf.getvalue()
@@ -286,60 +302,84 @@ def build_verification_pdf(work_date: str, verifications: list[dict], cal_serial
     buf = io.BytesIO()
     W, H = landscape(letter)
     c = canvas.Canvas(buf, pagesize=(W, H))
+    _set_pdf_meta(c, f"DOT Daily Verification Sheet - {work_date} ({cal_serial})")
 
-    c.setFont("Times-Bold", 15)
-    c.drawCentredString(W / 2, H - 36, "VERIFICATION DATA FOR WATER JACKET TESTING")
-    c.setFont("Times-Bold", 9.5)
-    c.drawString(40, H - 56, f"Date: {work_date}")
-    c.drawString(190, H - 56, f"Serial No. of Calibrated Cylinder: {cal_serial}")
-    c.drawString(490, H - 56, f"Operator's Name: {PRIMARY_MANAGER}")
-
-    c.setFont("Times-Bold", 11)
-    c.drawString(40, H - 78, "Method B — Verification procedure using Pressure Indicating Device (PID) against Expansion Indicating Device (EID)")
-
-    headers = ["Time", "Water Jacket", "Gauge Pressure (PSI)", "Expected Chart (cc) (A)", "Actual Burette (cc) (B)", "Permanent Exp (cc)", "Elastic Exp (cc)", "% Deviation ((A-B)/A)", "Within ±1%?"]
+    headers = [
+        "Time", "Water Jacket", "Gauge Pressure (PSI)", "Expected Chart (cc) (A)",
+        "Actual Burette (cc) (B)", "Permanent Exp (cc)", "Elastic Exp (cc)",
+        "% Deviation ((A-B)/A)", "Within ±1%?",
+    ]
     widths = [64, 86, 86, 92, 92, 78, 74, 88, 52]
     x0 = 40
     xs = [x0]
     for w in widths:
         xs.append(xs[-1] + w)
 
-    y = H - 92
-    c.setFillColor(colors.Color(0.94, 0.94, 0.94))
-    c.rect(x0, y - 24, xs[-1] - x0, 24, fill=1, stroke=1)
-    c.setFillColor(colors.black)
-    c.setFont("Times-Bold", 7.5)
-    for i, h_txt in enumerate(headers):
-        c.drawCentredString((xs[i] + xs[i + 1]) / 2, y - 15, h_txt)
-        c.line(xs[i], y, xs[i], y - 24)
-    c.line(xs[-1], y, xs[-1], y - 24)
+    rows_per_page = 16
+    chunks = [verifications[i : i + rows_per_page] for i in range(0, max(1, len(verifications)), rows_per_page)]
 
-    cur_y = y - 24
-    row_h = 22
-    for idx in range(16):
-        v = verifications[idx] if idx < len(verifications) else None
-        c.rect(x0, cur_y - row_h, xs[-1] - x0, row_h, fill=0, stroke=1)
-        for x_line in xs[1:-1]:
-            c.line(x_line, cur_y, x_line, cur_y - row_h)
-        if v:
-            c.setFont("Helvetica", 8.5)
-            vals = [
-                v.get("test_time", ""),
-                v.get("jacket_type", ""),
-                str(v.get("target_pressure_psi", "")),
-                _fmt_num(v.get("expected_cc")),
-                _fmt_num(v.get("actual_total_cc")),
-                _fmt_num(v.get("permanent_cc")),
-                _fmt_num(v.get("elastic_cc")),
-                f"{v.get('percent_deviation', 0)}%",
-                "PASS" if v.get("passed") else "FAIL",
-            ]
-            for i, val in enumerate(vals):
-                c.drawCentredString((xs[i] + xs[i + 1]) / 2, cur_y - 14, val)
-        cur_y -= row_h
+    for p_idx, chunk in enumerate(chunks):
+        if p_idx > 0:
+            c.showPage()
 
-    c.setFont("Times-Roman", 8)
-    c.drawString(40, cur_y - 20, "CFR Title 49 §180.215(b)(1): Verification must demonstrate ±1% accuracy and permanent expansion returning to zero prior to daily testing.")
+        c.setFont("Times-Bold", 15)
+        c.drawCentredString(W / 2, H - 36, "VERIFICATION DATA FOR WATER JACKET TESTING")
+        c.setFont("Times-Bold", 9.5)
+        c.drawString(40, H - 56, f"Date: {work_date}")
+        c.drawString(190, H - 56, f"Serial No. of Calibrated Cylinder: {cal_serial}")
+        c.drawString(490, H - 56, f"Operator's Name: {PRIMARY_MANAGER} ({PRIMARY_INITIALS})")
+
+        c.setFont("Times-Bold", 10.5)
+        c.drawString(
+            40, H - 76,
+            "Method B — Verification procedure using Pressure Indicating Device (PID) against Expansion Indicating Device (EID)",
+        )
+
+        y = H - 90
+        c.setFillColor(colors.Color(0.94, 0.94, 0.94))
+        c.rect(x0, y - 24, xs[-1] - x0, 24, fill=1, stroke=1)
+        c.setFillColor(colors.black)
+        c.setFont("Times-Bold", 7.4)
+        for i, h_txt in enumerate(headers):
+            c.drawCentredString((xs[i] + xs[i + 1]) / 2, y - 15, h_txt)
+            c.line(xs[i], y, xs[i], y - 24)
+        c.line(xs[-1], y, xs[-1], y - 24)
+
+        cur_y = y - 24
+        row_h = 22
+        for idx in range(rows_per_page):
+            v = chunk[idx] if idx < len(chunk) else None
+            c.rect(x0, cur_y - row_h, xs[-1] - x0, row_h, fill=0, stroke=1)
+            for x_line in xs[1:-1]:
+                c.line(x_line, cur_y, x_line, cur_y - row_h)
+            if v:
+                c.setFont("Helvetica", 8.5)
+                vals = [
+                    v.get("test_time", ""),
+                    v.get("jacket_type", ""),
+                    str(v.get("target_pressure_psi", "")),
+                    _fmt_num(v.get("expected_cc")),
+                    _fmt_num(v.get("actual_total_cc")),
+                    _fmt_num(v.get("permanent_cc")),
+                    _fmt_num(v.get("elastic_cc")),
+                    f"{v.get('percent_deviation', 0)}%",
+                    "PASS" if v.get("passed") else "FAIL",
+                ]
+                for i, val in enumerate(vals):
+                    c.drawCentredString((xs[i] + xs[i + 1]) / 2, cur_y - 14, val)
+            cur_y -= row_h
+
+        c.setFont("Times-Roman", 8)
+        c.drawString(
+            40, cur_y - 18,
+            "CFR Title 49 §180.215(b)(1): Verification must demonstrate ±1.0% accuracy and permanent expansion returning to zero prior to daily testing.",
+        )
+        c.setFont("Times-Italic", 10)
+        c.drawString(48, cur_y - 38, PRIMARY_MANAGER)
+        c.line(40, cur_y - 41, 215, cur_y - 41)
+        c.setFont("Times-Roman", 7.8)
+        c.drawString(220, cur_y - 40, "(Verified By — Facility Manager)")
+
     c.save()
     return buf.getvalue()
 
@@ -349,6 +389,7 @@ def build_visual_log_pdf(work_date: str, records: list[dict], dot_rin: str = "B3
     buf = io.BytesIO()
     W, H = landscape(letter)
     c = canvas.Canvas(buf, pagesize=(W, H))
+    _set_pdf_meta(c, f"DOT 7-Point Visual Log - {work_date} (RIN {dot_rin})")
 
     chunks = [records[i : i + 15] for i in range(0, max(1, len(records)), 15)]
     headers = [
@@ -368,7 +409,10 @@ def build_visual_log_pdf(work_date: str, records: list[dict], dot_rin: str = "B3
         c.setFont("Times-Bold", 14)
         c.drawCentredString(W / 2, H - 34, "D.O.T./I.C.C. CYLINDER VISUAL INSPECTION AND REQUALIFICATION LOG")
         c.setFont("Times-Bold", 9)
-        c.drawString(x0, H - 52, f"Company: Weber's Tank Testing     Inspection Date: {work_date}     RIN: {dot_rin}     Responsible Manager: {PRIMARY_MANAGER}")
+        c.drawString(
+            x0, H - 52,
+            f"Company: Weber's Tank Testing     Inspection Date: {work_date}     RIN: {dot_rin}     Responsible Manager: {PRIMARY_MANAGER}",
+        )
 
         y = H - 64
         c.setFillColor(colors.Color(0.94, 0.94, 0.94))
@@ -413,7 +457,10 @@ def build_visual_log_pdf(work_date: str, records: list[dict], dot_rin: str = "B3
             cy -= rh
 
         c.setFont("Times-Bold", 7.5)
-        c.drawString(x0, cy - 16, "Disposition Codes:   OK - Return to Service     SC - Scrap (Condemned)     RM - Removed from Service     (Retain in files 5 years)")
+        c.drawString(
+            x0, cy - 16,
+            "Disposition Codes:   OK - Return to Service     SC - Scrap (Condemned)     RM - Removed from Service     (Retain in files 5 years)",
+        )
 
     c.save()
     return buf.getvalue()
@@ -431,6 +478,7 @@ def build_rin_stickers_pdf(
     buf = io.BytesIO()
     W, H = letter
     c = canvas.Canvas(buf, pagesize=letter)
+    _set_pdf_meta(c, f"DOT RIN {dot_rin} Retest Stickers - {work_date}")
 
     try:
         dt = datetime.strptime(work_date, "%Y-%m-%d")
@@ -440,16 +488,17 @@ def build_rin_stickers_pdf(
         month_str, year_str = "11", "26"
 
     rin = (dot_rin or "B386").ljust(4)
+    # 49 CFR §180.213 clockwise 2x2 order: Top-Left, Top-Right, Bottom-Right, Bottom-Left
     r_tl, r_tr, r_br, r_bl = rin[0], rin[1], rin[2], rin[3]
 
-    margin_x = 0.19 * inch
+    margin_x = 0.1875 * inch
     margin_y = 0.5 * inch
     pitch_x = 2.75 * inch
     label_w = 2.625 * inch
     label_h = (H - 2 * margin_y) / max(1, rows)
 
     per_page = cols * rows
-    total_slots = skip_slots + max(1, count)
+    total_slots = max(0, skip_slots) + max(1, count)
 
     for slot in range(total_slots):
         if slot > 0 and slot % per_page == 0:
@@ -464,118 +513,153 @@ def build_rin_stickers_pdf(
         lx = margin_x + c_idx * pitch_x
         ly = H - margin_y - (r_idx + 1) * label_h
 
-        pad = 4
-        bx, by = lx + pad, ly + pad
-        bw, bh = label_w - 2 * pad, label_h - 2 * pad
-        c.setLineWidth(1.2)
-        c.roundRect(bx, by, bw, bh, 6, stroke=1, fill=0)
+        pad_x = 5.0
+        pad_y = 4.5
+        bx, by = lx + pad_x, ly + pad_y
+        bw, bh = label_w - 2 * pad_x, label_h - 2 * pad_y
 
-        box_y = by + 15
-        side_w = bw * 0.27
-        side_h = bh * 0.44
-        mid_w = bw * 0.30
-        mid_h = bh * 0.64
+        c.setLineWidth(1.15)
+        c.roundRect(bx, by, bw, bh, 5.5, stroke=1, fill=0)
 
-        m_x = bx + bw * 0.05
-        rin_x = bx + (bw - mid_w) / 2
-        y_x = bx + bw * 0.95 - side_w
+        side_w = bw * 0.26
+        side_h = 28.0
+        side_bot = by + 20.0
 
-        c.setLineWidth(1.0)
-        c.rect(m_x, box_y + 4, side_w, side_h, stroke=1, fill=0)
-        c.rect(rin_x, box_y - 2, mid_w, mid_h, stroke=1, fill=0)
-        c.rect(y_x, box_y + 4, side_w, side_h, stroke=1, fill=0)
+        mid_w = bw * 0.32
+        mid_h = 42.0
+        mid_bot = by + 13.5
 
-        c.setFont("Helvetica-Bold", 15)
-        c.drawCentredString(m_x + side_w / 2, box_y + 4 + side_h / 2 - 5, month_str)
-        c.drawCentredString(y_x + side_w / 2, box_y + 4 + side_h / 2 - 5, year_str)
+        m_x = bx + bw * 0.055
+        rin_x = bx + (bw - mid_w) / 2.0
+        y_x = bx + bw * 0.945 - side_w
 
-        c.setFont("Helvetica-Bold", 14)
-        cx_rin = rin_x + mid_w / 2
-        cy_rin = box_y - 2 + mid_h / 2
-        c.drawCentredString(cx_rin - 8, cy_rin + 3, r_tl)
-        c.drawCentredString(cx_rin + 8, cy_rin + 3, r_tr)
-        c.drawCentredString(cx_rin - 8, cy_rin - 13, r_bl)
-        c.drawCentredString(cx_rin + 8, cy_rin - 13, r_br)
+        c.setLineWidth(0.95)
+        c.rect(m_x, side_bot, side_w, side_h, stroke=1, fill=0)
+        c.rect(rin_x, mid_bot, mid_w, mid_h, stroke=1, fill=0)
+        c.rect(y_x, side_bot, side_w, side_h, stroke=1, fill=0)
 
-        c.setFont("Helvetica-Bold", 6.3)
-        c.drawCentredString(m_x + side_w / 2, box_y - 5, "MONTH")
-        c.drawCentredString(y_x + side_w / 2, box_y - 5, "YEAR")
-        c.drawCentredString(rin_x + mid_w / 2, by + 4, "LICENSE NO.")
+        c.setFont("Helvetica-Bold", 14.5)
+        c.drawCentredString(m_x + side_w / 2.0, side_bot + side_h / 2.0 - 5.0, month_str)
+        c.drawCentredString(y_x + side_w / 2.0, side_bot + side_h / 2.0 - 5.0, year_str)
+
+        c.setFont("Helvetica-Bold", 13.5)
+        cx_rin = rin_x + mid_w / 2.0
+        cy_rin = mid_bot + mid_h / 2.0
+        c.drawCentredString(cx_rin - 10.5, cy_rin + 4.0, r_tl)
+        c.drawCentredString(cx_rin + 10.5, cy_rin + 4.0, r_tr)
+        c.drawCentredString(cx_rin - 10.5, cy_rin - 13.0, r_bl)
+        c.drawCentredString(cx_rin + 10.5, cy_rin - 13.0, r_br)
+
+        c.setFont("Helvetica-Bold", 6.0)
+        c.drawCentredString(m_x + side_w / 2.0, by + 11.5, "MONTH")
+        c.drawCentredString(y_x + side_w / 2.0, by + 11.5, "YEAR")
+        c.drawCentredString(cx_rin, by + 5.5, "LICENSE NO.")
 
     c.save()
     return buf.getvalue()
 
 
 def build_valve_tags_pdf(work_date: str, records: list[dict], dot_rin: str = "B386") -> bytes:
-    """Shop Clipboard Match Sheet for Active Valve Tags."""
+    """Full-Page Shop Clipboard Match Sheet for Active Reusable Valve Tags."""
     buf = io.BytesIO()
     W, H = letter
     c = canvas.Canvas(buf, pagesize=letter)
+    _set_pdf_meta(c, f"Active Valve Tag Clipboard Sheet - {work_date}")
 
-    c.setFont("Helvetica-Bold", 15)
-    c.drawString(40, H - 44, "WEBER'S TANK TESTING — ACTIVE VALVE TAG MATCH SHEET")
-    c.setFont("Helvetica", 9.5)
-    c.drawString(40, H - 60, f"Work Date: {work_date}   •   DOT RIN: {dot_rin}   •   Facility Sign-Off: {PRIMARY_MANAGER} ({PRIMARY_INITIALS})")
-
-    headers = ["Valve Tag #", "Cylinder Serial #", "Customer / Owner", "Spec & PSI", "Gas", "Relief Chg?", "Reinstalled"]
-    widths = [72, 105, 145, 82, 42, 58, 58]
-    x0 = 30
+    headers = ["Tag #", "Cylinder Serial #", "Customer / Owner", "Spec & PSI", "Size", "Relief Chg?", "Reinstalled"]
+    widths = [58, 106, 146, 78, 60, 56, 58]
+    x0 = 25
     xs = [x0]
     for w in widths:
         xs.append(xs[-1] + w)
 
-    y = H - 78
-    c.setFillColor(colors.Color(0.93, 0.95, 0.94))
-    c.rect(x0, y - 22, xs[-1] - x0, 22, fill=1, stroke=1)
-    c.setFillColor(colors.black)
-    c.setFont("Helvetica-Bold", 8.5)
-    for i, h_txt in enumerate(headers):
-        c.drawCentredString((xs[i] + xs[i + 1]) / 2, y - 15, h_txt)
-        c.line(xs[i], y, xs[i], y - 22)
-    c.line(xs[-1], y, xs[-1], y - 22)
+    active_rows = [r for r in records if r.get("valve_tag") and not r.get("valve_reinstalled")]
+    rows_per_page = 25
+    total_slots = max(rows_per_page, ((len(active_rows) + rows_per_page - 1) // rows_per_page) * rows_per_page)
+    padded_rows = active_rows + [None] * (total_slots - len(active_rows))
 
-    cy = y - 22
-    rh = 22
-    active_rows = [r for r in records if r.get("valve_tag") and not r.get("valve_reinstalled")] or [None]
-    for r in active_rows:
-        if cy - rh < 45:
+    for p_idx in range(0, total_slots, rows_per_page):
+        if p_idx > 0:
             c.showPage()
-            cy = H - 50
-        c.rect(x0, cy - rh, xs[-1] - x0, rh, fill=0, stroke=1)
-        for xl in xs[1:-1]:
-            c.line(xl, cy, xl, cy - rh)
-        if r:
-            c.setFont("Helvetica-Bold", 9.5)
-            c.drawCentredString((xs[0] + xs[1]) / 2, cy - 15, str(r.get("valve_tag") or "—"))
-            c.drawCentredString((xs[1] + xs[2]) / 2, cy - 15, str(r.get("serial_number") or "")[:15])
+
+        c.setFont("Helvetica-Bold", 14.5)
+        c.drawString(x0, H - 40, "WEBER'S TANK TESTING — ACTIVE VALVE TAG CLIPBOARD SHEET")
+        c.setFont("Helvetica", 9.2)
+        c.drawString(
+            x0, H - 55,
+            f"Work Date: {work_date}   •   DOT RIN: {dot_rin}   •   Primary Sign-Off: {PRIMARY_MANAGER} ({PRIMARY_INITIALS})   •   Active Tags Pre-Filled: {len(active_rows)}",
+        )
+
+        y = H - 68
+        c.setFillColor(colors.Color(0.93, 0.95, 0.94))
+        c.rect(x0, y - 22, xs[-1] - x0, 22, fill=1, stroke=1)
+        c.setFillColor(colors.black)
+        c.setFont("Helvetica-Bold", 8.3)
+        for i, h_txt in enumerate(headers):
+            c.drawCentredString((xs[i] + xs[i + 1]) / 2, y - 15, h_txt)
+            c.line(xs[i], y, xs[i], y - 22)
+        c.line(xs[-1], y, xs[-1], y - 22)
+
+        cy = y - 22
+        rh = 24.5
+        chunk = padded_rows[p_idx : p_idx + rows_per_page]
+        for r in chunk:
+            c.setLineWidth(0.55)
+            c.rect(x0, cy - rh, xs[-1] - x0, rh, fill=0, stroke=1)
+            for xl in xs[1:-1]:
+                c.line(xl, cy, xl, cy - rh)
+            if r:
+                c.setFont("Helvetica-Bold", 9.5)
+                c.drawCentredString((xs[0] + xs[1]) / 2, cy - 16, f"#{r.get('valve_tag')}")
+                c.drawCentredString((xs[1] + xs[2]) / 2, cy - 16, str(r.get("serial_number") or "")[:15])
+                c.setFont("Helvetica", 8.5)
+                c.drawString(xs[2] + 4, cy - 16, str(r.get("customer_name") or "")[:24])
+                c.drawCentredString(
+                    (xs[3] + xs[4]) / 2, cy - 16,
+                    _fmt_spec_psi(r.get("dot_spec", ""), int(r.get("service_psi") or 0))[:12],
+                )
+                c.drawCentredString((xs[4] + xs[5]) / 2, cy - 16, str(r.get("physical_size") or "")[:9])
+                c.drawCentredString((xs[5] + xs[6]) / 2, cy - 16, str(r.get("relief_valve_changed") or "No"))
             c.setFont("Helvetica", 8.5)
-            c.drawString(xs[2] + 4, cy - 15, str(r.get("customer_name") or "")[:24])
-            c.drawCentredString((xs[3] + xs[4]) / 2, cy - 15, _fmt_spec_psi(r.get("dot_spec", ""), int(r.get("service_psi") or 0))[:12])
-            c.drawCentredString((xs[4] + xs[5]) / 2, cy - 15, str(r.get("gas_service") or "")[:6])
-            c.drawCentredString((xs[5] + xs[6]) / 2, cy - 15, str(r.get("relief_valve_changed") or "No"))
-            c.drawCentredString((xs[6] + xs[7]) / 2, cy - 15, "[   ]")
-        cy -= rh
+            c.drawCentredString((xs[6] + xs[7]) / 2, cy - 16, "[     ]")
+            cy -= rh
+
+        c.setFont("Helvetica-Oblique", 7.8)
+        c.drawString(x0, cy - 14, "Check off [  ✓  ] when the matching valve is torqued back onto its cylinder so the tag number returns to the bench pool.")
 
     c.save()
     return buf.getvalue()
 
 
 def build_invoice_pdf(invoice: dict, items: list[dict], phone: str = "724-266-8008", dot_rin: str = "B386") -> bytes:
-    """Clean Printable Customer Invoice PDF."""
+    """Clean Printable Customer Invoice PDF with Multi-Page Header Support."""
     buf = io.BytesIO()
     W, H = letter
     c = canvas.Canvas(buf, pagesize=letter)
+    inv_no = invoice.get("invoice_no") or "INVOICE"
+    _set_pdf_meta(c, f"{inv_no} - {invoice.get('customer_name', '')} | Weber's Tank Testing")
+
+    def draw_table_header(top_y: float) -> float:
+        c.setFillColor(colors.Color(0.93, 0.95, 0.94))
+        c.rect(45, top_y - 20, W - 90, 20, fill=1, stroke=1)
+        c.setFillColor(colors.black)
+        c.setFont("Helvetica-Bold", 9.5)
+        c.drawString(52, top_y - 14, "Description / Cylinder Serial & Service")
+        c.drawCentredString(W - 185, top_y - 14, "Qty")
+        c.drawRightString(W - 115, top_y - 14, "Unit Price")
+        c.drawRightString(W - 52, top_y - 14, "Line Total")
+        return top_y - 20
 
     c.setFont("Helvetica-Bold", 18)
     c.drawString(45, H - 50, "WEBER'S TANK TESTING")
     c.setFont("Helvetica", 10)
     c.drawString(45, H - 65, f"Hydrostatic Air Cylinder Testing & Visual Requalification • DOT RIN {dot_rin}")
-    c.drawString(45, H - 79, f"Phone: {phone} • Facility Manager: {PRIMARY_MANAGER}")
+    c.drawString(45, H - 79, f"Beaver County, PA • Phone: {phone} • Facility Manager: {PRIMARY_MANAGER}")
 
     c.setFont("Helvetica-Bold", 16)
     c.drawRightString(W - 45, H - 50, "INVOICE")
     c.setFont("Helvetica", 10)
-    c.drawRightString(W - 45, H - 66, f"Invoice #: {invoice.get('invoice_no')}")
+    c.drawRightString(W - 45, H - 66, f"Invoice #: {inv_no}")
     c.drawRightString(W - 45, H - 80, f"Invoice Date: {invoice.get('invoice_date')}")
     c.drawRightString(W - 45, H - 94, f"Status: {invoice.get('status')}")
 
@@ -585,24 +669,16 @@ def build_invoice_pdf(invoice: dict, items: list[dict], phone: str = "724-266-80
     c.setFont("Helvetica", 10)
     c.drawString(45, H - 143, f"Service / Test Date: {invoice.get('work_date')}")
 
-    y = H - 172
-    c.setFillColor(colors.Color(0.93, 0.95, 0.94))
-    c.rect(45, y - 20, W - 90, 20, fill=1, stroke=1)
-    c.setFillColor(colors.black)
-    c.setFont("Helvetica-Bold", 9.5)
-    c.drawString(52, y - 14, "Description / Cylinder Serial & Service")
-    c.drawCentredString(W - 185, y - 14, "Qty")
-    c.drawRightString(W - 115, y - 14, "Unit Price")
-    c.drawRightString(W - 52, y - 14, "Line Total")
-
-    cy = y - 20
+    cy = draw_table_header(H - 172)
     c.setFont("Helvetica", 9.5)
     for it in items:
-        cy -= 20
-        if cy < 110:
+        if cy - 20 < 120:
             c.showPage()
-            cy = H - 60
+            c.setFont("Helvetica-Bold", 11)
+            c.drawString(45, H - 42, f"WEBER'S TANK TESTING — {inv_no} (Continued)")
+            cy = draw_table_header(H - 56)
             c.setFont("Helvetica", 9.5)
+        cy -= 20
         c.line(45, cy, W - 45, cy)
         c.drawString(52, cy + 6, str(it.get("description", ""))[:68])
         c.drawCentredString(W - 185, cy + 6, _fmt_num(it.get("qty", 1)))

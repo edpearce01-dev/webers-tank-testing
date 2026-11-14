@@ -30,7 +30,7 @@ def bump_db_version(conn: sqlite3.Connection) -> None:
 
 
 def wipe_all_operational_data(conn: sqlite3.Connection) -> None:
-    """Clears all test/operational records while preserving keys, crew, and settings."""
+    """Clears all test/operational records while preserving keys, crew, feedback, rates, and settings."""
     cur = conn.cursor()
     cur.execute("DELETE FROM invoice_items;")
     cur.execute("DELETE FROM invoices;")
@@ -40,6 +40,48 @@ def wipe_all_operational_data(conn: sqlite3.Connection) -> None:
         "DELETE FROM sqlite_sequence WHERE name IN ('invoice_items', 'invoices', 'cylinder_records', 'daily_verifications');"
     )
     bump_db_version(conn)
+
+
+DEFAULT_CGA_SPECS = [
+    # (category, label, dot_spec, service_psi, test_psi, outside_dia, length_in, ree_limit)
+    ("SCBA / Fire", "Escape / Pony (SP14387)", "SP14387", 4500, 7500, "4.3", "8", 17.4),
+    ("SCBA / Fire", "45-Min Composite (SP14157)", "SP14157", 3442, 5250, "7.3", "23", 75.3),
+    ("SCBA / Fire", "30-Min Composite (SP10915 4500#)", "SP10915", 4500, 7500, "5.4", "18.5", None),
+    ("SCBA / Fire", "45-Min Composite (SP10945 4500#)", "SP10945", 4500, 7500, "6.3", "21.5", None),
+    ("SCBA / Fire", "60-Min Composite (4500#)", "SP10915", 4500, 7500, "7.2", "22.5", None),
+    ("SCBA / Fire", "SCBA Steel 30-Min", "3AA", 2250, 3750, "6.8", "25 1/2", None),
+    ("SCBA / Fire", "SCBA Aluminum 30-Min", "3AL", 2216, 3700, "6.8", "20.5", None),
+    ("SCBA / Fire", "SCUBA / Cascade 80cf", "3AL", 3000, 5000, "7.3", "26", None),
+    ("CO2 / Beverage", "5 lb CO2 Aluminum", "3AL", 1800, 3000, "5.25", "14", None),
+    ("CO2 / Beverage", "10 lb CO2 Aluminum", "3AL", 1800, 3000, "7", "16 3/4", None),
+    ("CO2 / Beverage", "20 lb CO2 Aluminum", "3AL", 1800, 3000, "8", "23", None),
+    ("CO2 / Extinguisher", "15 lb CO2 Steel", "3AA", 1800, 3000, "7", "21 1/2", None),
+    ("CO2 / Extinguisher", "20 lb CO2 Steel", "3AA", 1800, 3000, "7.8", "24", None),
+    ("Medical", "Medical Size B", "3AA", 2015, 3360, "3 1/4", "13", None),
+    ("Medical", "Medical Size D", "3AA", 2015, 3360, "4 1/4", "16 3/4", None),
+    ("Medical", "Medical Size E", "3AA", 2015, 3360, "4 1/4", "25 3/4", None),
+    ("Medical", "Medical Size M (3A)", "3A", 2015, 3360, "7", "43", None),
+    ("Medical", "Medical Size M (3AA)", "3AA", 2015, 3360, "7", "43", None),
+    ("Medical", "Medical Size G (3AA)", "3AA", 2015, 3360, "8 1/2", "51", None),
+    ("Medical", "Medical Size H (2015)", "3AA", 2015, 3360, "9", "51", None),
+    ("Medical", "Medical Size H (2265)", "3AA", 2265, 3775, "9", "51", None),
+    ("Industrial", "20 cu ft Steel", "3AA", 2015, 3360, "5 1/4", "14 7/8", None),
+    ("Industrial", "40 cu ft Steel", "3AA", 2015, 3360, "6 3/4", "18 1/2", None),
+    ("Industrial", "55 cu ft Steel", "3AA", 2015, 3360, "5 3/4", "32", None),
+    ("Industrial", "80 cu ft Steel (2015)", "3AA", 2015, 3360, "7", "32 1/2", None),
+    ("Industrial", "80 cu ft Steel (2215)", "3AA", 2215, 3700, "7 1/8", "30", None),
+    ("Industrial", "110 cu ft Steel", "3AA", 2015, 3360, "7", "43", None),
+    ("Industrial", "125 cu ft Steel (2265)", "3AA", 2265, 3775, "7", "43", None),
+    ("Industrial", "150 cu ft Steel", "3AA", 2015, 3360, "7 3/8", "46 1/8", None),
+    ("Industrial", "200 cu ft Steel (3A-1800)", "3A", 1800, 3000, "9", "51", None),
+    ("Industrial", "220 cu ft Steel (2015)", "3AA", 2015, 3360, "9", "51", None),
+    ("Industrial", "250 cu ft Steel (2265)", "3AA", 2265, 3775, "9", "51", None),
+    ("Industrial", "250 cu ft Steel (2400)", "3AA", 2400, 4000, "9", "51", None),
+    ("Industrial", "300 cu ft Steel (2400)", "3AA", 2400, 4000, "9 1/4", "55", None),
+    ("Industrial", "400 cu ft Cascade (3600)", "3AA", 3600, 6000, "9 1/4", "51", None),
+    ("Industrial", "435 cu ft Cascade (6000)", "3AA", 6000, 10000, "9 1/2", "51", None),
+    ("Industrial", "500 cu ft Cascade (4500)", "3AA", 4500, 7500, "9 3/8", "51", None),
+]
 
 
 def init_db() -> None:
@@ -89,6 +131,7 @@ def init_db() -> None:
             elastic_cc REAL NOT NULL,
             percent_deviation REAL NOT NULL,
             passed INTEGER NOT NULL,
+            logged_by TEXT DEFAULT 'RP',
             operator_name TEXT NOT NULL,
             operator_initials TEXT DEFAULT 'RP',
             synced INTEGER DEFAULT 0
@@ -96,6 +139,7 @@ def init_db() -> None:
     """)
     ensure_column(cur, "daily_verifications", "run_id", "TEXT DEFAULT ''")
     ensure_column(cur, "daily_verifications", "max_target_psi", "INTEGER DEFAULT 0")
+    ensure_column(cur, "daily_verifications", "logged_by", "TEXT DEFAULT 'RP'")
     ensure_column(cur, "daily_verifications", "operator_initials", "TEXT DEFAULT 'RP'")
 
     cur.execute("""
@@ -117,9 +161,11 @@ def init_db() -> None:
             code TEXT PRIMARY KEY,
             description TEXT NOT NULL,
             unit_price REAL NOT NULL DEFAULT 0.0,
-            notes TEXT DEFAULT ''
+            notes TEXT DEFAULT '',
+            sort_order INTEGER DEFAULT 100
         );
     """)
+    ensure_column(cur, "pricing_rates", "sort_order", "INTEGER DEFAULT 100")
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS invoices (
@@ -193,6 +239,8 @@ def init_db() -> None:
             hydro_disposition TEXT DEFAULT 'A',
             visual_disposition TEXT DEFAULT 'OK',
             intake_by TEXT DEFAULT 'RP',
+            tested_by TEXT DEFAULT 'RP',
+            completed_at TEXT DEFAULT '',
             operator_name TEXT NOT NULL DEFAULT 'Ryan Pearce',
             operator_initials TEXT NOT NULL DEFAULT 'RP',
             invoice_id INTEGER,
@@ -205,8 +253,24 @@ def init_db() -> None:
     ensure_column(cur, "cylinder_records", "valve_tag", "TEXT DEFAULT ''")
     ensure_column(cur, "cylinder_records", "valve_reinstalled", "INTEGER DEFAULT 0")
     ensure_column(cur, "cylinder_records", "intake_by", "TEXT DEFAULT 'RP'")
+    ensure_column(cur, "cylinder_records", "tested_by", "TEXT DEFAULT 'RP'")
+    ensure_column(cur, "cylinder_records", "completed_at", "TEXT DEFAULT ''")
     ensure_column(cur, "cylinder_records", "operator_initials", "TEXT DEFAULT 'RP'")
     ensure_column(cur, "cylinder_records", "invoice_id", "INTEGER")
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS crew_feedback (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at TEXT NOT NULL,
+            submitted_by TEXT NOT NULL DEFAULT 'RP',
+            category TEXT NOT NULL DEFAULT 'Improvement',
+            page_tab TEXT DEFAULT '',
+            priority TEXT NOT NULL DEFAULT 'Normal',
+            message TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'OPEN',
+            synced INTEGER DEFAULT 0
+        );
+    """)
 
     cur.executemany(
         "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?);",
@@ -221,32 +285,37 @@ def init_db() -> None:
             ("starting_sheet_no", "8095"),
             ("gemini_api_key", ""),
             ("sheets_webhook_url", ""),
+            ("feedback_webhook_url", ""),
+            ("default_tax_rate", "0"),
             ("shop_pin", "0386"),
             ("testing_mode", "1"),
+            ("clean_slate_v3", "1"),
             ("session_secret", secrets.token_hex(32)),
             ("db_version", "1"),
         ],
     )
 
-    if cur.execute("SELECT COUNT(*) FROM crew_members;").fetchone()[0] == 0:
-        cur.executemany(
-            "INSERT INTO crew_members (full_name, initials, role) VALUES (?, ?, ?);",
-            [
-                ("Ryan Pearce", "RP", "Facility Manager / Primary Sign-Off"),
-                ("Eric Pearce", "EP", "Intake / Visual Helper"),
-                ("Adam Pearce", "AP", "Billing / Visual Helper"),
-            ],
-        )
+    cur.executemany(
+        "INSERT OR IGNORE INTO crew_members (full_name, initials, role, active) VALUES (?, ?, ?, 1);",
+        [
+            ("Ryan Pearce", "RP", "Facility Manager / DOT Sign-Off"),
+            ("Eric Pearce", "EP", "Operations / Intake & Tech"),
+            ("Adam Pearce", "AP", "Billing / Visual Inspection"),
+            ("Alex Pearce", "AX", "Intake / Visual Inspection"),
+            ("Kenny", "KN", "Visual Inspection / Invoicing"),
+        ],
+    )
 
     if cur.execute("SELECT COUNT(*) FROM pricing_rates;").fetchone()[0] == 0:
         cur.executemany(
-            "INSERT INTO pricing_rates (code, description, unit_price, notes) VALUES (?, ?, ?, ?);",
+            "INSERT INTO pricing_rates (code, description, unit_price, notes, sort_order) VALUES (?, ?, ?, ?, ?);",
             [
-                ("HYDRO_STD", "Standard Hydrostatic + Visual Test", 0.0, "Steel / Aluminum DOT cylinder"),
-                ("HYDRO_SCBA", "Carbon Fiber / Special Permit Hydro Test", 0.0, "SCBA / SP composite cylinder"),
-                ("VISUAL_ONLY", "Visual Inspection Only (Shop or Road)", 0.0, "7-point visual requalification"),
-                ("VALVE_RELIEF", "Relief Valve Replacement", 0.0, "Safety relief device changed"),
-                ("CONDEMNED_FEE", "Condemned / Rejected Cylinder Handling", 0.0, "Failed cylinder processing"),
+                ("HYDRO_STD", "Standard Hydrostatic + Visual Test", 0.0, "Steel / Aluminum DOT cylinder", 10),
+                ("HYDRO_SCBA", "Carbon Fiber / Special Permit Hydro Test", 0.0, "SCBA / SP composite cylinder", 20),
+                ("VISUAL_ONLY", "Visual Inspection Only (Shop or Road)", 0.0, "7-point visual requalification", 30),
+                ("VALVE_RELIEF", "Relief Valve Replacement", 0.0, "Safety relief device changed", 40),
+                ("AIR_FILL", "Breathing Air / Gas Fill", 0.0, "Post-test cylinder fill", 50),
+                ("CONDEMNED_FEE", "Condemned / Rejected Cylinder Handling", 0.0, "Failed cylinder processing", 60),
             ],
         )
 
@@ -270,58 +339,23 @@ def init_db() -> None:
             ],
         )
 
-    # Refresh expanded cylinder reference table (SCBA, CO2, Medical, Industrial) for OD x Length auto-fill
-    if cur.execute("SELECT COUNT(*) FROM cga_specs;").fetchone()[0] < 32:
+    # Idempotent v4 spec fix: removes false REE limits from 3A / 3AA / 3AL steel & aluminum presets
+    v4_done = cur.execute("SELECT value FROM settings WHERE key='schema_v4_ree_fix';").fetchone()
+    if not v4_done or cur.execute("SELECT COUNT(*) FROM cga_specs;").fetchone()[0] < len(DEFAULT_CGA_SPECS):
         cur.execute("DELETE FROM cga_specs;")
         cur.executemany(
             """INSERT INTO cga_specs
                (category, label, dot_spec, service_psi, test_psi, outside_dia, length_in, ree_limit)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?);""",
-            [
-                ("SCBA / Fire", "Escape / Pony (SP14387)", "SP14387", 4500, 7500, "4.3", "8", 17.4),
-                ("SCBA / Fire", "45-Min Composite (SP14157)", "SP14157", 3442, 5250, "7.3", "23", 75.3),
-                ("SCBA / Fire", "30-Min Composite (4500#)", "SP10915", 4500, 7500, "5.4", "18.5", None),
-                ("SCBA / Fire", "45-Min Composite (4500#)", "SP10945", 4500, 7500, "6.3", "21.5", None),
-                ("SCBA / Fire", "SCBA Steel 30-Min", "3AA", 2250, 3750, "6.8", "25 1/2", None),
-                ("SCBA / Fire", "SCBA Aluminum 30-Min", "3AL", 2216, 3700, "6.8", "20.5", None),
-                ("SCBA / Fire", "SCUBA / Cascade 80cf", "3AL", 3000, 5000, "7.3", "26", None),
-                ("CO2 / Beverage", "5 lb CO2 Aluminum", "3AL", 1800, 3000, "5.25", "14", None),
-                ("CO2 / Beverage", "10 lb CO2 Aluminum", "3AL", 1800, 3000, "7", "16 3/4", None),
-                ("CO2 / Beverage", "20 lb CO2 Aluminum", "3AL", 1800, 3000, "8", "23", None),
-                ("CO2 / Extinguisher", "15 lb CO2 Steel", "3AA", 1800, 3000, "7", "21 1/2", None),
-                ("CO2 / Extinguisher", "20 lb CO2 Steel", "3AA", 1800, 3000, "7.8", "24", None),
-                ("Medical", "B", "3AA", 2015, 3360, "3 1/4", "13", 7.2),
-                ("Medical", "D", "3AA", 2015, 3360, "4 1/4", "16 3/4", 14.5),
-                ("Medical", "E", "3AA", 2015, 3360, "4 1/4", "25 3/4", 23.1),
-                ("Medical", "M (3A)", "3A", 2015, 3360, "7", "43", 88.0),
-                ("Medical", "M (3AA)", "3AA", 2015, 3360, "7", "43", 110.0),
-                ("Medical", "G (3AA)", "3AA", 2015, 3360, "8 1/2", "51", 200.0),
-                ("Medical", "H (2015)", "3AA", 2015, 3360, "9", "51", 216.0),
-                ("Medical", "H (2265)", "3AA", 2265, 3775, "9", "51", 216.0),
-                ("Industrial", "20 cu ft", "3AA", 2015, 3360, "5 1/4", "14 7/8", 19.8),
-                ("Industrial", "40 cu ft", "3AA", 2015, 3360, "6 3/4", "18 1/2", 41.3),
-                ("Industrial", "55 cu ft", "3AA", 2015, 3360, "5 3/4", "32", 57.0),
-                ("Industrial", "80 cu ft (2015)", "3AA", 2015, 3360, "7", "32 1/2", 80.0),
-                ("Industrial", "80 cu ft (2215)", "3AA", 2215, 3700, "7 1/8", "30", 73.0),
-                ("Industrial", "110 cu ft", "3AA", 2015, 3360, "7", "43", 110.0),
-                ("Industrial", "125 cu ft", "3AA", 2265, 3775, "7", "43", 110.0),
-                ("Industrial", "150 cu ft", "3AA", 2015, 3360, "7 3/8", "46 1/8", 133.0),
-                ("Industrial", "200 cu ft (3A-1800)", "3A", 1800, 3000, "9", "51", 179.0),
-                ("Industrial", "220 cu ft", "3AA", 2015, 3360, "9", "51", 216.0),
-                ("Industrial", "250 cu ft (2265)", "3AA", 2265, 3775, "9", "51", 216.0),
-                ("Industrial", "250 cu ft (2400)", "3AA", 2400, 4000, "9", "51", 227.0),
-                ("Industrial", "300 cu ft", "3AA", 2400, 4000, "9 1/4", "55", 251.0),
-                ("Industrial", "400 cu ft", "3AA", 3600, 6000, "9 1/4", "51", 230.0),
-                ("Industrial", "435 cu ft", "3AA", 6000, 10000, "9 1/2", "51", 209.0),
-                ("Industrial", "500 cu ft", "3AA", 4500, 7500, "9 3/8", "51", 226.0),
-            ],
+            DEFAULT_CGA_SPECS,
         )
-
-    # One-time automatic clean slate to strip all earlier test runs upon deploying Phase 3
-    already_cleaned = cur.execute("SELECT value FROM settings WHERE key='clean_slate_v3';").fetchone()
-    if not already_cleaned:
-        wipe_all_operational_data(conn)
-        cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('clean_slate_v3', '1');")
+        cur.execute(
+            """UPDATE cylinder_records
+               SET ree_limit = NULL
+               WHERE status = 'QUEUED' AND UPPER(dot_spec) IN ('3A', '3AA', '3AL') AND ree_limit = 7.2;"""
+        )
+        cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('schema_v4_ree_fix', '1');")
+        bump_db_version(conn)
 
     conn.commit()
     conn.close()
