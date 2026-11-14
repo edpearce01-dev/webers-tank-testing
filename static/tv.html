@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#061018" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <title>Weber's Tank Testing — Live Shop Board | DOT B386</title>
+  <style>
+    :root {
+      --bg: #050c12;
+      --panel: #0d1824;
+      --panel-alt: #122131;
+      --forest: #0f291e;
+      --emerald: #1b4332;
+      --border: #1e3448;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --gold: #fbbf24;
+      --amber: #f59e0b;
+      --green: #22c55e;
+      --red: #ef4444;
+      --blue: #38bdf8;
+    }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+    [hidden] { display: none !important; }
+    html, body {
+      margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text);
+      overflow-x: hidden;
+    }
+
+    /* Remote-Friendly TV PIN Screen */
+    .pin-screen {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(circle at top, #123527 0%, #050c12 70%); padding: 24px;
+    }
+    .pin-box {
+      background: var(--panel); border: 2px solid var(--border); border-radius: 20px;
+      padding: 32px; max-width: 440px; width: 100%; text-align: center;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.65);
+    }
+    .pin-dots {
+      background: #060e16; border: 2px solid #2b455d; border-radius: 12px;
+      padding: 14px; font-size: 2rem; letter-spacing: 12px; font-weight: 900;
+      color: var(--gold); min-height: 64px; margin: 16px 0;
+    }
+    .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .numpad button {
+      background: var(--panel-alt); color: #ffffff; border: 1px solid #2b455d;
+      border-radius: 12px; padding: 16px 0; font-size: 1.35rem; font-weight: 800; cursor: pointer;
+    }
+    .numpad button:hover, .numpad button:focus { background: var(--emerald); border-color: var(--gold); outline: none; }
+    .numpad button.go-btn { background: var(--gold); color: #111827; border-color: var(--gold); }
+
+    /* Broadcast Shell */
+    .tv-shell {
+      display: grid;
+      grid-template-rows: auto auto 1fr 48px;
+      min-height: 100vh;
+      max-height: 100vh;
+    }
+    @media (max-width: 1024px) {
+      .tv-shell { max-height: none; grid-template-rows: auto auto auto 48px; }
+    }
+
+    /* Top Broadcast Header */
+    .tv-header {
+      background: linear-gradient(90deg, #0b2219 0%, #102a3c 60%, #0a1520 100%);
+      border-bottom: 3px solid var(--gold); padding: 10px 22px;
+      display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+    }
+    .brand-left { display: flex; align-items: center; gap: 14px; }
+    .live-bug {
+      background: #dc2626; color: #ffffff; font-weight: 900; font-size: 0.78rem;
+      padding: 5px 10px; border-radius: 6px; letter-spacing: 1px; display: flex; align-items: center; gap: 6px;
+    }
+    .live-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: #ffffff;
+      animation: pulseDot 1.4s infinite;
+    }
+    @keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+    .brand-title h1 { margin: 0; font-size: 1.35rem; letter-spacing: 0.6px; text-transform: uppercase; }
+    .brand-title small { color: #cbd5e1; font-size: 0.82rem; font-weight: 700; }
+
+    .jacket-lights { display: flex; gap: 10px; flex-wrap: wrap; }
+    .j-badge {
+      padding: 7px 14px; border-radius: 9px; font-weight: 900; font-size: 0.92rem;
+      border: 2px solid #334155; background: #0f172a; display: flex; align-items: center; gap: 8px;
+    }
+    .j-badge.ok { border-color: #22c55e; background: rgba(34,197,94,0.14); color: #86efac; }
+    .j-badge.wait { border-color: #f59e0b; background: rgba(245,158,11,0.16); color: #fde68a; }
+
+    .hdr-right { display: flex; align-items: center; gap: 12px; }
+    .clock-box { text-align: right; }
+    .clock-time { font-size: 1.45rem; font-weight: 900; color: var(--gold); line-height: 1.05; font-variant-numeric: tabular-nums; }
+    .clock-date { font-size: 0.78rem; color: var(--muted); font-weight: 700; text-transform: uppercase; }
+    .tv-ctrl-btn {
+      background: rgba(255,255,255,0.08); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.2);
+      padding: 7px 11px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; cursor: pointer;
+    }
+    .tv-ctrl-btn.active { background: rgba(34,197,94,0.2); border-color: #4ade80; color: #bbf7d0; }
+
+    /* KPI Scoreboard Strip */
+    .scoreboard {
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;
+      padding: 10px 22px; background: #08121c; border-bottom: 1px solid var(--border);
+    }
+    @media (max-width: 1100px) { .scoreboard { grid-template-columns: repeat(3, 1fr); } }
+    .score-tile {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+      padding: 8px 14px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .score-tile.alert-pulse {
+      border-color: var(--amber); background: rgba(245,158,11,0.16);
+      animation: borderGlow 1.8s infinite;
+    }
+    @keyframes borderGlow {
+      0%, 100% { box-shadow: 0 0 0 rgba(245,158,11,0); }
+      50% { box-shadow: 0 0 18px rgba(245,158,11,0.45); }
+    }
+    .score-lbl { font-size: 0.74rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .score-val { font-size: 1.65rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+
+    /* 3-Column Arena */
+    .arena {
+      display: grid; grid-template-columns: 1.05fr 1.25fr 1fr; gap: 14px;
+      padding: 12px 22px; overflow: hidden; min-height: 0;
+    }
+    @media (max-width: 1100px) { .arena { grid-template-columns: 1fr; overflow: visible; } }
+    .col-stack { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+    .panel {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+      display: flex; flex-direction: column; overflow: hidden; min-height: 0;
+    }
+    .panel-hdr {
+      background: var(--panel-alt); padding: 9px 14px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .panel-hdr h2 {
+      margin: 0; font-size: 0.88rem; font-weight: 900; letter-spacing: 0.7px;
+      text-transform: uppercase; color: #e2e8f0;
+    }
+    .panel-badge {
+      font-size: 0.74rem; font-weight: 800; padding: 2px 9px; border-radius: 999px;
+      background: rgba(56,189,248,0.16); color: #7dd3fc; border: 1px solid rgba(56,189,248,0.35);
+    }
+    .panel-body { padding: 12px 14px; overflow-y: auto; flex: 1; }
+
+    /* Now On Stand Hero Card */
+    .stand-hero {
+      background: linear-gradient(145deg, #103224 0%, #0d1f2d 100%);
+      border: 2px solid #22c55e; border-radius: 12px; padding: 14px;
+    }
+    .stand-sn { font-size: 1.85rem; font-weight: 900; color: #ffffff; letter-spacing: 0.8px; margin: 4px 0; }
+    .stand-cust { font-size: 1.05rem; font-weight: 800; color: var(--gold); text-transform: uppercase; }
+    .stand-meta {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px;
+    }
+    .stand-stat {
+      background: rgba(5,12,18,0.55); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px; padding: 7px 9px;
+    }
+    .stand-stat small { display: block; font-size: 0.68rem; color: var(--muted); text-transform: uppercase; font-weight: 800; }
+    .stand-stat strong { font-size: 1.05rem; color: #ffffff; }
+
+    /* Queue & Completed Rows */
+    .q-row {
+      display: flex; justify-content: space-between; align-items: center; gap: 10px;
+      padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.92rem;
+    }
+    .q-row:last-child { border-bottom: none; }
+    .rank-num {
+      width: 26px; height: 26px; border-radius: 6px; background: #1e293b; color: #94a3b8;
+      display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.8rem;
+    }
+    .tag-pill {
+      background: rgba(251,191,36,0.18); color: var(--gold); border: 1px solid var(--amber);
+      padding: 2px 8px; border-radius: 6px; font-weight: 900; font-size: 0.82rem;
+    }
+    .disp-pill {
+      padding: 3px 9px; border-radius: 6px; font-weight: 900; font-size: 0.8rem;
+    }
+    .disp-pill.pass { background: rgba(34,197,94,0.2); color: #4ade80; border: 1px solid #22c55e; }
+    .disp-pill.fail { background: rgba(239,68,68,0.22); color: #fca5a5; border: 1px solid #ef4444; }
+
+    /* Batch Leaderboard Bars */
+    .batch-row {
+      padding: 9px 10px; border-radius: 10px; background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06); margin-bottom: 8px;
+    }
+    .batch-top { display: flex; justify-content: space-between; align-items: center; font-weight: 800; margin-bottom: 6px; }
+    .prog-track { height: 9px; background: #09131d; border-radius: 999px; overflow: hidden; }
+    .prog-fill { height: 100%; background: linear-gradient(90deg, #10b981, #fbbf24); border-radius: 999px; transition: width 0.4s ease; }
+
+    /* Giant Active Valve Tag Grid */
+    .valve-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 8px;
+    }
+    .valve-tile {
+      background: #142232; border: 1.5px solid rgba(245,158,11,0.55); border-radius: 10px;
+      padding: 8px 10px; display: flex; flex-direction: column; gap: 2px;
+    }
+    .valve-tile .v-num { font-size: 1.15rem; font-weight: 900; color: var(--gold); }
+    .valve-tile .v-sn { font-size: 0.92rem; font-weight: 800; color: #ffffff; }
+    .valve-tile .v-cust { font-size: 0.74rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Backroom Drop-Off Cards */
+    .drop-card {
+      background: rgba(245,158,11,0.14); border: 1.5px solid var(--amber);
+      border-radius: 10px; padding: 9px 12px; margin-bottom: 8px;
+    }
+    .drop-card.pickup { background: rgba(56,189,248,0.14); border-color: var(--blue); }
+
+    /* Bottom ESPN Scrolling Ticker */
+    .ticker-bar {
+      background: #09131d; border-top: 2px solid var(--gold);
+      display: flex; align-items: center; overflow: hidden; height: 48px;
+    }
+    .ticker-bug {
+      background: var(--gold); color: #0f172a; font-weight: 900; font-size: 0.84rem;
+      padding: 0 16px; height: 100%; display: flex; align-items: center;
+      letter-spacing: 0.8px; white-space: nowrap; z-index: 2;
+    }
+    .ticker-viewport { flex: 1; overflow: hidden; white-space: nowrap; }
+    .ticker-track {
+      display: inline-block; white-space: nowrap;
+      animation: scrollTicker 38s linear infinite;
+    }
+    .ticker-item {
+      display: inline-block; padding: 0 28px; font-size: 0.95rem; font-weight: 800; color: #f1f5f9;
+    }
+    @keyframes scrollTicker {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+  </style>
+</head>
+<body>
+  <!-- TV REMOTE PIN GATE -->
+  <div id="pinScreen" class="pin-screen" hidden>
+    <div class="pin-box">
+      <img src="/icon.svg" alt="B386" style="width:62px;height:62px;border-radius:12px;" />
+      <h2 style="margin:8px 0 4px;">Testing Room Live Board</h2>
+      <div style="color:var(--muted);font-size:0.88rem;">Enter Crew PIN with Remote or Keyboard</div>
+      <div id="pinDots" class="pin-dots"></div>
+      <div id="pinErr" style="color:#fca5a5;font-weight:800;margin-bottom:10px;" hidden>Incorrect PIN — Try Again</div>
+      <div class="numpad">
+        <button onclick="pressDigit('1')">1</button>
+        <button onclick="pressDigit('2')">2</button>
+        <button onclick="pressDigit('3')">3</button>
+        <button onclick="pressDigit('4')">4</button>
+        <button onclick="pressDigit('5')">5</button>
+        <button onclick="pressDigit('6')">6</button>
+        <button onclick="pressDigit('7')">7</button>
+        <button onclick="pressDigit('8')">8</button>
+        <button onclick="pressDigit('9')">9</button>
+        <button onclick="clearPin()">CLR</button>
+        <button onclick="pressDigit('0')">0</button>
+        <button class="go-btn" onclick="submitTvPin()">GO</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIVE BROADCAST BOARD -->
+  <div id="tvShell" class="tv-shell" hidden>
+    <header class="tv-header">
+      <div class="brand-left">
+        <span class="live-bug"><span class="live-dot"></span>LIVE</span>
+        <div class="brand-title">
+          <h1>Weber's Tank Testing</h1>
+          <small id="hdrSub">DOT RIN B386 • Facility Sign-Off: Ryan Pearce (RP)</small>
+        </div>
+      </div>
+
+      <div class="jacket-lights">
+        <div class="j-badge wait" id="tvShortBadge">SHORT JACKET: UNCALIBRATED</div>
+        <div class="j-badge wait" id="tvTallBadge">TALL JACKET: UNCALIBRATED</div>
+      </div>
+
+      <div class="hdr-right">
+        <button class="tv-ctrl-btn active" id="btnSound" onclick="toggleSound()">🔔 Chime: ON</button>
+        <button class="tv-ctrl-btn" onclick="toggleFullScreen()">⛶ Fullscreen</button>
+        <div class="clock-box">
+          <div class="clock-time" id="liveClock">--:--</div>
+          <div class="clock-date" id="liveDate">LOADING...</div>
+        </div>
+      </div>
+    </header>
+
+    <section class="scoreboard">
+      <div class="score-tile">
+        <span class="score-lbl">Queued On Deck</span>
+        <span class="score-val" id="scQueued" style="color:var(--blue);">0</span>
+      </div>
+      <div class="score-tile">
+        <span class="score-lbl">Tested Today</span>
+        <span class="score-val" id="scDone">0</span>
+      </div>
+      <div class="score-tile">
+        <span class="score-lbl">Passed (Code A)</span>
+        <span class="score-val" id="scPass" style="color:var(--green);">0</span>
+      </div>
+      <div class="score-tile">
+        <span class="score-lbl">Condemned</span>
+        <span class="score-val" id="scFail" style="color:var(--red);">0</span>
+      </div>
+      <div class="score-tile">
+        <span class="score-lbl">Active Valve Tags</span>
+        <span class="score-val" id="scTags" style="color:var(--gold);">0</span>
+      </div>
+      <div class="score-tile" id="tileBackroom">
+        <span class="score-lbl">Backroom Door</span>
+        <span class="score-val" id="scBackroom" style="color:var(--amber);">0</span>
+      </div>
+    </section>
+
+    <main class="arena">
+      <!-- COLUMN 1: HYDRO STAND + ON DECK -->
+      <div class="col-stack">
+        <div class="panel" style="flex:0 0 auto;">
+          <div class="panel-hdr">
+            <h2>⚡ Active Hydro Test Stand</h2>
+            <span class="panel-badge" id="standModeBadge">STANDBY</span>
+          </div>
+          <div class="panel-body" id="onStandBox"></div>
+        </div>
+
+        <div class="panel" style="flex:1;">
+          <div class="panel-hdr">
+            <h2>📋 Up Next In Queue</h2>
+            <span class="panel-badge" id="upNextCount">0 Waiting</span>
+          </div>
+          <div class="panel-body" id="upNextList"></div>
+        </div>
+      </div>
+
+      <!-- COLUMN 2: CUSTOMER BATCH LEADERBOARD + ACTIVE VALVE TAGS -->
+      <div class="col-stack">
+        <div class="panel" style="flex:1;">
+          <div class="panel-hdr">
+            <h2>🏆 Customer Batch Progress</h2>
+            <span class="panel-badge" id="syncStatusPill">☁ Synced</span>
+          </div>
+          <div class="panel-body" id="batchList"></div>
+        </div>
+
+        <div class="panel" style="flex:1.15;">
+          <div class="panel-hdr">
+            <h2>🏷️ Active Valve &amp; HPA Regulator Tags</h2>
+            <span class="panel-badge" id="activeTagBadge">0 Out</span>
+          </div>
+          <div class="panel-body">
+            <div class="valve-grid" id="valveGrid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLUMN 3: BACKROOM ALERTS + COMPLETED LOG -->
+      <div class="col-stack">
+        <div class="panel" style="flex:0.9;">
+          <div class="panel-hdr">
+            <h2>🚪 24/7 Backroom Check-Ins</h2>
+            <span class="panel-badge" id="pickupShelfBadge">Shelf: 0 Ready</span>
+          </div>
+          <div class="panel-body" id="backroomList"></div>
+        </div>
+
+        <div class="panel" style="flex:1.1;">
+          <div class="panel-hdr">
+            <h2>✅ Recently Completed</h2>
+            <span class="panel-badge">Sign-Off: RP</span>
+          </div>
+          <div class="panel-body" id="recentDoneList"></div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="ticker-bar">
+      <div class="ticker-bug">B386 SHOP WIRE</div>
+      <div class="ticker-viewport">
+        <div class="ticker-track" id="tickerTrack"></div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    let PIN_BUFFER = '';
+    let LAST_DB_VER = -1;
+    let PREV_BACKROOM_COUNT = null;
+    let SOUND_ON = localStorage.getItem('webers_tv_sound') !== '0';
+    let AUDIO_CTX = null;
+    let WAKE_LOCK = null;
+
+    function esc(s) {
+      return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    async function requestTvWakeLock() {
+      if ('wakeLock' in navigator) {
+        try { WAKE_LOCK = await navigator.wakeLock.request('screen'); } catch (_) {}
+      }
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') requestTvWakeLock();
+    });
+
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('liveClock').textContent = now.toLocaleTimeString('en-US', {
+        timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+      document.getElementById('liveDate').textContent = now.toLocaleDateString('en-US', {
+        timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+      });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function toggleSound() {
+      SOUND_ON = !SOUND_ON;
+      localStorage.setItem('webers_tv_sound', SOUND_ON ? '1' : '0');
+      const btn = document.getElementById('btnSound');
+      btn.classList.toggle('active', SOUND_ON);
+      btn.textContent = SOUND_ON ? '🔔 Chime: ON' : '🔕 Chime: OFF';
+      if (SOUND_ON) playAlertChime();
+    }
+
+    function playAlertChime() {
+      if (!SOUND_ON) return;
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        if (!AUDIO_CTX) AUDIO_CTX = new Ctx();
+        if (AUDIO_CTX.state === 'suspended') AUDIO_CTX.resume();
+        const t = AUDIO_CTX.currentTime;
+        [[659.25, 0, 0.16], [880, 0.18, 0.28]].forEach(([freq, offset, dur]) => {
+          const osc = AUDIO_CTX.createOscillator();
+          const g = AUDIO_CTX.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, t + offset);
+          g.gain.setValueAtTime(0.2, t + offset);
+          g.gain.exponentialRampToValueAtTime(0.001, t + offset + dur);
+          osc.connect(g);
+          g.connect(AUDIO_CTX.destination);
+          osc.start(t + offset);
+          osc.stop(t + offset + dur);
+        });
+      } catch (_) {}
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    // --- PIN ENTRY ---
+    function pressDigit(d) {
+      if (PIN_BUFFER.length >= 8) return;
+      PIN_BUFFER += d;
+      document.getElementById('pinDots').textContent = '•'.repeat(PIN_BUFFER.length);
+    }
+    function clearPin() {
+      PIN_BUFFER = '';
+      document.getElementById('pinDots').textContent = '';
+    }
+    window.addEventListener('keydown', (e) => {
+      if (document.getElementById('pinScreen').hidden) return;
+      if (e.key >= '0' && e.key <= '9') pressDigit(e.key);
+      else if (e.key === 'Backspace') { PIN_BUFFER = PIN_BUFFER.slice(0, -1); document.getElementById('pinDots').textContent = '•'.repeat(PIN_BUFFER.length); }
+      else if (e.key === 'Enter') submitTvPin();
+    });
+
+    async function submitTvPin() {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ pin: PIN_BUFFER })
+      });
+      if (!res.ok) {
+        document.getElementById('pinErr').hidden = false;
+        clearPin();
+        return;
+      }
+      document.getElementById('pinErr').hidden = true;
+      clearPin();
+      bootTv();
+    }
+
+    async function bootTv() {
+      const btn = document.getElementById('btnSound');
+      btn.classList.toggle('active', SOUND_ON);
+      btn.textContent = SOUND_ON ? '🔔 Chime: ON' : '🔕 Chime: OFF';
+
+      const st = await fetch('/api/auth/status');
+      const auth = await st.json();
+      if (!auth.authenticated) {
+        document.getElementById('pinScreen').hidden = false;
+        document.getElementById('tvShell').hidden = true;
+        return;
+      }
+      document.getElementById('pinScreen').hidden = true;
+      document.getElementById('tvShell').hidden = false;
+      requestTvWakeLock();
+      await refreshBoard();
+    }
+
+    async function refreshBoard() {
+      const res = await fetch('/api/tv');
+      if (res.status === 401) { bootTv(); return; }
+      if (!res.ok) return;
+      const d = await res.json();
+      LAST_DB_VER = d.db_version;
+
+      document.getElementById('hdrSub').textContent =
+        `DOT RIN ${d.dot_rin} • Sign-Off: Ryan Pearce (RP)` + (d.testing_mode ? ' • [TESTING MODE]' : '');
+
+      const sj = d.jacket_ceilings['Short Jacket'] || {};
+      const tj = d.jacket_ceilings['Tall Jacket'] || {};
+      const sb = document.getElementById('tvShortBadge');
+      const tb = document.getElementById('tvTallBadge');
+      sb.className = 'j-badge ' + (sj.max_allowed_test_psi ? 'ok' : 'wait');
+      sb.textContent = sj.max_allowed_test_psi ? `🟢 SHORT: ≤ ${sj.max_allowed_test_psi} PSI` : '🟡 SHORT: UNCALIBRATED';
+      tb.className = 'j-badge ' + (tj.max_allowed_test_psi ? 'ok' : 'wait');
+      tb.textContent = tj.max_allowed_test_psi ? `🟢 TALL: ≤ ${tj.max_allowed_test_psi} PSI` : '🟡 TALL: UNCALIBRATED';
+
+      const sc = d.scoreboard;
+      document.getElementById('scQueued').textContent = sc.queued_count;
+      document.getElementById('scDone').textContent = sc.completed_today;
+      document.getElementById('scPass').textContent = sc.passed_today;
+      document.getElementById('scFail').textContent = sc.condemned_today;
+      document.getElementById('scTags').textContent = sc.active_tags_count;
+      document.getElementById('scBackroom').textContent = sc.backroom_waiting_count;
+      document.getElementById('tileBackroom').classList.toggle('alert-pulse', sc.backroom_waiting_count > 0);
+      document.getElementById('pickupShelfBadge').textContent = `Shelf: ${sc.ready_pickup_count} Ready`;
+
+      if (PREV_BACKROOM_COUNT !== null && sc.backroom_waiting_count > PREV_BACKROOM_COUNT) {
+        playAlertChime();
+      }
+      PREV_BACKROOM_COUNT = sc.backroom_waiting_count;
+
+      document.getElementById('syncStatusPill').textContent = d.has_sheets_webhook
+        ? (d.unsynced_count ? `↻ Syncing (${d.unsynced_count})` : '☁ Sheets Synced')
+        : 'Local DB';
+
+      // Column 1: Active Stand + Queue
+      const standEl = document.getElementById('onStandBox');
+      if (d.on_stand) {
+        const s = d.on_stand;
+        document.getElementById('standModeBadge').textContent = s.service_mode === 'VISUAL_ONLY' ? 'VISUAL ONLY' : `${s.test_psi} PSI HYDRO`;
+        standEl.innerHTML = `
+          <div class="stand-hero">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <span class="stand-cust">${esc(s.customer_name)}</span>
+              ${s.valve_tag && !s.valve_reinstalled ? `<span class="tag-pill">TAG #${esc(s.valve_tag)}</span>` : ''}
+            </div>
+            <div class="stand-sn">SN: ${esc(s.serial_number)}</div>
+            <div class="stand-meta">
+              <div class="stand-stat"><small>Spec &amp; Svc</small><strong>${esc(s.dot_spec)}-${s.service_psi}</strong></div>
+              <div class="stand-stat"><small>Target PSI</small><strong style="color:var(--gold);">${s.test_psi} PSI</strong></div>
+              <div class="stand-stat"><small>OD × Length</small><strong>${esc(s.physical_size || '—')}</strong></div>
+            </div>
+            ${s.composite_warning ? `<div style="margin-top:8px;background:rgba(239,68,68,0.25);border:1px solid #ef4444;color:#fecaca;padding:6px 10px;border-radius:8px;font-size:0.8rem;font-weight:800;">⛔ ${esc(s.composite_warning)}</div>` : ''}
+          </div>`;
+      } else {
+        document.getElementById('standModeBadge').textContent = 'CLEAR';
+        standEl.innerHTML = '<div style="color:var(--muted);padding:16px 4px;text-align:center;font-weight:700;">Test stand clear — scan next cylinder on Intake.</div>';
+      }
+
+      document.getElementById('upNextCount').textContent = `${d.up_next.length} On Deck`;
+      document.getElementById('upNextList').innerHTML = d.up_next.length
+        ? d.up_next.map((r, idx) => `
+          <div class="q-row">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="rank-num">${idx + 2}</span>
+              <div>
+                <div style="font-weight:900;">${esc(r.serial_number)} <small style="color:var(--muted);">(${esc(r.dot_spec)}-${r.service_psi})</small></div>
+                <div style="font-size:0.78rem;color:var(--muted);">${esc(r.customer_name)} • ${esc(r.physical_size || 'Size N/A')}</div>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              ${r.valve_tag && !r.valve_reinstalled ? `<span class="tag-pill">#${esc(r.valve_tag)}</span>` : `<strong style="color:var(--blue);">${r.test_psi} PSI</strong>`}
+            </div>
+          </div>`).join('')
+        : '<div style="color:var(--muted);padding:12px 4px;text-align:center;">No additional cylinders waiting behind active stand.</div>';
+
+      // Column 2: Batch Leaderboard + Valve Tags
+      document.getElementById('batchList').innerHTML = d.batch_leaderboard.length
+        ? d.batch_leaderboard.map(b => {
+            const pct = b.total ? Math.round((b.completed / b.total) * 100) : 0;
+            const shelfNote = b.ready_backroom ? ` • 📦 ${b.ready_backroom} On Pickup Shelf` : '';
+            return `
+              <div class="batch-row">
+                <div class="batch-top">
+                  <span>${esc(b.customer_name)}</span>
+                  <span style="color:${pct===100 ? 'var(--green)' : 'var(--gold)'};">${b.completed} / ${b.total} (${pct}%)${shelfNote}</span>
+                </div>
+                <div class="prog-track"><div class="prog-fill" style="width:${pct}%;"></div></div>
+              </div>`;
+          }).join('')
+        : '<div style="color:var(--muted);padding:12px 4px;text-align:center;">No customer batches active for this date yet.</div>';
+
+      document.getElementById('activeTagBadge').textContent = `${d.active_valves.length} Out on Bench`;
+      document.getElementById('valveGrid').innerHTML = d.active_valves.length
+        ? d.active_valves.map(v => `
+          <div class="valve-tile">
+            <span class="v-num">TAG #${esc(v.valve_tag)}</span>
+            <span class="v-sn">SN ${esc(v.serial_number)}</span>
+            <span class="v-cust">${esc(v.customer_name)} • ${esc(v.dot_spec)}</span>
+          </div>`).join('')
+        : '<div style="color:var(--muted);grid-column:1/-1;text-align:center;padding:12px;">All reusable valve &amp; HPA regulator tags are clear.</div>';
+
+      // Column 3: Backroom Drop-Offs + Completed
+      document.getElementById('backroomList').innerHTML = d.backroom_dropoffs.length
+        ? d.backroom_dropoffs.map(dr => {
+            const isPickup = dr.entry_type === 'PICKUP_NOTICE' || dr.status === 'PICKUP_LOGGED';
+            return `
+              <div class="drop-card ${isPickup ? 'pickup' : ''}">
+                <div style="display:flex;justify-content:space-between;font-weight:900;">
+                  <span>${isPickup ? '🚚 PICKUP:' : '📥 DROP-OFF:'} ${esc(dr.customer_name)}</span>
+                  <span style="color:var(--gold);">${dr.bottle_count} Tank(s)</span>
+                </div>
+                <div style="font-size:0.8rem;color:#cbd5e1;margin-top:3px;">
+                  ${esc(dr.service_requested)}${dr.tank_summary ? ' • ' + esc(dr.tank_summary) : ''} (${esc(dr.created_at.slice(-8))})
+                </div>
+              </div>`;
+          }).join('')
+        : '<div style="color:var(--muted);padding:12px 4px;text-align:center;">No pending backroom drop-offs waiting at the door.</div>';
+
+      document.getElementById('recentDoneList').innerHTML = d.recent_completed.length
+        ? d.recent_completed.map(r => {
+            const pass = r.hydro_disposition === 'A';
+            const pct = r.percent_permanent !== null && r.percent_permanent !== undefined ? Number(r.percent_permanent).toFixed(1) + '%' : 'VIS';
+            return `
+              <div class="q-row">
+                <div>
+                  <div style="font-weight:900;">${esc(r.serial_number)} <small style="color:var(--muted);">• ${esc(r.customer_name)}</small></div>
+                  <div style="font-size:0.76rem;color:var(--muted);">${esc(r.dot_spec)}-${r.service_psi} • Perm: ${pct}</div>
+                </div>
+                <span class="disp-pill ${pass ? 'pass' : 'fail'}">${pass ? 'PASS (A)' : 'CONDEMN (' + esc(r.hydro_disposition) + ')'}</span>
+              </div>`;
+          }).join('')
+        : '<div style="color:var(--muted);padding:12px 4px;text-align:center;">Completed cylinders will post here live.</div>';
+
+      // Bottom ESPN Ticker (duplicated seamlessly for smooth infinite loop)
+      const items = d.ticker && d.ticker.length ? d.ticker : ['WEBER\'S TANK TESTING • DOT RIN B386 • READY FOR DAILY OPERATIONS'];
+      const doubled = items.concat(items);
+      document.getElementById('tickerTrack').innerHTML = doubled.map(t => `<span class="ticker-item">${esc(t)}</span>`).join('');
+    }
+
+    setInterval(async () => {
+      if (document.getElementById('tvShell').hidden) return;
+      try {
+        const res = await fetch('/api/ping');
+        if (!res.ok) return;
+        const p = await res.json();
+        if (p.db_version !== LAST_DB_VER) refreshBoard();
+      } catch (_) {}
+    }, 3000);
+
+    setInterval(() => {
+      if (!document.getElementById('tvShell').hidden) refreshBoard();
+    }, 30000);
+
+    bootTv();
+  </script>
+</body>
+</html>

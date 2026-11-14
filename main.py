@@ -21,6 +21,7 @@ from pydantic import BaseModel
 
 from database import bump_db_version, get_conn, init_db, wipe_all_operational_data
 from pdf_generator import (
+    build_backroom_poster_pdf,
     build_invoice_pdf,
     build_retest_datasheet_pdf,
     build_rin_stickers_pdf,
@@ -36,12 +37,20 @@ COOKIE_NAME = "webers_crew_session"
 CACHED_VISION_MODEL: Optional[str] = None
 SHEETS_SYNC_LOCK = asyncio.Lock()
 
+NO_CACHE_HEADERS = {
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0",
+}
+
 GAS_CODE_MAP = {
     "UN1956": "AIR",
     "UN1002": "AIR",
     "COMPRESSED AIR": "AIR",
     "BREATHING AIR": "AIR",
     "AIR COMPRESSED": "AIR",
+    "HPA": "AIR",
+    "N2/AIR": "AIR",
     "UN1072": "O2",
     "OXYGEN": "O2",
     "MEDICAL OXYGEN": "O2",
@@ -101,6 +110,74 @@ def normalize_gas_service(raw: Optional[str], fallback: str = "AIR") -> str:
     if re.match(r"^UN\d{4}$", clean):
         return fallback
     return clean[:10]
+
+
+def clean_phone(raw: Optional[str]) -> str:
+    if not raw:
+        return ""
+    digits = re.sub(r"\D", "", raw)
+    if len(digits) == 11 and digits.startswith("1"):
+        digits = digits[1:]
+    if len(digits) == 10:
+        return f"{digits[:3]}-{digits[3:6]}-{digits[6:]}"
+    return raw.strip()[:20]
+
+
+def evaluate_composite_life(dot_spec: str, mfg_date: str, ref_iso_date: Optional[str] = None) -> dict:
+    """Checks 15-year DOT service life on carbon/fiberglass Special Permit composite cylinders."""
+    sp = (dot_spec or "").strip().upper().replace("SP-", "SP")
+    is_comp = sp.startswith("SP") or sp.startswith("E-") or "CCM" in sp or "CFFC" in sp
+    if not is_comp:
+        return {"is_composite": False, "expired": False, "expiring_soon": False, "warning": None}
+
+    raw_d = (mfg_date or "").strip().lstrip("'")
+    m = re.match(r"^(\d{1,2})\s*[-/\.]\s*(\d{2,4})$", raw_d)
+    if not m:
+        return {"is_composite": True, "expired": False, "expiring_soon": False, "warning": None}
+
+    mfg_month = int(m.group(1))
+    mfg_year = int(m.group(2))
+    if not (1 <= mfg_month <= 12):
+        return {"is_composite": True, "expired": False, "expiring_soon": False, "warning": None}
+
+    ref_dt = now_eastern().date()
+    if ref_iso_date:
+        try:
+            ref_dt = datetime.strptime(ref_iso_date, "%Y-%m-%d").date()
+        except Exception:
+            pass
+
+    if mfg_year < 100:
+        cutoff = (ref_dt.year % 100) + 1
+        mfg_year = (2000 + mfg_year) if mfg_year <= cutoff else (1900 + mfg_year)
+
+    exp_year = mfg_year + 15
+    exp_month = mfg_month
+    months_left = (exp_year - ref_dt.year) * 12 + (exp_month - ref_dt.month)
+
+    if months_left < 0:
+        return {
+            "is_composite": True,
+            "expired": True,
+            "expiring_soon": False,
+            "expires_label": f"{exp_month:02d}-{exp_year}",
+            "warning": f"EXPIRED COMPOSITE (>15 YRS): Mfg {mfg_month:02d}-{mfg_year} expired {exp_month:02d}-{exp_year}. Do NOT hydro unless covered by an approved 30-yr MAE permit.",
+        }
+    if months_left <= 6:
+        return {
+            "is_composite": True,
+            "expired": False,
+            "expiring_soon": True,
+            "expires_label": f"{exp_month:02d}-{exp_year}",
+            "warning": f"COMPOSITE NEAR END-OF-LIFE: 15-yr service life ends {exp_month:02d}-{exp_year} ({months_left} mo left).",
+        }
+    return {
+        "is_composite": True,
+        "expired": False,
+        "expiring_soon": False,
+        "expires_label": f"{exp_month:02d}-{exp_year}",
+        "warning": None,
+    }
 
 
 def dot_max_allowed_test_psi(max_cal_psi: int) -> int:
@@ -195,6 +272,10 @@ def push_unsynced_to_sheets() -> dict:
                FROM invoices i WHERE i.synced=0 ORDER BY i.id ASC LIMIT 30;"""
         ).fetchall()
     ]
+    drops = [
+        dict(r)
+        for r in conn.execute("SELECT * FROM dropoffs WHERE synced=0 ORDER BY id ASC LIMIT 30;").fetchall()
+    ]
     fbs = [
         dict(r)
         for r in conn.execute("SELECT * FROM crew_feedback WHERE synced=0 ORDER BY id ASC LIMIT 30;").fetchall()
@@ -208,7 +289,7 @@ def push_unsynced_to_sheets() -> dict:
     pushed_total = 0
     ctx = ssl.create_default_context()
 
-    if webhook_url and (cals or recs or invs):
+    if webhook_url and (cals or recs or invs or drops):
         sheets_recs = []
         for r in recs:
             rc = dict(r)
@@ -225,6 +306,7 @@ def push_unsynced_to_sheets() -> dict:
                 "calibrations": cals,
                 "records": sheets_recs,
                 "invoices": invs,
+                "dropoffs": drops,
                 "pricing_rates": rates,
                 "feedback": fbs if fb_webhook_url == webhook_url else [],
             }
@@ -246,6 +328,8 @@ def push_unsynced_to_sheets() -> dict:
             conn.executemany("UPDATE cylinder_records SET synced=1 WHERE id=?;", [(r["id"],) for r in recs])
         if invs:
             conn.executemany("UPDATE invoices SET synced=1 WHERE id=?;", [(iv["id"],) for iv in invs])
+        if drops:
+            conn.executemany("UPDATE dropoffs SET synced=1 WHERE id=?;", [(d["id"],) for d in drops])
         if fbs and fb_webhook_url == webhook_url:
             conn.executemany("UPDATE crew_feedback SET synced=1 WHERE id=?;", [(f["id"],) for f in fbs])
             pushed_total += len(fbs)
@@ -253,7 +337,7 @@ def push_unsynced_to_sheets() -> dict:
         bump_db_version(conn)
         conn.commit()
         conn.close()
-        pushed_total += len(cals) + len(recs) + len(invs)
+        pushed_total += len(cals) + len(recs) + len(invs) + len(drops)
 
     if fb_webhook_url and fbs:
         fb_bytes = json.dumps({"action": "crew_feedback", "feedback": fbs}).encode("utf-8")
@@ -332,8 +416,9 @@ app = FastAPI(title="Weber's Tank Testing - DOT RIN B386", lifespan=lifespan)
 async def auth_gate_middleware(request: Request, call_next):
     path = request.url.path
     public_paths = {
-        "/", "/ops", "/manifest.json", "/sw.js", "/icon.svg",
+        "/", "/ops", "/tv", "/checkin", "/manifest.json", "/sw.js", "/icon.svg",
         "/api/auth/status", "/api/auth/login", "/api/auth/logout",
+        "/api/public/dropoff",
     }
     if path in public_paths or path.startswith("/static"):
         return await call_next(request)
@@ -344,6 +429,21 @@ async def auth_gate_middleware(request: Request, call_next):
 
 class LoginInput(BaseModel):
     pin: str
+
+
+class PublicDropoffInput(BaseModel):
+    entry_type: str = "DROPOFF"
+    customer_name: str
+    customer_phone: str = ""
+    bottle_count: int = 1
+    tank_summary: str = ""
+    service_requested: str = "Hydro + Visual"
+    notes: str = ""
+    website_hp: str = ""
+
+
+class DropoffStatusInput(BaseModel):
+    status: str
 
 
 class LadderStep(BaseModel):
@@ -380,6 +480,8 @@ class CrewInput(BaseModel):
 class IntakeInput(BaseModel):
     work_date: Optional[str] = None
     customer_name: str
+    customer_phone: str = ""
+    dropoff_id: Optional[int] = None
     serial_number: str
     valve_tag: str = ""
     mfg_id: str = ""
@@ -405,10 +507,24 @@ class ValveTagAssignInput(BaseModel):
     valve_reinstalled: Optional[bool] = None
 
 
+class ShopStageInput(BaseModel):
+    shop_stage: str
+    valve_reinstalled: Optional[bool] = None
+
+
+class BatchStageInput(BaseModel):
+    work_date: str
+    customer_name: str
+    shop_stage: str
+    release_valves: bool = False
+
+
 class ScanBottleJsonInput(BaseModel):
     images_b64: list[str]
     work_date: Optional[str] = None
     customer_name: str = ""
+    customer_phone: str = ""
+    dropoff_id: Optional[int] = None
     valve_tag: str = ""
     service_mode: str = "HYDRO_AND_VISUAL"
     gas_service: str = "AIR"
@@ -425,6 +541,7 @@ class TestCompleteInput(BaseModel):
     max_percent_perm: float = 10.0
     valve_tag: Optional[str] = None
     valve_reinstalled: bool = False
+    shop_stage: str = "DRYING"
     coating_type: str = "Painted"
     coating_condition: str = "Good"
     chk_corrosion: str = "OK"
@@ -441,9 +558,11 @@ class TestCompleteInput(BaseModel):
 
 class RecordEditInput(BaseModel):
     customer_name: str
+    customer_phone: str = ""
     serial_number: str
     valve_tag: str = ""
     valve_reinstalled: bool = False
+    shop_stage: str = "IN_SHOP"
     mfg_id: str = ""
     mfg_date: str = ""
     gas_service: str = "AIR"
@@ -487,8 +606,10 @@ class InvoiceLineInput(BaseModel):
 class InvoiceCreateInput(BaseModel):
     work_date: str
     customer_name: str
+    customer_phone: str = ""
     tax_rate: float = 0.0
     status: str = "DRAFT"
+    payment_method: str = ""
     created_by: str = "RP"
     notes: str = ""
     items: list[InvoiceLineInput]
@@ -496,6 +617,7 @@ class InvoiceCreateInput(BaseModel):
 
 class InvoiceStatusInput(BaseModel):
     status: str
+    payment_method: Optional[str] = None
 
 
 class CrewFeedbackInput(BaseModel):
@@ -510,19 +632,35 @@ class FeedbackStatusInput(BaseModel):
     status: str
 
 
-# --- HOST-AWARE ROUTING (weberstanktesting.com vs ops.weberstanktesting.com) ---
+# --- HOST-AWARE ROUTING (Public Storefront vs Ops Portal vs TV Board) ---
 @app.get("/")
 def serve_root(request: Request):
     host = (request.headers.get("host") or "").split(":")[0].lower()
     landing_file = STATIC_DIR / "landing.html"
-    if host in ("weberstanktesting.com", "www.weberstanktesting.com") and landing_file.exists():
-        return FileResponse(landing_file)
-    return FileResponse(STATIC_DIR / "index.html")
+    if (host in ("weberstanktesting.com", "www.weberstanktesting.com") or request.query_params.get("view") == "public") and landing_file.exists():
+        return FileResponse(landing_file, headers=NO_CACHE_HEADERS)
+    return FileResponse(STATIC_DIR / "index.html", headers=NO_CACHE_HEADERS)
+
+
+@app.get("/checkin")
+def serve_public_checkin():
+    landing_file = STATIC_DIR / "landing.html"
+    if landing_file.exists():
+        return FileResponse(landing_file, headers=NO_CACHE_HEADERS)
+    return FileResponse(STATIC_DIR / "index.html", headers=NO_CACHE_HEADERS)
 
 
 @app.get("/ops")
 def serve_ops():
-    return FileResponse(STATIC_DIR / "index.html")
+    return FileResponse(STATIC_DIR / "index.html", headers=NO_CACHE_HEADERS)
+
+
+@app.get("/tv")
+def serve_tv_board():
+    tv_file = STATIC_DIR / "tv.html"
+    if not tv_file.exists():
+        raise HTTPException(404, "tv.html not found in static/ folder.")
+    return FileResponse(tv_file, headers=NO_CACHE_HEADERS)
 
 
 @app.get("/icon.svg")
@@ -554,7 +692,7 @@ def serve_manifest():
 @app.get("/sw.js")
 def serve_sw():
     js = "self.addEventListener('install', e => self.skipWaiting()); self.addEventListener('activate', e => self.clients.claim()); self.addEventListener('fetch', () => {});"
-    return Response(content=js, media_type="application/javascript")
+    return Response(content=js, media_type="application/javascript", headers=NO_CACHE_HEADERS)
 
 
 @app.get("/api/auth/status")
@@ -591,7 +729,75 @@ def auth_logout():
     return resp
 
 
-# --- CORE OPERATIONS ---
+# --- PUBLIC BACKROOM 24/7 DROP-OFF & PICKUP CHECK-IN ---
+@app.post("/api/public/dropoff")
+def submit_public_dropoff(payload: PublicDropoffInput):
+    if payload.website_hp.strip():
+        return {"logged": True}
+    cust = payload.customer_name.strip()[:80]
+    if len(cust) < 2:
+        raise HTTPException(400, "Please enter your name, fire department, or company name.")
+    cnt = max(1, min(250, int(payload.bottle_count or 1)))
+    etype = "PICKUP_NOTICE" if payload.entry_type.strip().upper() == "PICKUP_NOTICE" else "DROPOFF"
+    init_status = "PICKUP_LOGGED" if etype == "PICKUP_NOTICE" else "IN_BACKROOM"
+
+    est = now_eastern()
+    ts = est.strftime("%Y-%m-%d %I:%M %p")
+    w_date = est.date().isoformat()
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """INSERT INTO dropoffs
+           (created_at, work_date, entry_type, customer_name, customer_phone,
+            bottle_count, tank_summary, service_requested, notes, status, synced)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0);""",
+        (
+            ts,
+            w_date,
+            etype,
+            cust,
+            clean_phone(payload.customer_phone),
+            cnt,
+            payload.tank_summary.strip()[:120],
+            payload.service_requested.strip()[:60] or "Hydro + Visual",
+            payload.notes.strip()[:280],
+            init_status,
+        ),
+    )
+    did = cur.lastrowid
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    trigger_sheets_sync_bg()
+    return {"logged": True, "ticket_no": f"BR-{did:04d}", "created_at": ts}
+
+
+@app.post("/api/dropoffs/{dropoff_id}/status")
+def update_dropoff_status(dropoff_id: int, payload: DropoffStatusInput):
+    conn = get_conn()
+    conn.execute(
+        "UPDATE dropoffs SET status=?, synced=0 WHERE id=?;",
+        (payload.status.strip().upper(), dropoff_id),
+    )
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    trigger_sheets_sync_bg()
+    return {"updated": dropoff_id}
+
+
+@app.delete("/api/dropoffs/{dropoff_id}")
+def delete_dropoff(dropoff_id: int):
+    conn = get_conn()
+    conn.execute("DELETE FROM dropoffs WHERE id=?;", (dropoff_id,))
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"deleted": dropoff_id}
+
+
+# --- CORE OPERATIONS & TV LEADERBOARD ---
 @app.get("/api/ping")
 def ping_version():
     conn = get_conn()
@@ -600,10 +806,145 @@ def ping_version():
         "SELECT (SELECT COUNT(*) FROM daily_verifications WHERE synced=0) + "
         "(SELECT COUNT(*) FROM cylinder_records WHERE synced=0 AND status='COMPLETED') + "
         "(SELECT COUNT(*) FROM invoices WHERE synced=0) + "
+        "(SELECT COUNT(*) FROM dropoffs WHERE synced=0) + "
         "(SELECT COUNT(*) FROM crew_feedback WHERE synced=0);"
     ).fetchone()[0]
+    backroom_waiting = conn.execute(
+        "SELECT COUNT(*) FROM dropoffs WHERE status IN ('IN_BACKROOM', 'PICKUP_LOGGED');"
+    ).fetchone()[0]
     conn.close()
-    return {"db_version": ver, "unsynced_count": unsynced}
+    return {"db_version": ver, "unsynced_count": unsynced, "backroom_waiting": backroom_waiting}
+
+
+@app.get("/api/tv")
+def get_tv_leaderboard(work_date: Optional[str] = None):
+    est = now_eastern()
+    target_date = work_date or est.date().isoformat()
+    conn = get_conn()
+    s_map = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings;").fetchall()}
+
+    jacket_ceilings = {}
+    for j_name in ("Short Jacket", "Tall Jacket"):
+        row = conn.execute(
+            """SELECT COALESCE(MAX(target_pressure_psi), 0) AS max_cal,
+                      MAX(test_time) AS last_time
+               FROM daily_verifications
+               WHERE test_date=? AND jacket_type=? AND passed=1;""",
+            (target_date, j_name),
+        ).fetchone()
+        max_cal = int(row["max_cal"] or 0)
+        jacket_ceilings[j_name] = {
+            "max_calibrated_psi": max_cal,
+            "max_allowed_test_psi": dot_max_allowed_test_psi(max_cal),
+            "verified_at": row["last_time"] or "",
+        }
+
+    records = [
+        dict(r)
+        for r in conn.execute(
+            "SELECT * FROM cylinder_records WHERE work_date=? ORDER BY id ASC;",
+            (target_date,),
+        ).fetchall()
+    ]
+    for r in records:
+        life = evaluate_composite_life(r.get("dot_spec", ""), r.get("mfg_date", ""), target_date)
+        r["composite_warning"] = life.get("warning")
+
+    queued = [r for r in records if r["status"] == "QUEUED"]
+    completed = [r for r in records if r["status"] == "COMPLETED"]
+    passed_today = sum(1 for r in completed if r.get("hydro_disposition") == "A")
+    condemned_today = sum(1 for r in completed if r.get("hydro_disposition") != "A")
+
+    active_valves = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT * FROM cylinder_records
+               WHERE valve_tag != '' AND valve_reinstalled = 0
+               ORDER BY id DESC LIMIT 36;"""
+        ).fetchall()
+    ]
+
+    dropoffs = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT * FROM dropoffs
+               WHERE status IN ('IN_BACKROOM', 'CHECKED_IN', 'PICKUP_LOGGED')
+               ORDER BY id DESC LIMIT 20;"""
+        ).fetchall()
+    ]
+
+    ready_shelf_count = conn.execute(
+        "SELECT COUNT(*) FROM cylinder_records WHERE status='COMPLETED' AND shop_stage='READY_BACKROOM';"
+    ).fetchone()[0]
+
+    batch_rows = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT customer_name,
+                      MAX(customer_phone) AS customer_phone,
+                      COUNT(*) AS total,
+                      SUM(CASE WHEN status='COMPLETED' THEN 1 ELSE 0 END) AS completed,
+                      SUM(CASE WHEN status='COMPLETED' AND hydro_disposition='A' THEN 1 ELSE 0 END) AS passed,
+                      SUM(CASE WHEN status='COMPLETED' AND hydro_disposition!='A' THEN 1 ELSE 0 END) AS condemned,
+                      SUM(CASE WHEN shop_stage='READY_BACKROOM' THEN 1 ELSE 0 END) AS ready_backroom
+               FROM cylinder_records
+               WHERE work_date=?
+               GROUP BY customer_name
+               ORDER BY completed ASC, total DESC;""",
+            (target_date,),
+        ).fetchall()
+    ]
+
+    unsynced = conn.execute(
+        "SELECT (SELECT COUNT(*) FROM daily_verifications WHERE synced=0) + "
+        "(SELECT COUNT(*) FROM cylinder_records WHERE synced=0 AND status='COMPLETED') + "
+        "(SELECT COUNT(*) FROM invoices WHERE synced=0);"
+    ).fetchone()[0]
+    conn.close()
+
+    # Build ESPN-style bottom ticker items
+    ticker = []
+    for j_name, jc in jacket_ceilings.items():
+        if jc["max_allowed_test_psi"]:
+            ticker.append(f"🟢 {j_name.upper()}: CERTIFIED ≤ {jc['max_allowed_test_psi']} PSI ({jc['verified_at']})")
+        else:
+            ticker.append(f"🟡 {j_name.upper()}: AWAITING MORNING CALIBRATION")
+    for d in dropoffs:
+        if d["status"] == "IN_BACKROOM":
+            ticker.append(f"📥 BACKROOM DROP-OFF: {d['customer_name']} — {d['bottle_count']} tank(s) ({d['service_requested']})")
+        elif d["status"] == "PICKUP_LOGGED":
+            ticker.append(f"🚚 PICKUP NOTICE: {d['customer_name']} picked up from backroom ({d['created_at'][-8:]})")
+    for b in batch_rows:
+        ticker.append(f"🏷️ {b['customer_name'].upper()}: {b['completed']}/{b['total']} COMPLETE ({b['passed']} PASS)")
+    if ready_shelf_count:
+        ticker.append(f"📦 BACKROOM PICKUP SHELF: {ready_shelf_count} COMPLETED CYLINDER(S) STAGED FOR CUSTOMER PICKUP")
+
+    return {
+        "db_version": int(s_map.get("db_version", "1")),
+        "testing_mode": s_map.get("testing_mode", "1") == "1",
+        "dot_rin": s_map.get("dot_rin", "B386"),
+        "work_date": target_date,
+        "server_time": est.strftime("%I:%M %p"),
+        "unsynced_count": unsynced,
+        "has_sheets_webhook": bool(s_map.get("sheets_webhook_url")),
+        "jacket_ceilings": jacket_ceilings,
+        "on_stand": queued[0] if queued else None,
+        "up_next": queued[1:12],
+        "recent_completed": list(reversed(completed[-10:])),
+        "active_valves": active_valves,
+        "backroom_dropoffs": dropoffs,
+        "batch_leaderboard": batch_rows,
+        "scoreboard": {
+            "queued_count": len(queued),
+            "completed_today": len(completed),
+            "passed_today": passed_today,
+            "condemned_today": condemned_today,
+            "active_tags_count": len(active_valves),
+            "backroom_waiting_count": sum(1 for d in dropoffs if d["status"] in ("IN_BACKROOM", "PICKUP_LOGGED")),
+            "ready_pickup_count": ready_shelf_count,
+        },
+        "ticker": ticker,
+    }
 
 
 @app.get("/api/bootstrap")
@@ -654,12 +995,26 @@ def bootstrap(work_date: Optional[str] = None):
             (target_date,),
         ).fetchall()
     ]
+    for r in records:
+        life = evaluate_composite_life(r.get("dot_spec", ""), r.get("mfg_date", ""), target_date)
+        r["composite_warning"] = life.get("warning")
+        r["composite_expired"] = life.get("expired", False)
+
     active_valves = [
         dict(r)
         for r in conn.execute(
             """SELECT * FROM cylinder_records
                WHERE valve_tag != '' AND valve_reinstalled = 0
                ORDER BY id DESC;"""
+        ).fetchall()
+    ]
+    dropoffs = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT * FROM dropoffs
+               WHERE status != 'ARCHIVED'
+               ORDER BY CASE WHEN status IN ('IN_BACKROOM', 'PICKUP_LOGGED') THEN 0 ELSE 1 END, id DESC
+               LIMIT 35;"""
         ).fetchall()
     ]
     dates_summary = [
@@ -678,9 +1033,11 @@ def bootstrap(work_date: Optional[str] = None):
         dict(r)
         for r in conn.execute(
             """SELECT customer_name,
+                      MAX(customer_phone) AS customer_phone,
                       COUNT(*) AS total_bottles,
                       MAX(work_date) AS last_date,
-                      SUM(CASE WHEN status='COMPLETED' AND invoice_id IS NULL THEN 1 ELSE 0 END) AS unbilled_count
+                      SUM(CASE WHEN status='COMPLETED' AND invoice_id IS NULL THEN 1 ELSE 0 END) AS unbilled_count,
+                      SUM(CASE WHEN shop_stage='READY_BACKROOM' THEN 1 ELSE 0 END) AS ready_backroom_count
                FROM cylinder_records
                GROUP BY customer_name
                ORDER BY last_date DESC, customer_name ASC;"""
@@ -702,6 +1059,7 @@ def bootstrap(work_date: Optional[str] = None):
         "SELECT (SELECT COUNT(*) FROM daily_verifications WHERE synced=0) + "
         "(SELECT COUNT(*) FROM cylinder_records WHERE synced=0 AND status='COMPLETED') + "
         "(SELECT COUNT(*) FROM invoices WHERE synced=0) + "
+        "(SELECT COUNT(*) FROM dropoffs WHERE synced=0) + "
         "(SELECT COUNT(*) FROM crew_feedback WHERE synced=0);"
     ).fetchone()[0]
     conn.close()
@@ -711,6 +1069,7 @@ def bootstrap(work_date: Optional[str] = None):
         "db_version": int(s_map.get("db_version", "1")),
         "testing_mode": s_map.get("testing_mode", "1") == "1",
         "dot_rin": s_map.get("dot_rin", "B386"),
+        "shop_phone": s_map.get("phone", "724-266-8008"),
         "starting_sheet_no": int(s_map.get("starting_sheet_no", "8095")),
         "default_tax_rate": float(s_map.get("default_tax_rate", "0") or 0),
         "calibrated_serial": cal_serial,
@@ -725,6 +1084,7 @@ def bootstrap(work_date: Optional[str] = None):
         "cga_specs": specs,
         "records": records,
         "active_valves": active_valves,
+        "dropoffs": dropoffs,
         "dates_summary": dates_summary,
         "customers_summary": customers_summary,
         "pricing_rates": rates,
@@ -930,7 +1290,6 @@ def lookup_spec_defaults(conn, dot_spec: str, service_psi: int) -> Optional[dict
         d = dict(rows[0])
         d["exact_size"] = True
         return d
-    # Ambiguous spec/pressure shared by multiple cylinder sizes (e.g. 3AA-2015, 3AL-1800)
     unique_rees = {r["ree_limit"] for r in rows if r["ree_limit"] is not None}
     return {
         "test_psi": rows[0]["test_psi"],
@@ -946,6 +1305,7 @@ def insert_cylinder_record(payload: IntakeInput) -> dict:
     v_tag = payload.valve_tag.strip().lstrip("#")
     serial_clean = payload.serial_number.strip().upper().replace(" ", "")
     cust_clean = payload.customer_name.strip()
+    phone_clean = clean_phone(payload.customer_phone)
     spec_clean = payload.dot_spec.strip().upper().replace("SP-", "SP")
     if not cust_clean or not serial_clean or not spec_clean or payload.service_psi <= 0:
         raise HTTPException(400, "Customer, Serial #, DOT Spec, and Service Pressure are required.")
@@ -967,6 +1327,14 @@ def insert_cylinder_record(payload: IntakeInput) -> dict:
                 409,
                 f"Serial #{serial_clean} is already in today's intake queue for {dup_sn['customer_name']}.",
             )
+
+    if not phone_clean:
+        prev_ph = conn.execute(
+            "SELECT customer_phone FROM cylinder_records WHERE customer_name=? AND customer_phone!='' ORDER BY id DESC LIMIT 1;",
+            (cust_clean,),
+        ).fetchone()
+        if prev_ph:
+            phone_clean = prev_ph["customer_phone"]
 
     base_sheet = int(conn.execute("SELECT value FROM settings WHERE key='starting_sheet_no';").fetchone()["value"])
     prior_hydro_count = conn.execute(
@@ -990,7 +1358,6 @@ def insert_cylinder_record(payload: IntakeInput) -> dict:
         if ree is None:
             ree = cga_match["ree_limit"]
 
-    # Standard 3A / 3AA / 3AL cylinders do not carry an REE limit unless explicitly specified
     if spec_clean in ("3A", "3AA", "3AL") and ree == 7.2:
         ree = None
 
@@ -999,21 +1366,33 @@ def insert_cylinder_record(payload: IntakeInput) -> dict:
     cur = conn.cursor()
     cur.execute(
         """INSERT INTO cylinder_records
-           (work_date, sheet_no, customer_name, serial_number, valve_tag, mfg_id, mfg_date, gas_service,
+           (work_date, sheet_no, customer_name, customer_phone, dropoff_id,
+            serial_number, valve_tag, mfg_id, mfg_date, gas_service,
             outside_dia, length_in, physical_size, dot_spec, service_psi, test_psi,
-            ree_limit, service_mode, intake_by, operator_name, operator_initials, notes)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Ryan Pearce', 'RP', ?);""",
+            ree_limit, service_mode, shop_stage, intake_by, operator_name, operator_initials, notes)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'IN_SHOP', ?, 'Ryan Pearce', 'RP', ?);""",
         (
-            w_date, assigned_sheet_no, cust_clean, serial_clean,
-            v_tag, payload.mfg_id.strip().upper(), payload.mfg_date.strip(),
+            w_date, assigned_sheet_no, cust_clean, phone_clean, payload.dropoff_id,
+            serial_clean, v_tag, payload.mfg_id.strip().upper(), payload.mfg_date.strip(),
             gas_clean, dia, length, phys_size,
             spec_clean, payload.service_psi, calc_test_psi,
             ree, payload.service_mode, payload.intake_by.strip().upper()[:4] or "RP", payload.notes,
         ),
     )
+    rid = cur.lastrowid
+
+    if payload.dropoff_id:
+        conn.execute(
+            """UPDATE dropoffs
+               SET imported_count = COALESCE(imported_count, 0) + 1,
+                   status = CASE WHEN status='IN_BACKROOM' THEN 'CHECKED_IN' ELSE status END,
+                   synced = 0
+               WHERE id = ?;""",
+            (payload.dropoff_id,),
+        )
+
     bump_db_version(conn)
     conn.commit()
-    rid = cur.lastrowid
     row = dict(conn.execute("SELECT * FROM cylinder_records WHERE id=?;", (rid,)).fetchone())
     conn.close()
     return row
@@ -1074,6 +1453,57 @@ def assign_or_update_valve_tag(payload: ValveTagAssignInput):
     if updated["status"] == "COMPLETED":
         trigger_sheets_sync_bg()
     return updated
+
+
+@app.post("/api/records/{record_id}/stage")
+def update_record_stage(record_id: int, payload: ShopStageInput):
+    stage = payload.shop_stage.strip().upper()
+    conn = get_conn()
+    if payload.valve_reinstalled is not None:
+        conn.execute(
+            "UPDATE cylinder_records SET shop_stage=?, valve_reinstalled=?, synced=0 WHERE id=?;",
+            (stage, 1 if payload.valve_reinstalled else 0, record_id),
+        )
+    elif stage in ("READY_BACKROOM", "PICKED_UP"):
+        conn.execute(
+            "UPDATE cylinder_records SET shop_stage=?, valve_reinstalled=1, synced=0 WHERE id=?;",
+            (stage, record_id),
+        )
+    else:
+        conn.execute("UPDATE cylinder_records SET shop_stage=?, synced=0 WHERE id=?;", (stage, record_id))
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"id": record_id, "shop_stage": stage}
+
+
+@app.post("/api/batch/stage")
+def update_batch_stage(payload: BatchStageInput):
+    stage = payload.shop_stage.strip().upper()
+    conn = get_conn()
+    if payload.release_valves or stage in ("READY_BACKROOM", "PICKED_UP"):
+        conn.execute(
+            """UPDATE cylinder_records
+               SET shop_stage=?, valve_reinstalled=1, synced=0
+               WHERE work_date=? AND customer_name=? AND status='COMPLETED';""",
+            (stage, payload.work_date, payload.customer_name),
+        )
+    else:
+        conn.execute(
+            """UPDATE cylinder_records
+               SET shop_stage=?, synced=0
+               WHERE work_date=? AND customer_name=? AND status='COMPLETED';""",
+            (stage, payload.work_date, payload.customer_name),
+        )
+    if stage == "PICKED_UP":
+        conn.execute(
+            "UPDATE dropoffs SET status='ARCHIVED', synced=0 WHERE customer_name=? AND status!='ARCHIVED';",
+            (payload.customer_name,),
+        )
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"updated": True, "shop_stage": stage}
 
 
 @app.delete("/api/records/{record_id}")
@@ -1215,21 +1645,21 @@ async def scan_and_import_bottle(payload: ScanBottleJsonInput):
 
     api_key = (os.getenv("GEMINI_API_KEY") or saved_key or "").strip()
     if not api_key:
-        raise HTTPException(503, "Gemini API Key not set. Open 'Settings' in the top right and paste your key.")
+        raise HTTPException(503, "Gemini API Key not set. Open 'Settings' and paste your Gemini API key.")
 
     prompt = (
-        "Examine ALL provided photos (1 to 6 angles of the SAME compressed gas cylinder) and stitch wraparound shoulder stamps across overlapping angles:\n"
-        "- MULTI-ANGLE STITCHING: Serial numbers (e.g. 'GTS-0291277'), DOT specs, and owner stencils curve around the cylinder neck. Carefully align overlapping characters across photos so no prefix or trailing digits are dropped.\n"
+        "Examine ALL provided photos (1 to 6 angles of the SAME compressed gas or paintball HPA cylinder) and stitch wraparound stamps/labels across overlapping angles:\n"
+        "- MULTI-ANGLE STITCHING: Serial numbers (e.g. 'GTS-0291277'), DOT specs, and owner stencils curve around the neck or gel-coat label. Align overlapping characters across photos so no prefix or trailing digits are dropped.\n"
         "- serial_number: Complete cylinder serial number without spaces (e.g. 'GTS-0291277', 'W370277'). Ignore 4-digit 2x2 RIN retest grids.\n"
-        "- valve_tag: If a numbered brass, plastic, or paper shop tag is hanging on or near the valve/neck, return its number only (e.g. '14'), else null.\n"
-        "- dot_spec: Spec code only without pressure (e.g. 'ICC3A1800'->'3A', 'DOT-3AA2015'->'3AA', '3AL3000'->'3AL', 'DOT-SP14387-4500'->'SP14387').\n"
+        "- valve_tag: If a numbered brass, plastic, or paper shop tag is hanging on or near the valve/regulator/neck, return its number only (e.g. '14'), else null.\n"
+        "- dot_spec: Spec code only without pressure (e.g. 'ICC3A1800'->'3A', 'DOT-3AA2015'->'3AA', '3AL3000'->'3AL', 'DOT-SP14387-4500'->'SP14387', 'DOT-SP10915-4500'->'SP10915').\n"
         "- service_psi: Integer service pressure (e.g. 1800, 2015, 2216, 2250, 2400, 3000, 3442, 4500).\n"
-        "- mfg_id: Manufacturer mark/name (e.g. 'LUXFER', 'WK', 'M4625', 'M8004', 'PST', 'TW', 'HARRISBURG', 'TAYLOR WHARTON').\n"
-        "- mfg_date: Earliest original manufacture date M-YY or MM-YY near the DOT/mfg stamp (ignore newer retest dates accompanied by 4-character RINs or '+' / '*' stars).\n"
-        "- gas_service: Short gas code ONLY ('AIR', 'O2', 'CO2', 'N2', 'AR', 'HE', 'AR/CO2'). NEVER output UN hazmat numbers like 'UN1956' or 'UN1002'; map hazmat diamonds/labels to the gas name (default 'AIR' if generic compressed gas).\n"
-        "- detected_customer: Owner, fire department, or gas distributor name on neck ring, stencil, or collar label (e.g. 'GTS INC', 'BUTLER GAS', 'CRESCENT TWP FD'), else null.\n"
-        "- outside_dia: Cylinder outside diameter in inches as string (e.g. '7', '7.3', '9', '6.8'). Read from label if printed; otherwise visually estimate standard cylinder OD (note: tall industrial steel cylinders are typically '7' or '9' OD, NOT '3 1/4' medical B).\n"
-        "- length_in: Cylinder body length (excluding valve) in inches as string (e.g. '23', '32 1/2', '43', '51', '16 3/4'). Read from label if printed; otherwise visually estimate from cylinder proportions.\n"
+        "- mfg_id: Manufacturer mark/name (e.g. 'LUXFER', 'WK', 'NINJA', 'HK ARMY', 'EMPIRE', 'FIRST STRIKE', 'M4625', 'PST', 'TW').\n"
+        "- mfg_date: Earliest original manufacture date M-YY or MM-YY near the DOT/mfg stamp or composite label (ignore newer retest dates accompanied by 4-character RINs).\n"
+        "- gas_service: Short gas code ONLY ('AIR', 'O2', 'CO2', 'N2', 'AR', 'HE', 'AR/CO2'). NEVER output UN hazmat numbers like 'UN1956'; map hazmat labels or HPA paintball tanks to 'AIR'.\n"
+        "- detected_customer: Owner, fire department, or gas distributor name on neck ring, stencil, or collar label (e.g. 'GTS INC', 'CRESCENT TWP FD'), else null (do NOT put paintball tank brand names like Ninja/HK Army as customer).\n"
+        "- outside_dia: Cylinder outside diameter in inches as string. Read from label if printed; otherwise estimate visually (stubby carbon paintball 68ci/4500 HPA is ~'4.5', 48ci/3000 alum HPA is ~'3.5', firefighter SCBA is ~'6.8' or '7.3', tall industrial steel is '7' or '9').\n"
+        "- length_in: Cylinder body length (excluding valve/regulator) in inches as string. Read from label if printed; otherwise estimate visually (paintball 68ci HPA is ~'9.3', firefighter SCBA is ~'21.5'–'23', industrial steel is '32 1/2', '43', or '51').\n"
         "- size_source: 'LABEL' if OD/Length were explicitly printed on cylinder, else 'ESTIMATED'.\n"
         "- ree_limit: Float REE (Rejection Elastic Expansion in cc) ONLY if 'REE' is explicitly printed on a composite/Special Permit cylinder label; ALWAYS return null for standard steel (3A/3AA) and aluminum (3AL) cylinders."
     )
@@ -1249,6 +1679,7 @@ async def scan_and_import_bottle(payload: ScanBottleJsonInput):
     scanned_vtag = (payload.valve_tag or extracted.get("valve_tag") or "").strip().lstrip("#")
     final_customer = payload.customer_name.strip() or (extracted.get("detected_customer") or "").strip()
     gas_svc = normalize_gas_service(extracted.get("gas_service"), fallback=normalize_gas_service(payload.gas_service))
+    mfg_date_clean = (extracted.get("mfg_date") or "").strip()
 
     conn = get_conn()
     cga_match = lookup_spec_defaults(conn, dot_spec, svc_psi) if (dot_spec and svc_psi) else None
@@ -1274,12 +1705,14 @@ async def scan_and_import_bottle(payload: ScanBottleJsonInput):
     elif ree_val is None and cga_match:
         ree_val = cga_match["ree_limit"]
 
+    comp_life = evaluate_composite_life(dot_spec, mfg_date_clean, w_date)
+
     form_fill = {
         "customer_name": final_customer,
         "serial_number": serial_clean,
         "valve_tag": scanned_vtag,
         "mfg_id": (extracted.get("mfg_id") or "").strip().upper(),
-        "mfg_date": (extracted.get("mfg_date") or "").strip(),
+        "mfg_date": mfg_date_clean,
         "gas_service": gas_svc,
         "dot_spec": dot_spec,
         "service_psi": svc_psi or "",
@@ -1304,15 +1737,18 @@ async def scan_and_import_bottle(payload: ScanBottleJsonInput):
     if dup_sn:
         duplicate_warning = f"Serial #{serial_clean} is already logged on {w_date} ({dup_sn['status']} for {dup_sn['customer_name']})."
 
-    if payload.auto_import and not missing and not duplicate_warning:
+    # Never auto-import an expired composite cylinder so the bench inspects the date first
+    if payload.auto_import and not missing and not duplicate_warning and not comp_life.get("expired"):
         rec = insert_cylinder_record(
             IntakeInput(
                 work_date=w_date,
                 customer_name=final_customer,
+                customer_phone=payload.customer_phone,
+                dropoff_id=payload.dropoff_id,
                 serial_number=serial_clean,
                 valve_tag=scanned_vtag,
                 mfg_id=form_fill["mfg_id"],
-                mfg_date=form_fill["mfg_date"],
+                mfg_date=mfg_date_clean,
                 gas_service=gas_svc,
                 outside_dia=dia,
                 length_in=length,
@@ -1324,12 +1760,19 @@ async def scan_and_import_bottle(payload: ScanBottleJsonInput):
                 intake_by=payload.intake_by,
             )
         )
-        return {"imported": True, "record": rec, "form_fill": form_fill, "duplicate_warning": duplicate_warning}
+        return {
+            "imported": True,
+            "record": rec,
+            "form_fill": form_fill,
+            "duplicate_warning": duplicate_warning,
+            "composite_life": comp_life,
+        }
     return {
         "imported": False,
         "form_fill": form_fill,
         "missing": missing,
         "duplicate_warning": duplicate_warning,
+        "composite_life": comp_life,
     }
 
 
@@ -1396,9 +1839,11 @@ def complete_record(record_id: int, payload: TestCompleteInput):
 
     tested_by = (payload.tested_by or "RP").strip().upper()[:4] or "RP"
     completed_ts = now_eastern().strftime("%I:%M %p")
+    next_stage = "READY_BACKROOM" if final_reinst else (payload.shop_stage or "DRYING")
+
     conn.execute(
         """UPDATE cylinder_records SET
-           status='COMPLETED', verification_id=?, jacket_type=?,
+           status='COMPLETED', shop_stage=?, verification_id=?, jacket_type=?,
            valve_tag=?, valve_reinstalled=?,
            total_cc=?, permanent_cc=?, elastic_cc=?, percent_permanent=?,
            coating_type=?, coating_condition=?,
@@ -1408,7 +1853,7 @@ def complete_record(record_id: int, payload: TestCompleteInput):
            tested_by=?, completed_at=?, operator_name='Ryan Pearce', operator_initials='RP', notes=?, synced=0
            WHERE id=?;""",
         (
-            ver_id, payload.jacket_type if rec["service_mode"] == "HYDRO_AND_VISUAL" else "Road/Visual",
+            next_stage, ver_id, payload.jacket_type if rec["service_mode"] == "HYDRO_AND_VISUAL" else "Road/Visual",
             final_vtag, final_reinst,
             payload.total_cc, payload.permanent_cc, elastic, pct_perm,
             payload.coating_type, payload.coating_condition,
@@ -1454,6 +1899,7 @@ def edit_cylinder_record(record_id: int, payload: RecordEditInput):
     phys_size = f"{dia}x{length}".strip("x") if (dia or length) else ""
     spec_clean = payload.dot_spec.strip().upper().replace("SP-", "SP")
     gas_clean = normalize_gas_service(payload.gas_service)
+    phone_clean = clean_phone(payload.customer_phone) or (rec["customer_phone"] or "")
 
     checks = [
         payload.chk_corrosion, payload.chk_dents_dings, payload.chk_cuts_gouges,
@@ -1481,7 +1927,7 @@ def edit_cylinder_record(record_id: int, payload: RecordEditInput):
 
     conn.execute(
         """UPDATE cylinder_records SET
-           customer_name=?, serial_number=?, valve_tag=?, valve_reinstalled=?,
+           customer_name=?, customer_phone=?, serial_number=?, valve_tag=?, valve_reinstalled=?, shop_stage=?,
            mfg_id=?, mfg_date=?, gas_service=?, outside_dia=?, length_in=?, physical_size=?,
            dot_spec=?, service_psi=?, test_psi=?, ree_limit=?,
            total_cc=?, permanent_cc=?, elastic_cc=?, percent_permanent=?,
@@ -1492,8 +1938,10 @@ def edit_cylinder_record(record_id: int, payload: RecordEditInput):
            operator_name='Ryan Pearce', operator_initials='RP', notes=?, synced=0
            WHERE id=?;""",
         (
-            payload.customer_name.strip(), payload.serial_number.strip().upper().replace(" ", ""),
-            vtag, reinst, payload.mfg_id.strip().upper(), payload.mfg_date.strip(), gas_clean,
+            payload.customer_name.strip(), phone_clean,
+            payload.serial_number.strip().upper().replace(" ", ""),
+            vtag, reinst, payload.shop_stage or rec["shop_stage"] or "IN_SHOP",
+            payload.mfg_id.strip().upper(), payload.mfg_date.strip(), gas_clean,
             dia, length, phys_size, spec_clean, payload.service_psi, payload.test_psi, payload.ree_limit,
             payload.total_cc, payload.permanent_cc, elastic, pct_perm,
             payload.coating_condition, payload.relief_valve_changed,
@@ -1603,19 +2051,31 @@ def create_invoice(payload: InvoiceCreateInput):
     nxt_num = conn.execute("SELECT COUNT(*) + 1 FROM invoices;").fetchone()[0]
     inv_no = f"INV-{est_today[:4]}-{nxt_num:04d}"
 
+    phone_clean = clean_phone(payload.customer_phone)
+    if not phone_clean:
+        ph_row = conn.execute(
+            "SELECT customer_phone FROM cylinder_records WHERE customer_name=? AND customer_phone!='' ORDER BY id DESC LIMIT 1;",
+            (payload.customer_name,),
+        ).fetchone()
+        if ph_row:
+            phone_clean = ph_row["customer_phone"]
+
     subtotal = round(sum(it.qty * it.unit_price for it in payload.items), 2)
     tax_amt = round(subtotal * (payload.tax_rate / 100.0), 2)
     total = round(subtotal + tax_amt, 2)
     created_by = (payload.created_by or "RP").strip().upper()[:4] or "RP"
+    paid_ts = now_eastern().strftime("%Y-%m-%d %I:%M %p") if payload.status == "PAID" else ""
 
     cur = conn.cursor()
     cur.execute(
         """INSERT INTO invoices
-           (invoice_no, invoice_date, work_date, customer_name, subtotal, tax_rate, tax_amount, total_amount, status, created_by, notes, synced)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0);""",
+           (invoice_no, invoice_date, work_date, customer_name, customer_phone,
+            subtotal, tax_rate, tax_amount, total_amount, status, payment_method, paid_at, created_by, notes, synced)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0);""",
         (
-            inv_no, est_today, payload.work_date, payload.customer_name,
-            subtotal, payload.tax_rate, tax_amt, total, payload.status, created_by, payload.notes,
+            inv_no, est_today, payload.work_date, payload.customer_name, phone_clean,
+            subtotal, payload.tax_rate, tax_amt, total, payload.status,
+            payload.payment_method.strip(), paid_ts, created_by, payload.notes,
         ),
     )
     inv_id = cur.lastrowid
@@ -1637,8 +2097,19 @@ def create_invoice(payload: InvoiceCreateInput):
 
 @app.post("/api/invoices/{inv_id}/status")
 def set_invoice_status(inv_id: int, payload: InvoiceStatusInput):
+    st = payload.status.strip().upper()
+    paid_ts = now_eastern().strftime("%Y-%m-%d %I:%M %p") if st == "PAID" else ""
     conn = get_conn()
-    conn.execute("UPDATE invoices SET status=?, synced=0 WHERE id=?;", (payload.status, inv_id))
+    if payload.payment_method is not None:
+        conn.execute(
+            "UPDATE invoices SET status=?, payment_method=?, paid_at=?, synced=0 WHERE id=?;",
+            (st, payload.payment_method.strip(), paid_ts, inv_id),
+        )
+    else:
+        conn.execute(
+            "UPDATE invoices SET status=?, paid_at=?, synced=0 WHERE id=?;",
+            (st, paid_ts, inv_id),
+        )
     bump_db_version(conn)
     conn.commit()
     conn.close()
@@ -1765,15 +2236,22 @@ def download_visual_pdf(work_date: str, customer: str = ""):
 
 
 @app.get("/api/pdf/stickers")
-def download_stickers_pdf(work_date: str, count: int = 30, skip: int = 0):
+def download_stickers_pdf(work_date: str, count: int = 30, skip: int = 0, compact: bool = False):
     conn = get_conn()
     rin = conn.execute("SELECT value FROM settings WHERE key='dot_rin';").fetchone()["value"]
     conn.close()
-    pdf_bytes = build_rin_stickers_pdf(work_date=work_date, count=count, dot_rin=rin, skip_slots=skip)
+    pdf_bytes = build_rin_stickers_pdf(
+        work_date=work_date,
+        count=count,
+        dot_rin=rin,
+        skip_slots=skip,
+        compact=compact,
+    )
+    suffix = "Mini_HPA" if compact else "Standard"
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="B386_Stickers_{work_date}.pdf"'},
+        headers={"Content-Disposition": f'inline; filename="B386_Stickers_{suffix}_{work_date}.pdf"'},
     )
 
 
@@ -1797,6 +2275,23 @@ def download_valve_tags_pdf(work_date: str, customer: str = ""):
         content=pdf_bytes,
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="Valve_Tag_Sheet_{work_date}.pdf"'},
+    )
+
+
+@app.get("/api/pdf/poster")
+def download_backroom_poster_pdf(checkin_url: str = "[https://weberstanktesting.com/#dropoff](https://weberstanktesting.com/#dropoff)"):
+    conn = get_conn()
+    s_map = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings;").fetchall()}
+    conn.close()
+    pdf_bytes = build_backroom_poster_pdf(
+        checkin_url=checkin_url,
+        phone=s_map.get("phone", "724-266-8008"),
+        dot_rin=s_map.get("dot_rin", "B386"),
+    )
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'inline; filename="Webers_Backroom_DropOff_QR_Sign.pdf"'},
     )
 
 

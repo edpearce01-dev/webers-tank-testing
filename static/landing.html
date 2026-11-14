@@ -4,155 +4,214 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#0f291e" />
-  <meta name="description" content="Weber's Tank Testing (U.S. DOT RIN B386) provides certified 49 CFR §180.215 hydrostatic water-jacket cylinder testing and visual requalification up to 7,500+ PSI in Beaver County and Western Pennsylvania." />
+  <meta name="description" content="Weber's Tank Testing (U.S. DOT RIN B386) provides certified 49 CFR §180.215 hydrostatic cylinder testing up to 7,500+ PSI for Fire/SCBA, Paintball HPA, Welding Gas, CO2, and Scuba in Beaver County & Western PA." />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-  <title>Weber's Tank Testing | DOT Hydrostatic Cylinder Requalification (RIN B386)</title>
+  <title>Weber's Tank Testing | DOT Hydrostatic Cylinder &amp; Paintball HPA Testing (RIN B386)</title>
   <style>
     :root {
-      --forest: #0f291e;
+      --forest: #0b2219;
       --emerald: #1b4332;
+      --emerald-mid: #2d6a4f;
       --emerald-soft: #ecfdf5;
       --amber: #f59e0b;
-      --amber-dark: #b45309;
+      --amber-light: #fef3c7;
       --slate: #0f172a;
       --muted: #475569;
       --bg: #f8fafc;
       --card: #ffffff;
-      --border: #e2e8f0;
+      --border: #cbd5e1;
+      --border-soft: #e2e8f0;
+      --ok: #15803d;
+      --danger: #b91c1c;
     }
     * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+    [hidden] { display: none !important; }
     html { scroll-behavior: smooth; }
     body { margin: 0; background: var(--bg); color: var(--slate); line-height: 1.6; }
 
-    /* Top Navigation Bar */
+    /* Sticky Executive Topbar */
     .topbar {
-      background: var(--forest); color: #ffffff; padding: 14px 24px;
-      border-bottom: 3px solid var(--amber); position: sticky; top: 0; z-index: 30;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      background: var(--forest); color: #ffffff; padding: 12px 20px;
+      border-bottom: 3px solid var(--amber); position: sticky; top: 0; z-index: 40;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.22);
     }
     .topbar-inner {
-      max-width: 1140px; margin: 0 auto; display: flex; justify-content: space-between;
-      align-items: center; flex-wrap: wrap; gap: 14px;
+      max-width: 1160px; margin: 0 auto; display: flex; justify-content: space-between;
+      align-items: center; flex-wrap: wrap; gap: 12px;
     }
     .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: #ffffff; }
-    .brand img { width: 44px; height: 44px; border-radius: 10px; }
-    .brand h1 { margin: 0; font-size: 1.2rem; letter-spacing: 0.4px; }
-    .brand small { color: #cbd5e1; font-weight: 600; display: block; font-size: 0.78rem; }
-    .nav-links { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-    .nav-links a.link {
-      color: #e2e8f0; text-decoration: none; font-weight: 600; font-size: 0.9rem;
-    }
+    .brand img { width: 42px; height: 42px; border-radius: 10px; }
+    .brand h1 { margin: 0; font-size: 1.15rem; letter-spacing: 0.4px; }
+    .brand small { color: #cbd5e1; font-weight: 600; display: block; font-size: 0.76rem; }
+    .nav-links { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .nav-links a.link { color: #e2e8f0; text-decoration: none; font-weight: 700; font-size: 0.88rem; }
     .nav-links a.link:hover { color: #fbbf24; }
+    .btn-top-checkin {
+      background: rgba(255,255,255,0.14); color: #ffffff; text-decoration: none;
+      padding: 8px 13px; border-radius: 8px; font-weight: 800; font-size: 0.84rem;
+      border: 1px solid rgba(255,255,255,0.28);
+    }
     .btn-top-call {
       background: var(--amber); color: #111827; text-decoration: none;
-      padding: 9px 16px; border-radius: 8px; font-weight: 800; font-size: 0.9rem;
+      padding: 8px 15px; border-radius: 8px; font-weight: 900; font-size: 0.86rem;
     }
-    .btn-top-call:hover { background: #fbbf24; }
+    @media (max-width: 720px) {
+      .nav-links a.link { display: none; }
+    }
 
     /* Hero Section */
     .hero {
-      background: linear-gradient(145deg, #0f291e 0%, #1b4332 100%);
-      color: #ffffff; padding: 68px 24px;
+      background: radial-gradient(circle at 85% 20%, #23533d 0%, #0b2219 65%);
+      color: #ffffff; padding: 60px 20px 68px;
     }
     .hero-inner {
-      max-width: 1140px; margin: 0 auto; display: grid;
-      grid-template-columns: 1.35fr 1fr; gap: 40px; align-items: center;
+      max-width: 1160px; margin: 0 auto; display: grid;
+      grid-template-columns: 1.3fr 1fr; gap: 38px; align-items: center;
     }
-    @media (max-width: 860px) { .hero-inner { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) { .hero-inner { grid-template-columns: 1fr; } }
     .rin-pill {
-      display: inline-block; background: #fef3c7; color: #92400e; font-weight: 800;
-      padding: 5px 13px; border-radius: 999px; font-size: 0.8rem; letter-spacing: 0.5px; margin-bottom: 16px;
+      display: inline-block; background: var(--amber-light); color: #92400e; font-weight: 900;
+      padding: 5px 13px; border-radius: 999px; font-size: 0.78rem; letter-spacing: 0.5px; margin-bottom: 14px;
     }
-    .hero h2 { font-size: 2.35rem; line-height: 1.18; margin: 0 0 16px; }
-    .hero p { color: #e2e8f0; font-size: 1.06rem; margin: 0 0 26px; max-width: 620px; }
-    .cta-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-    .btn-call {
-      background: var(--amber); color: #111827; text-decoration: none; padding: 14px 24px;
-      border-radius: 9px; font-weight: 800; font-size: 1rem; box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+    .hero h2 { font-size: 2.35rem; line-height: 1.16; margin: 0 0 14px; }
+    @media (max-width: 600px) { .hero h2 { font-size: 1.82rem; } }
+    .hero p { color: #e2e8f0; font-size: 1.04rem; margin: 0 0 24px; max-width: 620px; }
+    .cta-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn-amber {
+      background: var(--amber); color: #111827; text-decoration: none; padding: 13px 20px;
+      border-radius: 9px; font-weight: 900; font-size: 0.96rem; border: none; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 7px;
     }
-    .btn-secondary-hero {
+    .btn-outline-light {
       background: rgba(255,255,255,0.12); color: #ffffff; text-decoration: none;
-      padding: 13px 20px; border-radius: 9px; font-weight: 700; font-size: 0.96rem;
-      border: 1px solid rgba(255,255,255,0.28);
+      padding: 13px 18px; border-radius: 9px; font-weight: 800; font-size: 0.94rem;
+      border: 1px solid rgba(255,255,255,0.3); display: inline-flex; align-items: center; gap: 7px;
     }
-    .btn-secondary-hero:hover { background: rgba(255,255,255,0.2); }
+    .trust-strip {
+      display: flex; gap: 18px; flex-wrap: wrap; margin-top: 24px; padding-top: 18px;
+      border-top: 1px solid rgba(255,255,255,0.16); font-size: 0.85rem; color: #cbd5e1; font-weight: 700;
+    }
 
     .hero-card {
-      background: #ffffff; color: var(--slate); border-radius: 14px; padding: 24px;
-      box-shadow: 0 18px 38px rgba(0,0,0,0.3); border-top: 5px solid var(--amber);
+      background: #ffffff; color: var(--slate); border-radius: 16px; padding: 24px;
+      box-shadow: 0 20px 44px rgba(0,0,0,0.32); border-top: 5px solid var(--amber);
     }
-    .hero-card h3 { margin: 0 0 12px; color: var(--emerald); font-size: 1.12rem; }
+    .hero-card h3 { margin: 0 0 12px; color: var(--emerald); font-size: 1.1rem; }
     .spec-list { list-style: none; padding: 0; margin: 0; }
     .spec-list li {
-      padding: 9px 0; border-bottom: 1px solid var(--border);
-      display: flex; justify-content: space-between; gap: 12px; font-size: 0.92rem;
+      padding: 8px 0; border-bottom: 1px solid var(--border-soft);
+      display: flex; justify-content: space-between; gap: 12px; font-size: 0.9rem;
     }
     .spec-list li:last-child { border-bottom: none; }
     .spec-list span { color: var(--muted); }
 
-    /* Content Sections */
-    .section { max-width: 1140px; margin: 56px auto; padding: 0 24px; }
-    .section-hdr { margin-bottom: 26px; }
+    /* Sections */
+    .section { max-width: 1160px; margin: 54px auto; padding: 0 20px; }
+    .section-hdr { margin-bottom: 24px; }
     .section-hdr h3 { margin: 0 0 6px; font-size: 1.55rem; color: var(--forest); }
-    .section-hdr p { margin: 0; color: var(--muted); font-size: 0.98rem; }
+    .section-hdr p { margin: 0; color: var(--muted); font-size: 0.96rem; }
 
-    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(255px, 1fr)); gap: 20px; }
-    .card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-      padding: 22px; box-shadow: 0 2px 6px rgba(15,23,42,0.04);
+    /* Backroom Drop-Off & Pickup Check-In Split Card */
+    .checkin-shell {
+      background: #ffffff; border: 2px solid #86efac; border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(15,41,30,0.08); overflow: hidden;
+      display: grid; grid-template-columns: 1fr 1.25fr;
     }
+    @media (max-width: 880px) { .checkin-shell { grid-template-columns: 1fr; } }
+    .checkin-info {
+      background: linear-gradient(160deg, var(--forest) 0%, var(--emerald) 100%);
+      color: #ffffff; padding: 28px; display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .checkin-info h3 { margin: 8px 0 10px; font-size: 1.4rem; }
+    .checkin-steps { list-style: none; padding: 0; margin: 16px 0; }
+    .checkin-steps li {
+      margin-bottom: 12px; font-size: 0.9rem; color: #e2e8f0;
+      padding-left: 12px; border-left: 3px solid var(--amber);
+    }
+    .checkin-form-pane { padding: 26px; }
+    .mode-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    .mode-tab {
+      flex: 1; padding: 10px 12px; border-radius: 9px; border: 1.5px solid var(--border);
+      background: #f8fafc; color: var(--muted); font-weight: 800; font-size: 0.88rem; cursor: pointer;
+    }
+    .mode-tab.active {
+      background: var(--emerald-soft); color: var(--emerald); border-color: var(--emerald-mid);
+    }
+
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    label {
+      display: block; font-size: 0.76rem; font-weight: 800; color: #334155;
+      text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 4px;
+    }
+    input, select, textarea {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 0.95rem; color: var(--slate); background: #ffffff;
+    }
+    input:focus, select:focus, textarea:focus { outline: 2px solid var(--emerald-mid); border-color: var(--emerald-mid); }
+    .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .quick-chip {
+      background: #f1f5f9; border: 1px solid var(--border); color: var(--slate);
+      padding: 4px 10px; border-radius: 999px; font-size: 0.76rem; font-weight: 700; cursor: pointer;
+    }
+    .quick-chip:hover { background: var(--emerald-soft); border-color: var(--emerald-mid); }
+    .btn-submit {
+      width: 100%; margin-top: 14px; background: var(--emerald); color: #ffffff; border: none;
+      padding: 13px 18px; border-radius: 9px; font-size: 1rem; font-weight: 900; cursor: pointer;
+    }
+    .btn-submit:hover { background: var(--forest); }
+
+    /* Service Cards */
+    .cards-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; }
+    .svc-card {
+      background: var(--card); border: 1px solid var(--border-soft); border-radius: 14px;
+      padding: 22px; box-shadow: 0 2px 8px rgba(15,23,42,0.04); display: flex; flex-direction: column;
+    }
+    .svc-card.highlight { border: 2px solid var(--amber); }
     .card-tag {
-      display: inline-block; background: var(--emerald-soft); color: var(--emerald);
-      font-size: 0.74rem; font-weight: 800; padding: 3px 9px; border-radius: 6px;
+      align-self: flex-start; background: var(--emerald-soft); color: var(--emerald);
+      font-size: 0.73rem; font-weight: 900; padding: 3px 9px; border-radius: 6px;
       text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 10px;
     }
-    .card h4 { margin: 0 0 8px; color: var(--emerald); font-size: 1.08rem; }
-    .card p { margin: 0; color: var(--muted); font-size: 0.93rem; }
+    .card-tag.gold { background: var(--amber-light); color: #92400e; }
+    .svc-card h4 { margin: 0 0 8px; color: var(--forest); font-size: 1.08rem; }
+    .svc-card p { margin: 0; color: var(--muted); font-size: 0.91rem; }
 
-    /* 4-Step Process Strip */
-    .steps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; }
-    .step-box {
-      background: #ffffff; border: 1px solid var(--border); border-left: 4px solid var(--emerald);
-      border-radius: 10px; padding: 18px;
+    /* Interactive Date Checker */
+    .checker-card {
+      background: #ffffff; border: 1px solid var(--border); border-radius: 14px;
+      padding: 24px; box-shadow: 0 4px 14px rgba(15,23,42,0.05);
     }
-    .step-num {
-      font-size: 0.78rem; font-weight: 800; color: var(--amber-dark);
-      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;
+    .checker-result {
+      margin-top: 16px; padding: 14px 16px; border-radius: 10px; font-weight: 700; font-size: 0.95rem;
     }
-    .step-box h4 { margin: 0 0 6px; font-size: 1rem; color: var(--slate); }
-    .step-box p { margin: 0; font-size: 0.89rem; color: var(--muted); }
+    .checker-result.ok { background: #ecfdf5; border: 1px solid #6ee7b7; color: #065f46; }
+    .checker-result.due { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; }
+    .checker-result.exp { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
 
-    /* Retest Schedule Reference Table */
-    .schedule-card {
-      background: #ffffff; border: 1px solid var(--border); border-radius: 12px;
-      overflow-x: auto; box-shadow: 0 2px 6px rgba(15,23,42,0.04);
+    /* Prep & FAQ Details */
+    details.faq-item {
+      background: #ffffff; border: 1px solid var(--border-soft); border-radius: 10px;
+      padding: 14px 18px; margin-bottom: 10px;
     }
-    table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
-    th {
-      background: #f1f5f9; color: var(--slate); text-align: left; padding: 13px 16px;
-      font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 2px solid var(--border);
+    details.faq-item summary {
+      font-weight: 800; color: var(--forest); cursor: pointer; font-size: 0.97rem;
     }
-    td { padding: 13px 16px; border-bottom: 1px solid var(--border); color: var(--slate); }
-    tr:last-child td { border-bottom: none; }
+    details.faq-item p { margin: 10px 0 0; color: var(--muted); font-size: 0.92rem; }
 
-    /* Callout Banner */
     .cta-banner {
       background: linear-gradient(135deg, var(--forest) 0%, var(--emerald) 100%);
-      color: #ffffff; border-radius: 14px; padding: 32px 28px;
+      color: #ffffff; border-radius: 16px; padding: 30px 26px;
       display: flex; justify-content: space-between; align-items: center;
-      flex-wrap: wrap; gap: 20px;
+      flex-wrap: wrap; gap: 18px;
     }
-    .cta-banner h3 { margin: 0 0 6px; font-size: 1.35rem; }
-    .cta-banner p { margin: 0; color: #cbd5e1; font-size: 0.95rem; }
-
     footer {
-      background: #0f172a; color: #cbd5e1; padding: 30px 24px; margin-top: 64px; font-size: 0.88rem;
+      background: #0f172a; color: #cbd5e1; padding: 28px 20px; margin-top: 60px; font-size: 0.87rem;
     }
     .footer-inner {
-      max-width: 1140px; margin: 0 auto; display: flex; justify-content: space-between;
+      max-width: 1160px; margin: 0 auto; display: flex; justify-content: space-between;
       align-items: center; flex-wrap: wrap; gap: 12px;
     }
-    .footer-inner a { color: #fbbf24; text-decoration: none; font-weight: 700; }
+    .footer-inner a { color: #fbbf24; text-decoration: none; font-weight: 800; }
   </style>
   <script type="application/ld+json">
   {
@@ -165,7 +224,7 @@
       "addressRegion": "PA",
       "addressCountry": "US"
     },
-    "description": "U.S. DOT Certified (RIN B386) hydrostatic water-jacket cylinder testing and visual inspection facility."
+    "description": "U.S. DOT Certified (RIN B386) hydrostatic water-jacket cylinder testing and visual requalification facility serving Fire/SCBA, Paintball HPA, Industrial Gas, CO2, and Scuba."
   }
   </script>
 </head>
@@ -176,13 +235,15 @@
         <img src="/icon.svg" alt="Weber's Tank Testing" />
         <div>
           <h1>WEBER'S TANK TESTING</h1>
-          <small>U.S. D.O.T. Certified Hydrostatic Testing • RIN B386</small>
+          <small>U.S. D.O.T. Certified Facility • RIN B386</small>
         </div>
       </a>
       <div class="nav-links">
-        <a class="link" href="#services">Cylinders</a>
-        <a class="link" href="#process">Testing Process</a>
-        <a class="link" href="#intervals">DOT Intervals</a>
+        <a class="link" href="#dropoff">Drop-Off Check-In</a>
+        <a class="link" href="#services">Cylinders &amp; HPA</a>
+        <a class="link" href="#checker">Is My Tank Due?</a>
+        <a class="link" href="#faq">Prep &amp; FAQ</a>
+        <a class="btn-top-checkin" href="#dropoff">📥 Log Drop-Off</a>
         <a class="btn-top-call" href="tel:7242668008">📞 724-266-8008</a>
       </div>
     </div>
@@ -192,24 +253,30 @@
     <div class="hero-inner">
       <div>
         <span class="rin-pill">U.S. D.O.T. CERTIFIED FACILITY • RIN B386</span>
-        <h2>Precision Hydrostatic Water Jacket Testing &amp; Visual Requalification</h2>
+        <h2>Certified Hydrostatic Cylinder &amp; Paintball HPA Testing</h2>
         <p>
-          Serving fire departments, EMS squads, industrial gas distributors, welding shops, beverage suppliers, and dive operations across Beaver County and Western Pennsylvania with certified 49 CFR §180.215 cylinder testing.
+          Fast, local 49 CFR §180.215 water-jacket requalification up to 7,500+ PSI for fire departments, paintball &amp; airsoft players, welding &amp; industrial gas fleets, beverage CO2, and dive tanks across Beaver County and Western Pennsylvania.
         </p>
         <div class="cta-row">
-          <a class="btn-call" href="tel:7242668008">📞 Call to Schedule: 724-266-8008</a>
-          <a class="btn-secondary-hero" href="#intervals">Check Retest Intervals</a>
+          <a class="btn-amber" href="#dropoff">📥 Log Backroom Drop-Off / Pickup</a>
+          <a class="btn-outline-light" href="tel:7242668008">📞 Call: 724-266-8008</a>
+          <a class="btn-outline-light" href="sms:7242668008">💬 Text Shop</a>
+        </div>
+        <div class="trust-strip">
+          <span>✓ Dual Calibrated Water Jackets</span>
+          <span>✓ Numbered Valve &amp; Regulator Tagging</span>
+          <span>✓ 24/7 Backroom Drop-Off Check-In</span>
         </div>
       </div>
 
       <div class="hero-card">
-        <h3>Certified Facility Specifications</h3>
+        <h3>Certified Facility Capabilities</h3>
         <ul class="spec-list">
-          <li><span>D.O.T. Requalification ID</span><strong>RIN B386</strong></li>
-          <li><span>Federal Compliance</span><strong>49 CFR §180.215</strong></li>
+          <li><span>U.S. D.O.T. Requalification ID</span><strong>RIN B386</strong></li>
           <li><span>Calibrated Test Range</span><strong>Up to 7,500+ PSI</strong></li>
-          <li><span>SCBA &amp; Special Permit</span><strong>Composite / Carbon</strong></li>
-          <li><span>Steel &amp; Aluminum</span><strong>3A • 3AA • 3AL</strong></li>
+          <li><span>Fire &amp; Rescue SCBA</span><strong>2216 • 3000 • 4500 PSI</strong></li>
+          <li><span>Paintball &amp; Airsoft HPA</span><strong>3000# Alum • 4500# Carbon</strong></li>
+          <li><span>Industrial, Medical &amp; CO2</span><strong>3A • 3AA • 3AL</strong></li>
           <li><span>7-Point Visual Inspection</span><strong>Shop &amp; On-Site</strong></li>
           <li><span>Facility Manager</span><strong>Ryan Pearce</strong></li>
         </ul>
@@ -217,114 +284,345 @@
     </div>
   </section>
 
+  <!-- 24/7 BACKROOM DROP-OFF & PICKUP CHECK-IN -->
+  <section id="dropoff" class="section">
+    <div class="checkin-shell">
+      <div class="checkin-info">
+        <div>
+          <span class="rin-pill" style="margin-bottom:8px;">24/7 BACKROOM CHECK-IN</span>
+          <h3>Dropping Tanks Off or Picking Up a Batch?</h3>
+          <p style="color:#cbd5e1;font-size:0.93rem;margin:0;">
+            Log your cylinders below so your batch immediately posts to our testing room board and we can text you the moment your tanks are certified and ready.
+          </p>
+          <ul class="checkin-steps">
+            <li><strong>Repeat Customers &amp; Departments:</strong> Place cylinders neatly in the backroom drop-off area and submit this 20-second check-in.</li>
+            <li><strong>First-Time After-Hours Drop-Off?</strong> Call or text <strong>724-266-8008</strong> ahead of time for backroom access instructions.</li>
+            <li><strong>Regulators &amp; Valves Protected:</strong> Every removed valve or paintball HPA regulator receives a dedicated match tag tied to your serial number.</li>
+          </ul>
+        </div>
+        <div style="font-size:0.82rem;color:#fde68a;font-weight:700;">
+          ⚠️ Safety Reminder: Never leave actively leaking cylinders inside an enclosed area.
+        </div>
+      </div>
+
+      <div class="checkin-form-pane">
+        <div id="dropoffFormWrap">
+          <div class="mode-tabs">
+            <button type="button" class="mode-tab active" id="tabDrop" onclick="setCheckinMode('DROPOFF')">📥 Log Tank Drop-Off</button>
+            <button type="button" class="mode-tab" id="tabPick" onclick="setCheckinMode('PICKUP_NOTICE')">🚚 Log Completed Pickup</button>
+          </div>
+
+          <form onsubmit="submitDropoffForm(event)">
+            <input type="text" id="hpField" autocomplete="off" tabindex="-1" style="position:absolute;left:-9999px;" />
+            <div class="form-grid">
+              <div>
+                <label>Your Name, Fire Dept, or Company *</label>
+                <input id="doName" required placeholder="e.g. Crescent Twp FD or John Smith" />
+              </div>
+              <div>
+                <label>Cell Phone (For Ready-for-Pickup Text) *</label>
+                <input id="doPhone" type="tel" required placeholder="724-555-0199" />
+              </div>
+              <div>
+                <label>Number of Tanks *</label>
+                <input id="doCount" type="number" min="1" max="250" value="1" required />
+              </div>
+              <div id="svcSelectWrap">
+                <label>Service Needed</label>
+                <select id="doService">
+                  <option value="Hydro + Visual">DOT Hydrostatic + Visual Test</option>
+                  <option value="Hydro + Air/HPA Fill">DOT Hydro Test + Air / HPA Fill</option>
+                  <option value="Paintball HPA Hydro">Paintball / Airsoft HPA Hydro</option>
+                  <option value="Visual Inspection Only">Annual Visual Inspection Only</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-top:12px;">
+              <label>Tank Type(s) (Tap Quick Tag or Type)</label>
+              <input id="doSummary" placeholder="e.g. 2x 68/4500 Carbon Paintball HPA, 1x 20lb CO2" />
+              <div class="chip-row">
+                <button type="button" class="quick-chip" onclick="appendTankType('Paintball Carbon 4500 HPA')">🎯 Paintball 4500# HPA</button>
+                <button type="button" class="quick-chip" onclick="appendTankType('Paintball 3000# Alum')">🎯 Paintball 3000#</button>
+                <button type="button" class="quick-chip" onclick="appendTankType('Firefighter SCBA')">🚒 Fire SCBA</button>
+                <button type="button" class="quick-chip" onclick="appendTankType('Welding / Industrial')">⚙️ Welding / Gas</button>
+                <button type="button" class="quick-chip" onclick="appendTankType('Beverage CO2')">🫧 CO2 Tank</button>
+                <button type="button" class="quick-chip" onclick="appendTankType('Scuba Cylinder')">🤿 Scuba</button>
+              </div>
+            </div>
+
+            <div style="margin-top:12px;">
+              <label>Notes / PO# / Turnaround Notes (Optional)</label>
+              <textarea id="doNotes" rows="2" placeholder="Optional PO#, regulator notes, check # left in envelope, or tournament/shift deadline..."></textarea>
+            </div>
+
+            <div id="doError" class="checker-result exp" hidden></div>
+            <button type="submit" class="btn-submit" id="btnSubmitDrop">✓ Submit Backroom Drop-Off Notice</button>
+          </form>
+        </div>
+
+        <div id="dropoffSuccessWrap" hidden style="text-align:center;padding:22px 10px;">
+          <div style="font-size:2.6rem;">✅</div>
+          <h3 style="margin:6px 0;color:var(--emerald);" id="succTitle">Drop-Off Logged on Shop Board!</h3>
+          <p style="margin:6px 0 14px;color:var(--muted);" id="succDetail"></p>
+          <div style="display:inline-block;background:var(--emerald-soft);border:1.5px solid #6ee7b7;padding:10px 20px;border-radius:10px;font-weight:900;color:var(--forest);font-size:1.15rem;" id="succTicket"></div>
+          <p style="font-size:0.86rem;color:var(--muted);margin-top:14px;">
+            Questions or need immediate assistance? Call or text <a href="tel:7242668008" style="color:var(--emerald);font-weight:800;">724-266-8008</a>.
+          </p>
+          <button type="button" class="quick-chip" style="padding:9px 16px;margin-top:8px;" onclick="resetDropoffForm()">+ Log Another Batch</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 SERVICE PILLARS -->
   <section id="services" class="section">
     <div class="section-hdr">
       <h3>Cylinders We Test &amp; Certify</h3>
-      <p>Dual calibrated water jackets accommodate everything from compact SCBA escape bottles to full-height cascade and industrial cylinders.</p>
+      <p>Dual calibrated water jackets handle everything from compact 13ci paintball bottles to full-height cascade and industrial cylinders.</p>
     </div>
-    <div class="cards">
-      <div class="card">
+    <div class="cards-4">
+      <div class="svc-card">
         <span class="card-tag">Fire &amp; EMS</span>
         <h4>SCBA &amp; Cascade Cylinders</h4>
-        <p>Volumetric water-jacket expansion testing, REE verification, and DOT retest labeling for 2216, 3000, and 4500 PSI carbon-wrapped SCBA, escape, and 6000 PSI cascade cylinders.</p>
+        <p>Volumetric expansion testing, REE verification, and official B386 labeling for 2216, 3000, and 4500 PSI composite SCBA, escape bottles, and 6000 PSI cascade banks.</p>
       </div>
-      <div class="card">
+      <div class="svc-card highlight">
+        <span class="card-tag gold">Local Fast Turnaround</span>
+        <h4>Paintball &amp; Airsoft HPA Tanks</h4>
+        <p>Don't ship your tank away for weeks. We test 3000 PSI aluminum (13ci–48ci) and 4500 PSI carbon-wrapped bottles (45ci, 68ci, 77ci, 80ci, 90ci) locally up to 7,500 PSI with matched regulator tagging.</p>
+      </div>
+      <div class="svc-card">
         <span class="card-tag">Industrial &amp; Medical</span>
         <h4>Welding, Specialty &amp; Medical Gas</h4>
-        <p>Certified 5-year and 10-year hydrostatic requalification for 3A, 3AA, and 3AL high-pressure oxygen, nitrogen, argon, helium, and breathing air cylinders.</p>
+        <p>Certified 5-year and 10-year ★ hydrostatic requalification for 3A, 3AA, and 3AL oxygen, argon, C25 mix, nitrogen, helium, and breathing air cylinders.</p>
       </div>
-      <div class="card">
-        <span class="card-tag">Beverage &amp; Suppression</span>
+      <div class="svc-card">
+        <span class="card-tag">Beverage &amp; Dive</span>
         <h4>CO2, Extinguisher &amp; Scuba</h4>
-        <p>Fast turnaround testing, safety relief burst-disc replacement, internal/external visual inspection, and official B386 certification for CO2, fire suppression, and dive tanks.</p>
+        <p>Hydrostatic testing, safety burst-disc replacement, internal inspection, and DOT retest stamping/labeling for kegerator CO2, fire suppression, and scuba tanks.</p>
       </div>
     </div>
   </section>
 
-  <section id="process" class="section">
+  <!-- INTERACTIVE "IS MY TANK DUE?" CALCULATOR -->
+  <section id="checker" class="section">
     <div class="section-hdr">
-      <h3>Every Batch Documented to Federal DOT Standards</h3>
-      <p>Complete traceability from morning calibration through final requalification paperwork.</p>
+      <h3>Interactive DOT Hydro Date Checker</h3>
+      <p>Enter the <strong>MM-YY</strong> manufacture date (and last retest stamp, if any) on your cylinder neck or label to check its status.</p>
     </div>
-    <div class="steps-grid">
-      <div class="step-box">
-        <div class="step-num">Step 1 • Daily Calibration</div>
-        <h4>±1.0% Calibrated Verification</h4>
-        <p>Water jackets are verified daily against our calibrated master cylinder prior to testing in accordance with 49 CFR §180.215.</p>
+    <div class="checker-card">
+      <div class="form-grid" style="align-items:end;">
+        <div>
+          <label>1. Cylinder Material / Type</label>
+          <select id="chkType" onchange="evaluateTankDate()">
+            <option value="COMP_5">Carbon Fiber Paintball HPA or SCBA (DOT-SP — 5 Yr / 15 Yr Max Life)</option>
+            <option value="ALUM_5">Aluminum DOT-3AL (3000# HPA, Beverage CO2, Scuba, O2 — 5 Yr)</option>
+            <option value="STEEL_5">Steel DOT-3A / 3AA Standard (Welding, Industrial, CO2 — 5 Yr)</option>
+            <option value="STEEL_10">Steel DOT-3A / 3AA with ★ Star Stamp (10-Year Qualified)</option>
+          </select>
+        </div>
+        <div>
+          <label>2. Original Born / Mfg Date (MM-YY)</label>
+          <input id="chkMfg" placeholder="e.g. 06-19" maxlength="7" oninput="evaluateTankDate()" />
+        </div>
+        <div>
+          <label>3. Last Hydro Retest Date (Optional)</label>
+          <input id="chkLast" placeholder="Blank if never retested" maxlength="7" oninput="evaluateTankDate()" />
+        </div>
       </div>
-      <div class="step-box">
-        <div class="step-num">Step 2 • 7-Point Visual</div>
-        <h4>Internal &amp; External Inspection</h4>
-        <p>Every cylinder is inspected for corrosion, dents, cuts, gouges, neck/thread defects, heat exposure, and relief valve integrity.</p>
-      </div>
-      <div class="step-box">
-        <div class="step-num">Step 3 • Volumetric Hydro</div>
-        <h4>Water Jacket Expansion Test</h4>
-        <p>Pressurized to exact DOT/CGA test specification (5/3 or Special Permit pressure) measuring total, permanent, and elastic expansion.</p>
-      </div>
-      <div class="step-box">
-        <div class="step-num">Step 4 • Certification</div>
-        <h4>RIN B386 Stamp / Label &amp; Log</h4>
-        <p>Approved cylinders receive official B386 requalification markings or epoxy-grade composite labels plus itemized DOT test records.</p>
+      <div id="chkOutput" class="checker-result due" style="margin-top:14px;">
+        Enter your cylinder's original <strong>MM-YY</strong> manufacture date above (for example <code>04-21</code> for April 2021) to check hydro eligibility.
       </div>
     </div>
   </section>
 
-  <section id="intervals" class="section">
+  <!-- DROP-OFF PREP & FAQ -->
+  <section id="faq" class="section">
     <div class="section-hdr">
-      <h3>Common DOT Cylinder Retest Intervals</h3>
-      <p>Not sure if your department or shop cylinders are due? Call us with the shoulder stampings or label spec.</p>
+      <h3>Drop-Off Prep &amp; Frequently Asked Questions</h3>
     </div>
-    <div class="schedule-card">
-      <table>
-        <thead>
-          <tr>
-            <th>Cylinder Type / DOT Spec</th>
-            <th>Standard Hydro Interval</th>
-            <th>Key Compliance Notes</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>Carbon Fiber / Kevlar SCBA</strong> (DOT-SP)</td>
-            <td>Every 5 Years</td>
-            <td>Tested to REE (Rejection Elastic Expansion) limit; standard 15-year service life unless extended under applicable DOT Special Permit.</td>
-          </tr>
-          <tr>
-            <td><strong>Aluminum Cylinders</strong> (DOT 3AL — SCUBA, CO2, O2)</td>
-            <td>Every 5 Years</td>
-            <td>5/3 service pressure water-jacket test plus neck/thread visual check; SCUBA cylinders typically receive annual visual inspection.</td>
-          </tr>
-          <tr>
-            <td><strong>High-Pressure Steel</strong> (DOT 3A / 3AA)</td>
-            <td>5 Years (or 10 Years if ★ eligible)</td>
-            <td>5/3 service pressure test; 10% maximum permanent expansion tolerance under 49 CFR §180.209.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+
+    <details class="faq-item" open>
+      <summary>Should I empty my paintball HPA, CO2, or SCBA tank before dropping it off?</summary>
+      <p>Empty cylinders save bench bleed time, though if you can't safely bleed a tank at home you can bring it in as-is (just never transport or leave an actively leaking cylinder inside the backroom). Every cylinder must be depressurized and de-valved for internal visual inspection and water-jacket testing.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>Do I need to remove my paintball regulator or cylinder valve first?</summary>
+      <p>You can leave your valve or paintball HPA regulator attached, or bring the bare bottle if you prefer to pull your own regulator. When we remove a valve or regulator in-shop, it immediately gets a numbered tag tied to your cylinder's serial number so your exact shims, bonnet, and valve return to the same bottle.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>Why do carbon-fiber paintball and SCBA tanks retire at 15 years?</summary>
+      <p>Under U.S. DOT Special Permits (such as DOT-SP 14387, 10915, and 10945), carbon-wrapped composite cylinders require hydrostatic testing every 5 years and reach mandatory retirement 15 years from the original manufacture month/year. Aluminum (3AL) and steel (3A/3AA) cylinders do NOT have a 15-year expiration limit as long as they pass visual and hydrostatic expansion tolerances.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>How do pickup notifications and payment work?</summary>
+      <p>Leave your cell number on the Backroom Drop-Off form above—as soon as your bottles are tested, dried, labeled, and staged on the pickup shelf with your itemized invoice, we'll text or call you directly.</p>
+    </details>
   </section>
 
   <section class="section">
     <div class="cta-banner">
       <div>
-        <h3>Schedule Department Batch or Commercial Drop-Off</h3>
-        <p>Fast turnaround for Beaver County &amp; Western PA fire departments, commercial fleets, and walk-in cylinders.</p>
+        <h3 style="margin:0 0 6px;font-size:1.35rem;">Questions About a Department Batch or Walk-In Tank?</h3>
+        <p style="margin:0;color:#cbd5e1;font-size:0.95rem;">Call or text Ryan directly with your cylinder stampings or schedule a drop-off.</p>
       </div>
-      <a class="btn-call" href="tel:7242668008">📞 Call 724-266-8008</a>
+      <div class="cta-row">
+        <a class="btn-amber" href="tel:7242668008">📞 Call 724-266-8008</a>
+        <a class="btn-outline-light" href="sms:7242668008">💬 Text 724-266-8008</a>
+      </div>
     </div>
   </section>
 
   <footer>
     <div class="footer-inner">
       <div>© Weber's Tank Testing • Beaver County, Pennsylvania • U.S. D.O.T. RIN B386</div>
-      <div>Direct Shop Line: <a href="tel:7242668008">724-266-8008</a></div>
+      <div>Shop Phone / Text: <a href="tel:7242668008">724-266-8008</a></div>
     </div>
   </footer>
 
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister())).catch(() => {});
+    }
+
+    let CHECKIN_MODE = 'DROPOFF';
+
+    function setCheckinMode(mode) {
+      CHECKIN_MODE = mode;
+      const isDrop = mode === 'DROPOFF';
+      document.getElementById('tabDrop').classList.toggle('active', isDrop);
+      document.getElementById('tabPick').classList.toggle('active', !isDrop);
+      document.getElementById('svcSelectWrap').hidden = !isDrop;
+      document.getElementById('btnSubmitDrop').textContent = isDrop
+        ? '✓ Submit Backroom Drop-Off Notice'
+        : '✓ Notify Shop That Batch Was Picked Up';
+    }
+
+    function appendTankType(label) {
+      const el = document.getElementById('doSummary');
+      el.value = el.value.trim() ? `${el.value.trim()}, ${label}` : label;
+      el.focus();
+    }
+
+    async function submitDropoffForm(e) {
+      e.preventDefault();
+      const errEl = document.getElementById('doError');
+      const btn = document.getElementById('btnSubmitDrop');
+      errEl.hidden = true;
+      btn.disabled = true;
+      btn.textContent = '⏳ Logging on Shop Board...';
+
+      try {
+        const res = await fetch('/api/public/dropoff', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            entry_type: CHECKIN_MODE,
+            customer_name: document.getElementById('doName').value,
+            customer_phone: document.getElementById('doPhone').value,
+            bottle_count: parseInt(document.getElementById('doCount').value || '1', 10),
+            tank_summary: document.getElementById('doSummary').value,
+            service_requested: CHECKIN_MODE === 'PICKUP_NOTICE' ? 'Completed Batch Picked Up' : document.getElementById('doService').value,
+            notes: document.getElementById('doNotes').value,
+            website_hp: document.getElementById('hpField').value,
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          errEl.textContent = data.detail || 'Could not submit check-in. Please call 724-266-8008.';
+          errEl.hidden = false;
+          return;
+        }
+        document.getElementById('dropoffFormWrap').hidden = true;
+        document.getElementById('dropoffSuccessWrap').hidden = false;
+        document.getElementById('succTicket').textContent = `Check-In Ticket: ${data.ticket_no}`;
+        document.getElementById('succTitle').textContent = CHECKIN_MODE === 'PICKUP_NOTICE'
+          ? 'Pickup Logged — Thank You!'
+          : 'Drop-Off Posted to Testing Room!';
+        document.getElementById('succDetail').textContent = CHECKIN_MODE === 'PICKUP_NOTICE'
+          ? `Recorded at ${data.created_at} EST. Thanks for choosing Weber's Tank Testing!`
+          : `Logged at ${data.created_at} EST. We will reach out to your cell number once your cylinders are tested and ready.`;
+      } catch (_) {
+        errEl.textContent = 'Network error — please try again or text 724-266-8008.';
+        errEl.hidden = false;
+      } finally {
+        btn.disabled = false;
+        setCheckinMode(CHECKIN_MODE);
+      }
+    }
+
+    function resetDropoffForm() {
+      document.getElementById('doCount').value = '1';
+      document.getElementById('doSummary').value = '';
+      document.getElementById('doNotes').value = '';
+      document.getElementById('dropoffSuccessWrap').hidden = true;
+      document.getElementById('dropoffFormWrap').hidden = false;
+    }
+
+    function parseMmYy(str) {
+      const m = String(str || '').trim().match(/^(\d{1,2})\s*[-/\.]\s*(\d{2,4})$/);
+      if (!m) return null;
+      const mo = parseInt(m[1], 10);
+      let yr = parseInt(m[2], 10);
+      if (mo < 1 || mo > 12) return null;
+      const curYr = new Date().getFullYear();
+      if (yr < 100) yr = yr <= ((curYr % 100) + 1) ? 2000 + yr : 1900 + yr;
+      return { month: mo, year: yr };
+    }
+
+    function evaluateTankDate() {
+      const out = document.getElementById('chkOutput');
+      const kind = document.getElementById('chkType').value;
+      const mfg = parseMmYy(document.getElementById('chkMfg').value);
+      const last = parseMmYy(document.getElementById('chkLast').value);
+      if (!mfg) {
+        out.className = 'checker-result due';
+        out.innerHTML = 'Enter a valid <strong>MM-YY</strong> manufacture date (for example <code>05-20</code> for May 2020).';
+        return;
+      }
+
+      const now = new Date();
+      const curTotalMo = now.getFullYear() * 12 + (now.getMonth() + 1);
+      const mfgTotalMo = mfg.year * 12 + mfg.month;
+
+      if (kind === 'COMP_5') {
+        const expYear = mfg.year + 15;
+        const expTotalMo = expYear * 12 + mfg.month;
+        if (curTotalMo > expTotalMo) {
+          out.className = 'checker-result exp';
+          out.innerHTML = `⛔ <strong>PAST 15-YEAR COMPOSITE LIFESPAN:</strong> Born ${String(mfg.month).padStart(2,'0')}-${mfg.year} reached its 15-year DOT retirement in <strong>${String(mfg.month).padStart(2,'0')}-${expYear}</strong> and can no longer be hydrotested.`;
+          return;
+        }
+      }
+
+      const intervalYrs = kind === 'STEEL_10' ? 10 : 5;
+      const base = last || mfg;
+      const dueYear = base.year + intervalYrs;
+      const dueTotalMo = dueYear * 12 + base.month;
+      const moRemaining = dueTotalMo - curTotalMo;
+      const expNote = kind === 'COMP_5' ? ` (15-year retirement: ${String(mfg.month).padStart(2,'0')}-${mfg.year + 15})` : '';
+
+      if (moRemaining < 0) {
+        out.className = 'checker-result due';
+        out.innerHTML = `🟡 <strong>DUE FOR HYDRO TEST NOW:</strong> Retest window ended <strong>${String(base.month).padStart(2,'0')}-${dueYear}</strong>${expNote}. Bring it in or <a href="#dropoff" style="color:inherit;">log a backroom drop-off above</a>!`;
+      } else if (moRemaining <= 3) {
+        out.className = 'checker-result due';
+        out.innerHTML = `🟡 <strong>DUE SOON (${moRemaining === 0 ? 'This Month' : moRemaining + ' mo left'}):</strong> Next hydro due by <strong>${String(base.month).padStart(2,'0')}-${dueYear}</strong>${expNote}. Eligible for retesting now.`;
+      } else {
+        out.className = 'checker-result ok';
+        out.innerHTML = `✅ <strong>IN DATE:</strong> Current hydro certification is good through <strong>${String(base.month).padStart(2,'0')}-${dueYear}</strong>${expNote}.`;
+      }
+    }
+
+    if (location.pathname === '/checkin' || location.hash === '#dropoff') {
+      setTimeout(() => {
+        const el = document.getElementById('dropoff');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 150);
     }
   </script>
 </body>

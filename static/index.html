@@ -2,243 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0f291e" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b2219" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/icon.svg" />
+  <link rel="stylesheet" href="/static/ops.css?v=5.0" />
   <title>Weber's Tank Testing — Ops Portal | DOT B386</title>
-  <style>
-    :root {
-      --forest: #0f291e;
-      --green: #1b4332;
-      --green-mid: #2d6a4f;
-      --bg: #f1f5f9;
-      --card: #ffffff;
-      --slate: #0f172a;
-      --muted: #475569;
-      --border: #cbd5e1;
-      --border-soft: #e2e8f0;
-      --danger: #b91c1c;
-      --ok: #15803d;
-      --amber: #d97706;
-    }
-    * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
-    [hidden] { display: none !important; }
-    body { margin: 0; background: var(--bg); color: var(--slate); }
-
-    .sandbox-banner {
-      background: #fffbeb; color: #92400e; border-bottom: 1px solid #f59e0b;
-      padding: 5px 16px; display: flex; justify-content: space-between; align-items: center;
-      flex-wrap: wrap; gap: 8px; font-size: 0.79rem; font-weight: 700;
-    }
-    .btn-wipe-mini {
-      background: #dc2626; color: #ffffff; border: none; padding: 4px 10px;
-      border-radius: 5px; font-weight: 800; font-size: 0.75rem; cursor: pointer;
-    }
-
-    header {
-      background: linear-gradient(90deg, var(--forest) 0%, var(--green) 100%);
-      color: #ffffff; padding: 10px 18px; display: flex; justify-content: space-between;
-      align-items: center; flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.16);
-    }
-    .brand-block { display: flex; align-items: center; gap: 10px; }
-    .brand-block img { width: 36px; height: 36px; border-radius: 8px; }
-    .brand-block h1 { margin: 0; font-size: 1.06rem; letter-spacing: 0.3px; }
-    .brand-block small { color: #cbd5e1; font-size: 0.75rem; font-weight: 600; display: block; }
-    .hdr-btns { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
-    .crew-select-wrap {
-      display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.12);
-      border: 1px solid rgba(255,255,255,0.25); padding: 4px 9px; border-radius: 8px; font-size: 0.78rem;
-    }
-    .crew-select-wrap select {
-      width: auto; padding: 3px 6px; border: none; border-radius: 5px;
-      font-size: 0.82rem; font-weight: 800; background: #ffffff; color: var(--slate);
-    }
-    .btn-gold {
-      background: #fbbf24; color: #111827; border: none; padding: 7px 11px;
-      border-radius: 7px; font-weight: 800; cursor: pointer; font-size: 0.81rem;
-    }
-    .btn-ghost-hdr {
-      background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28);
-      color: #ffffff; padding: 6px 11px; border-radius: 7px; font-size: 0.8rem;
-      font-weight: 700; cursor: pointer;
-    }
-    .sync-chip {
-      background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28);
-      color: #ffffff; padding: 6px 11px; border-radius: 999px; font-size: 0.78rem;
-      font-weight: 700; cursor: pointer;
-    }
-
-    .telemetry-bar {
-      background: #ffffff; border-bottom: 1px solid var(--border);
-      padding: 8px 18px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
-      justify-content: space-between;
-    }
-    .telemetry-group { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-    .kpi-pill {
-      padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700;
-      border: 1px solid var(--border-soft); background: #f8fafc; color: var(--slate);
-    }
-    .kpi-pill.ready { background: #dcfce7; color: #166534; border-color: #86efac; }
-    .kpi-pill.wait { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
-
-    nav {
-      display: flex; background: #ffffff; border-bottom: 2px solid var(--border-soft);
-      overflow-x: auto; padding: 0 10px; gap: 2px; position: sticky; top: 0; z-index: 25;
-    }
-    nav button {
-      padding: 11px 14px; border: none; background: transparent; color: var(--muted);
-      font-size: 0.88rem; font-weight: 700; cursor: pointer;
-      border-bottom: 3px solid transparent; white-space: nowrap; transition: all 0.15s;
-    }
-    nav button:hover { color: var(--slate); background: #f8fafc; }
-    nav button.active { color: var(--green); border-bottom-color: var(--green); background: #f0fdf4; }
-
-    main { max-width: 1140px; margin: 16px auto; padding: 0 14px 64px; }
-    .card {
-      background: var(--card); border: 1px solid var(--border-soft); border-radius: 12px;
-      padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(15,23,42,0.06);
-    }
-    .card-hdr {
-      display: flex; justify-content: space-between; align-items: center;
-      flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding-bottom: 9px;
-      border-bottom: 1px solid var(--border-soft);
-    }
-    .card-hdr h3 { margin: 0; font-size: 1.02rem; color: var(--slate); }
-    .sub-badge {
-      font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 999px;
-      background: #e2e8f0; color: #1e293b;
-    }
-    .sub-badge.ai-verified { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
-
-    .notice {
-      background: #ecfdf5; border: 1px solid #6ee7b7; color: #065f46;
-      padding: 11px 14px; border-radius: 8px; margin-bottom: 12px; font-weight: 600; font-size: 0.89rem;
-    }
-    .notice.bad { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
-    .notice.warn { background: #fffbeb; border-color: #fcd34d; color: #92400e; }
-
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
-    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
-    label { display: block; font-size: 0.76rem; font-weight: 700; margin-bottom: 4px; color: #334155; text-transform: uppercase; letter-spacing: 0.3px; }
-    input, select, textarea {
-      width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
-      font-size: 0.94rem; color: var(--slate); background: #ffffff;
-    }
-    input:focus, select:focus, textarea:focus { outline: 2px solid var(--green-mid); border-color: var(--green-mid); }
-    .ai-filled input { border-color: #16a34a; background: #f0fdf4; font-weight: 700; }
-    .saved-flash { border-color: #16a34a !important; background: #dcfce7 !important; transition: all 0.2s; }
-
-    button.primary {
-      background: var(--green); color: #ffffff; border: none; padding: 12px 18px;
-      border-radius: 9px; font-size: 0.96rem; font-weight: 800; cursor: pointer; width: 100%; margin-top: 12px;
-    }
-    button.primary:hover:not(:disabled) { background: var(--forest); }
-    button.primary:disabled { opacity: 0.6; cursor: wait; }
-    button.scan-trigger {
-      background: #047857; color: #ffffff; border: none; padding: 13px 18px;
-      border-radius: 10px; font-size: 0.98rem; font-weight: 800; cursor: pointer; width: 100%;
-    }
-    button.secondary {
-      background: #f1f5f9; color: var(--slate); border: 1px solid var(--border);
-      padding: 7px 11px; border-radius: 7px; font-weight: 700; cursor: pointer;
-      text-decoration: none; display: inline-block; font-size: 0.82rem;
-    }
-    button.secondary:hover { background: #e2e8f0; }
-    button.danger-btn {
-      background: #dc2626; color: #ffffff; border: none; padding: 9px 14px;
-      border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 0.86rem;
-    }
-    button.pdf-card-btn {
-      background: #1e3a8a; color: #ffffff; border: none; padding: 15px;
-      border-radius: 10px; font-weight: 800; cursor: pointer; font-size: 0.94rem; text-align: left;
-    }
-
-    /* One-Tap 7-Point Visual Inspection Pills */
-    .vis-pills-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 8px; margin-top: 12px;
-    }
-    .vis-pill {
-      padding: 10px 10px; border-radius: 8px; font-weight: 800; font-size: 0.83rem;
-      cursor: pointer; display: flex; justify-content: space-between; align-items: center;
-      border: 2px solid #86efac; background: #f0fdf4; color: #166534; user-select: none;
-    }
-    .vis-pill.fail-state {
-      border-color: #f87171; background: #fef2f2; color: #991b1b;
-    }
-
-    /* Reference Photo Strip */
-    .ref-photo-strip {
-      display: flex; gap: 10px; overflow-x: auto; padding: 10px; background: #f8fafc;
-      border: 1px solid var(--border-soft); border-radius: 9px; margin-bottom: 12px; align-items: center;
-    }
-    .ref-photo-strip img {
-      height: 68px; border-radius: 6px; border: 2px solid var(--green-mid); cursor: zoom-in;
-    }
-
-    .ladder-row {
-      display: grid; grid-template-columns: 130px 1fr 165px 145px; gap: 12px;
-      align-items: center; padding: 10px 14px; border: 1px solid var(--border);
-      border-radius: 9px; margin-bottom: 8px; background: #ffffff;
-    }
-    .ladder-row.active-step { border: 2px solid var(--green); background: #f0fdf4; }
-    .ladder-row.locked-step { opacity: 0.55; background: #f8fafc; }
-    @media (max-width: 680px) { .ladder-row { grid-template-columns: 1fr; } }
-
-    .cam-box { background: #000000; border-radius: 12px; overflow: hidden; position: relative; margin-top: 12px; }
-    .cam-box video { width: 100%; max-height: 410px; object-fit: cover; display: block; }
-    .cam-guide { position: absolute; inset: 12% 10% 24% 10%; border: 2px dashed rgba(251,191,36,0.9); border-radius: 10px; pointer-events: none; }
-    .cam-controls { display: flex; gap: 8px; padding: 12px; background: #0f172a; flex-wrap: wrap; }
-    .shutter-btn { flex: 1 1 140px; background: #fbbf24; color: #111827; border: none; padding: 11px; border-radius: 8px; font-size: 0.92rem; font-weight: 800; cursor: pointer; }
-    .shutter-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    th {
-      text-align: left; padding: 9px 8px; background: #f8fafc; color: #334155;
-      border-bottom: 2px solid var(--border); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.4px;
-    }
-    td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--border-soft); vertical-align: middle; }
-    tr:hover td { background: #f8fafc; }
-    .pass { color: var(--ok); font-weight: 800; }
-    .fail { color: var(--danger); font-weight: 800; }
-    .tag-chip {
-      display: inline-block; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b;
-      padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.8rem;
-    }
-
-    .modal-bg {
-      position: fixed; inset: 0; background: rgba(15,23,42,0.7);
-      display: flex; align-items: center; justify-content: center; padding: 14px; z-index: 60;
-    }
-    .modal {
-      background: #ffffff; max-width: 760px; width: 100%; max-height: 92vh;
-      overflow-y: auto; border-radius: 14px; padding: 22px; box-shadow: 0 20px 40px rgba(0,0,0,0.35);
-    }
-    .login-wrap {
-      min-height: 100vh; display: flex; align-items: center; justify-content: center;
-      background: linear-gradient(155deg, #0f291e 0%, #081c15 100%); padding: 18px;
-    }
-    .login-card {
-      background: #ffffff; max-width: 420px; width: 100%; border-radius: 16px;
-      padding: 28px; text-align: center; box-shadow: 0 18px 40px rgba(0,0,0,0.4);
-    }
-  </style>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/icon.svg" alt="Weber's Tank Testing" style="width:66px;height:66px;margin-bottom:8px;" />
+      <img src="/icon.svg" alt="Weber's Tank Testing" style="width:64px;height:64px;margin-bottom:8px;border-radius:14px;" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Tank Testing</h2>
-      <p style="margin:0 0 18px;color:var(--muted);font-size:0.89rem;">
+      <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">
         Operations &amp; Hydrostatic Requalification Suite<br />
-        <strong>DOT RIN: B386</strong> • DOT Sign-Off: <strong>Ryan Pearce (RP)</strong>
+        <strong>DOT RIN: B386</strong> • Official Sign-Off: <strong>Ryan Pearce (RP)</strong>
       </p>
       <div style="text-align:left;">
         <label>Crew Access PIN</label>
-        <input type="password" inputmode="numeric" id="loginPinInput" placeholder="••••" onkeydown="if(event.key==='Enter')submitLoginPin()" style="text-align:center;font-size:1.35rem;letter-spacing:6px;font-weight:800;" />
+        <input type="password" inputmode="numeric" id="loginPinInput" placeholder="••••"
+          onkeydown="if(event.key==='Enter')submitLoginPin()"
+          style="text-align:center;font-size:1.35rem;letter-spacing:6px;font-weight:800;" />
       </div>
       <div id="loginError" class="notice bad" style="margin-top:12px;" hidden>Incorrect Shop PIN.</div>
       <button class="primary" onclick="submitLoginPin()">Unlock Operations Portal</button>
@@ -247,429 +33,497 @@
 
   <!-- TESTING STAGE DISCLAIMER MODAL -->
   <div id="disclaimerModal" class="modal-bg" hidden>
-    <div class="modal" style="max-width:530px;border-top:6px solid #f59e0b;">
-      <h2 style="margin-top:0;color:#92400e;">⚠️ Testing &amp; Calibration Stage Disclaimer</h2>
-      <p style="font-size:0.95rem;line-height:1.5;color:#1e293b;">
-        This application is currently running in <strong>Pre-Production Testing &amp; Fine-Tuning Mode</strong>.
+    <div class="modal" style="max-width:520px;border-top:6px solid #f59e0b;">
+      <h2 style="margin-top:0;color:#92400e;">⚠️ Testing &amp; Calibration Stage</h2>
+      <p style="font-size:0.93rem;line-height:1.5;">
+        Running in <strong>Pre-Production Testing Mode</strong>. Do not rely on this as your sole CFR §180.215 record book until final shop verification is signed off by Ryan Pearce.
       </p>
-      <ul style="font-size:0.9rem;line-height:1.5;color:#334155;padding-left:20px;">
-        <li><strong>Do NOT rely on this system as your sole official DOT CFR §180.215 record book yet</strong> until final shop verification is signed off by Ryan Pearce.</li>
-        <li>Run practice scans, calibrations, valve tags, and test logs freely—use <strong>Erase All Test Data</strong> anytime to reset both the app and Google Sheets.</li>
-      </ul>
-      <button class="primary" onclick="acknowledgeDisclaimer()">I Understand — Enter Testing Workspace</button>
+      <p style="font-size:0.88rem;color:var(--muted);">
+        Practice scans, drop-offs, valve tags, and invoices can be wiped anytime from the top menu.
+      </p>
+      <button class="primary" onclick="acknowledgeDisclaimer()">Enter Operations Workspace</button>
     </div>
   </div>
 
-  <!-- PHOTO LIGHTBOX MODAL -->
+  <!-- PHOTO LIGHTBOX ZOOM MODAL -->
   <div id="photoZoomModal" class="modal-bg" onclick="this.hidden=true" hidden>
     <div style="max-width:94vw;max-height:92vh;text-align:center;">
       <img id="photoZoomImg" src="" alt="Cylinder Stamp Zoom" style="max-width:94vw;max-height:85vh;border-radius:10px;border:3px solid #fbbf24;" />
-      <div style="color:#fff;margin-top:8px;font-weight:700;font-size:0.88rem;">Tap anywhere to close zoom</div>
+      <div style="color:#fff;margin-top:8px;font-weight:700;font-size:0.86rem;">Tap anywhere to close zoom</div>
     </div>
   </div>
 
   <!-- AUTHENTICATED OPERATIONS SHELL -->
   <div id="appShell" hidden>
-    <div id="sandboxBanner" class="sandbox-banner" hidden>
-      <span>⚠️ TESTING MODE: Practice entries only (DOT Sign-Off locked to RP).</span>
-      <button class="btn-wipe-mini" onclick="eraseAllTestData()">🗑 Erase All Test Data</button>
-    </div>
-
-    <header>
-      <div class="brand-block">
+    <!-- SLIM STICKY TOPBAR -->
+    <header class="app-topbar">
+      <div class="top-brand">
         <img src="/icon.svg" alt="B386" />
-        <div>
-          <h1>WEBER'S TANK TESTING — OPS</h1>
-          <small>DOT RIN: B386 • Official Sign-Off: Ryan Pearce (RP)</small>
+        <div class="top-brand-txt">
+          <h1>WEBER'S OPS</h1>
+          <small>RIN B386 • Sign-Off: RP</small>
         </div>
+        <button id="testModeChip" class="test-chip" onclick="toggleGuide(true)" title="Testing Mode Active" hidden>TEST</button>
       </div>
-      <div class="hdr-btns">
-        <div class="crew-select-wrap" title="Tracks who is operating this device internally while DOT forms sign off as RP">
-          <span>👷 Crew:</span>
-          <select id="activeCrewSelect" onchange="saveActiveCrew()"></select>
-        </div>
-        <button id="btnInstallPwa" class="btn-gold" onclick="installPwaApp()" hidden>📲 Install</button>
-        <button class="btn-ghost-hdr" onclick="toggleFeedbackModal(true)">💬 Feedback</button>
-        <span class="sync-chip" id="syncBadge" onclick="triggerManualSync()" title="Click to force Google Sheets sync">☁ Checking...</span>
-        <button class="btn-gold" onclick="toggleGuide(true)">⚙ Settings</button>
+
+      <div class="top-controls">
+        <input type="date" id="globalDate" class="top-date" onchange="changeWorkingDate()" />
+        <span class="j-dot wait" id="pillShort" onclick="jumpToTab('cal')" title="Short Water Jacket Status">S: <span class="full-lbl">Uncal</span></span>
+        <span class="j-dot wait" id="pillTall" onclick="jumpToTab('cal')" title="Tall Water Jacket Status">T: <span class="full-lbl">Uncal</span></span>
+        <button class="menu-pill" onclick="toggleMenuDrawer(true)">
+          <span id="menuCrewInitials">RP</span> ☰
+        </button>
       </div>
     </header>
 
-    <div class="telemetry-bar">
-      <div class="telemetry-group">
-        <span style="font-size:0.76rem;font-weight:800;color:var(--muted);text-transform:uppercase;">Date:</span>
-        <input type="date" id="globalDate" style="width:auto;padding:4px 9px;font-weight:800;font-size:0.86rem;" onchange="changeWorkingDate()" />
-        <span class="kpi-pill" id="pillShort">Short Jacket</span>
-        <span class="kpi-pill" id="pillTall">Tall Jacket</span>
-      </div>
-      <div class="telemetry-group">
-        <span class="kpi-pill" id="pillQueue">Queued: 0</span>
-        <span class="kpi-pill" id="pillValves">Active Tags: 0</span>
-      </div>
-    </div>
-
-    <nav>
-      <button class="active" data-tab="cal" onclick="showTab('cal', this)">1. Calibration</button>
-      <button data-tab="intake" onclick="showTab('intake', this)">2. AI Scan &amp; Intake</button>
-      <button data-tab="bench" onclick="showTab('bench', this)">3. Hydro Test Stand</button>
-      <button data-tab="logs" onclick="showTab('logs', this)">4. Daily Log &amp; Valves</button>
-      <button data-tab="print" onclick="showTab('print', this)">5. Print Center</button>
-      <button data-tab="billing" onclick="showTab('billing', this)">6. Billing &amp; Rates</button>
-    </nav>
-
-    <main>
-      <!-- TAB 1: MORNING CALIBRATION -->
-      <section id="tab-cal">
-        <div id="calCollapsedBanner" class="card" style="background:#f0fdf4;border:2px solid #86efac;" hidden>
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-            <div>
-              <strong style="color:#166534;font-size:1rem;">✅ Both Water Jackets Verified for Selected Date</strong>
-              <div id="calCollapsedSummary" style="font-size:0.86rem;color:#15803d;margin-top:3px;"></div>
-            </div>
-            <div style="display:flex;gap:8px;">
-              <button class="secondary" onclick="setCalExpanded(true)">Re-Calibrate / Higher PSI</button>
-              <button class="primary" style="width:auto;margin:0;padding:9px 15px;" onclick="jumpToTab('intake')">Go to AI Scan &amp; Intake →</button>
-            </div>
-          </div>
+    <div class="ops-layout">
+      <!-- IPAD & LAPTOP LEFT SIDEBAR RAIL -->
+      <aside class="side-rail">
+        <div class="rail-nav">
+          <button class="rail-btn active" data-tab="cal" onclick="jumpToTab('cal')">
+            <span>1. Calibration</span><span class="nav-badge" id="navBadgeCal">—</span>
+          </button>
+          <button class="rail-btn" data-tab="intake" onclick="jumpToTab('intake')">
+            <span>2. Scan &amp; Intake</span><span class="nav-badge" id="navBadgeIntake">0</span>
+          </button>
+          <button class="rail-btn" data-tab="bench" onclick="jumpToTab('bench')">
+            <span>3. Hydro Stand</span><span class="nav-badge" id="navBadgeBench">0</span>
+          </button>
+          <button class="rail-btn" data-tab="logs" onclick="jumpToTab('logs')">
+            <span>4. Valves &amp; Shelf</span><span class="nav-badge amber" id="navBadgeValves">0</span>
+          </button>
+          <button class="rail-btn" data-tab="print" onclick="jumpToTab('print')">
+            <span>5. Print &amp; QR</span>
+          </button>
+          <button class="rail-btn" data-tab="billing" onclick="jumpToTab('billing')">
+            <span>6. Billing &amp; Rates</span><span class="nav-badge" id="navBadgeBill">0</span>
+          </button>
         </div>
 
-        <div class="card" id="calFormCard">
-          <div class="card-hdr">
-            <h3>Stepped Water Jacket Verification — Master Cyl <span id="calSerialLabel">1SF11904</span></h3>
-            <span class="sub-badge">49 CFR §180.215 (±1.0% Tolerance)</span>
-          </div>
-          <div class="grid" style="margin-bottom:12px;">
-            <div>
-              <label>1. Select Water Jacket</label>
-              <select id="calJacket" onchange="buildCalibrationLadder()">
-                <option value="Short Jacket">Short Jacket</option>
-                <option value="Tall Jacket">Tall Jacket</option>
-              </select>
-            </div>
-            <div>
-              <label>2. Max Pressure Needed Today</label>
-              <select id="calMaxPsi" onchange="buildCalibrationLadder()"></select>
-            </div>
-          </div>
-          <div class="notice">Type each burette reading and press <strong>Enter</strong>—cursor advances down the ladder automatically.</div>
-          <div id="ladderSteps"></div>
-          <div id="releaseSection" class="card" style="background:#f0fdf4;border:2px solid var(--green);margin-top:12px;" hidden>
-            <label>Final Step: Bleed Pressure to 0 PSI — Permanent Expansion Reading (cc)</label>
-            <input type="number" step="0.1" id="calFinalPerm" value="0" style="max-width:220px;" onkeydown="if(event.key==='Enter')submitCalibrationLadder()" />
-            <button class="primary" id="btnCertCal" onclick="submitCalibrationLadder()">Certify Calibration Under Ryan Pearce (RP)</button>
-          </div>
+        <div class="rail-footer">
+          <a class="secondary" href="/tv" target="_blank" style="width:100%;">📺 Open Shop TV Board</a>
+          <button class="secondary" id="railSyncChip" onclick="triggerManualSync()" style="width:100%;">☁ Checking Sync...</button>
+          <button class="secondary" onclick="toggleFeedbackModal(true)" style="width:100%;">💬 Crew Feedback</button>
+          <button class="secondary" onclick="toggleGuide(true)" style="width:100%;">⚙ Facility Settings</button>
         </div>
+      </aside>
 
-        <div class="card">
-          <div class="card-hdr"><h3>Verified Calibrations on Selected Date</h3></div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Time (EST)</th><th>Jacket</th><th>Step PSI</th><th>Chart (A)</th><th>Burette (B)</th><th>Perm</th><th>% Dev</th><th>Crew</th><th>Sign-Off</th><th>Status</th></tr></thead>
-              <tbody id="calTable"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 2: AI SCAN & FULL VERIFICATION FORM -->
-      <section id="tab-intake" hidden>
-        <div class="card">
-          <div class="card-hdr">
-            <h3>Step A — Multi-Angle AI Bottle &amp; Valve Tag Scanner</h3>
-            <span class="sub-badge">Stitches Shoulder Stamps • Valve Tag # • OD × Length</span>
-          </div>
-          <div class="grid" style="margin-bottom:10px;">
-            <div>
-              <label>Batch Customer / Fire Dept (Optional Pre-Fill)</label>
-              <input id="inCustomer" list="customerSuggest" placeholder="e.g. GTS INC / Crescent Twp FD" />
-              <datalist id="customerSuggest"></datalist>
-            </div>
-            <div>
-              <label>Service Mode</label>
-              <select id="inMode">
-                <option value="HYDRO_AND_VISUAL">Shop Hydrostatic + Visual</option>
-                <option value="VISUAL_ONLY">Visual Inspection Only (Shop / Road)</option>
-              </select>
-            </div>
-            <div>
-              <label>Standard Cylinder Lookup (Optional)</label>
-              <select id="cgaPreset" onchange="applyPreset()">
-                <option value="">-- Auto-Detect via AI or Pick Standard Size --</option>
-              </select>
+      <!-- MAIN WORKSPACE -->
+      <main class="ops-workspace">
+        <!-- TAB 1: MORNING CALIBRATION -->
+        <section id="tab-cal">
+          <div id="calCollapsedBanner" class="card" style="background:#f0fdf4;border:2px solid #86efac;" hidden>
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+              <div>
+                <strong style="color:#166534;font-size:0.98rem;">✅ Both Water Jackets Certified for Selected Date</strong>
+                <div id="calCollapsedSummary" style="font-size:0.84rem;color:#15803d;margin-top:3px;"></div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="secondary" onclick="setCalExpanded(true)">Re-Calibrate / Higher PSI</button>
+                <button class="primary" style="width:auto;margin:0;padding:9px 15px;" onclick="jumpToTab('intake')">Go to Scan &amp; Intake →</button>
+              </div>
             </div>
           </div>
 
-          <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.86rem;margin-bottom:12px;cursor:pointer;color:var(--slate);">
-            <input type="checkbox" id="chkAutoQueue" style="width:17px;height:17px;" />
-            ⚡ <strong>Fast Batch Mode:</strong> Auto-add directly to Live Queue when Customer, Serial #, Spec, and PSI all scan cleanly
-          </label>
-
-          <canvas id="camCanvas" hidden></canvas>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="scan-trigger" id="btnOpenCam" style="flex:2;" onclick="openLiveCamera()">📷 Open Live Camera (Scan Shoulder &amp; Valve Tag)</button>
-            <label class="secondary" style="flex:1;display:flex;align-items:center;justify-content:center;cursor:pointer;text-align:center;padding:12px;">
-              🖼 Upload 1–6 Bottle Photos
-              <input type="file" accept="image/*" multiple hidden onchange="uploadSavedAngles(this)" />
-            </label>
-          </div>
-
-          <div id="camContainer" class="cam-box" hidden>
-            <video id="camVideo" autoplay playsinline muted></video>
-            <div class="cam-guide"></div>
-            <div id="thumbStrip" style="display:flex;gap:8px;padding:8px 12px;background:#1e293b;overflow-x:auto;align-items:center;min-height:44px;"></div>
-            <div class="cam-controls">
-              <button class="shutter-btn" style="background:#3b82f6;color:#fff;" onclick="quickSingleShot()">⚡ 1-Shot Scan</button>
-              <button class="shutter-btn" id="btnSnapAngle" onclick="captureAngle()">📸 + Add Angle (0)</button>
-              <button class="shutter-btn" id="btnReadAll" style="background:#10b981;color:#fff;" onclick="sendCapturedAngles()" disabled>✅ Populate Form</button>
-              <button class="secondary" onclick="clearAngles()">🗑 Clear</button>
-              <button class="secondary" onclick="switchCamera()">🔄 Flip</button>
-              <button class="secondary" id="btnTorch" onclick="toggleTorch()" hidden>🔦 Light</button>
-              <button class="secondary" onclick="closeLiveCamera()">✖ Close</button>
+          <div class="card" id="calFormCard">
+            <div class="card-hdr">
+              <h3>Water Jacket Verification — Master Cyl <span id="calSerialLabel">1SF11904</span></h3>
+              <span class="sub-badge">49 CFR §180.215 (±1.0%)</span>
+            </div>
+            <div class="grid" style="margin-bottom:11px;">
+              <div>
+                <label>1. Water Jacket</label>
+                <select id="calJacket" onchange="buildCalibrationLadder()">
+                  <option value="Short Jacket">Short Jacket</option>
+                  <option value="Tall Jacket">Tall Jacket</option>
+                </select>
+              </div>
+              <div>
+                <label>2. Max Pressure Needed Today</label>
+                <select id="calMaxPsi" onchange="buildCalibrationLadder()"></select>
+              </div>
+            </div>
+            <div class="notice">Type each burette reading and press <strong>Enter</strong> to step down the ladder.</div>
+            <div id="ladderSteps"></div>
+            <div id="releaseSection" class="card" style="background:#f0fdf4;border:2px solid var(--green);margin-top:12px;" hidden>
+              <label>Bleed Pressure to 0 PSI — Permanent Expansion (cc)</label>
+              <input type="number" step="0.1" id="calFinalPerm" value="0" style="max-width:220px;" onkeydown="if(event.key==='Enter')submitCalibrationLadder()" />
+              <button class="primary" id="btnCertCal" onclick="submitCalibrationLadder()">Certify Calibration Under Ryan Pearce (RP)</button>
             </div>
           </div>
-          <div id="scanFeedback" class="notice" style="margin-top:12px;" hidden></div>
-        </div>
 
-        <!-- STEP B: FULL VERIFICATION FORM WITH ZOOMABLE REFERENCE PHOTOS -->
-        <div class="card" id="verifyFormCard">
-          <div class="card-hdr">
-            <h3>Step B — Verify Cylinder Details &amp; Physical Size Before Queuing</h3>
-            <span class="sub-badge" id="sizeSourceBadge">Manual / Ready for AI Scan</span>
-          </div>
-
-          <div id="lastScanGalleryWrap" hidden>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-              <small style="font-weight:800;color:var(--muted);text-transform:uppercase;">🔍 Scanned Reference Angles (Tap Any Photo to Zoom Stamps):</small>
-              <button class="secondary" style="padding:3px 8px;font-size:0.74rem;" onclick="clearReferenceGallery()">Hide Photos</button>
-            </div>
-            <div id="lastScanGallery" class="ref-photo-strip"></div>
-          </div>
-
-          <div class="grid" id="intakeFieldsGrid">
-            <div><label>Customer / Owner *</label><input id="fCustomer" list="customerSuggest" placeholder="Customer or Dept Name" /></div>
-            <div><label>Cylinder Serial # *</label><input id="fSerial" placeholder="e.g. GTS-0291277" /></div>
-            <div><label>🏷️ Valve Tag # (If Tagged)</label><input id="fValveTag" placeholder="e.g. 14" /></div>
-            <div><label>MFG ID</label><input id="fMfg" placeholder="e.g. LUXFER / WK / TW" /></div>
-            <div><label>MFG Date</label><input id="fMfgDate" placeholder="MM-YY" /></div>
-            <div><label>Gas Service</label><input id="fGas" value="AIR" placeholder="AIR / O2 / CO2 / N2" /></div>
-            <div><label>DOT / Permit Spec *</label><input id="fSpec" placeholder="3AA / 3AL / SP14387" oninput="autoMatchSpecDimensions()" /></div>
-            <div><label>Service Pressure (PSI) *</label><input type="number" id="fSvcPsi" oninput="autoMatchSpecDimensions()" /></div>
-            <div><label>Actual Test Pressure (PSI)</label><input type="number" id="fTestPsi" /></div>
-            <div><label>Outside Diameter (in)</label><input id="fDia" placeholder="e.g. 7 or 7.3" /></div>
-            <div><label>Length (in)</label><input id="fLen" placeholder="e.g. 32 1/2 or 23" /></div>
-            <div><label>REE Limit (cc — Composite Only)</label><input type="number" step="0.1" id="fRee" placeholder="Blank for Steel/Alum" /></div>
-          </div>
-          <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
-            <button class="primary" id="btnVerifyQueue" style="flex:3;margin-top:0;" onclick="submitIntake(false)">✓ Verify Details &amp; Add Cylinder to Live Queue</button>
-            <button class="secondary" style="flex:1;" onclick="clearIntakeForm()">Clear Form</button>
-          </div>
-        </div>
-
-        <!-- QUICK ASSIGN VALVE TAG BY SERIAL NUMBER -->
-        <div class="card" style="border-left:4px solid var(--amber);">
-          <div class="card-hdr">
-            <h3>🏷️ Quick Valve Tag Assignment (Match Reusable Tag # to Serial #)</h3>
-          </div>
-          <datalist id="serialSuggest"></datalist>
-          <div class="grid" style="align-items:end;">
-            <div>
-              <label>Cylinder Serial Number</label>
-              <input id="quickTagSerial" list="serialSuggest" placeholder="Select or type Serial #" />
-            </div>
-            <div>
-              <label>Reusable Valve Tag #</label>
-              <input id="quickTagNum" placeholder="e.g. 14 (Press Enter)" onkeydown="if(event.key==='Enter')assignTagBySerial('quickTagSerial','quickTagNum')" />
-            </div>
-            <div>
-              <button class="primary" style="margin-top:0;" onclick="assignTagBySerial('quickTagSerial','quickTagNum')">Assign Active Tag</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-hdr"><h3>Live Intake Queue (Waiting for Test Stand)</h3></div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Customer</th><th>Serial #</th><th style="width:115px;">Active Tag #</th><th>Spec &amp; PSI</th><th>OD × Length</th><th>Test PSI</th><th>By</th><th>Action</th></tr></thead>
-              <tbody id="queuePreviewTable"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 3: HYDRO TEST STAND -->
-      <section id="tab-bench" hidden>
-        <div class="card">
-          <div class="card-hdr"><h3>Active Cylinder on Hydrostatic Test Stand</h3></div>
-          <select id="benchSelect" onchange="renderBenchForm()"></select>
-          <div id="benchArea" style="margin-top:14px;"></div>
-        </div>
-
-        <div class="card">
-          <div class="card-hdr"><h3>Completed Cylinders on Selected Date</h3></div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Owner</th><th>Serial #</th><th>Tag</th><th>Size</th><th>Spec</th><th>Test PSI</th><th>Total / Perm</th><th>% Perm</th><th>Disp</th><th>Actions</th></tr></thead>
-              <tbody id="doneTable"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 4: DAILY LOG & ACTIVE REUSABLE VALVE TAGS -->
-      <section id="tab-logs" hidden>
-        <div class="card" style="border-left:4px solid var(--amber);">
-          <div class="card-hdr">
-            <h3>🏷️ Active Valve Tags Out on Bench (Reusable Tags)</h3>
-            <span class="sub-badge">Reinstalling Releases Tag # Immediately</span>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Active Tag #</th><th>Belongs to Serial #</th><th>Customer</th><th>Size / Spec</th><th>Test Status</th><th>Release / Reinstall</th></tr></thead>
-              <tbody id="valveTrackerTable"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="grid-2">
           <div class="card">
-            <div class="card-hdr"><h3>Lookup Work History By Date</h3></div>
+            <div class="card-hdr"><h3>Verified Calibrations on Selected Date</h3></div>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Work Date</th><th>Clients</th><th>Done / Total</th><th>Inspect</th></tr></thead>
+                <thead><tr><th>Time</th><th>Jacket</th><th>PSI</th><th>Chart</th><th>Actual</th><th>Perm</th><th>% Dev</th><th>Crew</th><th>Status</th></tr></thead>
+                <tbody id="calTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 2: BACKROOM INBOX + AI SCANNER + VERIFICATION -->
+        <section id="tab-intake" hidden>
+          <!-- INCOMING 24/7 BACKROOM DROP-OFFS -->
+          <div class="card" id="backroomInboxCard" style="border-left:4px solid #f59e0b;" hidden>
+            <div class="card-hdr">
+              <h3>🚪 24/7 Backroom Drop-Off &amp; Pickup Check-Ins</h3>
+              <span class="sub-badge" id="backroomCountBadge">0 Waiting</span>
+            </div>
+            <div id="backroomInboxList"></div>
+          </div>
+
+          <div class="split-2">
+            <!-- LEFT COLUMN: CAMERA + VERIFICATION FORM -->
+            <div>
+              <div id="activeBatchBanner" class="active-batch-banner" hidden>
+                <span id="activeBatchText">Importing Drop-Off Batch</span>
+                <button class="secondary" style="padding:4px 9px;font-size:0.75rem;" onclick="clearActiveDropoffBatch()">Done / Clear Batch</button>
+              </div>
+
+              <div class="card">
+                <div class="card-hdr">
+                  <h3>Step A — 360° Guided Bottle &amp; HPA Scanner</h3>
+                  <span class="sub-badge">Panorama + Anti-Blur</span>
+                </div>
+                <div class="grid" style="margin-bottom:10px;">
+                  <div>
+                    <label>Customer / Dept / Player</label>
+                    <input id="inCustomer" list="customerSuggest" placeholder="e.g. Crescent Twp FD" />
+                    <datalist id="customerSuggest"></datalist>
+                  </div>
+                  <div>
+                    <label>Customer Cell # (Optional)</label>
+                    <input id="inPhone" type="tel" placeholder="724-555-0199" />
+                  </div>
+                  <div>
+                    <label>Service Mode</label>
+                    <select id="inMode">
+                      <option value="HYDRO_AND_VISUAL">Hydrostatic + Visual</option>
+                      <option value="VISUAL_ONLY">Visual Inspection Only</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label>Cylinder / Paintball HPA Preset</label>
+                    <select id="cgaPreset" onchange="applyPreset()">
+                      <option value="">-- Auto-Detect or Pick Size --</option>
+                    </select>
+                  </div>
+                </div>
+
+                <label class="inline-check" style="margin-bottom:11px;">
+                  <input type="checkbox" id="chkAutoQueue" />
+                  <span>⚡ <strong>Fast Batch Mode:</strong> Auto-queue when stamps scan cleanly &amp; in-date</span>
+                </label>
+
+                <canvas id="camCanvas" hidden></canvas>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button class="scan-trigger" id="btnOpenCam" style="flex:2;" onclick="openLiveCamera()">📷 Open 360° Guided Camera</button>
+                  <label class="secondary upload-tile" style="flex:1;padding:12px;">
+                    🖼 Upload 1–6 Photos
+                    <input type="file" accept="image/*" multiple hidden onchange="uploadSavedAngles(this)" />
+                  </label>
+                </div>
+
+                <div id="camContainer" class="cam-box" hidden>
+                  <div class="pano-stage">
+                    <video id="camVideo" autoplay playsinline muted></video>
+                    <div class="pano-flash" id="panoFlash"></div>
+                    <div class="pano-hud-top">
+                      <div class="pano-steps" id="panoStepsBar"></div>
+                      <span class="pano-steady-pill" id="panoSteadyPill">🟡 Align Stamp Ring</span>
+                    </div>
+                    <div class="pano-track" id="panoTrack">
+                      <div class="pano-center-line"></div>
+                      <div class="pano-ghost" id="panoGhostWrap" hidden>
+                        <img id="panoGhostImg" alt="Previous stamp edge" />
+                        <span class="pano-ghost-lbl">MATCH LAST STAMP</span>
+                      </div>
+                      <div class="pano-target-box" id="panoTargetBox">
+                        <div class="auto-snap-fill" id="autoSnapFill"></div>
+                        <div class="auto-snap-pct" id="autoSnapPct"></div>
+                      </div>
+                      <div class="pano-float-box" id="panoFloatBox"><div class="pano-float-dot"></div></div>
+                    </div>
+                    <div class="pano-hint-bar" id="panoHintText">Arc 1/4: Frame starting shoulder stamps</div>
+                  </div>
+                  <div id="thumbStrip" style="display:flex;gap:8px;padding:8px 12px;background:#1e293b;overflow-x:auto;align-items:center;min-height:44px;"></div>
+                  <div class="cam-controls">
+                    <button class="shutter-btn" id="btnSnapAngle" onclick="captureAngle(false)">📸 Snap Arc 1/4</button>
+                    <button class="shutter-btn" id="btnReadAll" style="background:#10b981;color:#fff;" onclick="sendCapturedAngles()" disabled>✅ Populate Form</button>
+                    <button class="auto-toggle-btn on" id="btnAutoShutter" onclick="toggleAutoShutter()">🤖 Auto-Snap: ON</button>
+                    <button class="shutter-btn" style="background:#3b82f6;color:#fff;flex:0.6 1 95px;" onclick="quickSingleShot()">⚡ 1-Shot</button>
+                    <button class="secondary" id="btnPanoDir" onclick="togglePanoDir()">Sweep: L→R</button>
+                    <button class="secondary" onclick="clearAngles()">🗑 Reset</button>
+                    <button class="secondary" onclick="switchCamera()">🔄 Flip</button>
+                    <button class="secondary" id="btnTorch" onclick="toggleTorch()" hidden>🔦 Light</button>
+                    <button class="secondary" onclick="closeLiveCamera()">✖ Close</button>
+                  </div>
+                </div>
+                <div id="scanFeedback" class="notice" style="margin-top:10px;" hidden></div>
+              </div>
+
+              <!-- STEP B: VERIFY FORM -->
+              <div class="card" id="verifyFormCard">
+                <div class="card-hdr">
+                  <h3>Step B — Verify Stamps &amp; Size</h3>
+                  <span class="sub-badge" id="sizeSourceBadge">Ready</span>
+                </div>
+
+                <div id="lastScanGalleryWrap" hidden>
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                    <small style="font-weight:800;color:var(--muted);">🔍 TAP PHOTO TO ZOOM STAMPS:</small>
+                    <button class="secondary" style="padding:2px 8px;font-size:0.72rem;" onclick="clearReferenceGallery()">Hide</button>
+                  </div>
+                  <div id="lastScanGallery" class="ref-photo-strip"></div>
+                </div>
+
+                <div id="compositeAlertBox" class="notice bad" hidden></div>
+
+                <div class="grid" id="intakeFieldsGrid">
+                  <div><label>Customer / Owner *</label><input id="fCustomer" list="customerSuggest" placeholder="Dept or Name" /></div>
+                  <div><label>Cell Phone</label><input id="fPhone" type="tel" placeholder="724-555-0199" /></div>
+                  <div><label>Serial # *</label><input id="fSerial" placeholder="e.g. GTS-0291277" /></div>
+                  <div><label>🏷️ Valve / Reg Tag #</label><input id="fValveTag" placeholder="e.g. 14" /></div>
+                  <div><label>MFG / Brand</label><input id="fMfg" placeholder="LUXFER / NINJA / WK" /></div>
+                  <div><label>MFG Date (MM-YY)</label><input id="fMfgDate" placeholder="MM-YY" oninput="checkIntakeLifespanLive()" /></div>
+                  <div><label>Gas Service</label><input id="fGas" value="AIR" /></div>
+                  <div><label>DOT / Permit Spec *</label><input id="fSpec" placeholder="3AA / 3AL / SP14387" oninput="autoMatchSpecDimensions()" /></div>
+                  <div><label>Service PSI *</label><input type="number" id="fSvcPsi" oninput="autoMatchSpecDimensions()" /></div>
+                  <div><label>Actual Test PSI</label><input type="number" id="fTestPsi" /></div>
+                  <div><label>Outside Dia (in)</label><input id="fDia" placeholder="e.g. 4.5 or 7" oninput="checkIntakeLifespanLive()" /></div>
+                  <div><label>Length (in)</label><input id="fLen" placeholder="e.g. 9.3 or 32 1/2" oninput="checkIntakeLifespanLive()" /></div>
+                  <div><label>REE Limit (Composite)</label><input type="number" step="0.1" id="fRee" placeholder="Blank for Steel/Alum" /></div>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:12px;">
+                  <button class="primary" id="btnVerifyQueue" style="flex:3;margin-top:0;" onclick="submitIntake(false)">✓ Verify &amp; Add to Queue</button>
+                  <button class="secondary" style="flex:1;" onclick="clearIntakeForm()">Clear</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT COLUMN: QUICK TAG + LIVE QUEUE -->
+            <div>
+              <div class="card" style="border-left:4px solid var(--amber);">
+                <div class="card-hdr"><h3>🏷️ Quick Valve / HPA Regulator Tag</h3></div>
+                <datalist id="serialSuggest"></datalist>
+                <div class="grid" style="align-items:end;">
+                  <div><label>Serial #</label><input id="quickTagSerial" list="serialSuggest" placeholder="Select Serial #" /></div>
+                  <div><label>Tag #</label><input id="quickTagNum" placeholder="e.g. 14" onkeydown="if(event.key==='Enter')assignTagBySerial('quickTagSerial','quickTagNum')" /></div>
+                  <div><button class="primary" style="margin-top:0;" onclick="assignTagBySerial('quickTagSerial','quickTagNum')">Assign Tag</button></div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-hdr">
+                  <h3>Live Intake Queue</h3>
+                  <span class="sub-badge" id="queueCountBadge">0 Waiting</span>
+                </div>
+                <div id="queuePreviewList"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 3: HYDRO TEST STAND -->
+        <section id="tab-bench" hidden>
+          <div class="split-2">
+            <div class="card">
+              <div class="card-hdr"><h3>Active Cylinder on Hydro Test Stand</h3></div>
+              <select id="benchSelect" onchange="renderBenchForm()"></select>
+              <div id="benchArea" style="margin-top:12px;"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-hdr">
+                <h3>Completed Today &amp; Shelf Staging</h3>
+                <span class="sub-badge" id="doneCountBadge">0 Done</span>
+              </div>
+              <div id="doneBatchActions" style="margin-bottom:10px;"></div>
+              <div id="doneList"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 4: ACTIVE VALVES, BACKROOM PICKUP SHELF & MASTER LOOKUP -->
+        <section id="tab-logs" hidden>
+          <div class="split-2">
+            <div class="card" style="border-left:4px solid var(--amber);">
+              <div class="card-hdr">
+                <h3>🏷️ Active Valve &amp; Regulator Tags</h3>
+                <span class="sub-badge" id="valveCountBadge">0 Out</span>
+              </div>
+              <div id="valveTrackerList"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-hdr"><h3>Customers, Pickup Shelf &amp; Text Alerts</h3></div>
+              <div id="customersListArea"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-hdr"><h3>Master Cylinder Lookup</h3></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+              <input id="searchBox" style="flex:3;" placeholder="Customer, serial #, YYYY-MM-DD, or active tag #..." oninput="runSearch(false)" />
+              <button class="secondary" style="flex:1;" onclick="runSearch(true)">🏷️ Active Tag #</button>
+            </div>
+            <div id="searchResultsList"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-hdr"><h3>Recent Work Dates</h3></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Date</th><th>Clients</th><th>Done / Total</th><th>Open</th></tr></thead>
                 <tbody id="datesListTable"></tbody>
               </table>
             </div>
           </div>
+        </section>
+
+        <!-- TAB 5: PRINT & QR SIGN CENTER -->
+        <section id="tab-print" hidden>
+          <div class="card">
+            <div class="card-hdr">
+              <h3>1. Print Scope — Date: <span id="pdfDateLabel"></span></h3>
+              <span class="sub-badge">Signed Off as Ryan Pearce (RP)</span>
+            </div>
+            <div class="grid">
+              <div>
+                <label>Filter by Customer (Blank = Full Day)</label>
+                <select id="pdfCustomerFilter"><option value="">-- All Customers on Selected Date --</option></select>
+              </div>
+              <div>
+                <label>Starting Retest Sheet #</label>
+                <input type="number" id="pdfSheetNo" value="8095" />
+              </div>
+            </div>
+          </div>
 
           <div class="card">
-            <div class="card-hdr"><h3>Categorized By Customer</h3></div>
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Customer</th><th>Bottles</th><th>Unbilled</th><th>Last Date</th><th>View</th></tr></thead>
-                <tbody id="customersListTable"></tbody>
-              </table>
+            <div class="card-hdr"><h3>2. Official DOT Forms &amp; Backroom Wall Sign</h3></div>
+            <div class="grid">
+              <button class="pdf-card-btn" onclick="openPdf('retest')">📄 DOT Retest Data Sheet<br /><small style="font-weight:500;opacity:0.9;">12-row Form 393-001 replica (RP)</small></button>
+              <button class="pdf-card-btn" onclick="openPdf('verification')">📄 Daily Verification Sheet<br /><small style="font-weight:500;opacity:0.9;">Method B calibration log (RP)</small></button>
+              <button class="pdf-card-btn" onclick="openPdf('visual')">📄 7-Point Visual Log<br /><small style="font-weight:500;opacity:0.9;">DOT/ICC visual inspection log (RP)</small></button>
+              <button class="pdf-card-btn" style="background:#92400e;" onclick="openPdf('valvetags')">🏷️ Valve &amp; HPA Tag Sheet<br /><small style="font-weight:500;opacity:0.9;">25-row bench clipboard match grid</small></button>
+              <button class="pdf-card-btn" style="background:#0f291e;" onclick="openPdf('poster')">🚪 Backroom 24/7 QR Poster<br /><small style="font-weight:500;opacity:0.9;">Laminated wall sign for drop-off check-in</small></button>
             </div>
           </div>
-        </div>
 
-        <div class="card">
-          <div class="card-hdr">
-            <h3>Master Cylinder Lookup (Customer, Serial #, Date, or Active Valve Tag #)</h3>
-          </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <input id="searchBox" style="flex:3;" placeholder="Search customer, serial #, YYYY-MM-DD date, or active valve tag #..." oninput="runSearch(false)" />
-            <button class="secondary" style="flex:1;" onclick="runSearch(true)">🏷️ Active Tag # Only</button>
-          </div>
-          <div class="table-wrap" style="margin-top:12px;">
-            <table>
-              <thead><tr><th>Date</th><th>Sheet</th><th>Owner</th><th>Serial #</th><th>Tag</th><th>Size</th><th>Spec</th><th>Tot / Perm</th><th>% Perm</th><th>Disp</th><th>Actions</th></tr></thead>
-              <tbody id="searchTable"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 5: PRINT CENTER -->
-      <section id="tab-print" hidden>
-        <div class="card">
-          <div class="card-hdr">
-            <h3>1. Print Scope — Working Date: <span id="pdfDateLabel"></span></h3>
-            <span class="sub-badge">All Official DOT Forms Signed Off as Ryan Pearce (RP)</span>
-          </div>
-          <div class="grid">
-            <div>
-              <label>Filter PDFs by Customer (Blank = Entire Day)</label>
-              <select id="pdfCustomerFilter"><option value="">-- All Customers Tested on This Date --</option></select>
-            </div>
-            <div>
-              <label>Starting Retest Sheet # (Top-Right Corner)</label>
-              <input type="number" id="pdfSheetNo" value="8095" />
+          <div class="card">
+            <div class="card-hdr"><h3>3. B386 Retest Laser Stickers (Avery 5160 3×10 Sheet)</h3></div>
+            <div class="grid" style="align-items:end;">
+              <div><label>Stickers Needed</label><input type="number" id="stickerCount" value="12" /></div>
+              <div><label>Skip Used Slots (0–29)</label><input type="number" id="stickerSkip" value="0" /></div>
+              <div>
+                <label class="inline-check" style="padding-bottom:8px;">
+                  <input type="checkbox" id="stickerCompact" />
+                  <span>🎯 <strong>2-Up Mini Paintball HPA Size</strong> (2 per label)</span>
+                </label>
+              </div>
+              <div>
+                <button class="pdf-card-btn" style="background:#047857;width:100%;text-align:center;" onclick="openPdf('stickers')">🏷️ Generate B386 Stickers PDF</button>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="card">
-          <div class="card-hdr"><h3>2. Official DOT Recordkeeping &amp; Bench PDFs</h3></div>
-          <div class="grid">
-            <button class="pdf-card-btn" onclick="openPdf('retest')">📄 DOT Retest Data Sheet<br /><small style="font-weight:500;opacity:0.9;">Exact 12-row Form 393-001 replica (RP)</small></button>
-            <button class="pdf-card-btn" onclick="openPdf('verification')">📄 Daily Verification Sheet<br /><small style="font-weight:500;opacity:0.9;">Method B morning calibration log (RP)</small></button>
-            <button class="pdf-card-btn" onclick="openPdf('visual')">📄 7-Point Visual Log<br /><small style="font-weight:500;opacity:0.9;">DOT/ICC visual inspection log (RP)</small></button>
-            <button class="pdf-card-btn" style="background:#92400e;" onclick="openPdf('valvetags')">🏷️ Active Valve Tag Sheet<br /><small style="font-weight:500;opacity:0.9;">25-row shop clipboard match grid</small></button>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-hdr"><h3>3. B386 Retest Laser Stickers (3×10 Avery 5160 Sheet)</h3></div>
-          <div class="grid" style="align-items:end;">
-            <div>
-              <label>Stickers Needed</label>
-              <input type="number" id="stickerCount" value="12" />
+        <!-- TAB 6: BILLING, PAYMENTS & RATES -->
+        <section id="tab-billing" hidden>
+          <div class="card">
+            <div class="card-hdr"><h3>1. Build Customer Invoice &amp; Send Pickup Text</h3></div>
+            <div class="grid">
+              <div><label>Service Date</label><input type="date" id="billDate" onchange="loadUnbilledItems()" /></div>
+              <div><label>Customer</label><select id="billCustomer" onchange="loadUnbilledItems()"></select></div>
+              <div><label>Customer Cell #</label><input id="billPhone" type="tel" placeholder="724-555-0199" /></div>
+              <div><label>Tax %</label><input type="number" step="0.01" id="billTax" value="0" oninput="recalcInvoiceDraft()" /></div>
+              <div><label>Status</label><select id="billStatus"><option value="DRAFT">DRAFT</option><option value="SENT">SENT</option><option value="PAID">PAID</option></select></div>
+              <div>
+                <label>Payment Method</label>
+                <select id="billPayMethod">
+                  <option value="">Unpaid / Pending</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Check">Check</option>
+                  <option value="Card / Venmo">Card / Venmo</option>
+                  <option value="Net-30 Dept">Net-30 Dept Invoice</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label>Skip Already-Used Slots on Sheet (0–29)</label>
-              <input type="number" id="stickerSkip" value="0" />
+
+            <div id="draftInvoiceList" style="margin-top:12px;"></div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-wrap:wrap;gap:10px;">
+              <button class="secondary" onclick="addCustomInvoiceLine()">+ Add Custom Fee / Air Fill</button>
+              <strong id="draftTotalLabel" style="font-size:1.15rem;">Draft Total: $0.00</strong>
             </div>
-            <div>
-              <button class="pdf-card-btn" style="background:#047857;width:100%;text-align:center;" onclick="openPdf('stickers')">🏷️ Generate B386 Stickers PDF</button>
+            <input id="billNotes" placeholder="Optional PO#, check #, or pickup shelf notes..." style="margin-top:10px;" />
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+              <button class="primary" style="flex:2;margin:0;" onclick="submitInvoice()">Save &amp; Open Printable Invoice PDF</button>
+              <button class="secondary" style="flex:1;padding:11px;" onclick="sendCustomerPickupSmsFromBilling()">📲 Text Ready Notice</button>
             </div>
           </div>
-        </div>
-      </section>
 
-      <!-- TAB 6: BILLING & RATES -->
-      <section id="tab-billing" hidden>
-        <div class="card">
-          <div class="card-hdr"><h3>1. Build Customer Invoice From Completed Bottles</h3></div>
-          <div class="grid">
-            <div><label>Service Date</label><input type="date" id="billDate" onchange="loadUnbilledItems()" /></div>
-            <div><label>Customer</label><select id="billCustomer" onchange="loadUnbilledItems()"></select></div>
-            <div><label>Tax %</label><input type="number" step="0.01" id="billTax" value="0" oninput="recalcInvoiceDraft()" /></div>
-            <div><label>Status</label><select id="billStatus"><option value="DRAFT">DRAFT</option><option value="SENT">SENT</option><option value="PAID">PAID</option></select></div>
+          <div class="card">
+            <div class="card-hdr"><h3>2. Saved Customer Invoices</h3></div>
+            <div id="invoicesList"></div>
           </div>
 
-          <div class="table-wrap" style="margin-top:12px;">
-            <table>
-              <thead><tr><th>Line Item Description</th><th style="width:80px;">Qty</th><th style="width:125px;">Unit Price ($)</th><th style="width:110px;">Line Total</th><th style="width:50px;"></th></tr></thead>
-              <tbody id="draftInvoiceRows"></tbody>
-            </table>
+          <div class="card">
+            <div class="card-hdr">
+              <h3>3. Master Service Rate Schedule</h3>
+              <button class="secondary" onclick="addRateScheduleRow()">+ Add Service Rate</button>
+            </div>
+            <div id="pricingList"></div>
+            <button class="primary" onclick="savePricingRates()">Save Master Pricing Rates</button>
           </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-wrap:wrap;gap:10px;">
-            <button class="secondary" onclick="addCustomInvoiceLine()">+ Add Custom Fee / Air Fill</button>
-            <strong id="draftTotalLabel" style="font-size:1.15rem;">Draft Total: $0.00</strong>
-          </div>
-          <input id="billNotes" placeholder="Optional invoice notes / PO#..." style="margin-top:10px;" />
-          <button class="primary" onclick="submitInvoice()">Save &amp; Open Printable Invoice PDF</button>
-        </div>
+        </section>
+      </main>
+    </div>
 
-        <div class="card">
-          <div class="card-hdr"><h3>2. Saved Customer Invoices</h3></div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Invoice #</th><th>Customer</th><th>Service Date</th><th>Total</th><th>Status</th><th>By</th><th>Actions</th></tr></thead>
-              <tbody id="invoicesTable"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-hdr">
-            <h3>3. Master Service Rate Schedule (Editable &amp; Custom Items)</h3>
-            <button class="secondary" onclick="addRateScheduleRow()">+ Add Service Rate</button>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th style="width:165px;">Service Code</th><th>Service Description</th><th style="width:140px;">Unit Price ($)</th><th style="width:65px;"></th></tr></thead>
-              <tbody id="pricingTable"></tbody>
-            </table>
-          </div>
-          <button class="primary" onclick="savePricingRates()">Save Master Pricing Rates</button>
-        </div>
-      </section>
-    </main>
+    <!-- PHONE FIXED BOTTOM TAB BAR -->
+    <nav class="bottom-nav">
+      <button class="bnav-btn active" data-tab="cal" onclick="jumpToTab('cal')"><span class="ico">⚖️</span><span>Cal</span></button>
+      <button class="bnav-btn" data-tab="intake" onclick="jumpToTab('intake')">
+        <span class="ico">📷</span><span>Intake</span><span class="bnav-dot" id="mobBadgeIntake" hidden>0</span>
+      </button>
+      <button class="bnav-btn" data-tab="bench" onclick="jumpToTab('bench')">
+        <span class="ico">💧</span><span>Stand</span><span class="bnav-dot" id="mobBadgeBench" hidden>0</span>
+      </button>
+      <button class="bnav-btn" data-tab="logs" onclick="jumpToTab('logs')">
+        <span class="ico">🏷️</span><span>Valves</span><span class="bnav-dot" id="mobBadgeValves" hidden>0</span>
+      </button>
+      <button class="bnav-btn" data-tab="print" onclick="jumpToTab('print')"><span class="ico">🖨️</span><span>Print</span></button>
+      <button class="bnav-btn" data-tab="billing" onclick="jumpToTab('billing')"><span class="ico">💲</span><span>Bill</span></button>
+    </nav>
   </div>
 
-  <!-- EDIT COMPLETED / QUEUED CYLINDER RECORD MODAL -->
+  <!-- SLIDE-OVER QUICK MENU DRAWER -->
+  <div id="menuDrawerModal" class="modal-bg" onclick="if(event.target===this)toggleMenuDrawer(false)" hidden>
+    <div class="drawer-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0;">Shop Controls</h3>
+        <button class="secondary" onclick="toggleMenuDrawer(false)">✖</button>
+      </div>
+      <div>
+        <label>Active Crew Operator (Internal Audit)</label>
+        <select id="activeCrewSelect" onchange="saveActiveCrew()"></select>
+        <small style="color:var(--muted);font-size:0.75rem;">Official DOT forms always sign off as Ryan Pearce (RP).</small>
+      </div>
+      <button id="btnInstallPwa" class="primary" style="margin:0;background:#d97706;" onclick="installPwaApp()" hidden>📲 Install Ops App on Device</button>
+      <a class="secondary" href="/tv" target="_blank" style="padding:11px;justify-content:flex-start;">📺 Launch Testing Room TV Board</a>
+      <button class="secondary" id="drawerSyncBtn" onclick="triggerManualSync()" style="padding:11px;justify-content:flex-start;">☁ Sync Google Sheets Now</button>
+      <button class="secondary" onclick="toggleMenuDrawer(false);toggleFeedbackModal(true)" style="padding:11px;justify-content:flex-start;">💬 Crew Feedback &amp; Ideas</button>
+      <button class="secondary" onclick="toggleMenuDrawer(false);toggleGuide(true)" style="padding:11px;justify-content:flex-start;">⚙ Facility Settings &amp; Keys</button>
+      <hr style="border:none;border-top:1px solid var(--border-soft);width:100%;" />
+      <button class="danger-btn" id="drawerWipeBtn" onclick="eraseAllTestData()" hidden>🗑 Erase All Practice / Test Data</button>
+      <button class="secondary" onclick="logoutCrew()">🔒 Sign Out This Device</button>
+    </div>
+  </div>
+
+  <!-- EDIT CYLINDER RECORD MODAL -->
   <div id="editRecordModal" class="modal-bg" onclick="if(event.target===this)closeEditModal()" hidden>
     <div class="modal">
       <div class="card-hdr">
@@ -679,9 +533,18 @@
       <input type="hidden" id="erId" />
       <div class="grid">
         <div><label>Customer / Owner</label><input id="erCustomer" list="customerSuggest" /></div>
+        <div><label>Customer Cell #</label><input id="erPhone" type="tel" /></div>
         <div><label>Serial #</label><input id="erSerial" /></div>
-        <div><label>Valve Tag #</label><input id="erValveTag" /></div>
-        <div><label>MFG ID</label><input id="erMfg" /></div>
+        <div><label>Valve / Reg Tag #</label><input id="erValveTag" /></div>
+        <div><label>Shop Stage</label>
+          <select id="erStage">
+            <option value="IN_SHOP">In Shop / Bench</option>
+            <option value="DRYING">Drying / Stamping</option>
+            <option value="READY_BACKROOM">Ready on Backroom Shelf</option>
+            <option value="PICKED_UP">Picked Up by Customer</option>
+          </select>
+        </div>
+        <div><label>MFG / Brand</label><input id="erMfg" /></div>
         <div><label>MFG Date</label><input id="erMfgDate" /></div>
         <div><label>Gas Service</label><input id="erGas" /></div>
         <div><label>DOT Spec</label><input id="erSpec" /></div>
@@ -689,14 +552,14 @@
         <div><label>Test PSI</label><input type="number" id="erTestPsi" /></div>
         <div><label>Outside Dia (in)</label><input id="erDia" /></div>
         <div><label>Length (in)</label><input id="erLen" /></div>
-        <div><label>REE Limit (cc)</label><input type="number" step="0.1" id="erRee" placeholder="Blank if N/A" /></div>
+        <div><label>REE Limit (cc)</label><input type="number" step="0.1" id="erRee" /></div>
         <div><label>Total Exp (cc)</label><input type="number" step="0.1" id="erTotal" /></div>
         <div><label>Perm Exp (cc)</label><input type="number" step="0.1" id="erPerm" /></div>
         <div><label>Coating</label><select id="erCoat"><option>Excellent</option><option>Good</option><option>Fair</option><option>Poor</option></select></div>
         <div><label>Relief Changed?</label><select id="erValveChg"><option>No</option><option>Yes</option></select></div>
         <div><label>Disposition Override</label>
           <select id="erDispOvr">
-            <option value="">Auto-Calculate (Pass/Fail)</option>
+            <option value="">Auto-Calculate</option>
             <option value="A">A - Return to Service</option>
             <option value="B">B - Hold for Retest</option>
             <option value="C">C - Rejected</option>
@@ -706,28 +569,27 @@
         </div>
         <div><label>DOT Row Notes</label><input id="erNotes" /></div>
       </div>
-      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;text-transform:none;font-size:0.88rem;cursor:pointer;">
-        <input type="checkbox" id="erReinst" style="width:17px;height:17px;" />
-        Valve reinstalled (releases reusable Valve Tag #)
+      <label class="inline-check" style="margin-top:11px;">
+        <input type="checkbox" id="erReinst" />
+        <span>Valve / HPA regulator reinstalled (releases reusable Tag #)</span>
       </label>
       <div id="erVisPills" class="vis-pills-grid"></div>
-      <div style="display:flex;gap:10px;margin-top:16px;">
+      <div style="display:flex;gap:8px;margin-top:14px;">
         <button class="primary" style="margin:0;flex:3;" onclick="saveEditedRecord()">Save Changes &amp; Recalculate</button>
         <button class="danger-btn" style="flex:1;" onclick="deleteRecordFromModal()">🗑 Delete</button>
       </div>
     </div>
   </div>
 
-  <!-- CREW FEEDBACK & BUG TRACKER MODAL -->
+  <!-- CREW FEEDBACK MODAL -->
   <div id="feedbackModal" class="modal-bg" onclick="if(event.target===this)toggleFeedbackModal(false)" hidden>
     <div class="modal">
       <div class="card-hdr">
-        <h3>💬 Crew Feedback, Bug Reports &amp; Feature Ideas</h3>
+        <h3>💬 Crew Feedback &amp; Ideas</h3>
         <button class="secondary" onclick="toggleFeedbackModal(false)">✖ Close</button>
       </div>
       <div class="grid" style="margin-bottom:10px;">
-        <div>
-          <label>Category</label>
+        <div><label>Category</label>
           <select id="fbCat">
             <option value="Bug / Fix">Bug / Something Off</option>
             <option value="Improvement" selected>Workflow Improvement</option>
@@ -735,20 +597,13 @@
             <option value="PDF / Sheets">PDFs or Google Sheets</option>
           </select>
         </div>
-        <div>
-          <label>Priority</label>
-          <select id="fbPrio">
-            <option value="Normal" selected>Normal</option>
-            <option value="High">High (Slowing Bench)</option>
-            <option value="Wishlist">Future Idea</option>
-          </select>
+        <div><label>Priority</label>
+          <select id="fbPrio"><option value="Normal" selected>Normal</option><option value="High">High</option><option value="Wishlist">Wishlist</option></select>
         </div>
       </div>
-      <label>What happened or what would make shop workflow faster?</label>
-      <textarea id="fbMsg" rows="3" placeholder="Type note here—saves locally and syncs to the Crew Feedback Google Sheet..."></textarea>
+      <textarea id="fbMsg" rows="3" placeholder="What happened or what would speed up shop work?"></textarea>
       <button class="primary" onclick="submitCrewFeedback()">Submit Crew Note</button>
-
-      <h4 style="margin:18px 0 8px;">Recent Crew Notes</h4>
+      <h4 style="margin:16px 0 8px;">Recent Crew Notes</h4>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Time</th><th>By</th><th>Type</th><th>Note</th><th>Status</th></tr></thead>
@@ -758,1344 +613,48 @@
     </div>
   </div>
 
-  <!-- SETTINGS & ADMIN MODAL -->
+  <!-- FACILITY SETTINGS MODAL -->
   <div id="guideModal" class="modal-bg" onclick="if(event.target===this)toggleGuide(false)" hidden>
     <div class="modal">
       <div class="card-hdr">
-        <h3 style="margin:0;">⚙ Facility Settings, Crew Roster &amp; Cloud Sync</h3>
+        <h3>⚙ Facility Settings, Crew &amp; Webhooks</h3>
         <button class="secondary" onclick="toggleGuide(false)">✖ Close</button>
       </div>
 
-      <div class="card" style="background:#fef2f2;border-color:#fca5a5;padding:14px;">
-        <h4 style="margin:0 0 8px;color:#991b1b;">Sandbox / Testing Stage Controls</h4>
-        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.88rem;margin-bottom:10px;cursor:pointer;">
-          <input type="checkbox" id="testingModeChk" style="width:17px;height:17px;" />
-          Show "Testing Stage / Not Official DOT Recordkeeping" disclaimer banner &amp; popup
+      <div class="card" style="background:#fef2f2;border-color:#fca5a5;padding:12px;">
+        <label class="inline-check" style="margin-bottom:10px;">
+          <input type="checkbox" id="testingModeChk" />
+          <span><strong>Testing Stage Mode:</strong> Show practice disclaimer &amp; enable test-data wipe</span>
         </label>
-        <button class="danger-btn" style="width:100%;" onclick="eraseAllTestData()">🗑 Erase All Test Data (Wipes App DB + Google Sheets)</button>
+        <button class="danger-btn" style="width:100%;" onclick="eraseAllTestData()">🗑 Erase All Test Data (App + Google Sheets)</button>
       </div>
 
-      <h4 style="margin:14px 0 6px;">Crew Roster (Internal Audit Tracking — DOT PDFs Always Sign Off as RP)</h4>
+      <h4 style="margin:12px 0 6px;">Crew Roster (Internal Audit — DOT PDFs Always Sign Off as RP)</h4>
       <div id="crewRosterList" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
-      <div class="grid" style="align-items:end;margin-bottom:14px;">
+      <div class="grid" style="align-items:end;margin-bottom:12px;">
         <div><label>Full Name</label><input id="newCrewName" placeholder="e.g. Kenny" /></div>
         <div><label>Initials</label><input id="newCrewInit" maxlength="4" placeholder="e.g. KN" /></div>
-        <div><button class="secondary" style="width:100%;padding:10px;" onclick="addCrewMember()">+ Add Crew Member</button></div>
+        <div><button class="secondary" style="width:100%;padding:10px;" onclick="addCrewMember()">+ Add Crew</button></div>
       </div>
 
-      <h4 style="margin:14px 0 6px;">Google Sheets Webhooks &amp; Facility Defaults</h4>
       <div class="grid" style="margin-bottom:10px;">
-        <div style="grid-column: 1 / -1;">
-          <label>Master Log Google Sheets Webhook URL</label>
-          <input id="webhookInput" placeholder="https://script.google.com/macros/s/.../exec" />
-        </div>
-        <div style="grid-column: 1 / -1;">
-          <label>Crew Feedback Sheet Webhook URL (Optional — Blank Uses Master Webhook)</label>
-          <input id="fbWebhookInput" placeholder="https://script.google.com/macros/s/.../exec" />
-        </div>
+        <div style="grid-column:1/-1;"><label>Master Log Google Sheets Webhook URL</label><input id="webhookInput" placeholder="https://script.google.com/macros/s/.../exec" /></div>
+        <div style="grid-column:1/-1;"><label>Crew Feedback Sheet Webhook URL (Optional)</label><input id="fbWebhookInput" placeholder="https://script.google.com/macros/s/.../exec" /></div>
       </div>
 
-      <p style="font-size:0.83rem;margin:4px 0 8px;">Gemini Vision Key: <strong id="keyStatusText"></strong></p>
+      <p style="font-size:0.82rem;margin:4px 0 8px;">Gemini Vision Key: <strong id="keyStatusText"></strong></p>
       <div class="grid">
-        <div><label>Change Crew Login PIN</label><input type="password" id="editShopPin" placeholder="Blank = keep current" /></div>
-        <div><label>Update Gemini API Key</label><input type="password" id="apiKeyInput" placeholder="Blank = keep current" /></div>
-        <div><label>Calibrated Cyl Serial #</label><input id="editCalSerial" value="1SF11904" /></div>
-        <div><label>Starting Retest Sheet #</label><input type="number" id="editSheetNo" value="8095" /></div>
-        <div><label>Default Invoice Tax %</label><input type="number" step="0.01" id="editDefaultTax" value="0" /></div>
+        <div><label>Change Crew PIN</label><input type="password" id="editShopPin" placeholder="Blank = keep current" /></div>
+        <div><label>Gemini API Key</label><input type="password" id="apiKeyInput" placeholder="Blank = keep current" /></div>
+        <div><label>Master Cyl Serial #</label><input id="editCalSerial" value="1SF11904" /></div>
+        <div><label>Starting Sheet #</label><input type="number" id="editSheetNo" value="8095" /></div>
+        <div><label>Default Tax %</label><input type="number" step="0.01" id="editDefaultTax" value="0" /></div>
       </div>
-      <button class="btn-gold" style="margin-top:14px;width:100%;padding:11px;" onclick="saveAllSettings()">Save Facility Settings</button>
-
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
-        <button class="secondary" onclick="logoutCrew()">🔒 Sign Out This Device</button>
-        <button class="primary" style="width:auto;margin:0;padding:9px 18px;" onclick="toggleGuide(false)">Done</button>
-      </div>
+      <button class="primary" onclick="saveAllSettings()">Save Facility Settings</button>
     </div>
   </div>
 
-  <script>
-    const VIS_FIELDS = [
-      { key: 'chk_corrosion', label: 'Corrosion' },
-      { key: 'chk_dents_dings', label: 'Dents / Dings' },
-      { key: 'chk_cuts_gouges', label: 'Cuts / Gouges' },
-      { key: 'chk_leaks', label: 'Leaks' },
-      { key: 'chk_fire_damage', label: 'Fire Damage' },
-      { key: 'chk_bulges', label: 'Bulges' },
-      { key: 'chk_neck_defects', label: 'Neck / Threads' },
-    ];
-
-    let STATE = {
-      testing_mode: true, calibration_targets: [], cga_specs: [], records: [],
-      active_valves: [], verifications: [], jacket_ceilings: {}, pricing_rates: [],
-      invoices: [], dates_summary: [], customers_summary: [], crew: [], feedback_items: [],
-      default_tax_rate: 0, db_version: 0
-    };
-    let CURRENT_TAB = 'cal';
-    let CAL_FORCE_EXPANDED = false;
-    let LADDER = [];
-    let ACTIVE_STEP = 0;
-    let MEDIA_STREAM = null;
-    let FACING_MODE = 'environment';
-    let TORCH_ON = false;
-    let CAPTURED_B64 = [];
-    let CAPTURED_URLS = [];
-    let BENCH_VIS = {};
-    let EDIT_VIS = {};
-    let BENCH_SUBMITTING = false;
-    let DRAFT_ITEMS = [];
-    let EDITABLE_RATES = [];
-    let DEFERRED_PWA = null;
-
-    // Gate Service Worker & PWA Install strictly to ops subdomain / local / render
-    const IS_OPS_HOST = !['weberstanktesting.com', 'www.weberstanktesting.com'].includes(location.hostname.toLowerCase());
-    if (IS_OPS_HOST && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
-    }
-    window.addEventListener('beforeinstallprompt', (e) => {
-      if (!IS_OPS_HOST) return;
-      e.preventDefault();
-      DEFERRED_PWA = e;
-      document.getElementById('btnInstallPwa').hidden = false;
-    });
-
-    async function installPwaApp() {
-      if (!DEFERRED_PWA) return;
-      DEFERRED_PWA.prompt();
-      await DEFERRED_PWA.userChoice;
-      DEFERRED_PWA = null;
-      document.getElementById('btnInstallPwa').hidden = true;
-    }
-
-    function getActiveCrew() {
-      return document.getElementById('activeCrewSelect').value || localStorage.getItem('webers_active_crew') || 'RP';
-    }
-    function saveActiveCrew() {
-      localStorage.setItem('webers_active_crew', document.getElementById('activeCrewSelect').value);
-    }
-
-    function fmtPctTenth(val) {
-      if (val === null || val === undefined || val === '') return '-';
-      return Number(val).toFixed(1) + '%';
-    }
-
-    function zoomPhoto(src) {
-      document.getElementById('photoZoomImg').src = src;
-      document.getElementById('photoZoomModal').hidden = false;
-    }
-
-    async function checkAuthAndBoot() {
-      const res = await fetch('/api/auth/status');
-      const data = await res.json();
-      if (!data.authenticated) {
-        document.getElementById('loginScreen').hidden = false;
-        document.getElementById('appShell').hidden = true;
-        document.getElementById('loginPinInput').focus();
-      } else {
-        document.getElementById('loginScreen').hidden = true;
-        document.getElementById('appShell').hidden = false;
-        await loadState(true);
-      }
-    }
-
-    async function submitLoginPin() {
-      const pin = document.getElementById('loginPinInput').value;
-      const err = document.getElementById('loginError');
-      const res = await fetch('/api/auth/login', {
-        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ pin })
-      });
-      if (!res.ok) { err.hidden = false; return; }
-      err.hidden = true;
-      document.getElementById('loginPinInput').value = '';
-      checkAuthAndBoot();
-    }
-
-    async function logoutCrew() {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      toggleGuide(false);
-      checkAuthAndBoot();
-    }
-
-    function acknowledgeDisclaimer() {
-      sessionStorage.setItem('webers_disclaimer_ack', '1');
-      document.getElementById('disclaimerModal').hidden = true;
-    }
-
-    function toggleGuide(show) { document.getElementById('guideModal').hidden = !show; }
-    function toggleFeedbackModal(show) { document.getElementById('feedbackModal').hidden = !show; }
-
-    function jumpToTab(name) {
-      const btn = document.querySelector(`nav button[data-tab="${name}"]`);
-      if (btn) showTab(name, btn);
-    }
-
-    function showTab(name, btn) {
-      CURRENT_TAB = name;
-      if (name !== 'intake') closeLiveCamera();
-      document.querySelectorAll('main > section').forEach(s => { s.hidden = true; });
-      document.getElementById('tab-' + name).hidden = false;
-      document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-      if (btn) btn.classList.add('active');
-      if (name === 'logs') runSearch(false);
-      if (name === 'billing') loadUnbilledItems();
-    }
-
-    function setCalExpanded(exp) {
-      CAL_FORCE_EXPANDED = exp;
-      updateCalCollapseUI();
-    }
-
-    function updateCalCollapseUI() {
-      const sMax = STATE.jacket_ceilings['Short Jacket']?.max_allowed_test_psi || 0;
-      const tMax = STATE.jacket_ceilings['Tall Jacket']?.max_allowed_test_psi || 0;
-      const bothReady = sMax > 0 && tMax > 0;
-      const banner = document.getElementById('calCollapsedBanner');
-      const formCard = document.getElementById('calFormCard');
-      if (bothReady && !CAL_FORCE_EXPANDED) {
-        banner.hidden = false;
-        formCard.hidden = true;
-        document.getElementById('calCollapsedSummary').textContent =
-          `Short Jacket certified ≤ ${sMax} PSI • Tall Jacket certified ≤ ${tMax} PSI (Signed off: RP)`;
-      } else {
-        banner.hidden = !bothReady;
-        formCard.hidden = false;
-      }
-    }
-
-    function changeWorkingDate() {
-      CAL_FORCE_EXPANDED = false;
-      const d = document.getElementById('globalDate').value;
-      document.getElementById('billDate').value = d;
-      loadState(true);
-    }
-
-    async function eraseAllTestData() {
-      if (!confirm('ERASE ALL TEST DATA?\n\nDeletes all test calibrations, cylinder records, valve tag assignments, and invoices from both the app and Google Sheets while keeping your API keys, crew, and rate schedule intact.')) return;
-      const res = await fetch('/api/admin/wipe-test-data', { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) { alert(data.detail || 'Wipe failed.'); return; }
-      alert(data.sheets_wiped
-        ? 'Clean slate complete! Both the Operations Database and Google Sheets have been wiped.'
-        : 'Local Operations Database wiped clean! (Check Google Sheets webhook if Sheet rows remain.)');
-      toggleGuide(false);
-      loadState(true);
-    }
-
-    async function loadState(rebuildLadder = false) {
-      const wDate = document.getElementById('globalDate').value || '';
-      const res = await fetch('/api/bootstrap' + (wDate ? `?work_date=${encodeURIComponent(wDate)}` : ''));
-      if (res.status === 401) { checkAuthAndBoot(); return; }
-      const prevVer = STATE.db_version;
-      STATE = await res.json();
-
-      if (!document.getElementById('globalDate').value) {
-        document.getElementById('globalDate').value = STATE.selected_date;
-        document.getElementById('billDate').value = STATE.selected_date;
-      }
-
-      document.getElementById('sandboxBanner').hidden = !STATE.testing_mode;
-      document.getElementById('testingModeChk').checked = STATE.testing_mode;
-      if (STATE.testing_mode && !sessionStorage.getItem('webers_disclaimer_ack')) {
-        document.getElementById('disclaimerModal').hidden = false;
-      }
-
-      // Crew selector & roster
-      const savedCrew = localStorage.getItem('webers_active_crew') || 'RP';
-      const crewSel = document.getElementById('activeCrewSelect');
-      crewSel.innerHTML = STATE.crew.map(c =>
-        `<option value="${c.initials}" ${c.initials===savedCrew?'selected':''}>${c.initials} — ${c.full_name.split(' ')[0]}</option>`
-      ).join('');
-      document.getElementById('crewRosterList').innerHTML = STATE.crew.map(c => `
-        <span class="kpi-pill" style="display:inline-flex;align-items:center;gap:6px;">
-          <strong>${c.initials}</strong> ${c.full_name}
-          ${c.initials !== 'RP' ? `<button onclick="removeCrewMember(${c.id})" style="border:none;background:none;color:#dc2626;cursor:pointer;font-weight:900;">×</button>` : ''}
-        </span>`).join('');
-
-      document.getElementById('pdfDateLabel').textContent = STATE.selected_date;
-      document.getElementById('pdfSheetNo').value = STATE.starting_sheet_no;
-      document.getElementById('editSheetNo').value = STATE.starting_sheet_no;
-      document.getElementById('editDefaultTax').value = STATE.default_tax_rate ?? 0;
-      if (prevVer === 0) document.getElementById('billTax').value = STATE.default_tax_rate ?? 0;
-      document.getElementById('calSerialLabel').textContent = STATE.calibrated_serial;
-      document.getElementById('editCalSerial').value = STATE.calibrated_serial;
-      document.getElementById('webhookInput').value = STATE.sheets_webhook_url || '';
-      document.getElementById('fbWebhookInput').value = STATE.feedback_webhook_url || '';
-      document.getElementById('keyStatusText').textContent = STATE.has_gemini_key ? 'Configured & Ready' : 'Not Set';
-
-      document.getElementById('syncBadge').textContent = STATE.has_sheets_webhook
-        ? (STATE.unsynced_count ? `↻ Syncing (${STATE.unsynced_count})` : '☁ Sheets Synced')
-        : `Local (${STATE.unsynced_count} unsynced)`;
-
-      const sCeil = STATE.jacket_ceilings['Short Jacket'] || { max_calibrated_psi: 0, max_allowed_test_psi: 0 };
-      const tCeil = STATE.jacket_ceilings['Tall Jacket'] || { max_calibrated_psi: 0, max_allowed_test_psi: 0 };
-      const pShort = document.getElementById('pillShort');
-      const pTall = document.getElementById('pillTall');
-      pShort.textContent = sCeil.max_calibrated_psi ? `Short: ≤${sCeil.max_allowed_test_psi} PSI` : 'Short: Uncalibrated';
-      pShort.className = 'kpi-pill ' + (sCeil.max_calibrated_psi ? 'ready' : 'wait');
-      pTall.textContent = tCeil.max_calibrated_psi ? `Tall: ≤${tCeil.max_allowed_test_psi} PSI` : 'Tall: Uncalibrated';
-      pTall.className = 'kpi-pill ' + (tCeil.max_calibrated_psi ? 'ready' : 'wait');
-
-      // Auto-select uncalibrated jacket when one is already done
-      const calJacketSel = document.getElementById('calJacket');
-      if (sCeil.max_calibrated_psi && !tCeil.max_calibrated_psi && calJacketSel.value === 'Short Jacket' && rebuildLadder) {
-        calJacketSel.value = 'Tall Jacket';
-      } else if (!sCeil.max_calibrated_psi && tCeil.max_calibrated_psi && calJacketSel.value === 'Tall Jacket' && rebuildLadder) {
-        calJacketSel.value = 'Short Jacket';
-      }
-      updateCalCollapseUI();
-
-      const queued = STATE.records.filter(r => r.status === 'QUEUED');
-      const done = STATE.records.filter(r => r.status === 'COMPLETED');
-      document.getElementById('pillQueue').textContent = `Queue: ${queued.length} • Done: ${done.length}`;
-      const pValves = document.getElementById('pillValves');
-      pValves.textContent = `Active Tags: ${STATE.active_valves.length}`;
-      pValves.className = 'kpi-pill ' + (STATE.active_valves.length ? 'wait' : 'ready');
-
-      document.getElementById('stickerCount').value = Math.max(1, done.filter(r => r.hydro_disposition === 'A').length);
-
-      document.getElementById('serialSuggest').innerHTML = STATE.records.map(r =>
-        `<option value="${r.serial_number}">${r.customer_name} (${r.dot_spec}${r.service_psi})${r.valve_tag && !r.valve_reinstalled ? ' — Tag #' + r.valve_tag : ''}</option>`
-      ).join('');
-
-      const maxSel = document.getElementById('calMaxPsi');
-      const curMax = maxSel.value || (calJacketSel.value === 'Short Jacket' ? '3000' : '4000');
-      maxSel.innerHTML = STATE.calibration_targets.map((t, idx) => {
-        const allow = t.pressure_psi >= 3000 ? t.pressure_psi + 500 : Math.round(t.pressure_psi * 1.1);
-        return `<option value="${t.pressure_psi}" ${String(t.pressure_psi)===String(curMax)?'selected':''}>${t.pressure_psi} PSI (${idx + 1} steps → ≤ ${allow} PSI)</option>`;
-      }).join('');
-      if (rebuildLadder || !LADDER.length) buildCalibrationLadder();
-
-      document.getElementById('calTable').innerHTML = STATE.verifications.length
-        ? STATE.verifications.map(v => `
-          <tr>
-            <td>${v.test_time}</td><td>${v.jacket_type}</td><td><strong>${v.target_pressure_psi}</strong></td>
-            <td>${v.expected_cc}</td><td>${v.actual_total_cc}</td><td>${v.permanent_cc}</td>
-            <td>${v.percent_deviation}%</td><td>${v.logged_by || 'RP'}</td><td>RP</td>
-            <td class="${v.passed ? 'pass' : 'fail'}">${v.passed ? 'PASS' : 'FAIL'}</td>
-          </tr>`).join('')
-        : '<tr><td colspan="10">No jacket calibrations logged for this date yet.</td></tr>';
-
-      document.getElementById('cgaPreset').innerHTML = '<option value="">-- Auto-Detect via AI or Pick Standard Size --</option>' +
-        STATE.cga_specs.map((s, idx) => `<option value="${idx}">${s.category}: ${s.label} (${s.dot_spec}-${s.service_psi} | OD ${s.outside_dia}" × ${s.length_in}")</option>`).join('');
-      document.getElementById('customerSuggest').innerHTML = STATE.customers_summary.map(c => `<option value="${c.customer_name}">`).join('');
-
-      const activeTagInput = document.activeElement && document.activeElement.classList.contains('inline-vtag');
-      if (!activeTagInput) {
-        document.getElementById('queuePreviewTable').innerHTML = queued.length
-          ? queued.map(r => `
-            <tr>
-              <td>${r.customer_name}</td>
-              <td><strong>${r.serial_number}</strong></td>
-              <td>
-                <input class="inline-vtag" value="${r.valve_tag && !r.valve_reinstalled ? r.valve_tag : ''}" placeholder="Tag #"
-                  style="padding:5px 8px;width:92px;font-weight:800;"
-                  onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
-                  onchange="saveInlineValveTag(${r.id}, this)" />
-              </td>
-              <td>${r.dot_spec}-${r.service_psi}</td>
-              <td><strong>${r.physical_size || '—'}</strong></td>
-              <td>${r.test_psi} PSI</td>
-              <td>${r.intake_by || 'RP'}</td>
-              <td style="display:flex;gap:5px;">
-                <button class="secondary" onclick="openEditModal(${r.id})">Edit</button>
-                <button class="secondary" onclick="removeRecord(${r.id})">✕</button>
-              </td>
-            </tr>`).join('')
-          : '<tr><td colspan="8">Intake queue is clear. Scan or verify a bottle above.</td></tr>';
-      }
-
-      const benchSel = document.getElementById('benchSelect');
-      const prevBenchId = benchSel.value;
-      const activeId = document.activeElement ? document.activeElement.id : '';
-      const typingOnBench = BENCH_SUBMITTING || ['bJacket', 'bTotal', 'bPerm', 'bValveTag', 'bCoat', 'bValve', 'bNotes', 'bValveReinst'].includes(activeId);
-      benchSel.innerHTML = queued.length
-        ? queued.map(r => `<option value="${r.id}" ${String(r.id)===String(prevBenchId)?'selected':''}>[${r.customer_name}] SN: ${r.serial_number} (${r.physical_size || 'Size N/A'}) — ${r.test_psi} PSI${r.valve_tag && !r.valve_reinstalled ? ' • Tag #' + r.valve_tag : ''}</option>`).join('')
-        : '<option value="">No bottles currently waiting in queue</option>';
-      if (!typingOnBench && (benchSel.value !== prevBenchId || !document.getElementById('btnCompleteBench'))) {
-        renderBenchForm();
-      } else if (!queued.length && !BENCH_SUBMITTING) {
-        renderBenchForm();
-      }
-
-      document.getElementById('doneTable').innerHTML = done.length
-        ? done.map(r => `
-          <tr>
-            <td>${r.customer_name}</td><td><strong>${r.serial_number}</strong></td>
-            <td>${r.valve_tag && !r.valve_reinstalled ? `<span class="tag-chip">#${r.valve_tag}</span>` : '<small style="color:var(--muted);">—</small>'}</td>
-            <td>${r.physical_size || '-'}</td><td>${r.dot_spec}-${r.service_psi}</td>
-            <td>${r.test_psi}</td><td>${r.total_cc ?? '-'} / ${r.permanent_cc ?? '-'}</td>
-            <td><strong>${fmtPctTenth(r.percent_permanent)}</strong></td>
-            <td class="${r.hydro_disposition === 'A' ? 'pass' : 'fail'}">${r.hydro_disposition}</td>
-            <td style="display:flex;gap:5px;">
-              <button class="secondary" onclick="openEditModal(${r.id})">Edit</button>
-              <button class="secondary" style="color:#b91c1c;" onclick="removeRecord(${r.id})">🗑</button>
-            </td>
-          </tr>`).join('')
-        : '<tr><td colspan="10">No completed tests on this date yet.</td></tr>';
-
-      document.getElementById('valveTrackerTable').innerHTML = STATE.active_valves.length
-        ? STATE.active_valves.map(r => `
-          <tr>
-            <td><span class="tag-chip">Tag #${r.valve_tag}</span></td>
-            <td><strong>${r.serial_number}</strong></td>
-            <td>${r.customer_name}</td>
-            <td>${r.physical_size || '-'} • ${r.dot_spec}-${r.service_psi}</td>
-            <td>${r.status} (${r.work_date})</td>
-            <td><button class="secondary" style="background:#dcfce7;color:#166534;border-color:#86efac;" onclick="releaseValveTag(${r.id})">✓ Reinstall &amp; Release #${r.valve_tag}</button></td>
-          </tr>`).join('')
-        : '<tr><td colspan="6">No active valve tags currently out on the bench.</td></tr>';
-
-      const allDayCustomers = [...new Set(STATE.records.map(r => r.customer_name))];
-      document.getElementById('pdfCustomerFilter').innerHTML = '<option value="">-- All Customers Tested on This Date --</option>' +
-        allDayCustomers.map(c => `<option value="${c}">${c}</option>`).join('');
-
-      document.getElementById('datesListTable').innerHTML = STATE.dates_summary.length
-        ? STATE.dates_summary.map(d => `
-          <tr>
-            <td><strong>${d.work_date}</strong></td><td>${d.customer_count}</td>
-            <td>${d.completed_bottles} / ${d.total_bottles}</td>
-            <td><button class="secondary" onclick="jumpToDate('${d.work_date}')">Open</button></td>
-          </tr>`).join('')
-        : '<tr><td colspan="4">No dates recorded yet.</td></tr>';
-
-      document.getElementById('customersListTable').innerHTML = STATE.customers_summary.length
-        ? STATE.customers_summary.map(c => `
-          <tr>
-            <td><strong>${c.customer_name}</strong></td><td>${c.total_bottles}</td>
-            <td>${c.unbilled_count}</td><td>${c.last_date}</td>
-            <td><button class="secondary" onclick="filterCustomerHistory('${c.customer_name.replace(/'/g, "\\'")}')">View</button></td>
-          </tr>`).join('')
-        : '<tr><td colspan="5">No customer records yet.</td></tr>';
-
-      const prevBillCust = document.getElementById('billCustomer').value;
-      document.getElementById('billCustomer').innerHTML = STATE.customers_summary.map(c =>
-        `<option value="${c.customer_name}" ${c.customer_name===prevBillCust?'selected':''}>${c.customer_name} (${c.unbilled_count} unbilled)</option>`
-      ).join('');
-
-      if (prevVer !== STATE.db_version) {
-        EDITABLE_RATES = STATE.pricing_rates.map(p => ({ ...p, isNew: false }));
-        renderRateScheduleTable();
-      }
-
-      document.getElementById('invoicesTable').innerHTML = STATE.invoices.length
-        ? STATE.invoices.map(inv => `
-          <tr>
-            <td><strong>${inv.invoice_no}</strong></td><td>${inv.customer_name}</td><td>${inv.work_date}</td>
-            <td>$${Number(inv.total_amount).toFixed(2)}</td><td>${inv.status}</td><td>${inv.created_by || 'RP'}</td>
-            <td style="display:flex;gap:6px;">
-              <a class="secondary" href="/api/pdf/invoice/${inv.id}" target="_blank">PDF</a>
-              ${inv.status !== 'PAID' ? `<button class="secondary" onclick="markInvoicePaid(${inv.id})">Mark Paid</button>` : ''}
-            </td>
-          </tr>`).join('')
-        : '<tr><td colspan="7">No invoices generated yet.</td></tr>';
-
-      document.getElementById('feedbackTable').innerHTML = STATE.feedback_items.length
-        ? STATE.feedback_items.map(fb => `
-          <tr>
-            <td><small>${fb.created_at}</small></td>
-            <td><strong>${fb.submitted_by}</strong></td>
-            <td>${fb.category} <small>(${fb.priority})</small></td>
-            <td>${fb.message}</td>
-            <td>
-              ${fb.status === 'OPEN'
-                ? `<button class="secondary" onclick="resolveFeedback(${fb.id})">Mark Done</button>`
-                : '<span class="pass">DONE</span>'}
-            </td>
-          </tr>`).join('')
-        : '<tr><td colspan="5">No crew notes logged yet.</td></tr>';
-    }
-
-    setInterval(async () => {
-      if (document.getElementById('appShell').hidden || BENCH_SUBMITTING) return;
-      try {
-        const res = await fetch('/api/ping');
-        if (!res.ok) return;
-        const p = await res.json();
-        if (p.db_version !== STATE.db_version) loadState(false);
-      } catch (_) {}
-    }, 3500);
-
-    // --- CALIBRATION ---
-    function buildCalibrationLadder() {
-      const jacket = document.getElementById('calJacket').value;
-      const maxSel = document.getElementById('calMaxPsi');
-      if (jacket === 'Short Jacket' && !LADDER.length && maxSel.querySelector('option[value="3000"]')) {
-        maxSel.value = '3000';
-      }
-      const maxPsi = parseInt(maxSel.value || '4000', 10);
-      LADDER = STATE.calibration_targets.filter(t => t.pressure_psi <= maxPsi).map(t => ({ ...t, actual: '', locked: false }));
-      ACTIVE_STEP = 0;
-      renderLadder(false);
-    }
-
-    function renderLadder(autoFocusActive = false) {
-      document.getElementById('ladderSteps').innerHTML = LADDER.map((step, i) => {
-        const minP = (Math.ceil(step.expected_cc * 0.99 * 10) / 10).toFixed(1);
-        const maxP = (Math.floor(step.expected_cc * 1.01 * 10) / 10).toFixed(1);
-        const isActive = i === ACTIVE_STEP;
-        const isLocked = i > ACTIVE_STEP;
-        let statusHtml = `<small style="color:var(--muted);">Target: ${minP}–${maxP} cc</small>`;
-        if (step.actual !== '') {
-          const dev = (((step.expected_cc - parseFloat(step.actual)) / step.expected_cc) * 100).toFixed(2);
-          const ok = Math.abs(parseFloat(dev)) <= 1.0;
-          statusHtml = `<span class="${ok ? 'pass' : 'fail'}">${ok ? '✓ PASS' : '⚠ OUT'} (${dev}%)</span>`;
-        }
-        return `
-          <div class="ladder-row ${isActive ? 'active-step' : ''} ${isLocked ? 'locked-step' : ''}">
-            <div><strong>Step ${i + 1}: ${step.pressure_psi} PSI</strong></div>
-            <div>Chart: <strong>${step.expected_cc} cc</strong> <small style="color:var(--muted);">(${minP}–${maxP})</small></div>
-            <div>
-              <input type="number" step="0.1" id="stepIn_${i}" value="${step.actual}"
-                placeholder="Burette cc" ${isLocked || step.locked ? 'disabled' : ''}
-                oninput="LADDER[${i}].actual=this.value"
-                onkeydown="if(event.key==='Enter'){event.preventDefault();lockLadderStep(${i});}" />
-            </div>
-            <div>
-              ${isActive && !step.locked
-                ? `<button class="secondary" style="width:100%;background:var(--green);color:#fff;border:none;" onclick="lockLadderStep(${i})">Lock Step ↓</button>`
-                : statusHtml}
-            </div>
-          </div>`;
-      }).join('');
-
-      const allDone = LADDER.length > 0 && LADDER.every(s => s.locked);
-      document.getElementById('releaseSection').hidden = !allDone;
-
-      if (autoFocusActive) {
-        setTimeout(() => {
-          if (allDone) {
-            const permEl = document.getElementById('calFinalPerm');
-            if (permEl) { permEl.focus(); permEl.select(); }
-          } else {
-            const nextEl = document.getElementById('stepIn_' + ACTIVE_STEP);
-            if (nextEl) nextEl.focus();
-          }
-        }, 30);
-      }
-    }
-
-    function lockLadderStep(idx) {
-      const step = LADDER[idx];
-      if (step.actual === '' || isNaN(parseFloat(step.actual))) { alert('Enter the burette expansion reading first.'); return; }
-      const dev = Math.abs(((step.expected_cc - parseFloat(step.actual)) / step.expected_cc) * 100);
-      if (dev > 1.0 && !confirm(`Reading deviates by ${dev.toFixed(2)}% (>1.0% DOT limit). Record anyway?`)) return;
-      step.locked = true;
-      if (idx + 1 < LADDER.length) ACTIVE_STEP = idx + 1;
-      renderLadder(true);
-    }
-
-    async function submitCalibrationLadder() {
-      const btn = document.getElementById('btnCertCal');
-      btn.disabled = true;
-      btn.textContent = '⏳ Saving Calibration...';
-      try {
-        const body = {
-          test_date: STATE.selected_date,
-          jacket_type: document.getElementById('calJacket').value,
-          max_target_psi: parseInt(document.getElementById('calMaxPsi').value, 10),
-          steps: LADDER.map(s => ({ pressure_psi: s.pressure_psi, actual_total_cc: parseFloat(s.actual) })),
-          permanent_cc: parseFloat(document.getElementById('calFinalPerm').value || '0'),
-          logged_by: getActiveCrew(),
-        };
-        const res = await fetch('/api/verify-ladder', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-        const data = await res.json();
-        if (!res.ok) { alert(data.detail); return; }
-        CAL_FORCE_EXPANDED = false;
-        LADDER = [];
-        alert(data.passed ? `CERTIFIED up to ${data.max_allowed_test_psi} PSI under Ryan Pearce (RP)!` : 'Calibration FAILED — check burette zero or test rig.');
-        await loadState(true);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Certify Calibration Under Ryan Pearce (RP)';
-      }
-    }
-
-    // --- CAMERA & CRISP 1600PX STAMP CAPTURE ---
-    async function openLiveCamera() {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Live camera requires HTTPS.');
-        return;
-      }
-      closeLiveCamera();
-      try {
-        MEDIA_STREAM = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: FACING_MODE }, width: { ideal: 1920 }, height: { ideal: 1440 } },
-          audio: false
-        });
-        document.getElementById('camVideo').srcObject = MEDIA_STREAM;
-        document.getElementById('camContainer').hidden = false;
-        document.getElementById('btnOpenCam').hidden = true;
-        clearAngles();
-        const caps = MEDIA_STREAM.getVideoTracks()[0].getCapabilities ? MEDIA_STREAM.getVideoTracks()[0].getCapabilities() : {};
-        document.getElementById('btnTorch').hidden = !caps.torch;
-      } catch (err) { alert('Camera error: ' + err.message); }
-    }
-
-    function closeLiveCamera() {
-      if (MEDIA_STREAM) { MEDIA_STREAM.getTracks().forEach(t => t.stop()); MEDIA_STREAM = null; }
-      document.getElementById('camContainer').hidden = true;
-      document.getElementById('btnOpenCam').hidden = false;
-    }
-
-    function switchCamera() { FACING_MODE = FACING_MODE === 'environment' ? 'user' : 'environment'; openLiveCamera(); }
-    async function toggleTorch() {
-      if (!MEDIA_STREAM) return;
-      TORCH_ON = !TORCH_ON;
-      await MEDIA_STREAM.getVideoTracks()[0].applyConstraints({ advanced: [{ torch: TORCH_ON }] });
-    }
-
-    function clearAngles() {
-      CAPTURED_B64 = [];
-      CAPTURED_URLS = [];
-      document.getElementById('thumbStrip').innerHTML = '<small style="color:#cbd5e1;">Snap 1–5 angles around cylinder shoulder &amp; hanging valve tag, then tap "Populate Form".</small>';
-      document.getElementById('btnSnapAngle').textContent = '📸 + Add Angle (0)';
-      document.getElementById('btnReadAll').disabled = true;
-      document.getElementById('btnReadAll').textContent = '✅ Populate Form';
-    }
-
-    function clearReferenceGallery() {
-      document.getElementById('lastScanGalleryWrap').hidden = true;
-      document.getElementById('lastScanGallery').innerHTML = '';
-    }
-
-    function showReferenceGallery(dataUrls) {
-      if (!dataUrls || !dataUrls.length) return;
-      const wrap = document.getElementById('lastScanGalleryWrap');
-      const strip = document.getElementById('lastScanGallery');
-      strip.innerHTML = dataUrls.map(u => `<img src="${u}" alt="Scanned Angle" onclick="zoomPhoto('${u}')" />`).join('');
-      wrap.hidden = false;
-    }
-
-    function grabVideoBase64() {
-      const video = document.getElementById('camVideo');
-      const canvas = document.getElementById('camCanvas');
-      if (!video.videoWidth) return null;
-      const scale = Math.min(1, 1600 / Math.max(video.videoWidth, video.videoHeight));
-      canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
-      canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
-      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
-      return { dataUrl, b64: dataUrl.split(',')[1] };
-    }
-
-    function fileToResizedObj(file) {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        const url = URL.createObjectURL(file);
-        img.onload = () => {
-          URL.revokeObjectURL(url);
-          const canvas = document.getElementById('camCanvas');
-          const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
-          canvas.width = Math.max(1, Math.round(img.width * scale));
-          canvas.height = Math.max(1, Math.round(img.height * scale));
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
-          resolve({ dataUrl, b64: dataUrl.split(',')[1] });
-        };
-        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load error')); };
-        img.src = url;
-      });
-    }
-
-    async function quickSingleShot() {
-      const s = grabVideoBase64();
-      if (s) await sendBase64Batch([s.b64], [s.dataUrl]);
-    }
-
-    function captureAngle() {
-      if (CAPTURED_B64.length >= 6) return;
-      const s = grabVideoBase64();
-      if (!s) return;
-      CAPTURED_B64.push(s.b64);
-      CAPTURED_URLS.push(s.dataUrl);
-      const strip = document.getElementById('thumbStrip');
-      if (CAPTURED_B64.length === 1) strip.innerHTML = '';
-      const img = document.createElement('img');
-      img.src = s.dataUrl;
-      img.style.cssText = 'height:50px;border-radius:6px;border:2px solid #fbbf24;cursor:zoom-in;';
-      img.onclick = () => zoomPhoto(s.dataUrl);
-      strip.appendChild(img);
-      document.getElementById('btnSnapAngle').textContent = `📸 + Add Angle (${CAPTURED_B64.length})`;
-      document.getElementById('btnReadAll').disabled = false;
-      document.getElementById('btnReadAll').textContent = `✅ Populate Form (${CAPTURED_B64.length})`;
-    }
-
-    async function uploadSavedAngles(input) {
-      const files = Array.from(input.files || []).slice(0, 6);
-      input.value = '';
-      if (!files.length) return;
-      const b64s = [], urls = [];
-      for (const f of files) {
-        const obj = await fileToResizedObj(f);
-        b64s.push(obj.b64);
-        urls.push(obj.dataUrl);
-      }
-      await sendBase64Batch(b64s, urls);
-    }
-
-    async function sendCapturedAngles() {
-      if (CAPTURED_B64.length) await sendBase64Batch([...CAPTURED_B64], [...CAPTURED_URLS]);
-    }
-
-    async function sendBase64Batch(b64List, urlList) {
-      const fb = document.getElementById('scanFeedback');
-      fb.hidden = false;
-      fb.className = 'notice';
-      fb.textContent = `⏳ Stitching ${b64List.length} angle(s) for Serial #, Valve Tag #, Spec, and OD × Length...`;
-
-      showReferenceGallery(urlList);
-      clearAngles();
-      closeLiveCamera();
-
-      const autoQueue = document.getElementById('chkAutoQueue').checked;
-      const res = await fetch('/api/scan-bottle', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          images_b64: b64List,
-          work_date: STATE.selected_date,
-          customer_name: document.getElementById('inCustomer').value,
-          service_mode: document.getElementById('inMode').value,
-          intake_by: getActiveCrew(),
-          auto_import: autoQueue,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        fb.className = 'notice bad';
-        fb.textContent = data.detail || 'AI scan failed.';
-        return;
-      }
-
-      if (data.imported && data.record) {
-        fb.className = 'notice';
-        fb.textContent = `⚡ Auto-Queued SN ${data.record.serial_number} (${data.record.dot_spec}-${data.record.service_psi}, Size ${data.record.physical_size || 'N/A'})!`;
-        await loadState(false);
-        return;
-      }
-
-      const f = data.form_fill || {};
-      document.getElementById('fCustomer').value = f.customer_name || document.getElementById('inCustomer').value || '';
-      document.getElementById('fSerial').value = f.serial_number || '';
-      document.getElementById('fValveTag').value = f.valve_tag || '';
-      document.getElementById('fMfg').value = f.mfg_id || '';
-      document.getElementById('fMfgDate').value = f.mfg_date || '';
-      document.getElementById('fGas').value = f.gas_service || 'AIR';
-      document.getElementById('fSpec').value = f.dot_spec || '';
-      document.getElementById('fSvcPsi').value = f.service_psi || '';
-      document.getElementById('fTestPsi').value = f.test_psi || '';
-      document.getElementById('fDia').value = f.outside_dia || '';
-      document.getElementById('fLen').value = f.length_in || '';
-      document.getElementById('fRee').value = f.ree_limit !== '' && f.ree_limit !== null ? f.ree_limit : '';
-
-      document.getElementById('intakeFieldsGrid').classList.add('ai-filled');
-      const badge = document.getElementById('sizeSourceBadge');
-      badge.className = 'sub-badge ai-verified';
-      const srcLabel = f.size_source === 'LABEL' ? 'Printed on Label' : (f.size_source === 'CGA_CHART' ? 'Matched Exact Spec' : 'AI Visual Estimate');
-      badge.textContent = `✓ AI Populated (Size: ${srcLabel}) — Verify Below`;
-
-      const missing = data.missing || [];
-      if (data.duplicate_warning) {
-        fb.className = 'notice warn';
-        fb.textContent = `⚠️ ${data.duplicate_warning} Verify serial number carefully before adding.`;
-      } else if (missing.length) {
-        fb.className = 'notice warn';
-        fb.textContent = `AI filled visible stamps — please complete missing field(s): ${missing.join(', ')}`;
-      } else {
-        fb.className = 'notice';
-        fb.textContent = `✅ AI Scan Ready! Tap reference photos above to zoom stamps, verify OD (${f.outside_dia || '?'}") × Length (${f.length_in || '?'}"), then click Verify & Add.`;
-      }
-      document.getElementById('verifyFormCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    function applyPreset() {
-      const idx = document.getElementById('cgaPreset').value;
-      if (idx === '') return;
-      const s = STATE.cga_specs[idx];
-      if (document.getElementById('inCustomer').value && !document.getElementById('fCustomer').value) {
-        document.getElementById('fCustomer').value = document.getElementById('inCustomer').value;
-      }
-      document.getElementById('fSpec').value = s.dot_spec;
-      document.getElementById('fSvcPsi').value = s.service_psi;
-      document.getElementById('fTestPsi').value = s.test_psi;
-      document.getElementById('fDia').value = s.outside_dia;
-      document.getElementById('fLen').value = s.length_in;
-      document.getElementById('fRee').value = s.ree_limit ?? '';
-    }
-
-    function autoMatchSpecDimensions() {
-      const sp = (document.getElementById('fSpec').value || '').trim().toUpperCase().replace('SP-', 'SP');
-      const svc = parseInt(document.getElementById('fSvcPsi').value || '0', 10);
-      if (svc <= 0) return;
-      const matches = STATE.cga_specs.filter(s => s.dot_spec.toUpperCase() === sp && s.service_psi === svc);
-      if (matches.length === 1) {
-        const m = matches[0];
-        document.getElementById('fTestPsi').value = m.test_psi;
-        if (!document.getElementById('fDia').value) document.getElementById('fDia').value = m.outside_dia;
-        if (!document.getElementById('fLen').value) document.getElementById('fLen').value = m.length_in;
-        if (!document.getElementById('fRee').value && m.ree_limit) document.getElementById('fRee').value = m.ree_limit;
-      } else if (matches.length > 1) {
-        document.getElementById('fTestPsi').value = matches[0].test_psi;
-      } else {
-        document.getElementById('fTestPsi').value = Math.round((svc * 5) / 3);
-      }
-    }
-
-    function clearIntakeForm() {
-      ['fSerial', 'fValveTag', 'fMfg', 'fMfgDate', 'fSpec', 'fSvcPsi', 'fTestPsi', 'fDia', 'fLen', 'fRee'].forEach(id => {
-        document.getElementById(id).value = '';
-      });
-      document.getElementById('fGas').value = 'AIR';
-      document.getElementById('cgaPreset').value = '';
-      document.getElementById('intakeFieldsGrid').classList.remove('ai-filled');
-      const badge = document.getElementById('sizeSourceBadge');
-      badge.className = 'sub-badge';
-      badge.textContent = 'Manual / Ready for AI Scan';
-    }
-
-    async function submitIntake(allowDup = false) {
-      const cust = document.getElementById('fCustomer').value.trim() || document.getElementById('inCustomer').value.trim();
-      const body = {
-        work_date: STATE.selected_date,
-        customer_name: cust,
-        service_mode: document.getElementById('inMode').value,
-        serial_number: document.getElementById('fSerial').value,
-        valve_tag: document.getElementById('fValveTag').value,
-        mfg_id: document.getElementById('fMfg').value,
-        mfg_date: document.getElementById('fMfgDate').value,
-        gas_service: document.getElementById('fGas').value,
-        dot_spec: document.getElementById('fSpec').value,
-        service_psi: parseInt(document.getElementById('fSvcPsi').value || '0', 10),
-        test_psi: parseInt(document.getElementById('fTestPsi').value || '0', 10),
-        outside_dia: document.getElementById('fDia').value,
-        length_in: document.getElementById('fLen').value,
-        ree_limit: document.getElementById('fRee').value ? parseFloat(document.getElementById('fRee').value) : null,
-        intake_by: getActiveCrew(),
-        allow_duplicate: allowDup,
-      };
-      const res = await fetch('/api/intake', {
-        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
-      });
-      const data = await res.json();
-      if (res.status === 409 && (data.detail || '').includes('intake queue')) {
-        if (confirm(data.detail + '\n\nQueue a second entry for this serial number anyway?')) {
-          return submitIntake(true);
-        }
-        return;
-      }
-      if (!res.ok) { alert(data.detail || 'Verify Customer, Serial #, Spec, and Service Pressure.'); return; }
-      document.getElementById('inCustomer').value = cust;
-      clearIntakeForm();
-      clearReferenceGallery();
-      document.getElementById('fCustomer').value = cust;
-      document.getElementById('scanFeedback').hidden = true;
-      await loadState(false);
-    }
-
-    async function assignTagBySerial(serialInputId, tagInputId) {
-      const sn = document.getElementById(serialInputId).value.trim();
-      const vtag = document.getElementById(tagInputId).value.trim();
-      if (!sn || !vtag) { alert('Enter both Cylinder Serial # and Valve Tag #.'); return; }
-      const res = await fetch('/api/valve-tag', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ serial_number: sn, work_date: STATE.selected_date, valve_tag: vtag, valve_reinstalled: false })
-      });
-      const data = await res.json();
-      if (!res.ok) { alert(data.detail); return; }
-      document.getElementById(serialInputId).value = '';
-      document.getElementById(tagInputId).value = '';
-      loadState(false);
-    }
-
-    async function saveInlineValveTag(recordId, inputEl) {
-      const res = await fetch('/api/valve-tag', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ record_id: recordId, valve_tag: inputEl.value, valve_reinstalled: false })
-      });
-      if (!res.ok) {
-        alert((await res.json()).detail);
-        loadState(false);
-        return;
-      }
-      inputEl.classList.add('saved-flash');
-      setTimeout(() => { inputEl.classList.remove('saved-flash'); loadState(false); }, 450);
-    }
-
-    async function releaseValveTag(recordId) {
-      const res = await fetch('/api/valve-tag', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ record_id: recordId, valve_reinstalled: true })
-      });
-      if (!res.ok) { alert((await res.json()).detail); return; }
-      loadState(false);
-    }
-
-    async function removeRecord(id) {
-      if (!confirm('Delete this cylinder record?')) return;
-      const res = await fetch(`/api/records/${id}`, { method: 'DELETE' });
-      if (!res.ok) { alert((await res.json()).detail || 'Delete failed.'); return; }
-      loadState(false);
-    }
-
-    // --- TEST STAND WITH ONE-TAP 7-POINT PILLS & RACE-FREE SAVE ---
-    function renderVisPillsHtml(stateObj, toggleFnName) {
-      return VIS_FIELDS.map(f => {
-        const val = stateObj[f.key] || 'OK';
-        const isFail = val !== 'OK';
-        return `<button type="button" class="vis-pill ${isFail ? 'fail-state' : ''}" onclick="${toggleFnName}('${f.key}')">
-          <span>${f.label}</span><span>${isFail ? '✗ FAIL' : '✓ OK'}</span>
-        </button>`;
-      }).join('');
-    }
-
-    function toggleBenchVis(key) {
-      BENCH_VIS[key] = BENCH_VIS[key] === 'OK' ? 'FAIL' : 'OK';
-      document.getElementById('benchVisGrid').innerHTML = renderVisPillsHtml(BENCH_VIS, 'toggleBenchVis');
-      const rec = STATE.records.find(r => r.id === parseInt(document.getElementById('benchSelect').value || '0', 10));
-      if (rec) previewBenchMath(rec.ree_limit ?? null);
-    }
-
-    function renderBenchForm() {
-      const id = parseInt(document.getElementById('benchSelect').value || '0', 10);
-      const area = document.getElementById('benchArea');
-      const rec = STATE.records.find(r => r.id === id);
-      if (!rec) { area.innerHTML = '<p style="color:var(--muted);">No queued bottles waiting—scan or verify a bottle on Tab 2.</p>'; return; }
-
-      BENCH_VIS = {};
-      VIS_FIELDS.forEach(f => { BENCH_VIS[f.key] = rec[f.key] || 'OK'; });
-
-      const isHydro = rec.service_mode === 'HYDRO_AND_VISUAL';
-      const tallOk = (STATE.jacket_ceilings['Tall Jacket']?.max_calibrated_psi || 0) > 0;
-      const shortOk = (STATE.jacket_ceilings['Short Jacket']?.max_calibrated_psi || 0) > 0;
-      const defaultJacket = tallOk ? 'Tall Jacket' : (shortOk ? 'Short Jacket' : 'Tall Jacket');
-      const effRee = (['3A', '3AA', '3AL'].includes((rec.dot_spec || '').toUpperCase()) && rec.ree_limit === 7.2) ? null : rec.ree_limit;
-
-      area.innerHTML = `
-        <div class="notice" id="benchPreview">
-          Testing <strong>[${rec.customer_name}]</strong> • SN <strong>${rec.serial_number}</strong> • Size: <strong>${rec.physical_size || 'N/A'}</strong> • Target: <strong>${rec.test_psi} PSI</strong>${rec.valve_tag && !rec.valve_reinstalled ? ` • 🏷️ Tag #<strong>${rec.valve_tag}</strong>` : ''}${effRee ? ` • REE Max: <strong>${effRee} cc</strong>` : ''}
-        </div>
-        <div class="grid">
-          ${isHydro ? `
-            <div><label>Water Jacket</label>
-              <select id="bJacket">
-                <option value="Short Jacket" ${defaultJacket==='Short Jacket'?'selected':''}>Short Jacket</option>
-                <option value="Tall Jacket" ${defaultJacket==='Tall Jacket'?'selected':''}>Tall Jacket</option>
-              </select>
-            </div>
-            <div><label>Total Expansion (cc) *</label><input type="number" step="0.1" id="bTotal" oninput="previewBenchMath(${effRee ?? 'null'})" onkeydown="if(event.key==='Enter')document.getElementById('bPerm').focus()" /></div>
-            <div><label>Permanent Expansion (cc) *</label><input type="number" step="0.1" id="bPerm" value="0" oninput="previewBenchMath(${effRee ?? 'null'})" onkeydown="if(event.key==='Enter')completeBottle(${rec.id}, ${isHydro})" /></div>
-          ` : ''}
-          <div><label>🏷️ Active Valve Tag #</label><input id="bValveTag" value="${rec.valve_tag && !rec.valve_reinstalled ? rec.valve_tag : ''}" placeholder="Tag #" /></div>
-          <div><label>Coating Condition</label><select id="bCoat"><option>Excellent</option><option selected>Good</option><option>Fair</option><option>Poor</option></select></div>
-          <div><label>Relief Valve Changed?</label><select id="bValve"><option>No</option><option>Yes</option></select></div>
-          <div style="grid-column: 1 / -1;"><label>Row Notes (DOT Sheet)</label><input id="bNotes" value="${rec.notes || ''}" placeholder="Optional note..." /></div>
-        </div>
-
-        <label style="margin-top:12px;">7-Point Visual Inspection (Tap Any Item to Toggle OK / FAIL)</label>
-        <div id="benchVisGrid" class="vis-pills-grid">${renderVisPillsHtml(BENCH_VIS, 'toggleBenchVis')}</div>
-
-        <label style="display:flex;align-items:center;gap:8px;margin-top:14px;text-transform:none;font-size:0.9rem;cursor:pointer;">
-          <input type="checkbox" id="bValveReinst" style="width:18px;height:18px;" />
-          Valve has been reinstalled onto cylinder (releases reusable Valve Tag # immediately)
-        </label>
-        <button class="primary" id="btnCompleteBench" onclick="completeBottle(${rec.id}, ${isHydro})">Certify &amp; Save Test Record (DOT Sign-Off: RP)</button>
-      `;
-    }
-
-    function previewBenchMath(reeLimit) {
-      const box = document.getElementById('benchPreview');
-      const totEl = document.getElementById('bTotal');
-      const visFailed = Object.values(BENCH_VIS).some(v => v !== 'OK');
-      if (!totEl) {
-        box.className = visFailed ? 'notice bad' : 'notice';
-        box.textContent = visFailed ? '7-Point Visual Inspection FAILED — Condemn / Scrap (SC)' : '7-Point Visual Inspection PASS (OK)';
-        return;
-      }
-      const tot = parseFloat(totEl.value || '0');
-      const perm = parseFloat(document.getElementById('bPerm').value || '0');
-      if (tot <= 0) return;
-      const elastic = (tot - perm).toFixed(2);
-      const pct = ((perm / tot) * 100).toFixed(1);
-      const bad = visFailed || (reeLimit !== null && parseFloat(elastic) > reeLimit) || parseFloat(pct) > 10.0;
-      box.className = bad ? 'notice bad' : 'notice';
-      box.textContent = `Elastic: ${elastic} cc | % Permanent: ${pct}%${visFailed ? ' | VISUAL FAIL' : ''} — ${bad ? 'EXCEEDS LIMIT (CONDEMN - CODE D)' : 'PASS (Disposition A)'}`;
-    }
-
-    async function completeBottle(id, isHydro) {
-      if (BENCH_SUBMITTING) return;
-      const btn = document.getElementById('btnCompleteBench');
-      if (isHydro) {
-        const tVal = parseFloat(document.getElementById('bTotal').value);
-        if (!tVal || tVal <= 0) { alert('Enter Burette Total Expansion (cc) first.'); document.getElementById('bTotal').focus(); return; }
-      }
-      BENCH_SUBMITTING = true;
-      if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving & Syncing to Sheets...'; }
-      try {
-        const body = {
-          jacket_type: isHydro ? document.getElementById('bJacket').value : 'Road/Visual',
-          total_cc: isHydro ? parseFloat(document.getElementById('bTotal').value) : null,
-          permanent_cc: isHydro ? parseFloat(document.getElementById('bPerm').value || '0') : null,
-          valve_tag: document.getElementById('bValveTag').value,
-          valve_reinstalled: document.getElementById('bValveReinst').checked,
-          coating_condition: document.getElementById('bCoat').value,
-          relief_valve_changed: document.getElementById('bValve').value,
-          tested_by: getActiveCrew(),
-          notes: document.getElementById('bNotes').value,
-          ...BENCH_VIS,
-        };
-        const res = await fetch(`/api/records/${id}/complete`, {
-          method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
-        });
-        const data = await res.json();
-        if (!res.ok) { alert(data.detail); return; }
-      } finally {
-        BENCH_SUBMITTING = false;
-        if (btn) { btn.disabled = false; btn.textContent = 'Certify & Save Test Record (DOT Sign-Off: RP)'; }
-      }
-      await loadState(false);
-    }
-
-    // --- EDIT RECORD MODAL ---
-    function toggleEditVis(key) {
-      EDIT_VIS[key] = EDIT_VIS[key] === 'OK' ? 'FAIL' : 'OK';
-      document.getElementById('erVisPills').innerHTML = renderVisPillsHtml(EDIT_VIS, 'toggleEditVis');
-    }
-
-    function openEditModal(recordId) {
-      let rec = STATE.records.find(r => r.id === recordId) || STATE.active_valves.find(r => r.id === recordId) || LAST_SEARCH_ROWS.find(r => r.id === recordId);
-      if (!rec) return;
-      document.getElementById('erId').value = rec.id;
-      document.getElementById('editModalTitle').textContent = `Edit Cylinder SN ${rec.serial_number} (${rec.status})`;
-      document.getElementById('erCustomer').value = rec.customer_name || '';
-      document.getElementById('erSerial').value = rec.serial_number || '';
-      document.getElementById('erValveTag').value = rec.valve_tag || '';
-      document.getElementById('erMfg').value = rec.mfg_id || '';
-      document.getElementById('erMfgDate').value = rec.mfg_date || '';
-      document.getElementById('erGas').value = rec.gas_service || 'AIR';
-      document.getElementById('erSpec').value = rec.dot_spec || '';
-      document.getElementById('erSvcPsi').value = rec.service_psi || '';
-      document.getElementById('erTestPsi').value = rec.test_psi || '';
-      document.getElementById('erDia').value = rec.outside_dia || '';
-      document.getElementById('erLen').value = rec.length_in || '';
-      document.getElementById('erRee').value = rec.ree_limit ?? '';
-      document.getElementById('erTotal').value = rec.total_cc ?? '';
-      document.getElementById('erPerm').value = rec.permanent_cc ?? '';
-      document.getElementById('erCoat').value = rec.coating_condition || 'Good';
-      document.getElementById('erValveChg').value = rec.relief_valve_changed || 'No';
-      document.getElementById('erDispOvr').value = '';
-      document.getElementById('erNotes').value = rec.notes || '';
-      document.getElementById('erReinst').checked = Boolean(rec.valve_reinstalled);
-
-      EDIT_VIS = {};
-      VIS_FIELDS.forEach(f => { EDIT_VIS[f.key] = rec[f.key] || 'OK'; });
-      document.getElementById('erVisPills').innerHTML = renderVisPillsHtml(EDIT_VIS, 'toggleEditVis');
-      document.getElementById('editRecordModal').hidden = false;
-    }
-
-    function closeEditModal() { document.getElementById('editRecordModal').hidden = true; }
-
-    async function saveEditedRecord() {
-      const id = document.getElementById('erId').value;
-      const body = {
-        customer_name: document.getElementById('erCustomer').value,
-        serial_number: document.getElementById('erSerial').value,
-        valve_tag: document.getElementById('erValveTag').value,
-        valve_reinstalled: document.getElementById('erReinst').checked,
-        mfg_id: document.getElementById('erMfg').value,
-        mfg_date: document.getElementById('erMfgDate').value,
-        gas_service: document.getElementById('erGas').value,
-        outside_dia: document.getElementById('erDia').value,
-        length_in: document.getElementById('erLen').value,
-        dot_spec: document.getElementById('erSpec').value,
-        service_psi: parseInt(document.getElementById('erSvcPsi').value || '0', 10),
-        test_psi: parseInt(document.getElementById('erTestPsi').value || '0', 10),
-        ree_limit: document.getElementById('erRee').value !== '' ? parseFloat(document.getElementById('erRee').value) : null,
-        total_cc: document.getElementById('erTotal').value !== '' ? parseFloat(document.getElementById('erTotal').value) : null,
-        permanent_cc: document.getElementById('erPerm').value !== '' ? parseFloat(document.getElementById('erPerm').value) : null,
-        coating_condition: document.getElementById('erCoat').value,
-        relief_valve_changed: document.getElementById('erValveChg').value,
-        hydro_disposition_override: document.getElementById('erDispOvr').value || null,
-        notes: document.getElementById('erNotes').value,
-        ...EDIT_VIS,
-      };
-      const res = await fetch(`/api/records/${id}`, {
-        method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
-      });
-      const data = await res.json();
-      if (!res.ok) { alert(data.detail || 'Save failed.'); return; }
-      closeEditModal();
-      await loadState(false);
-      if (CURRENT_TAB === 'logs') runSearch(false);
-    }
-
-    async function deleteRecordFromModal() {
-      const id = document.getElementById('erId').value;
-      closeEditModal();
-      await removeRecord(id);
-      if (CURRENT_TAB === 'logs') runSearch(false);
-    }
-
-    // --- DAILY LOG & SEARCH ---
-    let LAST_SEARCH_ROWS = [];
-    function jumpToDate(d) {
-      document.getElementById('globalDate').value = d;
-      document.getElementById('billDate').value = d;
-      loadState(true);
-      document.getElementById('searchBox').value = d;
-      runSearch(false);
-    }
-
-    async function filterCustomerHistory(cust) {
-      const res = await fetch('/api/search?customer=' + encodeURIComponent(cust));
-      renderSearchRows(await res.json());
-    }
-
-    async function runSearch(activeTagOnly = false) {
-      const q = document.getElementById('searchBox').value;
-      if (activeTagOnly && !q.trim()) { renderSearchRows(STATE.active_valves); return; }
-      const url = `/api/search?q=${encodeURIComponent(q)}${activeTagOnly ? '&active_tag_only=true' : ''}`;
-      const res = await fetch(url);
-      renderSearchRows(await res.json());
-    }
-
-    function renderSearchRows(rows) {
-      LAST_SEARCH_ROWS = rows;
-      document.getElementById('searchTable').innerHTML = rows.length
-        ? rows.map(r => `
-          <tr>
-            <td>${r.work_date}</td><td>${r.sheet_no || '-'}</td><td>${r.customer_name}</td>
-            <td><strong>${r.serial_number}</strong></td>
-            <td>${r.valve_tag && !r.valve_reinstalled ? `<span class="tag-chip">#${r.valve_tag}</span>` : '-'}</td>
-            <td>${r.physical_size || '-'}</td><td>${r.dot_spec}-${r.service_psi}</td>
-            <td>${r.total_cc ?? '-'} / ${r.permanent_cc ?? '-'}</td>
-            <td><strong>${fmtPctTenth(r.percent_permanent)}</strong></td>
-            <td class="${r.hydro_disposition === 'A' ? 'pass' : 'fail'}">${r.hydro_disposition}</td>
-            <td><button class="secondary" onclick="openEditModal(${r.id})">Edit</button></td>
-          </tr>`).join('')
-        : '<tr><td colspan="11">No matching cylinder records found.</td></tr>';
-    }
-
-    function openPdf(kind) {
-      const d = STATE.selected_date;
-      const cust = document.getElementById('pdfCustomerFilter').value;
-      const sheetNo = document.getElementById('pdfSheetNo').value || '8095';
-      const cnt = document.getElementById('stickerCount').value || '12';
-      const skip = document.getElementById('stickerSkip').value || '0';
-      let url = `/api/pdf/${kind}?work_date=${encodeURIComponent(d)}`;
-      if (cust) url += `&customer=${encodeURIComponent(cust)}`;
-      if (kind === 'retest') url += `&sheet_no=${encodeURIComponent(sheetNo)}`;
-      if (kind === 'stickers') url += `&count=${encodeURIComponent(cnt)}&skip=${encodeURIComponent(skip)}`;
-      window.open(url, '_blank');
-    }
-
-    // --- SYNC, CREW ROSTER, FEEDBACK & SETTINGS ---
-    async function triggerManualSync() {
-      const badge = document.getElementById('syncBadge');
-      badge.textContent = '↻ Syncing...';
-      const res = await fetch('/api/sync-now', { method: 'POST' });
-      const data = await res.json();
-      alert(res.ok ? (data.synced ? `Synced ${data.pushed} item(s) to Google Sheets!` : data.reason) : data.detail);
-      loadState(false);
-    }
-
-    async function addCrewMember() {
-      const full_name = document.getElementById('newCrewName').value.trim();
-      const initials = document.getElementById('newCrewInit').value.trim().toUpperCase();
-      if (!full_name || !initials) { alert('Enter crew name and initials.'); return; }
-      const res = await fetch('/api/crew', {
-        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ full_name, initials })
-      });
-      if (!res.ok) { alert((await res.json()).detail); return; }
-      document.getElementById('newCrewName').value = '';
-      document.getElementById('newCrewInit').value = '';
-      loadState(false);
-    }
-
-    async function removeCrewMember(id) {
-      if (!confirm('Remove crew member from active dropdown?')) return;
-      const res = await fetch(`/api/crew/${id}`, { method: 'DELETE' });
-      if (!res.ok) { alert((await res.json()).detail); return; }
-      loadState(false);
-    }
-
-    async function submitCrewFeedback() {
-      const message = document.getElementById('fbMsg').value.trim();
-      if (!message) { alert('Type a note first.'); return; }
-      const res = await fetch('/api/feedback', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          submitted_by: getActiveCrew(),
-          category: document.getElementById('fbCat').value,
-          priority: document.getElementById('fbPrio').value,
-          page_tab: CURRENT_TAB,
-          message,
-        })
-      });
-      if (!res.ok) { alert((await res.json()).detail); return; }
-      document.getElementById('fbMsg').value = '';
-      await loadState(false);
-    }
-
-    async function resolveFeedback(id) {
-      await fetch(`/api/feedback/${id}/status`, {
-        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ status: 'DONE' })
-      });
-      loadState(false);
-    }
-
-    async function saveAllSettings() {
-      const body = {
-        calibrated_serial: document.getElementById('editCalSerial').value,
-        starting_sheet_no: parseInt(document.getElementById('editSheetNo').value || '8095', 10),
-        default_tax_rate: parseFloat(document.getElementById('editDefaultTax').value || '0'),
-        gemini_api_key: document.getElementById('apiKeyInput').value || null,
-        sheets_webhook_url: document.getElementById('webhookInput').value,
-        feedback_webhook_url: document.getElementById('fbWebhookInput').value,
-        shop_pin: document.getElementById('editShopPin').value || null,
-        testing_mode: document.getElementById('testingModeChk').checked,
-      };
-      await fetch('/api/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-      document.getElementById('apiKeyInput').value = '';
-      document.getElementById('editShopPin').value = '';
-      document.getElementById('billTax').value = body.default_tax_rate;
-      alert('Facility settings saved!');
-      loadState(true);
-    }
-
-    // --- BILLING & CUSTOM RATE SCHEDULE ---
-    function getRate(code) {
-      const found = STATE.pricing_rates.find(r => r.code === code);
-      return found ? Number(found.unit_price) : 0;
-    }
-
-    async function loadUnbilledItems() {
-      const d = document.getElementById('billDate').value || STATE.selected_date;
-      const cust = document.getElementById('billCustomer').value;
-      if (!cust) { DRAFT_ITEMS = []; renderDraftInvoice(); return; }
-      const res = await fetch(`/api/unbilled?work_date=${encodeURIComponent(d)}&customer_name=${encodeURIComponent(cust)}`);
-      const recs = await res.json();
-      DRAFT_ITEMS = [];
-      for (const r of recs) {
-        const isSp = (r.dot_spec || '').startsWith('SP') || (r.dot_spec || '').startsWith('E-');
-        const code = r.service_mode === 'VISUAL_ONLY' ? 'VISUAL_ONLY' : (isSp ? 'HYDRO_SCBA' : 'HYDRO_STD');
-        DRAFT_ITEMS.push({
-          record_id: r.id,
-          description: `SN ${r.serial_number} (${r.dot_spec}-${r.service_psi} ${r.gas_service}) - ${r.service_mode === 'VISUAL_ONLY' ? 'Visual Insp' : 'Hydro + Visual'} [${r.hydro_disposition}]`,
-          qty: 1,
-          unit_price: getRate(code),
-        });
-        if (r.relief_valve_changed === 'Yes') {
-          DRAFT_ITEMS.push({ record_id: null, description: `SN ${r.serial_number} - Relief Valve Replacement`, qty: 1, unit_price: getRate('VALVE_RELIEF') });
-        }
-      }
-      renderDraftInvoice();
-    }
-
-    function addCustomInvoiceLine() {
-      DRAFT_ITEMS.push({ record_id: null, description: 'Custom Service / Air Fill', qty: 1, unit_price: getRate('AIR_FILL') });
-      renderDraftInvoice();
-    }
-
-    function removeDraftInvoiceLine(idx) {
-      DRAFT_ITEMS.splice(idx, 1);
-      renderDraftInvoice();
-    }
-
-    function renderDraftInvoice() {
-      document.getElementById('draftInvoiceRows').innerHTML = DRAFT_ITEMS.map((it, i) => `
-        <tr>
-          <td><input value="${it.description.replace(/"/g, '&quot;')}" oninput="DRAFT_ITEMS[${i}].description=this.value" /></td>
-          <td><input type="number" step="1" value="${it.qty}" oninput="DRAFT_ITEMS[${i}].qty=parseFloat(this.value||0);recalcInvoiceDraft()" /></td>
-          <td><input type="number" step="0.01" value="${it.unit_price}" oninput="DRAFT_ITEMS[${i}].unit_price=parseFloat(this.value||0);recalcInvoiceDraft()" /></td>
-          <td id="lineTot_${i}"><strong>$${(it.qty * it.unit_price).toFixed(2)}</strong></td>
-          <td><button class="secondary" onclick="removeDraftInvoiceLine(${i})">✕</button></td>
-        </tr>`).join('');
-      recalcInvoiceDraft();
-    }
-
-    function recalcInvoiceDraft() {
-      let sub = 0;
-      DRAFT_ITEMS.forEach((it, i) => {
-        const lt = (it.qty || 0) * (it.unit_price || 0);
-        sub += lt;
-        const cell = document.getElementById('lineTot_' + i);
-        if (cell) cell.innerHTML = `<strong>$${lt.toFixed(2)}</strong>`;
-      });
-      const taxPct = parseFloat(document.getElementById('billTax').value || '0');
-      const tot = sub + sub * (taxPct / 100);
-      document.getElementById('draftTotalLabel').textContent = `Draft Total: $${tot.toFixed(2)}`;
-    }
-
-    async function submitInvoice() {
-      const cust = document.getElementById('billCustomer').value;
-      if (!cust || !DRAFT_ITEMS.length) { alert('Select a customer with completed bottles or add a custom line.'); return; }
-      const res = await fetch('/api/invoices', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          work_date: document.getElementById('billDate').value || STATE.selected_date,
-          customer_name: cust,
-          tax_rate: parseFloat(document.getElementById('billTax').value || '0'),
-          status: document.getElementById('billStatus').value,
-          created_by: getActiveCrew(),
-          notes: document.getElementById('billNotes').value,
-          items: DRAFT_ITEMS,
-        })
-      });
-      const data = await res.json();
-      if (!res.ok) { alert(data.detail); return; }
-      window.open(`/api/pdf/invoice/${data.id}`, '_blank');
-      loadState(false);
-      loadUnbilledItems();
-    }
-
-    async function markInvoicePaid(id) {
-      await fetch(`/api/invoices/${id}/status`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ status: 'PAID' }) });
-      loadState(false);
-    }
-
-    function renderRateScheduleTable() {
-      document.getElementById('pricingTable').innerHTML = EDITABLE_RATES.map((p, i) => `
-        <tr>
-          <td>
-            <input value="${p.code}" ${p.isNew ? '' : 'readonly style="background:#f8fafc;font-weight:800;"'}
-              placeholder="e.g. O2_CLEAN" oninput="EDITABLE_RATES[${i}].code=this.value.toUpperCase()" />
-          </td>
-          <td><input value="${(p.description || '').replace(/"/g, '&quot;')}" placeholder="Service description" oninput="EDITABLE_RATES[${i}].description=this.value" /></td>
-          <td><input type="number" step="0.01" value="${p.unit_price}" oninput="EDITABLE_RATES[${i}].unit_price=parseFloat(this.value||0)" /></td>
-          <td><button class="secondary" style="color:#b91c1c;" onclick="deleteRateRow(${i})">🗑</button></td>
-        </tr>`).join('');
-    }
-
-    function addRateScheduleRow() {
-      EDITABLE_RATES.push({ code: '', description: '', unit_price: 0, sort_order: (EDITABLE_RATES.length + 1) * 10, isNew: true });
-      renderRateScheduleTable();
-    }
-
-    async function deleteRateRow(idx) {
-      const r = EDITABLE_RATES[idx];
-      if (!r) return;
-      if (!r.isNew && r.code) {
-        if (!confirm(`Delete rate "${r.code}" from the Master Schedule?`)) return;
-        await fetch(`/api/pricing/${encodeURIComponent(r.code)}`, { method: 'DELETE' });
-      }
-      EDITABLE_RATES.splice(idx, 1);
-      renderRateScheduleTable();
-      loadState(false);
-    }
-
-    async function savePricingRates() {
-      const payload = EDITABLE_RATES
-        .filter(r => r.code && r.code.trim())
-        .map((r, idx) => ({
-          code: r.code.trim().toUpperCase(),
-          description: r.description || r.code,
-          unit_price: parseFloat(r.unit_price || 0),
-          sort_order: (idx + 1) * 10,
-        }));
-      await fetch('/api/pricing', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-      alert('Master pricing rates saved!');
-      loadState(false);
-    }
-
-    checkAuthAndBoot();
-  </script>
+  <script src="/static/ops-camera.js?v=5.0"></script>
+  <script src="/static/ops-app.js?v=5.0"></script>
 </body>
 </html>
