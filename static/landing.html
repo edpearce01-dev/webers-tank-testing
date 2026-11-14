@@ -263,20 +263,20 @@
     </div>
   </section>
 
-  <!-- SHARPENED 24/7 BACKROOM DROP-OFF & VERIFIED PICKUP PORTAL -->
+  <!-- 24/7 BACKROOM DROP-OFF, PICK-UP & TRUCK DISPATCH PORTAL -->
   <section class="sec" id="dropoff" style="background:#f1f5f9;border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
     <div class="wrap">
       <div class="sec-hdr">
-        <small>Open 24 Hours • 3086 Legionville Rd, Baden, PA</small>
-        <h2>24/7 Self-Serve Backroom Drop-Off &amp; Pick-Up</h2>
+        <small>24/7 Self-Serve Backroom + Regional Truck Service • 3086 Legionville Rd, Baden, PA</small>
+        <h2>24/7 Backroom Check-In &amp; Truck Pickup / Delivery</h2>
       </div>
       <div class="portal-grid">
         <div class="box-card">
-          <h3 style="margin-top:0;color:var(--green);">How Our 24/7 Backroom Works</h3>
+          <h3 style="margin-top:0;color:var(--green);">Choose Your Service Option</h3>
           <ol style="padding-left:18px;font-size:0.9rem;color:#334155;line-height:1.7;">
-            <li><strong>Arrive Anytime:</strong> Pull around to our self-serve cylinder room at <strong>3086 Legionville Rd, Baden, PA 15005</strong>—even after hours.</li>
-            <li><strong>Dropping Off:</strong> Select <strong>DROP OFF CYLINDERS</strong>, group your tanks neatly in <strong>Zone A</strong>, and grab your <strong>BR-XXXX</strong> ticket #.</li>
-            <li><strong>Picking Up:</strong> Once we text you that your batch is ready on our <strong>Zone E Shelf</strong>, select <strong>PICK UP CYLINDERS</strong> to sign them out in 10 seconds.</li>
+            <li><strong>📥 BACKROOM DROP-OFF:</strong> Leaving cylinders in our 24/7 self-serve room at <strong>3086 Legionville Rd, Baden</strong>? Log them here to get your <strong>BR-XXXX</strong> ticket PDF.</li>
+            <li><strong>✅ BACKROOM PICK-UP:</strong> Grabbing finished cylinders from our <strong>Zone E Shelf</strong>? Sign them out in 10 seconds.</li>
+            <li><strong>🚚 TRUCK PICKUP &amp; DELIVERY:</strong> Fire department, EMS agency, or commercial shop needing our truck to pick up and/or return cylinders? Request a stop right here.</li>
           </ol>
           <div class="alert-box alert-ok" style="font-size:0.83rem;margin-top:10px;">
             ℹ️ <strong>Testing Facility Only:</strong> Weber's performs DOT hydrostatic &amp; visual testing only—<strong>we do not refill cylinders</strong>. Passing tanks return clean, heated-air dried, revalved, and depressurized.
@@ -286,14 +286,16 @@
           </div>
         </div>
 
-        <div class="box-card">
-          <div class="mode-tabs">
-            <button type="button" class="mode-tab active" id="tabDrop" onclick="setCheckinMode('DROPOFF')" style="letter-spacing:0.4px;font-weight:900;">DROP OFF CYLINDERS</button>
-            <button type="button" class="mode-tab" id="tabPick" onclick="setCheckinMode('PICKUP_NOTICE')" style="letter-spacing:0.4px;font-weight:900;">PICK UP CYLINDERS</button>
+        <div class="box-card" id="checkinCardTop">
+          <!-- THREE DISTINCT SERVICE BUTTONS -->
+          <div id="checkinModeTabs" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px;">
+            <button type="button" class="mode-tab active" id="tabDrop" onclick="setCheckinMode('DROPOFF')" style="font-size:0.76rem;font-weight:900;padding:10px 6px;">📥 BACKROOM DROP-OFF</button>
+            <button type="button" class="mode-tab" id="tabPick" onclick="setCheckinMode('PICKUP_NOTICE')" style="font-size:0.76rem;font-weight:900;padding:10px 6px;">✅ BACKROOM PICK-UP</button>
+            <button type="button" class="mode-tab" id="tabTruck" onclick="setCheckinMode('TRUCK_REQUEST')" style="font-size:0.76rem;font-weight:900;padding:10px 6px;">🚚 TRUCK PICKUP &amp; DELIVERY</button>
           </div>
           <input type="text" id="hpField" style="display:none;" tabindex="-1" autocomplete="off" />
 
-          <!-- FORM 1: LEAN CYLINDER DROP-OFF FORM -->
+          <!-- FORM 1: BACKROOM CYLINDER DROP-OFF -->
           <div id="formDropoff">
             <label>Account Type</label>
             <div class="acct-pills" id="pubAcctBar">
@@ -316,10 +318,14 @@
                 <input id="dropPhone" type="tel" placeholder="724-555-0199" oninput="formatPubPhone(this)" />
               </div>
               <div>
+                <label>Email for Instant Ticket Receipt (Optional)</label>
+                <input id="dropEmail" type="email" placeholder="you@example.com" />
+              </div>
+              <div>
                 <label>How Many Cylinders? *</label>
                 <input type="number" id="dropCount" min="1" max="250" value="1" oninput="refreshPublicSla(this.value)" />
               </div>
-              <div id="dropPoWrap" style="grid-column:1/-1;" hidden>
+              <div id="dropPoWrap" hidden>
                 <label>Station # or PO # (Optional)</label>
                 <input id="dropPo" placeholder="e.g. Station 47 / PO #204" />
               </div>
@@ -348,10 +354,10 @@
               </div>
             </div>
 
-            <button type="button" class="btn-submit" id="btnSubmitDrop" onclick="submitDropoffForm()">📥 Submit Cylinder Drop-Off</button>
+            <button type="button" class="btn-submit" id="btnSubmitDrop" onclick="submitDropoffForm()">📥 Submit Backroom Drop-Off</button>
           </div>
 
-          <!-- FORM 2: LEAN CYLINDER PICK-UP SIGN-OUT FORM -->
+          <!-- FORM 2: BACKROOM PICK-UP SIGN-OUT -->
           <div id="formPickup" hidden>
             <p style="margin:0 0 12px;font-size:0.86rem;color:var(--muted);font-weight:600;">
               Picking up finished cylinders from our <strong>Zone E Shelf</strong>? Sign them out below:
@@ -379,9 +385,67 @@
               </div>
             </div>
 
-            <button type="button" class="btn-submit" id="btnSubmitPick" style="background:#0369a1;" onclick="submitPickupForm()">✅ Confirm Cylinder Pick-Up</button>
+            <button type="button" class="btn-submit" id="btnSubmitPick" style="background:#0369a1;" onclick="submitPickupForm()">✅ Confirm Backroom Pick-Up</button>
           </div>
 
+          <!-- FORM 3: TRUCK PICKUP & DELIVERY REQUEST -->
+          <div id="formTruck" hidden>
+            <p style="margin:0 0 10px;font-size:0.85rem;color:#92400e;background:#fffbeb;border:1px solid #fcd34d;padding:8px 11px;border-radius:8px;font-weight:700;">
+              🚚 Request Weber's truck to pick up and/or return cylinders at your Fire Station, EMS base, or commercial shop:
+            </p>
+            <div class="form-grid">
+              <div style="grid-column:1/-1;">
+                <label>Truck Service Needed *</label>
+                <select id="trkMode">
+                  <option value="ROAD_ROUNDTRIP">🔄 Round-Trip: Truck Pickup &amp; Return Delivery</option>
+                  <option value="ROAD_PICKUP">🚚 Truck Pickup Only (Customer Will Pick Up at Shop)</option>
+                  <option value="ROAD_DELIVERY">📦 Return Truck Delivery Only (Tanks Already at Shop)</option>
+                </select>
+              </div>
+              <div>
+                <label>Fire Dept / Business / Name *</label>
+                <input id="trkCustName" placeholder="e.g. Baden VFD Station 47" />
+              </div>
+              <div>
+                <label>Point of Contact Name *</label>
+                <input id="trkContact" placeholder="e.g. Chief Mike Miller" />
+              </div>
+              <div>
+                <label>10-Digit Cell / Station Phone *</label>
+                <input id="trkPhone" type="tel" placeholder="724-555-0199" oninput="formatPubPhone(this)" />
+              </div>
+              <div>
+                <label>Email for Ticket Confirmation (Optional)</label>
+                <input id="trkEmail" type="email" placeholder="chief@dept.org" />
+              </div>
+              <div style="grid-column:1/-1;">
+                <label>Pickup / Delivery Street Address &amp; Town *</label>
+                <input id="trkAddress" placeholder="e.g. 123 State St, Baden, PA 15005 (Bay door / access notes)" />
+              </div>
+              <div>
+                <label>Preferred Pickup Date</label>
+                <input type="date" id="trkPrefDate" />
+              </div>
+              <div>
+                <label>Approx. Cylinder Count *</label>
+                <input type="number" id="trkCount" min="1" max="250" value="6" />
+              </div>
+              <div style="grid-column:1/-1;">
+                <label>Cylinder Types / PO # / Gate Notes</label>
+                <input id="trkSummary" placeholder="e.g. 12x 4500# SCBA, 4x Med O2 • Call 15 min prior" />
+              </div>
+              <div style="grid-column:1/-1;background:#fef2f2;border:1px solid #fca5a5;padding:8px 12px;border-radius:8px;">
+                <label style="display:flex;align-items:center;gap:9px;margin:0;text-transform:none;font-size:0.85rem;color:#991b1b;cursor:pointer;">
+                  <input type="checkbox" id="trkRush" style="width:18px;height:18px;accent-color:#dc2626;" />
+                  <span>🔥 <strong>Priority / Paid Rush Turnaround Needed</strong></span>
+                </label>
+              </div>
+            </div>
+
+            <button type="button" class="btn-submit" id="btnSubmitTruck" style="background:#b45309;" onclick="submitTruckForm()">🚚 Request Truck Pickup / Delivery</button>
+          </div>
+
+          <!-- FULL DIGITAL TICKET RECEIPT PASS -->
           <div id="ciConfirm" hidden></div>
         </div>
       </div>
@@ -452,6 +516,7 @@
   <script>
     let PUB_ACCT = 'WALK_IN';
     let PUB_TANK_COUNTS = {};
+    let LAST_TICKET_DATA = null;
 
     function esc(s) {
       const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
@@ -465,18 +530,35 @@
     }
 
     function setCheckinMode(mode) {
-      const isDrop = mode === 'DROPOFF';
       const tabDrop = document.getElementById('tabDrop');
       const tabPick = document.getElementById('tabPick');
+      const tabTruck = document.getElementById('tabTruck');
+      document.getElementById('checkinModeTabs').hidden = false;
+
+      const isDrop = mode === 'DROPOFF';
+      const isPick = mode === 'PICKUP_NOTICE';
+      const isTruck = mode === 'TRUCK_REQUEST';
+
       tabDrop.classList.toggle('active', isDrop);
-      tabPick.classList.toggle('active', !isDrop);
-      tabPick.style.background = !isDrop ? '#0369a1' : '#f8fafc';
-      tabPick.style.borderColor = !isDrop ? '#075985' : '#cbd5e1';
-      tabPick.style.color = !isDrop ? '#ffffff' : 'var(--slate)';
+      tabPick.classList.toggle('active', isPick);
+      tabTruck.classList.toggle('active', isTruck);
+
+      tabPick.style.background = isPick ? '#0369a1' : '#f8fafc';
+      tabPick.style.borderColor = isPick ? '#075985' : '#cbd5e1';
+      tabPick.style.color = isPick ? '#ffffff' : 'var(--slate)';
+
+      tabTruck.style.background = isTruck ? '#b45309' : '#f8fafc';
+      tabTruck.style.borderColor = isTruck ? '#92400e' : '#cbd5e1';
+      tabTruck.style.color = isTruck ? '#ffffff' : 'var(--slate)';
 
       document.getElementById('formDropoff').hidden = !isDrop;
-      document.getElementById('formPickup').hidden = isDrop;
+      document.getElementById('formPickup').hidden = !isPick;
+      document.getElementById('formTruck').hidden = !isTruck;
       document.getElementById('ciConfirm').hidden = true;
+    }
+
+    function resetForAnotherEntry(mode) {
+      setCheckinMode(mode || 'DROPOFF');
     }
 
     function setPubAcct(acct) {
@@ -532,6 +614,8 @@
         box.innerHTML = `<div style="background:rgba(239,68,68,0.2);border:1px solid #f87171;padding:10px;border-radius:8px;font-size:0.84rem;">${esc(data.detail || 'Ticket not found.')}</div>`;
         return;
       }
+      localStorage.setItem('webers_last_ticket', data.ticket_no);
+      if (l4) localStorage.setItem('webers_last_phone4', l4);
       let dots = '';
       for (let i = 1; i <= 5; i++) dots += `<div class="step-dot ${i <= data.step_num ? 'done' : ''}"></div>`;
       box.innerHTML = `
@@ -542,14 +626,92 @@
           </div>
           <div style="font-size:0.98rem;font-weight:900;margin-top:4px;color:#fff;">${esc(data.stage_label)}</div>
           <div class="step-dots">${dots}</div>
+          <div style="margin-top:8px;text-align:right;">
+            <a href="/api/public/receipt/${encodeURIComponent(data.ticket_no)}.pdf?p=${encodeURIComponent(l4)}" style="color:#fde68a;font-size:0.78rem;font-weight:800;text-decoration:underline;">📄 Download Ticket PDF</a>
+          </div>
         </div>`;
+    }
+
+    function copyTicketCode(code, btnEl) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(code);
+        const orig = btnEl.textContent;
+        btnEl.textContent = '✓ Copied!';
+        setTimeout(() => { btnEl.textContent = orig; }, 2000);
+      }
+    }
+
+    async function shareTicketReceipt() {
+      if (!LAST_TICKET_DATA) return;
+      const d = LAST_TICKET_DATA;
+      const url = `https://weberstanktesting.com/?ticket=${encodeURIComponent(d.ticket_no)}&p=${encodeURIComponent(d.phone_last4)}#tracker`;
+      const text = `Weber's Tank Testing Ticket ${d.ticket_no} (${d.bottle_count} cyl) • Est Ready: ${d.estimated_ready}. Track live: ${url}`;
+      if (navigator.share) {
+        try { await navigator.share({ title: `Weber's Ticket ${d.ticket_no}`, text, url }); return; } catch (_) {}
+      }
+      window.location.href = `sms:?body=${encodeURIComponent(text)}`;
+    }
+
+    function showDigitalTicketCard(data, meta) {
+      LAST_TICKET_DATA = { ...data, ...meta };
+      localStorage.setItem('webers_last_ticket', data.ticket_no);
+      localStorage.setItem('webers_last_phone4', data.phone_last4 || '');
+      document.getElementById('trkTicket').value = data.ticket_no;
+      document.getElementById('trkLast4').value = data.phone_last4 || '';
+
+      document.getElementById('checkinModeTabs').hidden = true;
+      document.getElementById('formDropoff').hidden = true;
+      document.getElementById('formPickup').hidden = true;
+      document.getElementById('formTruck').hidden = true;
+
+      const box = document.getElementById('ciConfirm');
+      box.hidden = false;
+      const isPick = meta.mode === 'PICKUP_NOTICE';
+      const isTruck = meta.mode === 'TRUCK_REQUEST';
+      const hdrTxt = isTruck
+        ? '🚚 Truck Pickup / Delivery Request Logged!'
+        : (isPick ? '✅ Backroom Pick-Up Confirmed' : '✅ Backroom Drop-Off Checked In — Save Your Ticket #');
+
+      box.innerHTML = `
+        <div style="background:linear-gradient(145deg,#071912 0%,#1b4332 100%);color:#fff;border-radius:14px;padding:22px;text-align:center;border:2px solid #fbbf24;box-shadow:0 12px 28px rgba(0,0,0,0.22);">
+          <div style="font-size:0.76rem;font-weight:900;letter-spacing:0.8px;color:#fde68a;text-transform:uppercase;">
+            ${hdrTxt}
+          </div>
+          <div style="font-size:2.75rem;font-weight:900;letter-spacing:2px;margin:6px 0;color:#ffffff;">
+            ${esc(data.ticket_no)}
+          </div>
+          <div style="font-size:0.95rem;font-weight:800;color:#a7f3d0;margin-bottom:12px;">
+            ${isPick ? `Signed Out By: ${esc(meta.personName || meta.name)}` : `Estimated Ready / Return: ~${esc(data.estimated_ready)}`}
+          </div>
+
+          <div style="background:rgba(255,255,255,0.1);border-radius:9px;padding:10px 12px;text-align:left;font-size:0.84rem;line-height:1.55;margin-bottom:14px;">
+            <div><strong>Customer / Dept:</strong> ${esc(meta.name)} (${meta.bottle_count} Cylinder${meta.bottle_count > 1 ? 's' : ''})</div>
+            ${meta.address ? `<div><strong>Stop Address:</strong> ${esc(meta.address)}</div>` : ''}
+            <div><strong>Contact Phone:</strong> ${esc(meta.phone)}</div>
+            ${data.email_queued ? `<div style="color:#fde68a;"><strong>✉️ Instant Email Receipt:</strong> Sent to ${esc(meta.email)}</div>` : ''}
+            <div style="color:#cbd5e1;font-size:0.77rem;margin-top:4px;">💡 Screenshot this card or tap <strong>Save Ticket PDF</strong> below (saved to this browser automatically).</div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <a href="${esc(data.receipt_pdf_url)}" class="btn-gold" style="justify-content:center;padding:11px 10px;font-size:0.85rem;">📄 Save Ticket PDF</a>
+            <button type="button" onclick="shareTicketReceipt()" class="btn-outline" style="justify-content:center;padding:11px 10px;font-size:0.85rem;cursor:pointer;">📲 Text / Save to Phone</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <button type="button" onclick="copyTicketCode('${esc(data.ticket_no)}', this)" class="btn-outline" style="justify-content:center;padding:9px;font-size:0.8rem;cursor:pointer;">📋 Copy ${esc(data.ticket_no)}</button>
+            <button type="button" onclick="resetForAnotherEntry('${meta.mode}')" class="btn-outline" style="justify-content:center;padding:9px;font-size:0.8rem;cursor:pointer;">➕ Log Another</button>
+          </div>
+        </div>`;
+
+      document.getElementById('checkinCardTop')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     async function submitDropoffForm() {
       const name = document.getElementById('dropName').value.trim();
       const contact = document.getElementById('dropContact').value.trim();
       const phone = document.getElementById('dropPhone').value.trim();
+      const email = document.getElementById('dropEmail').value.trim();
       const summary = document.getElementById('dropSummary').value.trim();
+      const cnt = Math.max(1, parseInt(document.getElementById('dropCount').value || '1', 10));
 
       if (!name || phone.replace(/\D/g, '').length < 10) {
         alert('Please enter your Name/Department and a 10-digit Phone Number.');
@@ -577,28 +739,24 @@
             contact_person: contact,
             customer_name: name,
             customer_phone: phone,
-            bottle_count: Math.max(1, parseInt(document.getElementById('dropCount').value || '1', 10)),
+            customer_email: email,
+            bottle_count: cnt,
             service_requested: svc,
             tank_summary: summary,
             valves_attached: true,
             needs_air_fill: false,
             rush_requested: document.getElementById('dropRush').checked,
-            notes: '',
             website_hp: document.getElementById('hpField').value,
           }),
         });
         const data = await res.json();
         if (!res.ok) { alert(data.detail || 'Drop-off check-in failed.'); return; }
 
-        const box = document.getElementById('ciConfirm');
-        box.hidden = false;
-        box.className = 'alert-box alert-ok';
-        box.innerHTML = `✅ <strong>Drop-Off Logged! Your Ticket # is ${esc(data.ticket_no)}</strong><br />Estimated Ready Date: <strong>${esc(data.estimated_ready)}</strong>. Save your Ticket # to track status anytime above—we will text ${esc(phone)} when your cylinders hit our Zone E pickup shelf!`;
-        document.getElementById('trkTicket').value = data.ticket_no;
         ['dropName', 'dropContact', 'dropPo', 'dropSummary'].forEach(id => { document.getElementById(id).value = ''; });
         document.getElementById('dropRush').checked = false;
         PUB_TANK_COUNTS = {};
         document.getElementById('dropCount').value = 1;
+        showDigitalTicketCard(data, { mode: 'DROPOFF', name, phone, email, bottle_count: cnt });
       } finally {
         btn.disabled = false;
       }
@@ -609,6 +767,7 @@
       const personName = document.getElementById('pickPersonName').value.trim();
       const phone = document.getElementById('pickPhone').value.trim();
       const ticket = document.getElementById('pickTicket').value.trim();
+      const cnt = Math.max(1, parseInt(document.getElementById('pickCount').value || '1', 10));
 
       if (!custName || !personName || phone.replace(/\D/g, '').length < 10) {
         alert('Please enter the Customer/Dept Name, Your Full Name, and a 10-digit Phone Number.');
@@ -625,7 +784,7 @@
             account_type: 'WALK_IN',
             customer_name: custName,
             customer_phone: phone,
-            bottle_count: Math.max(1, parseInt(document.getElementById('pickCount').value || '1', 10)),
+            bottle_count: cnt,
             picked_up_by: personName,
             pickup_ticket_ref: ticket,
             website_hp: document.getElementById('hpField').value,
@@ -634,12 +793,63 @@
         const data = await res.json();
         if (!res.ok) { alert(data.detail || 'Pick-up sign-out failed.'); return; }
 
-        const box = document.getElementById('ciConfirm');
-        box.hidden = false;
-        box.className = 'alert-box alert-ok';
-        box.innerHTML = `✅ <strong>Pick-Up Confirmed (${esc(data.ticket_no)})!</strong>${data.released_bottles ? ` (${data.released_bottles} cylinder(s) marked picked up by ${esc(personName)}.)` : ''} Thank you for trusting Weber's Tank Testing!`;
         ['pickCustName', 'pickPersonName', 'pickTicket'].forEach(id => { document.getElementById(id).value = ''; });
         document.getElementById('pickCount').value = 1;
+        showDigitalTicketCard(data, { mode: 'PICKUP_NOTICE', name: custName, personName, phone, email: '', bottle_count: cnt });
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function submitTruckForm() {
+      const trkMode = document.getElementById('trkMode').value;
+      const name = document.getElementById('trkCustName').value.trim();
+      const contact = document.getElementById('trkContact').value.trim();
+      const phone = document.getElementById('trkPhone').value.trim();
+      const email = document.getElementById('trkEmail').value.trim();
+      const address = document.getElementById('trkAddress').value.trim();
+      const prefDate = document.getElementById('trkPrefDate').value;
+      const summary = document.getElementById('trkSummary').value.trim();
+      const cnt = Math.max(1, parseInt(document.getElementById('trkCount').value || '1', 10));
+
+      if (!name || !contact || phone.replace(/\D/g, '').length < 10 || address.length < 5) {
+        alert('Please enter Dept/Business Name, Contact Name, 10-Digit Phone, and Street Address.');
+        return;
+      }
+
+      const modeLabel = trkMode === 'ROAD_ROUNDTRIP' ? 'Truck Pickup & Return Delivery'
+        : (trkMode === 'ROAD_PICKUP' ? 'Truck Pickup Only' : 'Return Truck Delivery Only');
+      const up = name.toUpperCase();
+      const guessAcct = ['VFD', ' FD', 'FIRE', 'EMS', 'RESCUE', 'AMBULANCE'].some(k => up.includes(k)) ? 'FIRE_EMS' : 'COMMERCIAL';
+
+      const btn = document.getElementById('btnSubmitTruck');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/public/dropoff', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entry_type: 'TRUCK_REQUEST',
+            account_type: guessAcct,
+            contact_person: contact,
+            customer_name: name,
+            customer_phone: phone,
+            customer_email: email,
+            pickup_address: address,
+            preferred_date: prefDate,
+            truck_mode: trkMode,
+            bottle_count: cnt,
+            service_requested: modeLabel,
+            tank_summary: summary,
+            rush_requested: document.getElementById('trkRush').checked,
+            website_hp: document.getElementById('hpField').value,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.detail || 'Truck request failed.'); return; }
+
+        ['trkCustName', 'trkContact', 'trkAddress', 'trkSummary'].forEach(id => { document.getElementById(id).value = ''; });
+        document.getElementById('trkRush').checked = false;
+        showDigitalTicketCard(data, { mode: 'TRUCK_REQUEST', name, phone, email, address, bottle_count: cnt });
       } finally {
         btn.disabled = false;
       }
@@ -673,8 +883,19 @@
         : `✅ <strong>IN-DATE &amp; VALID THROUGH ${String(mo).padStart(2,'0')}-${dueY}:</strong> Next ${cycle}-year DOT hydro test is due by ${String(mo).padStart(2,'0')}-${dueY}.`;
     }
 
-    (function initDeepLink() {
+    (function initSavedAndUrlTicket() {
+      document.getElementById('trkPrefDate').value = new Date().toISOString().slice(0, 10);
       const params = new URLSearchParams(location.search);
+      const savedT = localStorage.getItem('webers_last_ticket') || '';
+      const savedP = localStorage.getItem('webers_last_phone4') || '';
+      if (params.get('ticket')) {
+        document.getElementById('trkTicket').value = params.get('ticket');
+        if (params.get('p')) document.getElementById('trkLast4').value = params.get('p');
+        setTimeout(() => lookupTicket(), 200);
+      } else if (savedT) {
+        document.getElementById('trkTicket').value = savedT;
+        document.getElementById('trkLast4').value = savedP;
+      }
       if (params.get('mode') === 'pickup') {
         setCheckinMode('PICKUP_NOTICE');
         if (params.get('customer')) document.getElementById('pickCustName').value = params.get('customer');
@@ -682,6 +903,9 @@
           document.getElementById('dropoff')?.scrollIntoView({ behavior: 'smooth' });
           document.getElementById('pickPersonName')?.focus();
         }, 150);
+      } else if (params.get('mode') === 'truck') {
+        setCheckinMode('TRUCK_REQUEST');
+        setTimeout(() => document.getElementById('dropoff')?.scrollIntoView({ behavior: 'smooth' }), 150);
       }
     })();
     refreshPublicSla(4);

@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b2219" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/static/ops.css?v=8.2" />
+  <link rel="stylesheet" href="/static/ops.css?v=8.4" />
   <title>Weber's Tank Testing — Office, Rolodex, Printouts &amp; Supplies | RIN B386</title>
 </head>
 <body>
@@ -63,7 +63,10 @@
         <div class="rail-nav">
           <div class="rail-section-lbl">Phone &amp; Office</div>
           <button class="rail-btn active" data-tab="quick" onclick="switchOfficeTab('quick')">
-            <span>📞 Quick Schedule</span><span class="nav-badge green" id="navBadgeQuick">Call</span>
+            <span>📞 Call: Shop Drop-Off</span><span class="nav-badge green" id="navBadgeQuick">Drop</span>
+          </button>
+          <button class="rail-btn" data-tab="dispatch" onclick="switchOfficeTab('dispatch')">
+            <span>🚚 Dispatch: Truck Run</span><span class="nav-badge amber" id="navBadgeDispatch">Truck</span>
           </button>
           <button class="rail-btn" data-tab="invoice" onclick="switchOfficeTab('invoice')">
             <span>💲 Create Invoice</span><span class="nav-badge amber" id="navBadgeUnbilled">0</span>
@@ -102,7 +105,7 @@
           <div class="split-2">
             <div class="card" style="border-top:4px solid #f59e0b;">
               <div class="card-hdr">
-                <h3>📞 Quick Phone Schedule — Get Info, Quote &amp; Hang Up</h3>
+                <h3>📞 Call: Shop Drop-Off — Fast Phone Logger</h3>
                 <span class="sub-badge" id="qsBacklogBadge">Backlog: 0 Cyl</span>
               </div>
 
@@ -166,7 +169,7 @@
                 <div class="pill-selector-bar" id="qsArriveBar" style="margin-bottom:8px;">
                   <button type="button" class="tap-pill active" data-mode="BACKROOM" onclick="setQsArrive('BACKROOM')">🚪 24/7 Backroom Drop</button>
                   <button type="button" class="tap-pill" data-mode="SHOP_BATCH" onclick="setQsArrive('SHOP_BATCH')">📌 Scheduled Shop Drop</button>
-                  <button type="button" class="tap-pill" data-mode="ROAD_PICKUP" onclick="setQsArrive('ROAD_PICKUP')">🚚 Needs Road Pickup</button>
+                  <button type="button" class="tap-pill" style="background:#fffbeb;border-color:#f59e0b;color:#92400e;" onclick="switchOfficeTab('dispatch')">🚚 Switch to Truck Run →</button>
                 </div>
 
                 <div class="grid" style="align-items:end;">
@@ -223,6 +226,123 @@
                 <a class="secondary" href="/schedule">📅 Full Month View →</a>
               </div>
               <div id="qsOpenJobsList"></div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- TAB 0B: TRUCK PICKUP & DELIVERY DISPATCH CALL LOGGER -->
+        <section id="tab-dispatch" hidden>
+          <div id="tdSavedBanner" class="notice" hidden></div>
+
+          <div class="split-2">
+            <div class="card" style="border-top:4px solid #b45309;">
+              <div class="card-hdr">
+                <h3>🚚 Truck Pickup &amp; Delivery Dispatch — Fast Call Logger</h3>
+                <span class="sub-badge" id="tdBacklogBadge" style="background:#fef3c7;color:#92400e;">Truck Dispatch</span>
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <label style="margin:0;">1. Truck Service Type</label>
+                <span id="tdKnownBadge" class="sub-badge ai-verified" hidden>✓ Station Address Auto-Filled</span>
+              </div>
+              <div class="pill-selector-bar" id="tdModeBar" style="margin-bottom:10px;">
+                <button type="button" class="tap-pill active" data-tmode="ROAD_ROUNDTRIP" onclick="setTdMode('ROAD_ROUNDTRIP')">🔄 Pickup &amp; Return Delivery</button>
+                <button type="button" class="tap-pill" data-tmode="ROAD_PICKUP" onclick="setTdMode('ROAD_PICKUP')">🚚 Truck Pickup Only</button>
+                <button type="button" class="tap-pill" data-tmode="ROAD_DELIVERY" onclick="setTdMode('ROAD_DELIVERY')">📦 Return Delivery Only</button>
+              </div>
+
+              <div class="grid">
+                <div>
+                  <label>Fire Dept / Business Name *</label>
+                  <input id="tdCustomer" list="qsRoloSuggest" placeholder="e.g. Baden VFD" oninput="onTdCustomerInput()" />
+                </div>
+                <div>
+                  <label>Caller / Point of Contact *</label>
+                  <input id="tdContact" placeholder="e.g. Chief Mike Miller" oninput="updateTdScript()" />
+                </div>
+                <div>
+                  <label>Cell / Station Phone *</label>
+                  <input id="tdPhone" type="tel" placeholder="724-555-0199" oninput="formatPhoneLive(this);updateTdScript()" />
+                </div>
+                <div>
+                  <label>Station # / PO # (Optional)</label>
+                  <input id="tdPo" placeholder="e.g. Station 47 / PO #204" />
+                </div>
+                <div style="grid-column:1/-1;">
+                  <label>Pickup / Delivery Street Address &amp; Town (Opens Google Maps) *</label>
+                  <input id="tdAddress" placeholder="e.g. 123 State St, Baden, PA 15005" oninput="updateTdScript()" />
+                </div>
+              </div>
+
+              <div style="margin-top:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <label style="margin:0;">2. Tap Tank Types on Run</label>
+                  <button type="button" class="secondary" style="padding:2px 8px;font-size:0.7rem;" onclick="clearTdTanks()">↺ Reset</button>
+                </div>
+                <div class="tank-chip-bar">
+                  <button type="button" class="tank-chip" onclick="bumpTdTank('4500# SCBA', 1)">+1 SCBA</button>
+                  <button type="button" class="tank-chip" onclick="bumpTdTank('4500# SCBA', 5)">+5 SCBA</button>
+                  <button type="button" class="tank-chip" onclick="bumpTdTank('4500# SCBA', 10)">+10 SCBA</button>
+                  <button type="button" class="tank-chip" onclick="bumpTdTank('Medical O2', 1)">+1 Med O2</button>
+                  <button type="button" class="tank-chip" onclick="bumpTdTank('Welding/Ind', 1)">+1 Weld/Ind</button>
+                  <button type="button" class="tank-chip" onclick="bumpTdTank('CO2', 1)">+1 CO2</button>
+                </div>
+                <div class="grid">
+                  <div>
+                    <label>Total Cylinder Count *</label>
+                    <input type="number" id="tdCount" min="1" max="250" value="6" oninput="fetchTdQuote()" />
+                  </div>
+                  <div style="grid-column:span 2;">
+                    <label>Tank Mix / Bay Door / Gate Notes</label>
+                    <input id="tdSummary" placeholder="e.g. 12x 4500# SCBA • Rear Engine Bay" oninput="updateTdScript()" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid" style="margin-top:10px;align-items:end;">
+                <div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                    <label style="margin:0;">Scheduled Truck Run Date *</label>
+                    <span style="display:inline-flex;gap:4px;">
+                      <button type="button" class="secondary" style="padding:1px 6px;font-size:0.68rem;" onclick="setTdQuickDate(0)">Today</button>
+                      <button type="button" class="secondary" style="padding:1px 6px;font-size:0.68rem;" onclick="setTdQuickDate(1)">Tmrw</button>
+                    </span>
+                  </div>
+                  <input type="date" id="tdDate" onchange="updateTdScript()" />
+                </div>
+                <div>
+                  <label>Est. Return / Ready Date</label>
+                  <input type="date" id="tdDueDate" onchange="updateTdScript()" />
+                </div>
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:10px;padding:9px 12px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;">
+                <label class="inline-check" style="color:#991b1b;margin:0;">
+                  <input type="checkbox" id="tdRush" onchange="applyTdQuoteDates()" />
+                  <span>🔥 <strong>Priority / Paid Rush Turnaround</strong> <small id="tdRushHint"></small></span>
+                </label>
+                <small style="font-weight:800;color:#166534;" id="tdStdHint">Std Return: —</small>
+              </div>
+
+              <div class="notice" style="margin-top:12px;margin-bottom:4px;background:#fffbeb;border:2px solid #f59e0b;color:#78350f;">
+                <div style="font-size:0.7rem;font-weight:900;text-transform:uppercase;letter-spacing:0.4px;color:#b45309;margin-bottom:3px;">🗣️ Read This &amp; Wrap Up Dispatch Call:</div>
+                <div id="tdScriptBox" style="font-size:0.9rem;line-height:1.42;font-weight:700;">Enter department/company &amp; address to generate your truck dispatch confirmation line.</div>
+              </div>
+
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+                <button class="primary" style="flex:2;margin:0;background:#b45309;" id="btnTdSave" onclick="submitTruckDispatch(false)">🚚 Log Truck Run &amp; Clear</button>
+                <button class="secondary" style="flex:1;padding:11px;background:#fef3c7;color:#92400e;border-color:#f59e0b;font-weight:900;" onclick="submitTruckDispatch(true)">📲 Log + Text ETA</button>
+              </div>
+            </div>
+
+            <!-- RIGHT COLUMN: ACTIVE TRUCK PICKUP & DELIVERY QUEUE -->
+            <div class="card">
+              <div class="card-hdr">
+                <h3>🚚 Active Truck Runs (Pickup &amp; Delivery Queue)</h3>
+                <a class="secondary" href="/schedule?tab=runs">📅 All Runs →</a>
+              </div>
+              <div id="tdOpenRunsList"></div>
             </div>
           </div>
         </section>
@@ -501,12 +621,14 @@
     <!-- PHONE BOTTOM NAVIGATION BAR -->
     <nav class="bottom-nav">
       <button class="bnav-btn active" data-tab="quick" onclick="switchOfficeTab('quick')">
-        <span class="ico">📞</span><span>Call</span>
+        <span class="ico">📞</span><span>Drop Call</span>
+      </button>
+      <button class="bnav-btn" data-tab="dispatch" onclick="switchOfficeTab('dispatch')">
+        <span class="ico">🚚</span><span>Truck</span>
       </button>
       <button class="bnav-btn" data-tab="invoice" onclick="switchOfficeTab('invoice')">
         <span class="ico">💲</span><span>Bill</span><span class="bnav-dot" id="mobBadgeUnbilled" hidden>0</span>
       </button>
-      <button class="bnav-btn" data-tab="saved" onclick="switchOfficeTab('saved')"><span class="ico">📄</span><span>Invoices</span></button>
       <button class="bnav-btn" data-tab="rolodex" onclick="switchOfficeTab('rolodex')"><span class="ico">📇</span><span>Rolodex</span></button>
       <button class="bnav-btn" data-tab="print" onclick="switchOfficeTab('print')"><span class="ico">🖨️</span><span>Print</span></button>
       <button class="bnav-btn" data-tab="supplies" onclick="switchOfficeTab('supplies')">
@@ -582,6 +704,7 @@
         b.classList.toggle('active', b.getAttribute('data-tab') === tab);
       });
       if (tab === 'quick') setTimeout(() => document.getElementById('qsCustomer')?.focus(), 40);
+      if (tab === 'dispatch') setTimeout(() => document.getElementById('tdCustomer')?.focus(), 40);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -607,7 +730,7 @@
       if (tabParam) {
         const mapLegacy = { billing: 'invoice', print: 'print', rates: 'rates' };
         const cleanTab = mapLegacy[tabParam] || tabParam;
-        if (['quick', 'invoice', 'saved', 'rolodex', 'print', 'supplies', 'rates'].includes(cleanTab)) {
+        if (['quick', 'dispatch', 'invoice', 'saved', 'rolodex', 'print', 'supplies', 'rates'].includes(cleanTab)) {
           switchOfficeTab(cleanTab);
         }
       }
@@ -624,6 +747,7 @@
       document.getElementById('appShell').hidden = false;
       await loadOfficeState();
       await fetchQsQuote();
+      await fetchTdQuote();
       if (CURRENT_TAB === 'quick') document.getElementById('qsCustomer')?.focus();
     }
 
@@ -741,6 +865,7 @@
       renderRecallsList();
       renderSuppliesGrid();
       renderQuickScheduleJobs();
+      renderTruckDispatchList();
 
       if (INITIAL_BOOT) {
         INITIAL_BOOT = false;
@@ -1013,6 +1138,214 @@
         await loadOfficeState();
         await fetchQsQuote();
         document.getElementById('qsCustomer').focus();
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+
+    // --- TAB 0B: DEDICATED TRUCK PICKUP & DELIVERY DISPATCH ---
+    let TD_MODE = 'ROAD_ROUNDTRIP';
+    let TD_TANKS = {};
+    let TD_LAST_QUOTE = null;
+
+    function setTdMode(mode) {
+      TD_MODE = mode;
+      document.querySelectorAll('#tdModeBar .tap-pill').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-tmode') === mode);
+      });
+      updateTdScript();
+    }
+
+    function setTdQuickDate(offsetDays) {
+      const base = STATE.today || new Date().toISOString().slice(0, 10);
+      const [y, m, d] = base.split('-').map(Number);
+      const dt = new Date(y, m - 1, d + offsetDays);
+      document.getElementById('tdDate').value = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+      updateTdScript();
+    }
+
+    function onTdCustomerInput() {
+      const val = (document.getElementById('tdCustomer').value || '').trim();
+      const badge = document.getElementById('tdKnownBadge');
+      if (!val) { badge.hidden = true; updateTdScript(); return; }
+      const match = (STATE.customers_rolodex || []).find(c => c.customer_name.toUpperCase() === val.toUpperCase());
+      if (match) {
+        badge.hidden = false;
+        if (match.phone) document.getElementById('tdPhone').value = match.phone;
+        if (match.contact_person) document.getElementById('tdContact').value = match.contact_person;
+        if (match.street_address) {
+          document.getElementById('tdAddress').value = [match.street_address, match.city, match.state, match.zip_code].filter(Boolean).join(', ');
+        }
+      } else {
+        badge.hidden = true;
+      }
+      updateTdScript();
+    }
+
+    function bumpTdTank(label, qty) {
+      TD_TANKS[label] = (TD_TANKS[label] || 0) + qty;
+      const tot = Object.values(TD_TANKS).reduce((a, b) => a + b, 0);
+      document.getElementById('tdCount').value = tot;
+      document.getElementById('tdSummary').value = Object.entries(TD_TANKS).map(([k, v]) => `${v}x ${k}`).join(', ');
+      fetchTdQuote();
+    }
+
+    function clearTdTanks() {
+      TD_TANKS = {};
+      document.getElementById('tdCount').value = 6;
+      document.getElementById('tdSummary').value = '';
+      fetchTdQuote();
+    }
+
+    async function fetchTdQuote() {
+      const cnt = Math.max(1, parseInt(document.getElementById('tdCount')?.value || '6', 10));
+      try {
+        const res = await fetch('/api/schedule/quote?bottles=' + cnt);
+        if (!res.ok) return;
+        TD_LAST_QUOTE = await res.json();
+        document.getElementById('tdStdHint').textContent = `🟢 Std Return: ~${TD_LAST_QUOTE.standard_promise_label}`;
+        document.getElementById('tdRushHint').textContent = `(Return ~${TD_LAST_QUOTE.rush_promise_label})`;
+        applyTdQuoteDates();
+      } catch (_) {}
+    }
+
+    function applyTdQuoteDates() {
+      if (TD_LAST_QUOTE) {
+        const isRush = document.getElementById('tdRush').checked;
+        document.getElementById('tdDueDate').value = isRush ? TD_LAST_QUOTE.rush_promise_date : TD_LAST_QUOTE.standard_promise_date;
+      }
+      updateTdScript();
+    }
+
+    function updateTdScript() {
+      const cust = (document.getElementById('tdCustomer')?.value || '').trim() || '[Dept/Company]';
+      const cnt = parseInt(document.getElementById('tdCount')?.value || '6', 10);
+      const sum = (document.getElementById('tdSummary')?.value || '').trim();
+      const addr = (document.getElementById('tdAddress')?.value || '').trim() || '[Station/Shop Address]';
+      const ph = (document.getElementById('tdPhone')?.value || '').trim() || 'your phone';
+      const runDate = document.getElementById('tdDate')?.value || 'scheduled date';
+      const isRush = document.getElementById('tdRush')?.checked;
+      const readyLbl = TD_LAST_QUOTE
+        ? (isRush ? TD_LAST_QUOTE.rush_promise_label : TD_LAST_QUOTE.standard_promise_label)
+        : (document.getElementById('tdDueDate')?.value || 'soonest window');
+      const phrase = sum ? `${cnt} cylinders (${sum})` : `${cnt} cylinders`;
+
+      let actionTxt = `pick up ${escHtml(phrase)} on ${escHtml(runDate)} at ${escHtml(addr)} and deliver them back around ~${escHtml(readyLbl)}`;
+      if (TD_MODE === 'ROAD_PICKUP') actionTxt = `pick up ${escHtml(phrase)} on ${escHtml(runDate)} at ${escHtml(addr)} (ready for shop pickup ~${escHtml(readyLbl)})`;
+      if (TD_MODE === 'ROAD_DELIVERY') actionTxt = `deliver ${escHtml(phrase)} back to ${escHtml(addr)} on ${escHtml(runDate)}`;
+
+      const box = document.getElementById('tdScriptBox');
+      if (box) {
+        box.innerHTML = `"Got ${escHtml(cust)} on the truck dispatch board to ${actionTxt}. Reminder: testing facility only — cylinders return clean, dry & depressurized. We will text/call ${escHtml(ph)} before heading out!"`;
+      }
+    }
+
+    function renderTruckDispatchList() {
+      if (!document.getElementById('tdDate')?.value) {
+        const dEl = document.getElementById('tdDate');
+        if (dEl) dEl.value = STATE.today || STATE.selected_date;
+      }
+      const truckRuns = (STATE.schedule_jobs || []).filter(j => j.status !== 'COMPLETED' && j.job_type.startsWith('ROAD_'));
+      const navB = document.getElementById('navBadgeDispatch');
+      if (navB) navB.textContent = truckRuns.length ? String(truckRuns.length) : 'Truck';
+
+      const el = document.getElementById('tdOpenRunsList');
+      if (!el) return;
+      el.innerHTML = truckRuns.length
+        ? truckRuns.map(j => {
+            const lbl = j.job_type === 'ROAD_ROUNDTRIP' ? '🔄 Pickup + Return' : (j.job_type === 'ROAD_PICKUP' ? '🚚 Pickup Only' : '📦 Delivery Only');
+            const mapUrl = j.location_notes ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.location_notes)}` : '';
+            return `
+              <div class="rec-item">
+                <div class="rec-main">
+                  <div class="rec-title">
+                    <span>${lbl}: ${escHtml(j.customer_name)} (${j.bottle_count})</span>
+                    ${(j.rush_fee || j.priority === 'RUSH') ? '<span class="rush-badge">🔥 RUSH</span>' : ''}
+                  </div>
+                  <div class="rec-sub">
+                    Run Date: <strong>${escHtml(j.scheduled_date)}</strong>${j.due_date ? ` • Return/Ready: <strong>${escHtml(j.due_date)}</strong>` : ''}${j.location_notes ? ` • 📍 ${escHtml(j.location_notes)}` : ''}${j.contact_person ? ` • 👤 ${escHtml(j.contact_person)}` : ''}${j.customer_phone ? ` • 📞 ${escHtml(j.customer_phone)}` : ''}
+                  </div>
+                </div>
+                <div class="rec-actions">
+                  ${mapUrl ? `<a class="secondary" href="${mapUrl}" target="_blank">📍 Map</a>` : ''}
+                  <a class="secondary" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7;" href="/ops?job=${j.id}">↳ Scan Batch</a>
+                  <button class="secondary" onclick="completeQuickJob(${j.id})">✓</button>
+                  <button class="secondary" style="color:#b91c1c;" onclick="deleteQuickJob(${j.id})">✕</button>
+                </div>
+              </div>`;
+          }).join('')
+        : '<div style="color:var(--muted);font-size:0.86rem;padding:8px 0;">No open truck pickup/delivery runs scheduled right now.</div>';
+    }
+
+    async function submitTruckDispatch(sendSmsAfter = false) {
+      const cust = document.getElementById('tdCustomer').value.trim();
+      const contact = document.getElementById('tdContact').value.trim();
+      const phone = document.getElementById('tdPhone').value.trim();
+      const addr = document.getElementById('tdAddress').value.trim();
+      const cnt = Math.max(1, parseInt(document.getElementById('tdCount').value || '1', 10));
+      const isRush = document.getElementById('tdRush').checked;
+      const schedDate = document.getElementById('tdDate').value || STATE.today || STATE.selected_date;
+      const dueDate = document.getElementById('tdDueDate').value || schedDate;
+      const summary = document.getElementById('tdSummary').value.trim();
+
+      if (!cust || !contact || phone.replace(/\D/g, '').length < 10 || addr.length < 5) {
+        alert('Enter Dept/Company Name, Contact Name, 10-Digit Phone, and Street Address.');
+        return;
+      }
+
+      const up = cust.toUpperCase();
+      const acct = ['VFD', ' FD', 'FIRE', 'EMS', 'RESCUE', 'AMBULANCE'].some(k => up.includes(k)) ? 'FIRE_EMS' : 'COMMERCIAL';
+      const btn = document.getElementById('btnTdSave');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/schedule/jobs', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            job_type: TD_MODE,
+            account_type: acct,
+            po_station: document.getElementById('tdPo').value.trim(),
+            contact_person: contact,
+            scheduled_date: schedDate,
+            due_date: dueDate,
+            customer_name: cust,
+            customer_phone: phone,
+            bottle_count: cnt,
+            tank_summary: summary,
+            valves_attached: true,
+            needs_air_fill: false,
+            priority: isRush ? 'RUSH' : 'STANDARD',
+            rush_fee: isRush,
+            holding_zone: 'OUTBOUND_TRUCK',
+            location_notes: addr,
+            notes: TD_MODE === 'ROAD_ROUNDTRIP' ? 'Round-Trip Truck Pickup & Return Delivery' : '',
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.detail || 'Could not save truck dispatch.'); return; }
+
+        const banner = document.getElementById('tdSavedBanner');
+        banner.hidden = false;
+        banner.textContent = `✅ Truck Run Logged: ${cust} (${cnt} cyl on ${schedDate}) — Cleared for next call!`;
+        setTimeout(() => { banner.hidden = true; }, 5000);
+
+        if (sendSmsAfter) {
+          const digits = phone.replace(/\D/g, '');
+          const smsTxt = `Weber's Tank Testing (RIN B386): Confirmed truck ${TD_MODE === 'ROAD_DELIVERY' ? 'delivery' : 'pickup'} for ${cust} (${cnt} cyl) at ${addr} on ${schedDate}. Est return/ready: ~${dueDate} (testing only - returned clean, dry & empty). Questions? 724-266-8008.`;
+          const sep = /iPad|iPhone|iPod/i.test(navigator.userAgent) ? '&' : '?';
+          window.location.href = `sms:${digits}${sep}body=${encodeURIComponent(smsTxt)}`;
+        }
+
+        ['tdCustomer', 'tdContact', 'tdPhone', 'tdPo', 'tdAddress', 'tdSummary'].forEach(id => {
+          document.getElementById(id).value = '';
+        });
+        document.getElementById('tdRush').checked = false;
+        document.getElementById('tdKnownBadge').hidden = true;
+        TD_TANKS = {};
+        document.getElementById('tdCount').value = 6;
+        await loadOfficeState();
+        await fetchTdQuote();
+        document.getElementById('tdCustomer').focus();
       } finally {
         btn.disabled = false;
       }

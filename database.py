@@ -346,6 +346,9 @@ def init_db() -> None:
         ("picked_up_by", "TEXT DEFAULT ''"),
         ("pickup_ticket_ref", "TEXT DEFAULT ''"),
         ("contact_person", "TEXT DEFAULT ''"),
+        ("preferred_date", "TEXT DEFAULT ''"),
+        ("pickup_address", "TEXT DEFAULT ''"),
+        ("customer_email", "TEXT DEFAULT ''"),
     ]:
         _ensure_column(conn, "dropoffs", col, cdef)
 

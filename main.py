@@ -25,6 +25,7 @@ from pydantic import BaseModel
 from database import bump_db_version, get_conn, init_db, wipe_all_operational_data
 from pdf_generator import (
     build_backroom_poster_pdf,
+    build_dropoff_receipt_pdf,
     build_invoice_pdf,
     build_retest_datasheet_pdf,
     build_rin_stickers_pdf,
@@ -163,7 +164,13 @@ def clean_phone(raw: Optional[str]) -> str:
 
 
 def upsert_rolodex_from_activity(
-    conn, customer_name: str, phone: str = "", account_type: str = "", contact_person: str = ""
+    conn,
+    customer_name: str,
+    phone: str = "",
+    account_type: str = "",
+    contact_person: str = "",
+    email: str = "",
+    street_address: str = "",
 ) -> None:
     """Automatically creates or enriches a Customer Rolodex entry whenever a job or tank is logged."""
     cname = (customer_name or "").strip()
@@ -171,6 +178,8 @@ def upsert_rolodex_from_activity(
         return
     ph = clean_phone(phone)
     cp = (contact_person or "").strip()[:60]
+    em = (email or "").strip()[:100]
+    addr = (street_address or "").strip()[:120]
     up = cname.upper()
     is_dept = account_type.upper() == "FIRE_EMS" or any(k in up for k in DEPT_KEYWORDS)
     eff_acct = account_type.upper() if account_type else ("FIRE_EMS" if is_dept else "WALK_IN")
@@ -179,25 +188,26 @@ def upsert_rolodex_from_activity(
     ts = now_eastern().strftime("%Y-%m-%d %I:%M %p")
 
     existing = conn.execute(
-        "SELECT id, phone, contact_person, account_type FROM customers WHERE UPPER(customer_name)=UPPER(?);",
+        "SELECT id, phone, contact_person, email, street_address, account_type FROM customers WHERE UPPER(customer_name)=UPPER(?);",
         (cname,),
     ).fetchone()
     if not existing:
         conn.execute(
             """INSERT OR IGNORE INTO customers
-               (customer_name, account_type, contact_person, phone, payment_terms, tax_exempt, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?);""",
-            (cname, eff_acct, cp, ph, terms, tax_ex, ts),
+               (customer_name, account_type, contact_person, phone, email, street_address, payment_terms, tax_exempt, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);""",
+            (cname, eff_acct, cp, ph, em, addr, terms, tax_ex, ts),
         )
     else:
         new_ph = ph if (ph and not existing["phone"]) else existing["phone"]
         new_cp = cp if (cp and not existing["contact_person"]) else existing["contact_person"]
-        if new_ph != existing["phone"] or new_cp != existing["contact_person"]:
+        new_em = em if (em and not existing["email"]) else existing["email"]
+        new_ad = addr if (addr and not existing["street_address"]) else existing["street_address"]
+        if (new_ph, new_cp, new_em, new_ad) != (existing["phone"], existing["contact_person"], existing["email"], existing["street_address"]):
             conn.execute(
-                "UPDATE customers SET phone=?, contact_person=?, updated_at=? WHERE id=?;",
-                (new_ph, new_cp, ts, existing["id"]),
+                "UPDATE customers SET phone=?, contact_person=?, email=?, street_address=?, updated_at=? WHERE id=?;",
+                (new_ph, new_cp, new_em, new_ad, ts, existing["id"]),
             )
-
 
 def get_compliance_alerts(s_map: dict, ref_today: str) -> list[dict]:
     """Tracks DOT RIN B386 5-Year Renewal and Master Pressure Gauge Calibration Cert deadlines."""
@@ -381,7 +391,7 @@ def build_month_calendar_grid(conn, year: int, month: int, s_map: dict) -> dict:
         day_jobs = [j for j in jobs_rows if j["scheduled_date"] == iso and j["status"] != "COMPLETED"]
         done_jobs = [j for j in jobs_rows if j["scheduled_date"] == iso and j["status"] == "COMPLETED"]
         due_jobs = [j for j in jobs_rows if j.get("due_date") == iso and j["scheduled_date"] != iso and j["status"] != "COMPLETED"]
-        booked = sum(int(j["bottle_count"] or 0) for j in day_jobs if j["job_type"] in ("SHOP_BATCH", "ROAD_PICKUP"))
+        booked = sum(int(j["bottle_count"] or 0) for j in day_jobs if j["job_type"] in ("SHOP_BATCH", "ROAD_PICKUP", "ROAD_ROUNDTRIP"))
         p.update({
             "day_num": d.day,
             "in_month": d.month == month,
@@ -543,7 +553,7 @@ def calculate_turnaround_quote(conn, requested_bottles: int = 1) -> dict:
     sched_row = conn.execute(
         """SELECT COALESCE(SUM(bottle_count), 0) AS tot,
                   COALESCE(SUM(CASE WHEN rush_fee=1 OR priority='RUSH' THEN bottle_count ELSE 0 END), 0) AS rush_tot
-           FROM schedule_jobs WHERE status IN ('OPEN', 'PREPPED') AND job_type IN ('SHOP_BATCH', 'ROAD_PICKUP');"""
+           FROM schedule_jobs WHERE status IN ('OPEN', 'PREPPED') AND job_type IN ('SHOP_BATCH', 'ROAD_PICKUP', 'ROAD_ROUNDTRIP');"""
     ).fetchone()
 
     total_backlog = int(queued_total) + int(drop_row["tot"] or 0) + int(sched_row["tot"] or 0)
@@ -778,6 +788,38 @@ async def run_guarded_sheets_sync() -> dict:
         return await asyncio.to_thread(push_unsynced_to_sheets)
 
 
+
+def send_ticket_email_via_webhook(ticket_info: dict) -> None:
+    """Sends instant customer email receipt + shop alert via the Google Apps Script webhook."""
+    try:
+        conn = get_conn()
+        row = conn.execute("SELECT value FROM settings WHERE key='sheets_webhook_url';").fetchone()
+        conn.close()
+        webhook_url = (row["value"] if row else "").strip()
+        if not webhook_url:
+            return
+        payload_bytes = json.dumps({"action": "dropoff_receipt_email", "ticket": ticket_info}).encode("utf-8")
+        req = urllib.request.Request(
+            webhook_url,
+            data=payload_bytes,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        ctx = ssl.create_default_context()
+        with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
+            _ = resp.read()
+    except Exception:
+        pass
+
+
+def trigger_ticket_email_bg(ticket_info: dict) -> None:
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(asyncio.to_thread(send_ticket_email_via_webhook, ticket_info))
+    except RuntimeError:
+        pass
+
+
 def trigger_sheets_sync_bg() -> None:
     try:
         loop = asyncio.get_running_loop()
@@ -834,7 +876,7 @@ async def auth_gate_middleware(request: Request, call_next):
         "/api/auth/status", "/api/auth/login", "/api/auth/logout",
         "/api/public/dropoff", "/api/public/turnaround", "/api/public/track",
     }
-    if path in public_paths or path.startswith("/static"):
+    if path in public_paths or path.startswith("/static") or path.startswith("/api/public/receipt/"):
         return await call_next(request)
     if not is_authenticated(request):
         return JSONResponse({"detail": "Crew PIN login required."}, status_code=401)
@@ -853,6 +895,10 @@ class PublicDropoffInput(BaseModel):
     contact_person: str = ""
     customer_name: str
     customer_phone: str = ""
+    customer_email: str = ""
+    pickup_address: str = ""
+    preferred_date: str = ""
+    truck_mode: str = "ROAD_ROUNDTRIP"
     bottle_count: int = 1
     tank_summary: str = ""
     service_requested: str = "Hydro + Visual"
@@ -863,7 +909,6 @@ class PublicDropoffInput(BaseModel):
     pickup_ticket_ref: str = ""
     notes: str = ""
     website_hp: str = ""
-
 
 class DropoffStatusInput(BaseModel):
     status: Optional[str] = None
@@ -1387,6 +1432,40 @@ def track_public_ticket(ticket: str = "", phone_last4: str = ""):
     }
 
 
+
+@app.get("/api/public/receipt/{ticket_no}.pdf")
+def download_public_dropoff_receipt(ticket_no: str, p: str = ""):
+    raw_num = re.sub(r"[^0-9]", "", (ticket_no or "").upper())
+    if not raw_num:
+        raise HTTPException(400, "Invalid ticket number.")
+    did = int(raw_num)
+    conn = get_conn()
+    d = conn.execute("SELECT * FROM dropoffs WHERE id=?;", (did,)).fetchone()
+    s_map = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings;").fetchall()}
+    conn.close()
+    if not d:
+        raise HTTPException(404, "Ticket not found.")
+    stored_digits = re.sub(r"\D", "", d["customer_phone"] or "")
+    req_last4 = re.sub(r"\D", "", p or "")[-4:]
+    if stored_digits and len(req_last4) == 4 and not stored_digits.endswith(req_last4):
+        raise HTTPException(403, "Phone verification mismatch.")
+
+    t_code = f"BR-{did:04d}"
+    t_last4 = stored_digits[-4:] if stored_digits else ""
+    track_link = f"https://weberstanktesting.com/?ticket={t_code}&p={t_last4}#tracker"
+    pdf_bytes = build_dropoff_receipt_pdf(
+        dict(d),
+        phone=s_map.get("phone", "724-266-8008"),
+        dot_rin=s_map.get("dot_rin", "B386"),
+        track_url=track_link,
+    )
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="Webers_Ticket_{t_code}.pdf"'},
+    )
+
+
 @app.post("/api/public/dropoff")
 def submit_public_dropoff(payload: PublicDropoffInput):
     if payload.website_hp.strip():
@@ -1400,60 +1479,99 @@ def submit_public_dropoff(payload: PublicDropoffInput):
         raise HTTPException(400, "Please enter a valid 10-digit cell or station phone number.")
 
     cnt = max(1, min(250, int(payload.bottle_count or 1)))
-    etype = "PICKUP_NOTICE" if payload.entry_type.strip().upper() == "PICKUP_NOTICE" else "DROPOFF"
-    init_status = "PICKUP_LOGGED" if etype == "PICKUP_NOTICE" else "IN_BACKROOM"
+    raw_etype = payload.entry_type.strip().upper()
+    if raw_etype == "PICKUP_NOTICE":
+        etype = "PICKUP_NOTICE"
+        init_status = "PICKUP_LOGGED"
+    elif raw_etype == "TRUCK_REQUEST":
+        etype = "TRUCK_REQUEST"
+        init_status = "TRUCK_REQUESTED"
+    else:
+        etype = "DROPOFF"
+        init_status = "IN_BACKROOM"
+
     svc_txt = payload.service_requested.strip()[:60] or "Hydro + Visual"
     is_rush = 1 if (payload.rush_requested or "RUSH" in svc_txt.upper()) else 0
     acct = (payload.account_type or "WALK_IN").strip().upper()
     po_st = payload.po_station.strip()[:60]
     contact_p = payload.contact_person.strip()[:60]
+    em_clean = payload.customer_email.strip()[:100]
+    addr_clean = payload.pickup_address.strip()[:140]
+    pref_date = payload.preferred_date.strip()[:16]
+
     if etype == "DROPOFF" and acct in ("FIRE_EMS", "COMMERCIAL") and len(contact_p) < 2:
-        raise HTTPException(400, "Please enter the individual's name in 'Dropped Off By' for department or commercial accounts.")
+        raise HTTPException(400, "Please enter your individual name in 'Dropped Off By'.")
+    if etype == "TRUCK_REQUEST" and len(addr_clean) < 5:
+        raise HTTPException(400, "Please enter the street / station address for Truck Pickup & Delivery.")
+
     picked_by = payload.picked_up_by.strip()[:60]
     tkt_ref = payload.pickup_ticket_ref.strip().upper()[:24]
 
     note_parts = []
     if contact_p:
-        note_parts.append(f"Dropped by: {contact_p}")
+        note_parts.append(f"Contact: {contact_p}")
     if po_st:
         note_parts.append(f"PO/Sta: {po_st}")
-    if etype == "DROPOFF":
-        note_parts.append("Valves ON" if payload.valves_attached else "Bare/No Valves")
-    elif picked_by:
+    if addr_clean:
+        note_parts.append(f"Addr: {addr_clean}")
+    if picked_by:
         note_parts.append(f"Picked up by: {picked_by}")
     if payload.notes.strip():
-        note_parts.append(payload.notes.strip()[:200])
+        note_parts.append(payload.notes.strip()[:180])
     combined_notes = " | ".join(note_parts)[:280]
 
     est = now_eastern()
     ts = est.strftime("%Y-%m-%d %I:%M %p")
     w_date = est.date().isoformat()
+    sched_date = pref_date if re.match(r"^\d{4}-\d{2}-\d{2}$", pref_date) else w_date
 
     conn = get_conn()
-    upsert_rolodex_from_activity(conn, cust, ph_clean, acct, contact_p)
+    upsert_rolodex_from_activity(conn, cust, ph_clean, acct, contact_p, em_clean, addr_clean)
     quote = calculate_turnaround_quote(conn, cnt)
     promised = quote["rush_promise_date"] if is_rush else quote["standard_promise_date"]
+    zone = "OUTBOUND_TRUCK" if etype == "TRUCK_REQUEST" else "ZONE_A_BACKROOM"
 
     cur = conn.cursor()
     cur.execute(
         """INSERT INTO dropoffs
-           (created_at, work_date, entry_type, account_type, po_station, contact_person, customer_name, customer_phone,
+           (created_at, work_date, entry_type, account_type, po_station, contact_person,
+            customer_name, customer_phone, customer_email, pickup_address, preferred_date,
             bottle_count, tank_summary, service_requested, valves_attached, needs_air_fill,
             rush_requested, promised_date, holding_zone, picked_up_by, pickup_ticket_ref, notes, status, synced)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ZONE_A_BACKROOM', ?, ?, ?, ?, 0);""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, 0);""",
         (
-            ts, w_date, etype, acct, po_st, contact_p, cust, ph_clean,
+            ts, w_date, etype, acct, po_st, contact_p,
+            cust, ph_clean, em_clean, addr_clean, sched_date,
             cnt, payload.tank_summary.strip()[:140], svc_txt,
             1 if payload.valves_attached else 0,
-            0,
             is_rush,
-            promised if etype == "DROPOFF" else "",
-            picked_by, tkt_ref, combined_notes, init_status,
+            promised if etype in ("DROPOFF", "TRUCK_REQUEST") else "",
+            zone, picked_by, tkt_ref, combined_notes, init_status,
         ),
     )
     did = cur.lastrowid
 
-    # Verified Pickup Check-Out: auto-mark matching Zone E shelf bottles as PICKED_UP
+    # If customer requested Truck Pickup / Delivery, auto-create the dispatch job on the Wall Calendar!
+    if etype == "TRUCK_REQUEST":
+        jtype = payload.truck_mode.strip().upper() if payload.truck_mode else "ROAD_ROUNDTRIP"
+        if jtype not in ("ROAD_ROUNDTRIP", "ROAD_PICKUP", "ROAD_DELIVERY"):
+            jtype = "ROAD_ROUNDTRIP"
+        cur.execute(
+            """INSERT INTO schedule_jobs
+               (created_at, scheduled_date, due_date, job_type, account_type, po_station, contact_person,
+                customer_name, customer_phone, location_notes, bottle_count, tank_summary,
+                valves_attached, needs_air_fill, priority, rush_fee, holding_zone, prep_status, status, notes, synced)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?, 'OUTBOUND_TRUCK', 'WAITING', 'OPEN', ?, 0);""",
+            (
+                ts, sched_date, promised, jtype, acct, po_st, contact_p,
+                cust, ph_clean, addr_clean, cnt, payload.tank_summary.strip()[:140],
+                "RUSH" if is_rush else "STANDARD", is_rush,
+                f"Web Request BR-{did:04d}" + (f" | {payload.notes.strip()[:160]}" if payload.notes.strip() else ""),
+            ),
+        )
+        # Mark dropoffs row archived from backroom door inbox since it lives in Truck Dispatch now
+        conn.execute("UPDATE dropoffs SET status='DISPATCH_SCHEDULED' WHERE id=?;", (did,))
+
     released_bottles = 0
     if etype == "PICKUP_NOTICE":
         who = picked_by or cust
@@ -1484,9 +1602,34 @@ def submit_public_dropoff(payload: PublicDropoffInput):
     conn.commit()
     conn.close()
     trigger_sheets_sync_bg()
+
+    ticket_code = f"BR-{did:04d}"
+    last4 = ph_digits[-4:]
+    receipt_pdf_path = f"/api/public/receipt/{ticket_code}.pdf?p={last4}"
+    if em_clean or etype in ("DROPOFF", "TRUCK_REQUEST"):
+        trigger_ticket_email_bg({
+            "ticket_no": ticket_code,
+            "entry_type": etype,
+            "customer_name": cust,
+            "contact_person": contact_p,
+            "customer_phone": ph_clean,
+            "customer_email": em_clean,
+            "pickup_address": addr_clean,
+            "preferred_date": sched_date,
+            "bottle_count": cnt,
+            "tank_summary": payload.tank_summary.strip()[:140],
+            "rush_requested": bool(is_rush),
+            "estimated_ready": promised if etype in ("DROPOFF", "TRUCK_REQUEST") else "",
+            "created_at": ts,
+            "track_url": f"https://weberstanktesting.com/?ticket={ticket_code}&p={last4}#tracker",
+            "pdf_url": f"https://weberstanktesting.com{receipt_pdf_path}",
+        })
     return {
         "logged": True,
-        "ticket_no": f"BR-{did:04d}",
+        "ticket_no": ticket_code,
+        "phone_last4": last4,
+        "email_queued": bool(em_clean and "@" in em_clean),
+        "receipt_pdf_url": receipt_pdf_path,
         "created_at": ts,
         "estimated_ready": promised,
         "released_bottles": released_bottles,
@@ -1602,7 +1745,7 @@ def create_schedule_job(payload: ScheduleJobInput):
 
     contact_p = payload.contact_person.strip()[:60]
     conn = get_conn()
-    upsert_rolodex_from_activity(conn, cust, ph, acct, contact_p)
+    upsert_rolodex_from_activity(conn, cust, ph, acct, contact_p, '', payload.location_notes.strip()[:120])
     cur = conn.cursor()
     cur.execute(
         """INSERT INTO schedule_jobs
@@ -1753,7 +1896,7 @@ def get_tv_leaderboard(work_date: Optional[str] = None):
         p = resolve_day_plan(d_cur, plans_map, default_cap)
         day_jobs = [j for j in upcoming_jobs if j["scheduled_date"] == p["work_date"]]
         due_jobs = [j for j in upcoming_jobs if j.get("due_date") == p["work_date"] and j["scheduled_date"] != p["work_date"]]
-        booked_bottles = sum(j["bottle_count"] for j in day_jobs if j["job_type"] in ("SHOP_BATCH", "ROAD_PICKUP"))
+        booked_bottles = sum(j["bottle_count"] for j in day_jobs if j["job_type"] in ("SHOP_BATCH", "ROAD_PICKUP", "ROAD_ROUNDTRIP"))
         p["jobs"] = day_jobs
         p["due_jobs"] = due_jobs
         p["booked_bottles"] = booked_bottles
@@ -1871,7 +2014,7 @@ def get_tv_leaderboard(work_date: Optional[str] = None):
             ticker.append(f"🟡 {j_name.upper()}: AWAITING MORNING CALIBRATION")
 
     for j in upcoming_jobs[:6]:
-        j_icon = "🚚 PICKUP" if j["job_type"] == "ROAD_PICKUP" else ("🚚 DELIVERY" if j["job_type"] == "ROAD_DELIVERY" else "📌 SCHEDULED")
+        j_icon = "🔄 PICKUP+DELIV" if j["job_type"] == "ROAD_ROUNDTRIP" else ("🚚 PICKUP" if j["job_type"] == "ROAD_PICKUP" else ("🚚 DELIVERY" if j["job_type"] == "ROAD_DELIVERY" else "📌 SCHEDULED"))
         rush_tag = " [🔥 RUSH]" if (j["rush_fee"] or j["priority"] == "RUSH") else ""
         ticker.append(f"{j_icon} ({j['scheduled_date']}): {j['customer_name']} — {j['bottle_count']} cyl{rush_tag}")
 
@@ -1964,12 +2107,12 @@ def bootstrap(work_date: Optional[str] = None, cal_year: Optional[int] = None, c
     for i in range(14):
         p = resolve_day_plan(win_start + timedelta(days=i), plans_map, default_cap)
         open_day = [j for j in schedule_jobs if j["status"] != "COMPLETED" and j["scheduled_date"] == p["work_date"]]
-        p["booked_bottles"] = sum(j["bottle_count"] for j in open_day if j["job_type"] in ("SHOP_BATCH", "ROAD_PICKUP"))
+        p["booked_bottles"] = sum(j["bottle_count"] for j in open_day if j["job_type"] in ("SHOP_BATCH", "ROAD_PICKUP", "ROAD_ROUNDTRIP"))
         p["job_count"] = len(open_day)
         day_plans.append(p)
     selected_day_plan = resolve_day_plan(cal_anchor, plans_map, default_cap)
     selected_day_open = [j for j in schedule_jobs if j["status"] != "COMPLETED" and j["scheduled_date"] == selected_day_plan["work_date"]]
-    selected_day_plan["booked_bottles"] = sum(j["bottle_count"] for j in selected_day_open if j["job_type"] in ("SHOP_BATCH", "ROAD_PICKUP"))
+    selected_day_plan["booked_bottles"] = sum(j["bottle_count"] for j in selected_day_open if j["job_type"] in ("SHOP_BATCH", "ROAD_PICKUP", "ROAD_ROUNDTRIP"))
 
     crew = [dict(r) for r in conn.execute("SELECT * FROM crew_members WHERE active=1 ORDER BY id;").fetchall()]
     targets = [
@@ -2034,7 +2177,7 @@ def bootstrap(work_date: Optional[str] = None, cal_year: Optional[int] = None, c
         dict(r)
         for r in conn.execute(
             """SELECT * FROM dropoffs
-               WHERE status != 'ARCHIVED'
+               WHERE status NOT IN ('ARCHIVED', 'DISPATCH_SCHEDULED')
                  AND (entry_type='PICKUP_NOTICE' OR COALESCE(imported_count, 0) < bottle_count)
                ORDER BY CASE WHEN status IN ('IN_BACKROOM', 'PICKUP_LOGGED') THEN 0 ELSE 1 END,
                         rush_requested DESC, id DESC LIMIT 40;"""

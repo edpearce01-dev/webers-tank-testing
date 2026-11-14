@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b2219" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/static/ops.css?v=8.2" />
+  <link rel="stylesheet" href="/static/ops.css?v=8.4" />
   <title>Weber's Tank Testing — Month Schedule &amp; Dispatch | DOT B386</title>
 </head>
 <body>
@@ -78,7 +78,8 @@
         </div>
 
         <div class="rail-footer">
-          <a class="secondary" href="/office?tab=quick" style="width:100%;background:#fef3c7;color:#92400e;border-color:#f59e0b;">📞 Quick Phone Schedule</a>
+          <a class="secondary" href="/office?tab=quick" style="width:100%;background:#ecfdf5;color:#065f46;border-color:#6ee7b7;">📞 Call: Shop Drop-Off</a>
+          <a class="secondary" href="/office?tab=dispatch" style="width:100%;background:#fef3c7;color:#92400e;border-color:#f59e0b;">🚚 Dispatch: Truck Run</a>
           <a class="secondary" href="/ops" style="width:100%;">🔧 Back to Shop Ops</a>
           <a class="secondary" href="/office?tab=rolodex" style="width:100%;">📇 Customer Rolodex</a>
           <a class="secondary" href="/office?tab=supplies" id="railSupplyBtn" style="width:100%;">📦 Reorder Supplies</a>
@@ -181,7 +182,8 @@
                   <label>Dispatch Type</label>
                   <select id="sjType">
                     <option value="SHOP_BATCH">📌 Scheduled Shop Batch</option>
-                    <option value="ROAD_PICKUP">🚚 Outbound Pickup Run</option>
+                    <option value="ROAD_ROUNDTRIP">🔄 Round-Trip: Truck Pickup &amp; Return Delivery</option>
+                    <option value="ROAD_PICKUP">🚚 Truck Pickup Only</option>
                     <option value="ROAD_DELIVERY">🚚 Outbound Delivery Run</option>
                     <option value="ONSITE_VISUAL">🔍 On-Site Visual Inspection</option>
                   </select>
@@ -516,7 +518,7 @@
         const fillCls = pct >= 100 ? 'full' : (pct >= 80 ? 'warn' : '');
         const jobsHtml = (d.jobs || []).slice(0, 2).map(j => {
           const isR = Boolean(j.rush_fee || j.priority === 'RUSH');
-          const ico = j.job_type === 'ROAD_PICKUP' ? '🚚' : (j.job_type === 'ROAD_DELIVERY' ? '📦' : '📌');
+          const ico = j.job_type === 'ROAD_ROUNDTRIP' ? '🔄' : (j.job_type === 'ROAD_PICKUP' ? '🚚' : (j.job_type === 'ROAD_DELIVERY' ? '📦' : '📌'));
           return `<div class="mday-job-pill ${isR ? 'rush' : ''}">${ico} ${escHtml(j.customer_name)} (${j.bottle_count})</div>`;
         }).join('');
         const extra = (d.jobs || []).length > 2 ? `<div style="font-size:0.65rem;color:var(--muted);font-weight:800;">+${d.jobs.length - 2} more</div>` : '';
@@ -559,7 +561,7 @@
     }
 
     function jobRowHtml(j) {
-      const ico = j.job_type === 'ROAD_PICKUP' ? '🚚 Pickup' : (j.job_type === 'ROAD_DELIVERY' ? '🚚 Delivery' : (j.job_type === 'ONSITE_VISUAL' ? '🔍 On-Site' : '📌 Batch'));
+      const ico = j.job_type === 'ROAD_ROUNDTRIP' ? '🔄 Pickup+Deliv' : (j.job_type === 'ROAD_PICKUP' ? '🚚 Pickup' : (j.job_type === 'ROAD_DELIVERY' ? '📦 Delivery' : (j.job_type === 'ONSITE_VISUAL' ? '🔍 On-Site' : '📌 Batch')));
       const isPrepped = j.prep_status === 'DEVALVED_TAGGED';
       const mapUrl = j.location_notes ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.location_notes)}` : '';
       return `

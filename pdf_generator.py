@@ -1109,9 +1109,124 @@ def build_shelf_claim_slip_pdf(
     c.setFillColor(colors.HexColor("#334155"))
     c.setFont("Helvetica", 9.0)
     c.drawString(128, foot_y + 45, "1. Verify cylinder count above matches your group on the Zone E Pickup Shelf.")
-    c.drawString(128, foot_y + 30, "2. Scan QR code -> tap 'PICK UP CYLINDERS' -> enter your name to confirm pickup.")
+    c.drawString(128, foot_y + 30, "2. Scan QR code -> tap 'BACKROOM PICK-UP' -> enter your name to confirm pickup.")
     c.setFont("Helvetica-Bold", 8.5)
     c.drawString(128, foot_y + 13, f"NOTE: Testing facility only - cylinders are returned clean, dry & depressurized.  |  {phone}")
 
+    c.save()
+    return buf.getvalue()
+
+
+def build_dropoff_receipt_pdf(
+    dropoff: dict,
+    phone: str = "724-266-8008",
+    dot_rin: str = "B386",
+    track_url: str = "https://weberstanktesting.com/#tracker",
+) -> bytes:
+    """Generates a clean mobile-friendly 1-page Customer Ticket PDF with QR tracker."""
+    buf = io.BytesIO()
+    W, H = letter
+    c = canvas.Canvas(buf, pagesize=letter)
+
+    ticket_no = f"BR-{int(dropoff.get('id') or 0):04d}"
+    etype = (dropoff.get("entry_type") or "DROPOFF").upper()
+    is_pickup = (etype == "PICKUP_NOTICE")
+    is_truck = (etype == "TRUCK_REQUEST")
+
+    c.setFillColorRGB(0.04, 0.13, 0.09)
+    c.rect(36, H - 122, W - 72, 86, fill=1, stroke=0)
+    c.setFillColorRGB(0.98, 0.75, 0.14)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(54, H - 62, f"U.S. D.O.T. CERTIFIED FACILITY  •  RIN {dot_rin}")
+    c.setFillColorRGB(1, 1, 1)
+    c.setFont("Helvetica-Bold", 21)
+    c.drawString(54, H - 88, "WEBER'S TANK TESTING")
+    c.setFont("Helvetica", 9.5)
+    c.drawString(54, H - 106, f"3086 Legionville Rd, Baden, PA 15005  •  Call/Text: {phone}")
+
+    c.setFillColorRGB(0.94, 0.99, 0.96)
+    c.setStrokeColorRGB(0.09, 0.64, 0.29)
+    c.setLineWidth(2)
+    c.roundRect(36, H - 252, W - 72, 114, 10, fill=1, stroke=1)
+
+    c.setFillColorRGB(0.06, 0.37, 0.24)
+    c.setFont("Helvetica-Bold", 11)
+    lbl = (
+        "TRUCK PICKUP & DELIVERY REQUEST TICKET #"
+        if is_truck
+        else ("BACKROOM PICK-UP CONFIRMATION #" if is_pickup else "24/7 BACKROOM DROP-OFF TICKET #")
+    )
+    c.drawCentredString(W / 2, H - 164, lbl)
+
+    c.setFillColorRGB(0.04, 0.13, 0.09)
+    c.setFont("Helvetica-Bold", 42)
+    c.drawCentredString(W / 2, H - 208, ticket_no)
+
+    est_ready = dropoff.get("promised_date") or "Pending Shop Schedule"
+    c.setFillColorRGB(0.09, 0.40, 0.20)
+    c.setFont("Helvetica-Bold", 12)
+    sub_line = (
+        f"Signed Out By: {dropoff.get('picked_up_by') or dropoff.get('customer_name')}"
+        if is_pickup
+        else f"Estimated Ready / Return Date:  {est_ready}" + ("  (PAID RUSH)" if dropoff.get("rush_requested") else "")
+    )
+    c.drawCentredString(W / 2, H - 234, sub_line)
+
+    y = H - 288
+    c.setFillColorRGB(0.06, 0.09, 0.16)
+    rows = [
+        ("Logged Date / Time:", str(dropoff.get("created_at") or "")),
+        ("Customer / Department:", str(dropoff.get("customer_name") or "")),
+    ]
+    if dropoff.get("contact_person"):
+        rows.append(("Contact / Requested By:", str(dropoff.get("contact_person"))))
+    if dropoff.get("pickup_address"):
+        rows.append(("Pickup / Delivery Address:", str(dropoff.get("pickup_address"))))
+    if dropoff.get("preferred_date"):
+        rows.append(("Requested Stop Date:", str(dropoff.get("preferred_date"))))
+    if dropoff.get("po_station"):
+        rows.append(("Station / PO #:", str(dropoff.get("po_station"))))
+    rows.extend([
+        ("Contact Phone:", str(dropoff.get("customer_phone") or "")),
+        ("Service / Dispatch Mode:", str(dropoff.get("service_requested") or "Hydro + Visual")),
+        ("Cylinder Count:", f"{dropoff.get('bottle_count') or 1} Cylinder(s)"),
+        ("Cylinder Types / Notes:", str(dropoff.get("tank_summary") or "Standard Hydro + Visual")),
+    ])
+
+    for k, v in rows:
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(48, y, k)
+        c.setFont("Helvetica", 10)
+        c.drawString(205, y, v[:68])
+        c.setStrokeColorRGB(0.88, 0.91, 0.94)
+        c.setLineWidth(0.7)
+        c.line(48, y - 6, W - 48, y - 6)
+        y -= 23
+
+    qr_y = 78
+    c.setFillColorRGB(0.97, 0.98, 0.99)
+    c.setStrokeColorRGB(0.75, 0.80, 0.86)
+    c.setLineWidth(1)
+    c.roundRect(36, qr_y, W - 72, 114, 8, fill=1, stroke=1)
+
+    qr_widget = qr.QrCodeWidget(track_url)
+    bounds = qr_widget.getBounds()
+    qw = bounds[2] - bounds[0]
+    qh = bounds[3] - bounds[1]
+    d = Drawing(90, 90, transform=[90.0 / qw, 0, 0, 90.0 / qh, 0, 0])
+    d.add(qr_widget)
+    renderPDF.draw(d, c, 50, qr_y + 12)
+
+    c.setFillColorRGB(0.06, 0.09, 0.16)
+    c.setFont("Helvetica-Bold", 11.5)
+    c.drawString(154, qr_y + 84, "Track Live Shop Status Anytime:  weberstanktesting.com")
+    c.setFont("Helvetica", 9.6)
+    c.drawString(154, qr_y + 65, f"1. Scan QR code (or visit weberstanktesting.com) and enter Ticket {ticket_no}.")
+    c.drawString(154, qr_y + 48, "2. We will text/call your phone to confirm ready status or truck ETA.")
+    c.setFont("Helvetica-Bold", 9.0)
+    c.setFillColorRGB(0.55, 0.25, 0.04)
+    c.drawString(154, qr_y + 26, "TESTING FACILITY ONLY: Weber's does not refill cylinders. Tanks return clean, dry & empty.")
+
+    c.showPage()
     c.save()
     return buf.getvalue()

@@ -438,7 +438,7 @@ function renderStartOfDayHuddle(queued, openSched, waitingDrops) {
   document.getElementById('huddleLineupList').innerHTML = todayRuns.length
     ? `<small style="font-weight:800;color:var(--muted);display:block;margin-bottom:4px;">TODAY'S SCHEDULED BATCHES &amp; ROAD RUNS:</small>` +
       todayRuns.slice(0, 4).map(j => {
-        const ico = j.job_type === 'ROAD_PICKUP' ? '🚚 Pickup' : (j.job_type === 'ROAD_DELIVERY' ? '🚚 Delivery' : '📌 Batch');
+        const ico = j.job_type === 'ROAD_ROUNDTRIP' ? '🔄 Pickup+Deliv' : (j.job_type === 'ROAD_PICKUP' ? '🚚 Pickup' : (j.job_type === 'ROAD_DELIVERY' ? '🚚 Delivery' : '📌 Batch'));
         return `
           <div class="rec-item">
             <div class="rec-main">
