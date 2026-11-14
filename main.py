@@ -9,16 +9,17 @@ import ssl
 import urllib.error
 import urllib.request
 from contextlib import asynccontextmanager
-from datetime import date, datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from database import bump_db_version, get_conn, init_db
+from database import bump_db_version, get_conn, init_db, wipe_all_operational_data
 from pdf_generator import (
     build_invoice_pdf,
     build_retest_datasheet_pdf,
@@ -33,6 +34,25 @@ STATIC_DIR.mkdir(exist_ok=True)
 
 COOKIE_NAME = "webers_crew_session"
 CACHED_VISION_MODEL: Optional[str] = None
+
+
+def now_eastern() -> datetime:
+    """Locks server timestamps and working dates to Pennsylvania Eastern Time."""
+    try:
+        return datetime.now(ZoneInfo("America/New_York"))
+    except Exception:
+        utc_now = datetime.now(timezone.utc)
+        yr = utc_now.year
+        mar1 = datetime(yr, 3, 1, tzinfo=timezone.utc)
+        dst_start = mar1 + timedelta(days=(6 - mar1.weekday()) % 7 + 7, hours=7)
+        nov1 = datetime(yr, 11, 1, tzinfo=timezone.utc)
+        dst_end = nov1 + timedelta(days=(6 - nov1.weekday()) % 7, hours=6)
+        offset = -4 if dst_start <= utc_now < dst_end else -5
+        return utc_now.astimezone(timezone(timedelta(hours=offset)))
+
+
+def today_eastern() -> str:
+    return now_eastern().date().isoformat()
 
 
 def get_lan_ip() -> str:
@@ -73,15 +93,16 @@ def is_authenticated(request: Request) -> bool:
     return hmac.compare_digest(token, compute_session_token())
 
 
-def check_duplicate_valve_tag(
-    conn, work_date: str, valve_tag: str, exclude_id: Optional[int] = None
+def check_duplicate_active_valve_tag(
+    conn, valve_tag: str, exclude_id: Optional[int] = None
 ) -> Optional[dict]:
+    """Blocks duplicate assignment ONLY if the valve tag is currently active on another tank."""
     clean = (valve_tag or "").strip()
     if not clean:
         return None
-    sql = """SELECT id, serial_number, customer_name FROM cylinder_records
-             WHERE work_date=? AND UPPER(valve_tag)=UPPER(?) AND valve_reinstalled=0"""
-    params: list = [work_date, clean]
+    sql = """SELECT id, serial_number, customer_name, work_date FROM cylinder_records
+             WHERE UPPER(valve_tag)=UPPER(?) AND valve_reinstalled=0 AND valve_tag != ''"""
+    params: list = [clean]
     if exclude_id is not None:
         sql += " AND id != ?"
         params.append(exclude_id)
@@ -129,10 +150,7 @@ def push_unsynced_to_sheets() -> dict:
     for r in recs:
         if r.get("percent_permanent") is not None:
             r["percent_permanent"] = round(float(r["percent_permanent"]), 1)
-        vtag = (r.get("valve_tag") or "").strip()
-        raw_notes = (r.get("notes") or "").strip()
-        if vtag and f"Valve Tag #{vtag}" not in raw_notes:
-            r["notes"] = f"[Valve Tag #{vtag}] {raw_notes}".strip()
+        r["operator_initials"] = "RP"
 
     payload_bytes = json.dumps(
         {"calibrations": cals, "records": recs, "invoices": invs, "pricing_rates": rates}
@@ -145,7 +163,7 @@ def push_unsynced_to_sheets() -> dict:
         method="POST",
     )
     ctx = ssl.create_default_context()
-    with urllib.request.urlopen(req, timeout=18, context=ctx) as resp:
+    with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
         _ = resp.read()
 
     conn = get_conn()
@@ -159,6 +177,21 @@ def push_unsynced_to_sheets() -> dict:
     conn.commit()
     conn.close()
     return {"synced": True, "pushed": len(cals) + len(recs) + len(invs)}
+
+
+def wipe_sheets_remote(webhook_url: str) -> bool:
+    if not webhook_url:
+        return False
+    req = urllib.request.Request(
+        webhook_url,
+        data=json.dumps({"action": "wipe_test_data"}).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    ctx = ssl.create_default_context()
+    with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
+        _ = resp.read()
+    return True
 
 
 async def background_sheets_sync_loop():
@@ -184,7 +217,10 @@ app = FastAPI(title="Weber's Tank Testing - DOT RIN B386", lifespan=lifespan)
 @app.middleware("http")
 async def auth_gate_middleware(request: Request, call_next):
     path = request.url.path
-    public_paths = {"/", "/manifest.json", "/sw.js", "/icon.svg", "/api/auth/status", "/api/auth/login", "/api/auth/logout"}
+    public_paths = {
+        "/", "/ops", "/manifest.json", "/sw.js", "/icon.svg",
+        "/api/auth/status", "/api/auth/login", "/api/auth/logout",
+    }
     if path in public_paths or path.startswith("/static"):
         return await call_next(request)
     if not is_authenticated(request):
@@ -207,8 +243,6 @@ class VerificationLadderInput(BaseModel):
     max_target_psi: int
     steps: list[LadderStep]
     permanent_cc: float = 0.0
-    operator_name: str = "Ryan Pearce"
-    operator_initials: str = "RP"
 
 
 class SettingsInput(BaseModel):
@@ -217,12 +251,13 @@ class SettingsInput(BaseModel):
     gemini_api_key: Optional[str] = None
     sheets_webhook_url: Optional[str] = None
     shop_pin: Optional[str] = None
+    testing_mode: Optional[bool] = None
 
 
 class CrewInput(BaseModel):
     full_name: str
     initials: str
-    role: str = "Visual Inspector"
+    role: str = "Visual Helper"
 
 
 class IntakeInput(BaseModel):
@@ -240,7 +275,7 @@ class IntakeInput(BaseModel):
     test_psi: Optional[int] = None
     ree_limit: Optional[float] = None
     service_mode: str = "HYDRO_AND_VISUAL"
-    intake_by: str = "EP"
+    intake_by: str = "RP"
     notes: str = ""
 
 
@@ -261,8 +296,8 @@ class ScanBottleJsonInput(BaseModel):
     gas_service: str = "AIR"
     outside_dia: str = ""
     length_in: str = ""
-    intake_by: str = "EP"
-    auto_import: bool = True
+    intake_by: str = "RP"
+    auto_import: bool = False
 
 
 class TestCompleteInput(BaseModel):
@@ -282,8 +317,6 @@ class TestCompleteInput(BaseModel):
     chk_bulges: str = "OK"
     chk_neck_defects: str = "OK"
     relief_valve_changed: str = "No"
-    operator_name: str = "Ryan Pearce"
-    operator_initials: str = "RP"
     notes: str = ""
 
 
@@ -304,7 +337,6 @@ class InvoiceCreateInput(BaseModel):
     customer_name: str
     tax_rate: float = 0.0
     status: str = "DRAFT"
-    created_by: str = "AP"
     notes: str = ""
     items: list[InvoiceLineInput]
 
@@ -313,9 +345,18 @@ class InvoiceStatusInput(BaseModel):
     status: str
 
 
-# --- PWA & AUTH ROUTES ---
+# --- HOST-AWARE ROUTING (weberstanktesting.com vs ops.weberstanktesting.com) ---
 @app.get("/")
-def serve_ui():
+def serve_root(request: Request):
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    landing_file = STATIC_DIR / "landing.html"
+    if host in ("weberstanktesting.com", "www.weberstanktesting.com") and landing_file.exists():
+        return FileResponse(landing_file)
+    return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/ops")
+def serve_ops():
     return FileResponse(STATIC_DIR / "index.html")
 
 
@@ -335,11 +376,11 @@ def serve_icon():
 @app.get("/manifest.json")
 def serve_manifest():
     return {
-        "name": "Weber's Tank Testing (DOT B386)",
-        "short_name": "Weber's Hydro",
-        "start_url": "/",
+        "name": "Weber's Tank Testing — Ops (DOT B386)",
+        "short_name": "Weber's Ops",
+        "start_url": "/ops",
         "display": "standalone",
-        "background_color": "#1b4332",
+        "background_color": "#0f291e",
         "theme_color": "#1b4332",
         "icons": [{"src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}],
     }
@@ -401,7 +442,8 @@ def ping_version():
 
 @app.get("/api/bootstrap")
 def bootstrap(work_date: Optional[str] = None):
-    target_date = work_date or date.today().isoformat()
+    est_today = today_eastern()
+    target_date = work_date or est_today
     conn = get_conn()
     s_map = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings;").fetchall()}
     cal_serial = s_map.get("calibrated_serial", "1SF11904")
@@ -446,6 +488,15 @@ def bootstrap(work_date: Optional[str] = None):
             (target_date,),
         ).fetchall()
     ]
+    # All currently active valve tags across the shop (reusable tags not yet reinstalled)
+    active_valves = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT * FROM cylinder_records
+               WHERE valve_tag != '' AND valve_reinstalled = 0
+               ORDER BY id DESC;"""
+        ).fetchall()
+    ]
     dates_summary = [
         dict(r)
         for r in conn.execute(
@@ -481,30 +532,48 @@ def bootstrap(work_date: Optional[str] = None):
         "(SELECT COUNT(*) FROM invoices WHERE synced=0);"
     ).fetchone()[0]
     conn.close()
-    ip = get_lan_ip()
     return {
         "selected_date": target_date,
-        "today": date.today().isoformat(),
+        "today": est_today,
         "db_version": int(s_map.get("db_version", "1")),
+        "testing_mode": s_map.get("testing_mode", "1") == "1",
         "dot_rin": s_map.get("dot_rin", "B386"),
         "starting_sheet_no": int(s_map.get("starting_sheet_no", "8095")),
         "calibrated_serial": cal_serial,
         "has_gemini_key": has_key,
         "has_sheets_webhook": has_webhook,
         "sheets_webhook_url": s_map.get("sheets_webhook_url", ""),
-        "lan_https_url": f"https://{ip}:8443",
         "crew": crew,
         "calibration_targets": targets,
         "verifications": verifications,
         "jacket_ceilings": jacket_ceilings,
         "cga_specs": specs,
         "records": records,
+        "active_valves": active_valves,
         "dates_summary": dates_summary,
         "customers_summary": customers_summary,
         "pricing_rates": rates,
         "invoices": invoices,
         "unsynced_count": unsynced,
     }
+
+
+@app.post("/api/admin/wipe-test-data")
+async def admin_wipe_test_data():
+    conn = get_conn()
+    webhook_row = conn.execute("SELECT value FROM settings WHERE key='sheets_webhook_url';").fetchone()
+    webhook_url = (webhook_row["value"] if webhook_row else "").strip()
+    wipe_all_operational_data(conn)
+    conn.commit()
+    conn.close()
+
+    sheets_wiped = False
+    if webhook_url:
+        try:
+            sheets_wiped = await asyncio.to_thread(wipe_sheets_remote, webhook_url)
+        except Exception:
+            sheets_wiped = False
+    return {"wiped": True, "sheets_wiped": sheets_wiped}
 
 
 @app.post("/api/settings")
@@ -523,6 +592,8 @@ def update_settings(payload: SettingsInput, request: Request):
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('gemini_api_key', ?);", (payload.gemini_api_key.strip(),))
     if payload.sheets_webhook_url is not None:
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('sheets_webhook_url', ?);", (payload.sheets_webhook_url.strip(),))
+    if payload.testing_mode is not None:
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('testing_mode', ?);", ("1" if payload.testing_mode else "0",))
     pin_changed = False
     if payload.shop_pin is not None and payload.shop_pin.strip():
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('shop_pin', ?);", (payload.shop_pin.strip(),))
@@ -568,9 +639,10 @@ async def manual_sync_now():
 
 @app.post("/api/verify-ladder")
 def log_verification_ladder(payload: VerificationLadderInput):
-    t_date = payload.test_date or date.today().isoformat()
-    t_time = datetime.now().strftime("%I:%M %p")
-    run_id = f"{t_date}-{payload.jacket_type[:5]}-{datetime.now().strftime('%H%M%S')}"
+    est = now_eastern()
+    t_date = payload.test_date or est.date().isoformat()
+    t_time = est.strftime("%I:%M %p")
+    run_id = f"{t_date}-{payload.jacket_type[:5]}-{est.strftime('%H%M%S')}"
 
     conn = get_conn()
     cal_serial = conn.execute("SELECT value FROM settings WHERE key='calibrated_serial';").fetchone()["value"]
@@ -608,11 +680,11 @@ def log_verification_ladder(payload: VerificationLadderInput):
                (run_id, test_date, test_time, jacket_type, calibrated_serial, max_target_psi,
                 target_pressure_psi, expected_cc, actual_total_cc, permanent_cc,
                 elastic_cc, percent_deviation, passed, operator_name, operator_initials)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Ryan Pearce', 'RP');""",
             (
                 run_id, t_date, t_time, payload.jacket_type, cal_serial,
                 payload.max_target_psi, exp_psi, expected_a, actual_b,
-                perm, elastic, pct_dev, step_passed, payload.operator_name, payload.operator_initials,
+                perm, elastic, pct_dev, step_passed,
             ),
         )
     bump_db_version(conn)
@@ -625,17 +697,27 @@ def log_verification_ladder(payload: VerificationLadderInput):
     }
 
 
+def lookup_spec_defaults(conn, dot_spec: str, service_psi: int) -> Optional[dict]:
+    sp = (dot_spec or "").strip().upper().replace("SP-", "SP")
+    row = conn.execute(
+        """SELECT test_psi, outside_dia, length_in, ree_limit FROM cga_specs
+           WHERE UPPER(dot_spec)=? AND service_psi=? LIMIT 1;""",
+        (sp, service_psi),
+    ).fetchone()
+    return dict(row) if row else None
+
+
 def insert_cylinder_record(payload: IntakeInput) -> dict:
-    w_date = payload.work_date or date.today().isoformat()
-    v_tag = payload.valve_tag.strip()
+    w_date = payload.work_date or today_eastern()
+    v_tag = payload.valve_tag.strip().lstrip("#")
     conn = get_conn()
 
-    dup = check_duplicate_valve_tag(conn, w_date, v_tag)
+    dup = check_duplicate_active_valve_tag(conn, v_tag)
     if dup:
         conn.close()
         raise HTTPException(
             409,
-            f"Valve Tag #{v_tag} is already in use on SN {dup['serial_number']} ({dup['customer_name']}). Pick an unused tag # or mark that valve reinstalled.",
+            f"Valve Tag #{v_tag} is currently active on SN {dup['serial_number']} ({dup['customer_name']}). Mark that valve reinstalled before reusing Tag #{v_tag}.",
         )
 
     base_sheet = int(conn.execute("SELECT value FROM settings WHERE key='starting_sheet_no';").fetchone()["value"])
@@ -649,16 +731,16 @@ def insert_cylinder_record(payload: IntakeInput) -> dict:
     ree = payload.ree_limit
     calc_test_psi = payload.test_psi
 
-    cga_match = conn.execute(
-        """SELECT test_psi, outside_dia, length_in, ree_limit FROM cga_specs
-           WHERE UPPER(dot_spec)=? AND service_psi=? LIMIT 1;""",
-        (payload.dot_spec.strip().upper(), payload.service_psi),
-    ).fetchone()
-
+    cga_match = lookup_spec_defaults(conn, payload.dot_spec, payload.service_psi)
     if not calc_test_psi:
         calc_test_psi = int(cga_match["test_psi"]) if cga_match else round((payload.service_psi * 5) / 3)
-    if cga_match and ree is None:
-        ree = cga_match["ree_limit"]
+    if cga_match:
+        if not dia:
+            dia = cga_match["outside_dia"]
+        if not length:
+            length = cga_match["length_in"]
+        if ree is None:
+            ree = cga_match["ree_limit"]
 
     phys_size = f"{dia}x{length}".strip("x") if (dia or length) else ""
     cur = conn.cursor()
@@ -666,14 +748,14 @@ def insert_cylinder_record(payload: IntakeInput) -> dict:
         """INSERT INTO cylinder_records
            (work_date, sheet_no, customer_name, serial_number, valve_tag, mfg_id, mfg_date, gas_service,
             outside_dia, length_in, physical_size, dot_spec, service_psi, test_psi,
-            ree_limit, service_mode, intake_by, notes)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);""",
+            ree_limit, service_mode, intake_by, operator_name, operator_initials, notes)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Ryan Pearce', 'RP', ?);""",
         (
             w_date, assigned_sheet_no, payload.customer_name.strip(), payload.serial_number.strip().upper(),
             v_tag, payload.mfg_id.strip().upper(), payload.mfg_date.strip(),
             payload.gas_service.strip().upper(), dia, length, phys_size,
-            payload.dot_spec.strip().upper(), payload.service_psi, calc_test_psi,
-            ree, payload.service_mode, payload.intake_by.strip().upper(), payload.notes,
+            payload.dot_spec.strip().upper().replace("SP-", "SP"), payload.service_psi, calc_test_psi,
+            ree, payload.service_mode, payload.intake_by.strip().upper() or "RP", payload.notes,
         ),
     )
     bump_db_version(conn)
@@ -712,7 +794,7 @@ def assign_or_update_valve_tag(payload: ValveTagAssignInput):
         conn.close()
         raise HTTPException(404, "Cylinder serial number not found. Scan or log the bottle in first.")
 
-    new_tag = rec["valve_tag"] if payload.valve_tag is None else payload.valve_tag.strip()
+    new_tag = rec["valve_tag"] if payload.valve_tag is None else payload.valve_tag.strip().lstrip("#")
     new_reinst = (
         int(rec["valve_reinstalled"] or 0)
         if payload.valve_reinstalled is None
@@ -720,12 +802,12 @@ def assign_or_update_valve_tag(payload: ValveTagAssignInput):
     )
 
     if new_tag and not new_reinst:
-        dup = check_duplicate_valve_tag(conn, rec["work_date"], new_tag, exclude_id=rec["id"])
+        dup = check_duplicate_active_valve_tag(conn, new_tag, exclude_id=rec["id"])
         if dup:
             conn.close()
             raise HTTPException(
                 409,
-                f"Valve Tag #{new_tag} is already assigned to SN {dup['serial_number']} ({dup['customer_name']}) on {rec['work_date']}.",
+                f"Valve Tag #{new_tag} is currently active on SN {dup['serial_number']} ({dup['customer_name']}).",
             )
 
     conn.execute(
@@ -749,6 +831,7 @@ def delete_queued_record(record_id: int):
     return {"deleted": record_id}
 
 
+# --- FAST MULTI-ANGLE GEMINI VISION ENGINE ---
 def discover_vision_models(api_key: str) -> list[str]:
     url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
     ctx = ssl.create_default_context()
@@ -756,7 +839,10 @@ def discover_vision_models(api_key: str) -> list[str]:
     with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
         data = json.loads(resp.read().decode("utf-8"))
 
-    skip_tokens = ("tts", "embedding", "imagen", "veo", "audio", "robotics", "aqa", "learnlm", "image", "computer-use", "live", "2.5-flash", "2.0-flash", "1.5-")
+    skip_tokens = (
+        "tts", "embedding", "imagen", "veo", "audio", "robotics",
+        "aqa", "learnlm", "image", "computer-use", "live", "1.5-",
+    )
     scored = []
     for m in data.get("models", []):
         if "generateContent" not in m.get("supportedGenerationMethods", []):
@@ -765,12 +851,14 @@ def discover_vision_models(api_key: str) -> list[str]:
         low = short.lower()
         if not low.startswith("gemini-") or any(tok in low for tok in skip_tokens):
             continue
+        # Prioritize fast non-blocking Flash vision models (2.5-flash first, then 3.x-flash)
+        is_25_flash = 1 if low == "gemini-2.5-flash" else 0
+        is_flash = 1 if ("flash" in low and "lite" not in low) else 0
+        is_stable = 0 if ("preview" in low or "exp" in low) else 1
         ver = re.search(r"gemini-(\d+)(?:\.(\d+))?", low)
         major = int(ver.group(1)) if ver else 0
         minor = int(ver.group(2) or 0) if ver else 0
-        is_flash = 1 if ("flash" in low and "lite" not in low) else 0
-        is_stable = 0 if ("preview" in low or "exp" in low) else 1
-        scored.append(((is_flash, major, minor, is_stable), short))
+        scored.append(((is_25_flash, is_flash, is_stable, major, minor), short))
     scored.sort(key=lambda item: item[0], reverse=True)
     return [name for _, name in scored]
 
@@ -786,58 +874,68 @@ def call_gemini_vision_rest(api_key: str, images_b64: list[str], prompt: str) ->
                 candidates.append(d)
     except Exception:
         pass
-    for fb in ("gemini-3.8-flash", "gemini-3.0-flash", "gemini-flash-latest"):
+    for fb in ("gemini-2.5-flash", "gemini-3-flash-preview", "gemini-2.0-flash"):
         if fb not in candidates:
             candidates.append(fb)
 
+    schema = {
+        "type": "OBJECT",
+        "properties": {
+            "detected_customer": {"type": "STRING", "nullable": True},
+            "serial_number": {"type": "STRING", "nullable": True},
+            "valve_tag": {"type": "STRING", "nullable": True},
+            "mfg_id": {"type": "STRING", "nullable": True},
+            "mfg_date": {"type": "STRING", "nullable": True},
+            "dot_spec": {"type": "STRING", "nullable": True},
+            "service_psi": {"type": "INTEGER", "nullable": True},
+            "outside_dia": {"type": "STRING", "nullable": True},
+            "length_in": {"type": "STRING", "nullable": True},
+            "size_source": {"type": "STRING", "nullable": True},
+            "ree_limit": {"type": "NUMBER", "nullable": True},
+            "gas_service": {"type": "STRING", "nullable": True},
+        },
+    }
+
     parts = [{"inline_data": {"mime_type": "image/jpeg", "data": b64}} for b64 in images_b64]
     parts.append({"text": prompt})
-    body_bytes = json.dumps(
-        {
-            "contents": [{"parts": parts}],
-            "generationConfig": {
-                "responseMimeType": "application/json",
-                "responseSchema": {
-                    "type": "OBJECT",
-                    "properties": {
-                        "detected_customer": {"type": "STRING", "nullable": True},
-                        "serial_number": {"type": "STRING", "nullable": True},
-                        "mfg_id": {"type": "STRING", "nullable": True},
-                        "mfg_date": {"type": "STRING", "nullable": True},
-                        "dot_spec": {"type": "STRING", "nullable": True},
-                        "service_psi": {"type": "INTEGER", "nullable": True},
-                        "ree_limit": {"type": "NUMBER", "nullable": True},
-                        "gas_service": {"type": "STRING", "nullable": True},
-                    },
-                },
-            },
-        }
-    ).encode("utf-8")
-
     ctx = ssl.create_default_context()
-    last_error = "No compatible Gemini model responded."
-    idx = 0
-    while idx < len(candidates) and idx < 6:
-        model_name = candidates[idx]
-        idx += 1
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
-        req = urllib.request.Request(url, data=body_bytes, headers={"Content-Type": "application/json"}, method="POST")
-        try:
-            with urllib.request.urlopen(req, timeout=25, context=ctx) as resp:
-                resp_json = json.loads(resp.read().decode("utf-8"))
-                raw_text = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
-                if raw_text.startswith("```"):
-                    raw_text = re.sub(r"^```(?:json)?|```$", "", raw_text, flags=re.MULTILINE).strip()
-                parsed = json.loads(raw_text)
-                CACHED_VISION_MODEL = model_name
-                return parsed
-        except urllib.error.HTTPError as http_err:
-            err_detail = http_err.read().decode("utf-8", errors="ignore")
-            if http_err.code == 404:
-                for s in re.findall(r"models/(gemini-[a-zA-Z0-9.\-]+)", err_detail):
-                    if s != model_name and s not in candidates:
-                        candidates.insert(idx, s)
-            last_error = f"Gemini HTTP {http_err.code} ({model_name}): {err_detail[:200]}"
+    last_error = "No compatible Gemini vision model responded."
+
+    for model_name in candidates[:5]:
+        low_m = model_name.lower()
+        gen_cfg: dict = {
+            "temperature": 0.1,
+            "responseMimeType": "application/json",
+            "responseSchema": schema,
+        }
+        if "2.5-flash" in low_m:
+            gen_cfg["thinkingConfig"] = {"thinkingBudget": 0}
+        elif low_m.startswith("gemini-3"):
+            gen_cfg["thinkingConfig"] = {"thinkingLevel": "LOW"}
+
+        for attempt in range(2):
+            body_bytes = json.dumps({"contents": [{"parts": parts}], "generationConfig": gen_cfg}).encode("utf-8")
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+            req = urllib.request.Request(url, data=body_bytes, headers={"Content-Type": "application/json"}, method="POST")
+            try:
+                with urllib.request.urlopen(req, timeout=55, context=ctx) as resp:
+                    resp_json = json.loads(resp.read().decode("utf-8"))
+                    raw_text = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+                    if raw_text.startswith("```"):
+                        raw_text = re.sub(r"^```(?:json)?|```$", "", raw_text, flags=re.MULTILINE).strip()
+                    parsed = json.loads(raw_text)
+                    CACHED_VISION_MODEL = model_name
+                    return parsed
+            except urllib.error.HTTPError as http_err:
+                err_detail = http_err.read().decode("utf-8", errors="ignore")
+                if http_err.code == 400 and "thinkingConfig" in gen_cfg and attempt == 0:
+                    gen_cfg.pop("thinkingConfig", None)
+                    continue
+                last_error = f"Gemini HTTP {http_err.code} ({model_name}): {err_detail[:180]}"
+                break
+            except Exception as exc:
+                last_error = f"{model_name}: {exc}"
+                break
     raise RuntimeError(last_error)
 
 
@@ -849,41 +947,84 @@ async def scan_and_import_bottle(payload: ScanBottleJsonInput):
 
     api_key = (os.getenv("GEMINI_API_KEY") or saved_key or "").strip()
     if not api_key:
-        raise HTTPException(503, "Gemini API Key not set. Paste it in '? Guide & Settings'.")
+        raise HTTPException(503, "Gemini API Key not set. Open 'Settings' in the top right and paste your key.")
 
     prompt = (
-        "Read 1 to 6 photos around the curved shoulder/neck of the SAME compressed gas cylinder and combine all stamps:\n"
-        "- serial_number: Cylinder serial without spaces (e.g. 'B6680'). Ignore 2x2 RIN stamps like B3/68.\n"
-        "- dot_spec: Spec code only (e.g. 'ICC3A1800'->'3A', '3AA2015'->'3AA', '3AL3000'->'3AL', 'SP14387-4500'->'SP14387').\n"
-        "- service_psi: Integer service pressure (e.g. 1800, 2015, 2250, 3000, 3442, 4500).\n"
-        "- mfg_id: Manufacturer code/symbol (e.g. 'LUXFER', 'WK', 'M4625', 'S O CO', 'PST', 'TW').\n"
-        "- mfg_date: Original manufacture date M-YY or MM-YY (ignore later retest dates).\n"
-        "- gas_service: Gas from sticker/stencil (e.g. 'CO2', 'AIR', 'O2', else null).\n"
-        "- detected_customer: Owner/Distributor name on sticker or stencil (else null).\n"
-        "- ree_limit: Float REE value if printed on label, else null."
+        "Examine these 1 to 6 photos of a compressed gas cylinder and extract all markings for DOT hydro-test intake:\n"
+        "- serial_number: Cylinder serial number without spaces (e.g. 'B6680', 'W370277'). Ignore 4-digit 2x2 RIN grids.\n"
+        "- valve_tag: If a numbered brass, plastic, or paper shop tag is hanging on or near the valve/neck, return its number (e.g. '14'), else null.\n"
+        "- dot_spec: Spec code only without pressure (e.g. 'ICC3A1800'->'3A', '3AA2015'->'3AA', '3AL3000'->'3AL', 'DOT-SP14387-4500'->'SP14387').\n"
+        "- service_psi: Integer service pressure (e.g. 1800, 2015, 2216, 2250, 2400, 3000, 3442, 4500).\n"
+        "- mfg_id: Manufacturer code/name (e.g. 'LUXFER', 'WK', 'M4625', 'M8004', 'PST', 'TW', 'S O CO').\n"
+        "- mfg_date: Original manufacture date M-YY or MM-YY (earliest date near inspector mark; ignore newer retest stamps).\n"
+        "- gas_service: Gas type from label/paint/stencil (e.g. 'AIR', 'CO2', 'O2', 'N2', 'AR', else 'AIR').\n"
+        "- detected_customer: Owner, fire department, or distributor name on collar/stencil/label (else null).\n"
+        "- outside_dia: Cylinder outside diameter in inches as string (e.g. '7.3', '6.8', '8', '9'). Read from label if printed; otherwise estimate standard CGA/DOT cylinder OD from spec, pressure, gas, and visible proportions.\n"
+        "- length_in: Cylinder body length (excluding valve) in inches as string (e.g. '23', '25 1/2', '51', '16 3/4'). Read from label if printed; otherwise estimate standard cylinder length from proportions.\n"
+        "- size_source: 'LABEL' if OD/Length were explicitly printed on cylinder, else 'ESTIMATED'.\n"
+        "- ree_limit: Float REE (Rejection Elastic Expansion in cc) if printed on a composite cylinder label, else null."
     )
 
     try:
         extracted = await asyncio.wait_for(
             asyncio.to_thread(call_gemini_vision_rest, api_key, payload.images_b64[:6], prompt),
-            timeout=30.0,
+            timeout=70.0,
         )
     except Exception as exc:
-        raise HTTPException(502, str(exc))
+        raise HTTPException(502, f"AI Scan Error: {exc}")
 
+    dot_spec = (extracted.get("dot_spec") or "").strip().upper().replace("SP-", "SP")
+    svc_psi = int(extracted["service_psi"]) if extracted.get("service_psi") else 0
+    serial_clean = (extracted.get("serial_number") or "").replace(" ", "").strip().upper()
+    scanned_vtag = (payload.valve_tag or extracted.get("valve_tag") or "").strip().lstrip("#")
     final_customer = payload.customer_name.strip() or (extracted.get("detected_customer") or "").strip()
-    serial_clean = (extracted.get("serial_number") or "").replace(" ", "").strip()
-    if serial_clean:
-        extracted["serial_number"] = serial_clean
+    gas_svc = (extracted.get("gas_service") or payload.gas_service or "AIR").strip().upper()
+
+    conn = get_conn()
+    cga_match = lookup_spec_defaults(conn, dot_spec, svc_psi) if (dot_spec and svc_psi) else None
+    conn.close()
+
+    dia = payload.outside_dia.strip() or (extracted.get("outside_dia") or "").strip()
+    length = payload.length_in.strip() or (extracted.get("length_in") or "").strip()
+    size_source = extracted.get("size_source") or "ESTIMATED"
+
+    if cga_match:
+        if not dia or size_source != "LABEL":
+            dia = dia or cga_match["outside_dia"]
+            if size_source != "LABEL":
+                size_source = "CGA_CHART"
+        if not length or size_source != "LABEL":
+            length = length or cga_match["length_in"]
+
+    test_psi = int(cga_match["test_psi"]) if cga_match else (round((svc_psi * 5) / 3) if svc_psi else 0)
+    ree_val = extracted.get("ree_limit")
+    if ree_val is None and cga_match:
+        ree_val = cga_match["ree_limit"]
+
+    form_fill = {
+        "customer_name": final_customer,
+        "serial_number": serial_clean,
+        "valve_tag": scanned_vtag,
+        "mfg_id": (extracted.get("mfg_id") or "").strip().upper(),
+        "mfg_date": (extracted.get("mfg_date") or "").strip(),
+        "gas_service": gas_svc,
+        "dot_spec": dot_spec,
+        "service_psi": svc_psi or "",
+        "test_psi": test_psi or "",
+        "outside_dia": dia,
+        "length_in": length,
+        "size_source": size_source,
+        "ree_limit": ree_val if ree_val is not None else "",
+    }
 
     missing = []
     if not final_customer:
         missing.append("Customer Name")
     if not serial_clean:
         missing.append("Serial Number")
-    if not extracted.get("dot_spec"):
+    if not dot_spec:
         missing.append("DOT Spec")
-    if not extracted.get("service_psi"):
+    if not svc_psi:
         missing.append("Service Pressure")
 
     if payload.auto_import and not missing:
@@ -892,21 +1033,22 @@ async def scan_and_import_bottle(payload: ScanBottleJsonInput):
                 work_date=payload.work_date,
                 customer_name=final_customer,
                 serial_number=serial_clean,
-                valve_tag=payload.valve_tag,
-                mfg_id=extracted.get("mfg_id") or "",
-                mfg_date=extracted.get("mfg_date") or "",
-                gas_service=extracted.get("gas_service") or payload.gas_service or "AIR",
-                outside_dia=payload.outside_dia,
-                length_in=payload.length_in,
-                dot_spec=extracted["dot_spec"],
-                service_psi=int(extracted["service_psi"]),
-                ree_limit=extracted.get("ree_limit"),
+                valve_tag=scanned_vtag,
+                mfg_id=form_fill["mfg_id"],
+                mfg_date=form_fill["mfg_date"],
+                gas_service=gas_svc,
+                outside_dia=dia,
+                length_in=length,
+                dot_spec=dot_spec,
+                service_psi=svc_psi,
+                test_psi=test_psi,
+                ree_limit=ree_val,
                 service_mode=payload.service_mode,
                 intake_by=payload.intake_by,
             )
         )
-        return {"imported": True, "record": rec, "extracted": extracted}
-    return {"imported": False, "extracted": extracted, "missing": missing}
+        return {"imported": True, "record": rec, "form_fill": form_fill}
+    return {"imported": False, "form_fill": form_fill, "missing": missing}
 
 
 @app.post("/api/records/{record_id}/complete")
@@ -917,15 +1059,15 @@ def complete_record(record_id: int, payload: TestCompleteInput):
         conn.close()
         raise HTTPException(404, "Cylinder record not found.")
 
-    final_vtag = rec["valve_tag"] if payload.valve_tag is None else payload.valve_tag.strip()
+    final_vtag = rec["valve_tag"] if payload.valve_tag is None else payload.valve_tag.strip().lstrip("#")
     final_reinst = 1 if payload.valve_reinstalled else int(rec["valve_reinstalled"] or 0)
     if final_vtag and not final_reinst:
-        dup = check_duplicate_valve_tag(conn, rec["work_date"], final_vtag, exclude_id=record_id)
+        dup = check_duplicate_active_valve_tag(conn, final_vtag, exclude_id=record_id)
         if dup:
             conn.close()
             raise HTTPException(
                 409,
-                f"Valve Tag #{final_vtag} is already assigned to SN {dup['serial_number']} ({dup['customer_name']}).",
+                f"Valve Tag #{final_vtag} is currently active on SN {dup['serial_number']} ({dup['customer_name']}).",
             )
 
     checks = [
@@ -978,7 +1120,7 @@ def complete_record(record_id: int, payload: TestCompleteInput):
            chk_corrosion=?, chk_dents_dings=?, chk_cuts_gouges=?, chk_leaks=?,
            chk_fire_damage=?, chk_bulges=?, chk_neck_defects=?,
            relief_valve_changed=?, visual_pass=?, hydro_disposition=?, visual_disposition=?,
-           operator_name=?, operator_initials=?, notes=?, synced=0
+           operator_name='Ryan Pearce', operator_initials='RP', notes=?, synced=0
            WHERE id=?;""",
         (
             ver_id, payload.jacket_type if rec["service_mode"] == "HYDRO_AND_VISUAL" else "Road/Visual",
@@ -988,7 +1130,7 @@ def complete_record(record_id: int, payload: TestCompleteInput):
             payload.chk_corrosion, payload.chk_dents_dings, payload.chk_cuts_gouges,
             payload.chk_leaks, payload.chk_fire_damage, payload.chk_bulges, payload.chk_neck_defects,
             payload.relief_valve_changed, vis_pass, hydro_disp, vis_disp,
-            payload.operator_name, payload.operator_initials.strip().upper(), payload.notes, record_id,
+            payload.notes, record_id,
         ),
     )
     bump_db_version(conn)
@@ -998,25 +1140,34 @@ def complete_record(record_id: int, payload: TestCompleteInput):
 
 
 @app.get("/api/search")
-def search_records(q: str = "", customer: str = ""):
+def search_records(q: str = "", customer: str = "", active_tag_only: bool = False):
     conn = get_conn()
     if customer:
         rows = conn.execute(
             "SELECT * FROM cylinder_records WHERE customer_name=? ORDER BY work_date DESC, id ASC;",
             (customer,),
         ).fetchall()
+    elif active_tag_only:
+        tag_q = q.strip().lstrip("#")
+        rows = conn.execute(
+            """SELECT * FROM cylinder_records
+               WHERE valve_reinstalled = 0 AND valve_tag != '' AND UPPER(valve_tag) = UPPER(?)
+               ORDER BY id DESC;""",
+            (tag_q,),
+        ).fetchall()
     else:
-        raw_q = q.strip()
+        raw_q = q.strip().lstrip("#")
         like = f"%{raw_q}%"
+        # Valve tags ONLY match in search if currently active on the cylinder (valve_reinstalled = 0)
         rows = conn.execute(
             """SELECT * FROM cylinder_records
                WHERE customer_name LIKE ?
                   OR serial_number LIKE ?
                   OR dot_spec LIKE ?
                   OR work_date LIKE ?
-                  OR valve_tag LIKE ?
+                  OR (valve_reinstalled = 0 AND valve_tag != '' AND UPPER(valve_tag) = UPPER(?))
                ORDER BY work_date DESC, id DESC LIMIT 150;""",
-            (like, like, like, like, like),
+            (like, like, like, like, raw_q),
         ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -1050,9 +1201,10 @@ def get_unbilled(work_date: str, customer_name: str):
 def create_invoice(payload: InvoiceCreateInput):
     if not payload.items:
         raise HTTPException(400, "Add at least one line item to create an invoice.")
+    est_today = today_eastern()
     conn = get_conn()
     nxt_num = conn.execute("SELECT COUNT(*) + 1 FROM invoices;").fetchone()[0]
-    inv_no = f"INV-{date.today().year}-{nxt_num:04d}"
+    inv_no = f"INV-{est_today[:4]}-{nxt_num:04d}"
 
     subtotal = round(sum(it.qty * it.unit_price for it in payload.items), 2)
     tax_amt = round(subtotal * (payload.tax_rate / 100.0), 2)
@@ -1062,10 +1214,10 @@ def create_invoice(payload: InvoiceCreateInput):
     cur.execute(
         """INSERT INTO invoices
            (invoice_no, invoice_date, work_date, customer_name, subtotal, tax_rate, tax_amount, total_amount, status, created_by, notes, synced)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0);""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'RP', ?, 0);""",
         (
-            inv_no, date.today().isoformat(), payload.work_date, payload.customer_name,
-            subtotal, payload.tax_rate, tax_amt, total, payload.status, payload.created_by, payload.notes,
+            inv_no, est_today, payload.work_date, payload.customer_name,
+            subtotal, payload.tax_rate, tax_amt, total, payload.status, payload.notes,
         ),
     )
     inv_id = cur.lastrowid
@@ -1114,7 +1266,6 @@ def download_retest_pdf(work_date: str, customer: str = "", sheet_no: Optional[i
         records=[dict(r) for r in rows],
         dot_rin=s_map.get("dot_rin", "B386"),
         tc_reg=s_map.get("tc_reg", ""),
-        manager_name=s_map.get("manager", "Ryan Pearce"),
         base_sheet_no=sheet_no or int(s_map.get("starting_sheet_no", "8095")),
     )
     return Response(
@@ -1134,7 +1285,6 @@ def download_verification_pdf(work_date: str):
         work_date=work_date,
         verifications=[dict(r) for r in rows],
         cal_serial=s_map.get("calibrated_serial", "1SF11904"),
-        operator=s_map.get("operator", "Ryan Pearce"),
     )
     return Response(
         content=pdf_bytes,
@@ -1162,7 +1312,6 @@ def download_visual_pdf(work_date: str, customer: str = ""):
         work_date=work_date,
         records=[dict(r) for r in rows],
         dot_rin=s_map.get("dot_rin", "B386"),
-        manager=s_map.get("manager", "Ryan Pearce"),
     )
     return Response(
         content=pdf_bytes,
