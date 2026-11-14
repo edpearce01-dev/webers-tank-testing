@@ -12,7 +12,7 @@ PRIMARY_MANAGER = "Ryan Pearce"
 PRIMARY_INITIALS = "RP"
 PDF_AUTHOR = "Weber's Tank Testing (DOT RIN B386)"
 SHOP_ADDRESS = "3086 Legionville Rd, Baden, PA 15005"
-SHOP_HOURS = "Mon & Fri 9AM-4PM • Tue-Thu 9AM-2PM • 24/7 Backroom Drop-Off"
+SHOP_HOURS = "Mon & Fri 9AM-4PM  |  Tue-Thu 9AM-2PM  |  24/7 Backroom Drop-Off"
 
 
 def _set_pdf_meta(c: canvas.Canvas, title: str) -> None:
@@ -265,20 +265,21 @@ def build_retest_datasheet_pdf(
 
             cur_top = r_bot
 
-        fy = cur_top - 16
-        c.setFont("Times-Roman", 7.5)
-        c.drawString(left_x + 10, fy, "I hereby certify that all of the above tests were made under my supervision and")
-        c.drawString(left_x + 10, fy - 9, "in accordance with DOT and/or TC regulations.")
+        # Non-overlapping 3-column footer layout
+        fy = cur_top - 15
+        c.setFont("Times-Roman", 7.4)
+        c.drawString(left_x + 8, fy, "I hereby certify that all of the above tests were made under my supervision and")
+        c.drawString(left_x + 8, fy - 9, "in accordance with DOT and/or TC regulations.")
 
         c.setFont("Times-Italic", 10)
-        c.drawString(left_x + 24, fy - 25, PRIMARY_MANAGER)
+        c.drawString(left_x + 20, fy - 25, PRIMARY_MANAGER)
         c.setLineWidth(0.6)
-        c.line(left_x + 10, fy - 28, left_x + 185, fy - 28)
-        c.setFont("Times-Roman", 7.5)
-        c.drawString(left_x + 188, fy - 27, "(Facility Manager)")
+        c.line(left_x + 8, fy - 28, left_x + 178, fy - 28)
+        c.setFont("Times-Roman", 7.4)
+        c.drawString(left_x + 182, fy - 27, "(Facility Manager)")
 
-        dx = left_x + 410
-        c.setFont("Times-Bold", 7.2)
+        dx = left_x + 295
+        c.setFont("Times-Bold", 7.1)
         c.drawString(dx, fy, "(*) Disposition Codes:")
         codes = [
             "A - Return to Service",
@@ -287,15 +288,17 @@ def build_retest_datasheet_pdf(
             "D - Condemned",
             "E - Other (specify in notes)",
         ]
-        c.setFont("Times-Roman", 6.8)
+        c.setFont("Times-Roman", 6.7)
         for idx, txt in enumerate(codes):
-            c.drawString(dx + 88, fy - (idx * 8.2), txt)
+            c.drawString(dx + 80, fy - (idx * 8.0), txt)
 
+        c.setFont("Times-Roman", 6.4)
+        c.drawRightString(right_x, fy - 4, "This form meets the requirements for recording of")
+        c.drawRightString(right_x, fy - 12, "cylinder re-qualification under CFR Title 49 §180.215")
+        c.setFont("Times-Bold", 6.5)
+        c.drawRightString(right_x, fy - 22, f"Weber's Tank Testing  |  RIN {dot_rin}")
         c.setFont("Times-Roman", 6.2)
-        c.drawRightString(right_x, fy - 12, "This form meets the requirements for recording of")
-        c.drawRightString(right_x, fy - 20, "cylinder re-qualification under CFR Title 49 §180.215")
-        c.setFont("Times-Bold", 6.2)
-        c.drawRightString(right_x, fy - 30, f"Weber's Tank Testing • {SHOP_ADDRESS} • RIN {dot_rin}")
+        c.drawRightString(right_x, fy - 30, SHOP_ADDRESS)
 
     c.save()
     return buf.getvalue()
@@ -333,10 +336,10 @@ def build_verification_pdf(work_date: str, verifications: list[dict], cal_serial
         c.drawString(190, H - 56, f"Serial No. of Calibrated Cylinder: {cal_serial}")
         c.drawString(490, H - 56, f"Operator's Name: {PRIMARY_MANAGER} ({PRIMARY_INITIALS})")
 
-        c.setFont("Times-Bold", 10.5)
+        c.setFont("Times-Bold", 10.2)
         c.drawString(
             40, H - 76,
-            "Method B — Verification procedure using Pressure Indicating Device (PID) against Expansion Indicating Device (EID)",
+            "Method B - Verification procedure using Pressure Indicating Device (PID) against Expansion Indicating Device (EID)",
         )
 
         y = H - 90
@@ -382,7 +385,8 @@ def build_verification_pdf(work_date: str, verifications: list[dict], cal_serial
         c.drawString(48, cur_y - 38, PRIMARY_MANAGER)
         c.line(40, cur_y - 41, 215, cur_y - 41)
         c.setFont("Times-Roman", 7.8)
-        c.drawString(220, cur_y - 40, "(Verified By — Facility Manager)")
+        c.drawString(220, cur_y - 40, "(Verified By - Facility Manager)")
+        c.drawRightString(xs[-1], cur_y - 40, f"Weber's Tank Testing  |  {SHOP_ADDRESS}")
 
     c.save()
     return buf.getvalue()
@@ -412,10 +416,10 @@ def build_visual_log_pdf(work_date: str, records: list[dict], dot_rin: str = "B3
             c.showPage()
         c.setFont("Times-Bold", 14)
         c.drawCentredString(W / 2, H - 34, "D.O.T./I.C.C. CYLINDER VISUAL INSPECTION AND REQUALIFICATION LOG")
-        c.setFont("Times-Bold", 8.8)
+        c.setFont("Times-Bold", 8.6)
         c.drawString(
             x0, H - 52,
-            f"Company: Weber's Tank Testing ({SHOP_ADDRESS})   Date: {work_date}   RIN: {dot_rin}   Manager: {PRIMARY_MANAGER}",
+            f"Company: Weber's Tank Testing ({SHOP_ADDRESS})  |  Date: {work_date}  |  RIN: {dot_rin}  |  Manager: {PRIMARY_MANAGER}",
         )
 
         y = H - 64
@@ -463,7 +467,7 @@ def build_visual_log_pdf(work_date: str, records: list[dict], dot_rin: str = "B3
         c.setFont("Times-Bold", 7.5)
         c.drawString(
             x0, cy - 16,
-            "Disposition Codes:   OK - Return to Service     SC - Scrap (Condemned)     RM - Removed from Service     (Retain in files 5 years)",
+            "Disposition Codes:  OK - Return to Service   |   SC - Scrap (Condemned)   |   RM - Removed from Service   (Retain in files 5 years)",
         )
 
     c.save()
@@ -529,7 +533,7 @@ def build_rin_stickers_pdf(
     skip_slots: int = 0,
     compact: bool = False,
 ) -> bytes:
-    """Laser Label Sheet (3x10 Avery 5160) — Standard full-width OR 2-up Compact Paintball HPA Mini-Stickers."""
+    """Laser Label Sheet (3x10 Avery 5160) - Standard full-width OR 2-up Compact Paintball HPA Mini-Stickers."""
     buf = io.BytesIO()
     W, H = letter
     c = canvas.Canvas(buf, pagesize=letter)
@@ -681,12 +685,12 @@ def build_valve_tags_pdf(work_date: str, records: list[dict], dot_rin: str = "B3
         if p_idx > 0:
             c.showPage()
 
-        c.setFont("Helvetica-Bold", 14.5)
-        c.drawString(x0, H - 40, "WEBER'S TANK TESTING — ACTIVE VALVE & REGULATOR TAG SHEET")
-        c.setFont("Helvetica", 9.2)
+        c.setFont("Helvetica-Bold", 14.0)
+        c.drawString(x0, H - 40, "WEBER'S TANK TESTING - ACTIVE VALVE & REGULATOR TAG SHEET")
+        c.setFont("Helvetica", 9.0)
         c.drawString(
             x0, H - 55,
-            f"Work Date: {work_date}   •   DOT RIN: {dot_rin}   •   Primary Sign-Off: {PRIMARY_MANAGER} ({PRIMARY_INITIALS})   •   Active Tags Pre-Filled: {len(active_rows)}",
+            f"Work Date: {work_date}  |  DOT RIN: {dot_rin}  |  Sign-Off: {PRIMARY_MANAGER} ({PRIMARY_INITIALS})  |  Active Tags: {len(active_rows)}",
         )
 
         y = H - 68
@@ -726,7 +730,7 @@ def build_valve_tags_pdf(work_date: str, records: list[dict], dot_rin: str = "B3
         c.setFont("Helvetica-Oblique", 7.8)
         c.drawString(
             x0, cy - 14,
-            "Check off [  ✓  ] when the matching valve or HPA regulator is reinstalled onto its cylinder so the tag returns to the bench pool.",
+            "Mark [ X ] when the matching valve or HPA regulator is reinstalled onto its cylinder so the tag returns to the bench pool.",
         )
 
     c.save()
@@ -752,14 +756,14 @@ def build_backroom_poster_pdf(
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 24)
     c.drawCentredString(W / 2, H - 46, "WEBER'S TANK TESTING")
-    c.setFont("Helvetica-Bold", 11.5)
+    c.setFont("Helvetica-Bold", 11.2)
     c.setFillColor(colors.HexColor("#fde68a"))
-    c.drawCentredString(W / 2, H - 67, f"{SHOP_ADDRESS.upper()} • U.S. D.O.T. RIN {dot_rin}")
+    c.drawCentredString(W / 2, H - 67, f"{SHOP_ADDRESS.upper()}  |  U.S. D.O.T. RIN {dot_rin}")
     c.setFillColor(colors.HexColor("#e2e8f0"))
-    c.setFont("Helvetica-Bold", 9.8)
+    c.setFont("Helvetica-Bold", 9.4)
     c.drawCentredString(W / 2, H - 86, f"Regular Shop Hours: {SHOP_HOURS}")
-    c.setFont("Helvetica", 9.8)
-    c.drawCentredString(W / 2, H - 105, "SCBA • EMS Oxygen • Paintball HPA • Industrial & Welding Gas • CO2 • Scuba")
+    c.setFont("Helvetica", 9.5)
+    c.drawCentredString(W / 2, H - 105, "SCBA  |  EMS Oxygen  |  Paintball HPA  |  Industrial & Welding Gas  |  CO2  |  Scuba")
 
     c.setFillColor(colors.HexColor("#0f172a"))
     c.setFont("Helvetica-Bold", 21)
@@ -799,8 +803,8 @@ def build_backroom_poster_pdf(
     c.roundRect(box_x, box_y, box_w, box_h, 10, fill=1, stroke=1)
 
     steps = [
-        ("1. SCAN QR CODE WITH YOUR PHONE CAMERA", "Opens our instant check-in form — no app download or login needed."),
-        ("2. ENTER NAME / DEPT, CELL #, & TANK COUNT", "Posts straight to our test room board so we can text you when your tanks are ready."),
+        ("1. SCAN QR CODE WITH YOUR PHONE CAMERA", "Opens our instant check-in form - no app download or login needed."),
+        ("2. ENTER NAME / DEPT, CELL #, & TANK COUNT", "Receive a live Ticket # and get texted as soon as your tanks hit our pickup shelf."),
         ("3. GROUP YOUR TANKS NEATLY IN DROP-OFF ZONE", "Every removed valve & paintball HPA regulator is numbered & matched to its serial #."),
     ]
     sy = box_y + box_h - 32
@@ -824,7 +828,7 @@ def build_backroom_poster_pdf(
 
     c.setFillColor(colors.HexColor("#64748b"))
     c.setFont("Helvetica-Bold", 9.2)
-    c.drawCentredString(W / 2, 36, f"Weber's Tank Testing • {SHOP_ADDRESS} • Manager: {PRIMARY_MANAGER} • {phone}")
+    c.drawCentredString(W / 2, 36, f"Weber's Tank Testing  |  {SHOP_ADDRESS}  |  Manager: {PRIMARY_MANAGER}  |  {phone}")
 
     c.save()
     return buf.getvalue()
@@ -851,12 +855,12 @@ def build_invoice_pdf(invoice: dict, items: list[dict], phone: str = "724-266-80
 
     c.setFont("Helvetica-Bold", 18)
     c.drawString(45, H - 48, "WEBER'S TANK TESTING")
-    c.setFont("Helvetica-Bold", 9.8)
-    c.drawString(45, H - 63, f"{SHOP_ADDRESS} • Phone / Text: {phone}")
-    c.setFont("Helvetica", 9.4)
-    c.drawString(45, H - 76, f"U.S. D.O.T. Certified Cylinder Testing (RIN {dot_rin}) • Facility Manager: {PRIMARY_MANAGER}")
+    c.setFont("Helvetica-Bold", 9.6)
+    c.drawString(45, H - 63, f"{SHOP_ADDRESS}  |  Phone / Text: {phone}")
+    c.setFont("Helvetica", 9.3)
+    c.drawString(45, H - 76, f"U.S. D.O.T. Certified Cylinder Testing (RIN {dot_rin})  |  Facility Manager: {PRIMARY_MANAGER}")
     c.setFillColor(colors.HexColor("#475569"))
-    c.setFont("Helvetica", 8.6)
+    c.setFont("Helvetica", 8.5)
     c.drawString(45, H - 89, f"Hours: {SHOP_HOURS}")
     c.setFillColor(colors.black)
 
@@ -874,7 +878,7 @@ def build_invoice_pdf(invoice: dict, items: list[dict], phone: str = "724-266-80
     c.drawString(45, H - 124, f"Bill To: {invoice.get('customer_name')}")
     c.setFont("Helvetica", 10)
     cust_ph = str(invoice.get("customer_phone") or "").strip()
-    svc_line = f"Service / Test Date: {invoice.get('work_date')}" + (f"   •   Phone: {cust_ph}" if cust_ph else "")
+    svc_line = f"Service / Test Date: {invoice.get('work_date')}" + (f"   |   Phone: {cust_ph}" if cust_ph else "")
     c.drawString(45, H - 139, svc_line)
 
     cy = draw_table_header(H - 166)
@@ -883,7 +887,7 @@ def build_invoice_pdf(invoice: dict, items: list[dict], phone: str = "724-266-80
         if cy - 20 < 120:
             c.showPage()
             c.setFont("Helvetica-Bold", 11)
-            c.drawString(45, H - 42, f"WEBER'S TANK TESTING — {inv_no} (Continued)")
+            c.drawString(45, H - 42, f"WEBER'S TANK TESTING - {inv_no} (Continued)")
             cy = draw_table_header(H - 56)
             c.setFont("Helvetica", 9.5)
         cy -= 20
@@ -909,7 +913,7 @@ def build_invoice_pdf(invoice: dict, items: list[dict], phone: str = "724-266-80
     if invoice.get("paid_at"):
         c.setFont("Helvetica-Bold", 9.5)
         c.setFillColor(colors.HexColor("#15803d"))
-        c.drawString(45, cy, f"PAID IN FULL — {invoice['paid_at']}" + (f" via {pay_method}" if pay_method else ""))
+        c.drawString(45, cy, f"PAID IN FULL - {invoice['paid_at']}" + (f" via {pay_method}" if pay_method else ""))
         c.setFillColor(colors.black)
 
     if invoice.get("notes"):
@@ -918,7 +922,7 @@ def build_invoice_pdf(invoice: dict, items: list[dict], phone: str = "724-266-80
 
     c.setFillColor(colors.HexColor("#64748b"))
     c.setFont("Helvetica", 8.5)
-    c.drawCentredString(W / 2, 34, f"Thank you for trusting Weber's Tank Testing • {SHOP_ADDRESS} • {phone}")
+    c.drawCentredString(W / 2, 34, f"Thank you for trusting Weber's Tank Testing  |  {SHOP_ADDRESS}  |  {phone}")
 
     c.save()
     return buf.getvalue()

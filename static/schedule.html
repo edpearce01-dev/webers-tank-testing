@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b2219" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/static/ops.css?v=7.0" />
+  <title>Weber's Tank Testing — Wall Schedule &amp; Dispatch | DOT B386</title>
+</head>
+<body>
+  <!-- CREW PIN LOGIN GATE -->
+  <div id="loginScreen" class="login-wrap" hidden>
+    <div class="login-card">
+      <img src="/static/images/logo-crest.jpg" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
+      <h2 style="margin:4px 0;color:var(--green);">Weber's Schedule &amp; Dispatch</h2>
+      <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter Crew PIN to open the Shop Wall Calendar</p>
+      <div style="text-align:left;">
+        <label>Crew Access PIN</label>
+        <input type="password" inputmode="numeric" id="loginPinInput" placeholder="••••"
+          onkeydown="if(event.key==='Enter')submitLoginPin()"
+          style="text-align:center;font-size:1.35rem;letter-spacing:6px;font-weight:800;" />
+      </div>
+      <div id="loginError" class="notice bad" style="margin-top:12px;" hidden>Incorrect Shop PIN.</div>
+      <button class="primary" onclick="submitLoginPin()">Unlock Wall Calendar</button>
+    </div>
+  </div>
+
+  <!-- AUTHENTICATED SCHEDULE SHELL -->
+  <div id="appShell" hidden>
+    <header class="app-topbar">
+      <a href="/ops" class="top-brand">
+        <img src="/static/images/logo-crest.jpg" alt="B386" onerror="this.src='/icon.svg'" />
+        <div class="top-brand-txt">
+          <h1>WALL SCHEDULE</h1>
+          <small>RIN B386 • Dispatch &amp; Capacity</small>
+        </div>
+      </a>
+
+      <nav class="ws-switcher">
+        <a href="/ops" class="ws-link">🔧 Shop Ops <span id="wsOpsBadge"></span></a>
+        <a href="/schedule" class="ws-link active">📅 Schedule <span id="wsSchedBadge"></span></a>
+        <a href="/office" class="ws-link">💲 Office &amp; Print <span id="wsBillBadge"></span></a>
+        <a href="/tv" target="_blank" class="ws-link">📺 Live TV</a>
+      </nav>
+
+      <div class="top-controls">
+        <input type="date" id="globalDate" class="top-date" onchange="loadScheduleState()" />
+        <a href="/ops?tab=cal" class="j-dot wait" id="pillShort" title="Short Jacket Status">S: Uncal</a>
+        <a href="/ops?tab=cal" class="j-dot wait" id="pillTall" title="Tall Jacket Status">T: Uncal</a>
+        <button class="menu-pill" onclick="logoutCrew()" title="Sign Out">🔒</button>
+      </div>
+    </header>
+
+    <main class="ops-single-workspace">
+      <!-- 14-DAY INTERACTIVE SHOP WALL CALENDAR -->
+      <div class="card">
+        <div class="card-hdr">
+          <h3>📅 14-Day Shop Wall Calendar — Tap Any Day to Set Shift Mode or Book Runs</h3>
+          <span class="sub-badge" id="backlogSummaryBadge">Checking backlog...</span>
+        </div>
+        <div class="cal-grid-14" id="calStripGrid"></div>
+      </div>
+
+      <div class="split-2">
+        <!-- LEFT COLUMN: DAY SHIFT PLANNER + PHONE PROMISE-DATE CALCULATOR -->
+        <div>
+          <div class="card" style="border-left:4px solid var(--green);">
+            <div class="card-hdr">
+              <h3>Operating Window for <span id="planDateLabel">Selected Date</span></h3>
+              <span class="sub-badge" id="planBookedBadge">0 Booked</span>
+            </div>
+            <div class="grid" style="align-items:end;">
+              <div>
+                <label>Shop Operating Mode</label>
+                <select id="planShiftMode" onchange="autoFillPlanCap()">
+                  <option value="FULL_HYDRO">🟢 Full Hydro &amp; Prep Window</option>
+                  <option value="PREP_ONLY">🔧 Prep, Devalve &amp; Drop-Off Only</option>
+                  <option value="ROAD_RUN">🚚 Road Pickup / Delivery &amp; Partial Hydro</option>
+                  <option value="BACKROOM_ONLY">🚪 24/7 Backroom Self-Drop Only</option>
+                </select>
+              </div>
+              <div>
+                <label>Daily Hydro Bottle Capacity</label>
+                <input type="number" id="planCapacity" min="0" max="150" value="24" />
+              </div>
+              <div style="grid-column:1/-1;">
+                <label>Wall Calendar Day Note (Shows on Live TV)</label>
+                <input id="planNotes" placeholder="e.g. Baden VFD 18x SCBA, afternoon road deliveries..." />
+              </div>
+            </div>
+            <button class="primary" onclick="saveDayPlan()">Save Day Operating Plan</button>
+          </div>
+
+          <div class="card" style="border-left:4px solid #0284c7;">
+            <div class="card-hdr">
+              <h3>📞 Phone Call Quote — Realistic Promise Date</h3>
+              <span class="sub-badge">Backlog + Hydro Windows</span>
+            </div>
+            <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;">
+              <div style="flex:1;min-width:130px;">
+                <label>Incoming Bottle Count</label>
+                <input type="number" id="quoteCountInput" min="1" max="250" value="6" oninput="fetchLiveTurnaroundQuote()" />
+              </div>
+              <button class="secondary" style="padding:10px 14px;" onclick="fetchLiveTurnaroundQuote()">↻ Recalculate</button>
+            </div>
+            <div class="quote-grid" id="quoteResultArea"></div>
+          </div>
+
+          <div class="card" id="backroomPreviewCard" style="border-left:4px solid #f59e0b;" hidden>
+            <div class="card-hdr">
+              <h3>🚪 Unscanned 24/7 Backroom Check-Ins</h3>
+              <span class="sub-badge" id="backroomCountBadge">0</span>
+            </div>
+            <div id="backroomPreviewList"></div>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN: BOOK SCHEDULED BATCH / ROAD RUN + ACTIVE DISPATCH LIST -->
+        <div>
+          <div class="card">
+            <div class="card-hdr">
+              <h3>➕ Book Pickup, Delivery, or Scheduled Shop Batch</h3>
+              <span class="sub-badge">Syncs to Ops &amp; TV</span>
+            </div>
+            <datalist id="customerSuggest"></datalist>
+            <div class="grid">
+              <div>
+                <label>Entry Type</label>
+                <select id="sjType">
+                  <option value="SHOP_BATCH">📌 Scheduled Shop Batch</option>
+                  <option value="ROAD_PICKUP">🚚 Outbound Pickup Run</option>
+                  <option value="ROAD_DELIVERY">🚚 Outbound Delivery Run</option>
+                  <option value="ONSITE_VISUAL">🔍 On-Site Visual Inspection</option>
+                </select>
+              </div>
+              <div><label>Scheduled Date</label><input type="date" id="sjDate" /></div>
+              <div><label>Promised Ready Date</label><input type="date" id="sjDueDate" /></div>
+              <div>
+                <label>Priority / Rush</label>
+                <select id="sjPriority">
+                  <option value="STANDARD">Standard Turnaround</option>
+                  <option value="RUSH">🔥 Paid Rush Service (Fee)</option>
+                  <option value="HIGH">⚡ High Priority</option>
+                </select>
+              </div>
+              <div><label>Customer / Fire Dept *</label><input id="sjCustomer" list="customerSuggest" placeholder="e.g. Economy Ambulance" /></div>
+              <div><label>Contact Phone</label><input id="sjPhone" type="tel" placeholder="724-555-0199" /></div>
+              <div><label>Bottle Count</label><input type="number" id="sjCount" min="1" value="6" /></div>
+              <div>
+                <label>Initial Shop Zone</label>
+                <select id="sjZone">
+                  <option value="ZONE_A_BACKROOM">Zone A • Backroom Drop</option>
+                  <option value="ZONE_B_DEVALVE">Zone B • Devalve &amp; Tag</option>
+                  <option value="ZONE_C_READY_RACK">Zone C • Ready Rack</option>
+                  <option value="OUTBOUND_TRUCK">🚚 Truck / Road Stop</option>
+                </select>
+              </div>
+              <div><label>Tank Types / Specs</label><input id="sjSummary" placeholder="e.g. 12x 4500# SCBA, 4x O2" /></div>
+              <div><label>Address / Stop Info (For Road Runs)</label><input id="sjLocation" placeholder="Station #2, Ambridge PA" /></div>
+              <div style="grid-column:1/-1;"><label>Crew Prep / Dispatch Notes</label><input id="sjNotes" placeholder="Pull valves &amp; water-fill ahead of hydro day..." /></div>
+            </div>
+            <button class="primary" onclick="submitScheduleJob()">Add to Wall Calendar &amp; Live TV</button>
+          </div>
+
+          <div class="card">
+            <div class="card-hdr">
+              <h3>Active Pickups, Deliveries &amp; Prep Batches</h3>
+              <span class="sub-badge" id="schedActiveBadge">0 Active</span>
+            </div>
+            <div id="scheduleJobsList"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let STATE = { db_version: 0, daily_hydro_capacity: 24 };
+    let LAST_QUOTE = null;
+
+    function escHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    async function bootSchedule() {
+      const params = new URLSearchParams(location.search);
+      if (params.get('date')) document.getElementById('globalDate').value = params.get('date');
+      const res = await fetch('/api/auth/status');
+      const auth = await res.json();
+      if (!auth.authenticated) {
+        document.getElementById('loginScreen').hidden = false;
+        document.getElementById('appShell').hidden = true;
+        document.getElementById('loginPinInput').focus();
+        return;
+      }
+      document.getElementById('loginScreen').hidden = true;
+      document.getElementById('appShell').hidden = false;
+      await loadScheduleState();
+      fetchLiveTurnaroundQuote();
+    }
+
+    async function submitLoginPin() {
+      const pin = document.getElementById('loginPinInput').value;
+      const res = await fetch('/api/auth/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }),
+      });
+      if (!res.ok) { document.getElementById('loginError').hidden = false; return; }
+      document.getElementById('loginError').hidden = true;
+      bootSchedule();
+    }
+
+    async function logoutCrew() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      bootSchedule();
+    }
+
+    function selectCalendarDay(isoDate) {
+      document.getElementById('globalDate').value = isoDate;
+      document.getElementById('sjDate').value = isoDate;
+      loadScheduleState();
+    }
+
+    async function loadScheduleState() {
+      const wDate = document.getElementById('globalDate').value || '';
+      const res = await fetch('/api/bootstrap' + (wDate ? `?work_date=${encodeURIComponent(wDate)}` : ''));
+      if (res.status === 401) { bootSchedule(); return; }
+      STATE = await res.json();
+
+      if (!document.getElementById('globalDate').value) document.getElementById('globalDate').value = STATE.selected_date;
+      if (!document.getElementById('sjDate').value) document.getElementById('sjDate').value = STATE.selected_date;
+
+      const sCeil = STATE.jacket_ceilings['Short Jacket'] || {};
+      const tCeil = STATE.jacket_ceilings['Tall Jacket'] || {};
+      const pShort = document.getElementById('pillShort'), pTall = document.getElementById('pillTall');
+      pShort.className = 'j-dot ' + (sCeil.max_calibrated_psi ? 'ready' : 'wait');
+      pShort.textContent = sCeil.max_calibrated_psi ? `S: ≤${sCeil.max_allowed_test_psi}✓` : 'S: Uncal';
+      pTall.className = 'j-dot ' + (tCeil.max_calibrated_psi ? 'ready' : 'wait');
+      pTall.textContent = tCeil.max_calibrated_psi ? `T: ≤${tCeil.max_allowed_test_psi}✓` : 'T: Uncal';
+
+      const queued = (STATE.records || []).filter(r => r.status === 'QUEUED');
+      const openSched = (STATE.schedule_jobs || []).filter(j => j.status !== 'COMPLETED');
+      const totalUnbilled = (STATE.customers_summary || []).reduce((s, c) => s + (c.unbilled_count || 0), 0);
+      document.getElementById('wsOpsBadge').textContent = queued.length ? `(${queued.length})` : '';
+      document.getElementById('wsSchedBadge').textContent = openSched.length ? `(${openSched.length})` : '';
+      document.getElementById('wsBillBadge').textContent = totalUnbilled ? `(${totalUnbilled})` : '';
+
+      document.getElementById('customerSuggest').innerHTML = (STATE.customers_summary || []).map(c =>
+        `<option value="${escHtml(c.customer_name)}">`
+      ).join('');
+
+      const plans = STATE.day_plans || [];
+      const selDate = STATE.selected_date;
+      const selPlan = plans.find(p => p.work_date === selDate) || STATE.huddle?.selected_day_plan || {};
+
+      document.getElementById('planDateLabel').textContent = `${selPlan.weekday || ''} ${selDate}`;
+      document.getElementById('planBookedBadge').textContent = `${selPlan.booked_bottles || 0} / ${selPlan.bottle_capacity || 0} Hydro Slots`;
+      if (document.activeElement !== document.getElementById('planShiftMode')) document.getElementById('planShiftMode').value = selPlan.shift_mode || 'FULL_HYDRO';
+      if (document.activeElement !== document.getElementById('planCapacity')) document.getElementById('planCapacity').value = selPlan.bottle_capacity ?? 24;
+      if (document.activeElement !== document.getElementById('planNotes')) document.getElementById('planNotes').value = selPlan.day_notes || '';
+
+      document.getElementById('calStripGrid').innerHTML = plans.map(p => {
+        const dayJobs = openSched.filter(j => j.scheduled_date === p.work_date);
+        const modeCls = p.shift_mode === 'PREP_ONLY' ? 'prep-mode'
+          : (p.shift_mode === 'ROAD_RUN' ? 'road-mode' : (p.shift_mode === 'FULL_HYDRO' ? 'hydro-mode' : 'closed-mode'));
+        const shortMode = p.shift_mode === 'PREP_ONLY' ? '🔧 Prep Only'
+          : (p.shift_mode === 'ROAD_RUN' ? `🚚 Road (${p.bottle_capacity})`
+          : (p.shift_mode === 'FULL_HYDRO' ? `🟢 Hydro (${p.bottle_capacity})` : '🚪 Backroom'));
+        const rushCnt = dayJobs.filter(j => j.rush_fee || j.priority === 'RUSH').length;
+        const booked = p.booked_bottles || 0;
+        const cap = p.bottle_capacity || 0;
+        const pct = cap > 0 ? Math.min(100, Math.round((booked / cap) * 100)) : 0;
+        const fillCls = pct >= 100 ? 'full' : (pct >= 80 ? 'warn' : '');
+        return `
+          <div class="day-tile ${modeCls} ${p.work_date === selDate ? 'selected' : ''}" onclick="selectCalendarDay('${p.work_date}')">
+            <div>
+              <div style="display:flex;justify-content:space-between;font-weight:900;font-size:0.82rem;">
+                <span>${escHtml(p.weekday)} ${escHtml(p.work_date.slice(5))}</span>
+                ${rushCnt ? '<span class="rush-badge">🔥</span>' : (p.work_date === STATE.today ? '<span class="sub-badge" style="font-size:0.62rem;">TODAY</span>' : '')}
+              </div>
+              <div style="font-size:0.74rem;font-weight:800;color:var(--green);margin-top:3px;">${shortMode}</div>
+            </div>
+            <div>
+              ${cap > 0 ? `<div class="cap-bar"><div class="cap-fill ${fillCls}" style="width:${pct}%"></div></div><div style="font-size:0.68rem;color:var(--muted);margin-top:2px;">${booked}/${cap} cyl booked</div>` : ''}
+              <div style="font-size:0.72rem;color:var(--slate);font-weight:700;margin-top:2px;">
+                ${dayJobs.length ? `${dayJobs.length} job(s)` : (p.day_notes ? escHtml(p.day_notes.slice(0, 20)) : '<span style="color:var(--muted);font-weight:500;">Open</span>')}
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+
+      const drops = STATE.dropoffs || [];
+      document.getElementById('backroomPreviewCard').hidden = !drops.length;
+      document.getElementById('backroomCountBadge').textContent = String(drops.length);
+      document.getElementById('backroomPreviewList').innerHTML = drops.map(d => `
+        <div class="rec-item">
+          <div class="rec-main">
+            <div class="rec-title"><span>${escHtml(d.customer_name)} (${d.bottle_count - (d.imported_count || 0)} left)</span>${d.rush_requested ? '<span class="rush-badge">🔥 RUSH</span>' : ''}</div>
+            <div class="rec-sub">${escHtml(d.service_requested)}${d.promised_date ? ' • Est: ' + escHtml(d.promised_date) : ''}</div>
+          </div>
+          <a class="secondary" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7;" href="/ops?dropoff=${d.id}">↳ Scan in Ops</a>
+        </div>`).join('');
+
+      document.getElementById('schedActiveBadge').textContent = `${openSched.length} Active`;
+      document.getElementById('scheduleJobsList').innerHTML = openSched.length
+        ? openSched.map(j => {
+            const ico = j.job_type === 'ROAD_PICKUP' ? '🚚 Pickup' : (j.job_type === 'ROAD_DELIVERY' ? '🚚 Delivery' : (j.job_type === 'ONSITE_VISUAL' ? '🔍 On-Site' : '📌 Batch'));
+            const isPrepped = j.prep_status === 'DEVALVED_TAGGED';
+            const mapUrl = j.location_notes ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.location_notes)}` : '';
+            return `
+              <div class="rec-item">
+                <div class="rec-main">
+                  <div class="rec-title">
+                    <span>${ico}: ${escHtml(j.customer_name)} (${j.bottle_count})</span>
+                    ${(j.rush_fee || j.priority === 'RUSH') ? '<span class="rush-badge">🔥 RUSH</span>' : (j.priority === 'HIGH' ? '<span class="high-badge">⚡ HIGH</span>' : '')}
+                    ${isPrepped ? '<span class="stage-chip ready">✓ Prepped Zone C</span>' : '<span class="stage-chip">Needs Prep</span>'}
+                  </div>
+                  <div class="rec-sub">
+                    Sched: <strong>${escHtml(j.scheduled_date)}</strong>${j.due_date ? ` • Due: <strong>${escHtml(j.due_date)}</strong>` : ''} • <span class="zone-badge">${escHtml((j.holding_zone_label || '').split('•')[0])}</span>
+                    ${j.location_notes ? ` • 📍 ${escHtml(j.location_notes)}` : ''}${j.tank_summary ? ` • ${escHtml(j.tank_summary)}` : ''}
+                  </div>
+                  ${j.notes ? `<div style="font-size:0.75rem;color:#92400e;margin-top:2px;">Note: ${escHtml(j.notes)}</div>` : ''}
+                </div>
+                <div class="rec-actions">
+                  <a class="secondary" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7;" href="/ops?job=${j.id}">↳ Lock &amp; Scan</a>
+                  ${mapUrl ? `<a class="secondary" href="${mapUrl}" target="_blank">📍 Map</a>` : ''}
+                  ${!isPrepped ? `<button class="secondary" onclick="markJobPrepped(${j.id})">🔧 Prepped</button>` : ''}
+                  <button class="secondary" title="Toggle Paid Rush" onclick="toggleJobRush(${j.id}, ${Boolean(j.rush_fee)})">🔥</button>
+                  <button class="secondary" onclick="completeJob(${j.id})">✓ Done</button>
+                  <button class="secondary" style="color:#b91c1c;" onclick="deleteJob(${j.id})">✕</button>
+                </div>
+              </div>`;
+          }).join('')
+        : '<div style="color:var(--muted);font-size:0.86rem;padding:8px 0;">No open pickups, deliveries, or scheduled batches yet.</div>';
+    }
+
+    function autoFillPlanCap() {
+      const m = document.getElementById('planShiftMode').value;
+      document.getElementById('planCapacity').value = m === 'FULL_HYDRO' ? (STATE.daily_hydro_capacity || 24) : (m === 'ROAD_RUN' ? 10 : 0);
+    }
+
+    async function saveDayPlan() {
+      await fetch('/api/schedule/day-plan', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          work_date: STATE.selected_date,
+          shift_mode: document.getElementById('planShiftMode').value,
+          bottle_capacity: parseInt(document.getElementById('planCapacity').value || '0', 10),
+          day_notes: document.getElementById('planNotes').value,
+        }),
+      });
+      await loadScheduleState();
+      fetchLiveTurnaroundQuote();
+    }
+
+    async function fetchLiveTurnaroundQuote() {
+      const cnt = Math.max(1, parseInt(document.getElementById('quoteCountInput').value || '1', 10));
+      const res = await fetch(`/api/schedule/quote?bottles=${cnt}`);
+      if (!res.ok) return;
+      LAST_QUOTE = await res.json();
+      document.getElementById('backlogSummaryBadge').textContent = `Shop Backlog: ${LAST_QUOTE.total_backlog_bottles} Cyl (${LAST_QUOTE.rush_backlog_bottles} Rush)`;
+      document.getElementById('quoteResultArea').innerHTML = `
+        <div class="quote-card std">
+          <div style="font-size:0.74rem;font-weight:900;color:#166534;">🟢 STANDARD TURNAROUND</div>
+          <div style="font-size:1.18rem;font-weight:900;margin:3px 0;">Ready: ${escHtml(LAST_QUOTE.standard_promise_label)}</div>
+          <div style="font-size:0.76rem;color:var(--muted);">Clears ${LAST_QUOTE.total_backlog_bottles} cyl backlog + dry/stamp</div>
+          <button class="secondary" style="width:100%;margin-top:7px;" onclick="prefillFromQuote(false, '${LAST_QUOTE.standard_promise_date}', ${LAST_QUOTE.requested_bottles})">➕ Book Standard</button>
+        </div>
+        <div class="quote-card rush">
+          <div style="font-size:0.74rem;font-weight:900;color:#991b1b;">🔥 PAID RUSH SERVICE</div>
+          <div style="font-size:1.18rem;font-weight:900;margin:3px 0;">Ready: ${escHtml(LAST_QUOTE.rush_promise_label)}</div>
+          <div style="font-size:0.76rem;color:var(--muted);">Ahead of standard (${LAST_QUOTE.rush_backlog_bottles} rush ahead)</div>
+          <button class="secondary" style="width:100%;margin-top:7px;background:#fee2e2;color:#991b1b;border-color:#fca5a5;" onclick="prefillFromQuote(true, '${LAST_QUOTE.rush_promise_date}', ${LAST_QUOTE.requested_bottles})">➕ Book Paid Rush</button>
+        </div>`;
+    }
+
+    function prefillFromQuote(isRush, promiseDate, count) {
+      document.getElementById('sjDate').value = STATE.today || STATE.selected_date;
+      document.getElementById('sjDueDate').value = promiseDate;
+      document.getElementById('sjCount').value = count;
+      document.getElementById('sjPriority').value = isRush ? 'RUSH' : 'STANDARD';
+      document.getElementById('sjCustomer').focus();
+    }
+
+    async function submitScheduleJob() {
+      const cust = document.getElementById('sjCustomer').value.trim();
+      if (!cust) { alert('Enter Customer / Fire Dept name first.'); return; }
+      const pri = document.getElementById('sjPriority').value;
+      const res = await fetch('/api/schedule/jobs', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_type: document.getElementById('sjType').value,
+          scheduled_date: document.getElementById('sjDate').value || STATE.selected_date,
+          due_date: document.getElementById('sjDueDate').value || '',
+          customer_name: cust,
+          customer_phone: document.getElementById('sjPhone').value,
+          bottle_count: parseInt(document.getElementById('sjCount').value || '1', 10),
+          priority: pri,
+          rush_fee: pri === 'RUSH',
+          holding_zone: document.getElementById('sjZone').value,
+          tank_summary: document.getElementById('sjSummary').value,
+          location_notes: document.getElementById('sjLocation').value,
+          notes: document.getElementById('sjNotes').value,
+        }),
+      });
+      if (!res.ok) { alert((await res.json()).detail || 'Could not save entry.'); return; }
+      ['sjCustomer', 'sjPhone', 'sjSummary', 'sjLocation', 'sjNotes'].forEach(id => { document.getElementById(id).value = ''; });
+      await loadScheduleState();
+      fetchLiveTurnaroundQuote();
+    }
+
+    async function markJobPrepped(id) {
+      await fetch(`/api/schedule/jobs/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prep_status: 'DEVALVED_TAGGED', holding_zone: 'ZONE_C_READY_RACK', status: 'PREPPED' }),
+      });
+      loadScheduleState();
+    }
+
+    async function toggleJobRush(id, curRush) {
+      await fetch(`/api/schedule/jobs/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rush_fee: !curRush, priority: !curRush ? 'RUSH' : 'STANDARD' }),
+      });
+      loadScheduleState();
+    }
+
+    async function completeJob(id) {
+      await fetch(`/api/schedule/jobs/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'COMPLETED' }),
+      });
+      loadScheduleState();
+    }
+
+    async function deleteJob(id) {
+      if (!confirm('Remove this entry from the schedule?')) return;
+      await fetch(`/api/schedule/jobs/${id}`, { method: 'DELETE' });
+      loadScheduleState();
+    }
+
+    setInterval(async () => {
+      if (document.getElementById('appShell').hidden) return;
+      try {
+        const res = await fetch('/api/ping');
+        if (res.ok) {
+          const p = await res.json();
+          if (p.db_version !== STATE.db_version) loadScheduleState();
+        }
+      } catch (_) {}
+    }, 4000);
+
+    bootSchedule();
+  </script>
+</body>
+</html>

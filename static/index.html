@@ -7,8 +7,8 @@
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/icon.svg" />
-  <link rel="stylesheet" href="/static/ops.css?v=6.0" />
-  <title>Weber's Tank Testing — Ops &amp; Dispatch | DOT B386</title>
+  <link rel="stylesheet" href="/static/ops.css?v=7.0" />
+  <title>Weber's Tank Testing — Shop Floor Ops | DOT B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
@@ -17,7 +17,7 @@
       <img src="/static/images/logo-crest.jpg" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Tank Testing</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">
-        Operations, Dispatch &amp; Hydrostatic Suite<br />
+        Shop Floor Operations Workspace<br />
         <strong>DOT RIN: B386</strong> • Official Sign-Off: <strong>Ryan Pearce (RP)</strong>
       </p>
       <div style="text-align:left;">
@@ -38,7 +38,7 @@
       <p style="font-size:0.92rem;line-height:1.5;">
         Running in <strong>Pre-Production Testing Mode</strong>. Do not rely on this as your sole CFR §180.215 record book until final shop verification is signed off by Ryan Pearce.
       </p>
-      <button class="primary" onclick="acknowledgeDisclaimer()">Enter Operations Workspace</button>
+      <button class="primary" onclick="acknowledgeDisclaimer()">Enter Shop Workspace</button>
     </div>
   </div>
 
@@ -50,19 +50,26 @@
     </div>
   </div>
 
-  <!-- AUTHENTICATED OPERATIONS SHELL -->
+  <!-- AUTHENTICATED SHOP FLOOR SHELL -->
   <div id="appShell" hidden>
     <header class="app-topbar">
-      <div class="top-brand">
+      <a href="/ops" class="top-brand">
         <img src="/static/images/logo-crest.jpg" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>WEBER'S OPS</h1>
           <small>RIN B386 • Sign-Off: RP</small>
         </div>
-        <button id="testModeChip" class="test-chip" onclick="toggleGuide(true)" title="Testing Mode Active" hidden>TEST</button>
-      </div>
+      </a>
+
+      <nav class="ws-switcher">
+        <a href="/ops" class="ws-link active">🔧 Shop Ops</a>
+        <a href="/schedule" class="ws-link">📅 Schedule <span id="wsSchedBadge"></span></a>
+        <a href="/office" class="ws-link">💲 Office &amp; Print <span id="wsBillBadge"></span></a>
+        <a href="/tv" target="_blank" class="ws-link">📺 Live TV</a>
+      </nav>
 
       <div class="top-controls">
+        <button id="testModeChip" class="test-chip" onclick="toggleGuide(true)" title="Testing Mode Active" hidden>TEST</button>
         <input type="date" id="globalDate" class="top-date" onchange="changeWorkingDate()" />
         <span class="j-dot wait" id="pillShort" onclick="jumpToTab('cal')" title="Short Water Jacket">S: <span class="full-lbl">Uncal</span></span>
         <span class="j-dot wait" id="pillTall" onclick="jumpToTab('cal')" title="Tall Water Jacket">T: <span class="full-lbl">Uncal</span></span>
@@ -71,59 +78,54 @@
     </header>
 
     <div class="ops-layout">
-      <!-- IPAD & DESKTOP LEFT SIDEBAR RAIL -->
+      <!-- IPAD & DESKTOP LEFT SIDEBAR (4 PURE SHOP STATIONS) -->
       <aside class="side-rail">
         <div class="rail-nav">
           <button class="rail-btn active" data-tab="cal" onclick="jumpToTab('cal')">
             <span>1. Start &amp; Cal</span><span class="nav-badge" id="navBadgeCal">—</span>
           </button>
-          <button class="rail-btn" data-tab="schedule" onclick="jumpToTab('schedule')">
-            <span>2. Wall Schedule</span><span class="nav-badge" id="navBadgeSched">0</span>
-          </button>
           <button class="rail-btn" data-tab="intake" onclick="jumpToTab('intake')">
-            <span>3. Scan &amp; Intake</span><span class="nav-badge" id="navBadgeIntake">0</span>
+            <span>2. Prep &amp; Scan</span><span class="nav-badge" id="navBadgeIntake">0</span>
           </button>
           <button class="rail-btn" data-tab="bench" onclick="jumpToTab('bench')">
-            <span>4. Hydro Stand</span><span class="nav-badge" id="navBadgeBench">0</span>
+            <span>3. Hydro Stand</span><span class="nav-badge" id="navBadgeBench">0</span>
           </button>
           <button class="rail-btn" data-tab="logs" onclick="jumpToTab('logs')">
-            <span>5. Finish &amp; Tags</span><span class="nav-badge amber" id="navBadgeValves">0</span>
-          </button>
-          <button class="rail-btn" data-tab="print" onclick="jumpToTab('print')">
-            <span>6. Print &amp; Stickers</span>
-          </button>
-          <button class="rail-btn" data-tab="billing" onclick="jumpToTab('billing')">
-            <span>7. Billing &amp; Rates</span><span class="nav-badge" id="navBadgeBill">0</span>
+            <span>4. Finish &amp; Shelf</span><span class="nav-badge amber" id="navBadgeValves">0</span>
           </button>
         </div>
 
         <div class="rail-footer">
-          <a class="secondary" href="/tv" target="_blank" style="width:100%;">📺 Open Shop TV Board</a>
+          <a class="secondary" href="/schedule" style="width:100%;">📅 Open Wall Schedule</a>
+          <a class="secondary" href="/office" style="width:100%;">💲 Billing &amp; DOT Printouts</a>
           <button class="secondary" id="railSyncChip" onclick="triggerManualSync()" style="width:100%;">☁ Checking Sync...</button>
           <button class="secondary" onclick="toggleFeedbackModal(true)" style="width:100%;">💬 Crew Feedback</button>
           <button class="secondary" onclick="toggleGuide(true)" style="width:100%;">⚙ Facility Settings</button>
         </div>
       </aside>
 
-      <!-- MAIN WORKSPACE -->
+      <!-- MAIN SHOP FLOOR WORKSPACE -->
       <main class="ops-workspace">
-        <!-- TAB 1: START-OF-DAY HUDDLE, BINDER CONTINUITY & MORNING CALIBRATION -->
+        <!-- STATION 1: START-OF-DAY BINDER HUDDLE & MORNING CALIBRATION -->
         <section id="tab-cal">
           <div class="card">
             <div class="card-hdr">
               <h3>☀️ Start-of-Day Huddle &amp; DOT Test Book Setup</h3>
-              <span class="sub-badge" id="huddleShiftBadge">🟢 Full Hydro &amp; Prep Window</span>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <span class="sub-badge" id="huddleShiftBadge">🟢 Full Hydro &amp; Prep Window</span>
+                <a class="secondary" href="/schedule">Edit Day / Schedule →</a>
+              </div>
             </div>
 
             <div class="binder-box">
               <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
                 <div>
-                  <strong style="font-size:1.02rem;" id="binderSheetTitle">Active Retest Sheet #8095 — Next Entry: Row 1 of 12</strong>
-                  <div style="font-size:0.8rem;color:#cbd5e1;margin-top:2px;" id="binderLastNote">Ready to start logging on Sheet #8095.</div>
+                  <strong style="font-size:1.02rem;" id="binderSheetTitle">Active Retest Sheet #8095 — Next Completed Row: #1 of 12</strong>
+                  <div style="font-size:0.8rem;color:#cbd5e1;margin-top:2px;" id="binderLastNote">Sheet numbers assign automatically in exact test completion order.</div>
                 </div>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
                   <button class="secondary" style="background:#fde68a;color:#111827;border:none;" onclick="advanceToFreshSheet()">📄 Start Fresh Next Sheet</button>
-                  <input type="number" id="customBinderInput" placeholder="Sheet #" style="width:92px;padding:6px 8px;font-size:0.82rem;font-weight:800;" />
+                  <input type="number" id="customBinderInput" placeholder="Sheet #" style="width:90px;padding:6px 8px;font-size:0.82rem;font-weight:800;" />
                   <button class="secondary" onclick="setCustomBinderSheet()">Set #</button>
                 </div>
               </div>
@@ -142,7 +144,8 @@
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <button class="secondary" onclick="setCalExpanded(true)">Re-Calibrate / Higher PSI</button>
-                <button class="primary" style="width:auto;margin:0;padding:9px 15px;" onclick="jumpToTab('intake')">Go to Scan &amp; Intake →</button>
+                <button class="primary" style="width:auto;margin:0;padding:9px 15px;" onclick="jumpToTab('intake')">Go to Prep &amp; Scan →</button>
+                <button class="primary" style="width:auto;margin:0;padding:9px 15px;background:#047857;" onclick="jumpToTab('bench')">Go to Hydro Stand →</button>
               </div>
             </div>
           </div>
@@ -185,122 +188,11 @@
           </div>
         </section>
 
-        <!-- TAB 2: WALL CALENDAR, SHIFT WINDOWS, PHONE QUOTE CALCULATOR & PREP DISPATCH -->
-        <section id="tab-schedule" hidden>
-          <div class="card">
-            <div class="card-hdr">
-              <h3>📅 14-Day Shop Wall Calendar &amp; Operating Windows</h3>
-              <span class="sub-badge">Tap Any Day to Inspect or Set Operating Mode</span>
-            </div>
-            <div class="cal-strip" id="calStripGrid"></div>
-
-            <div style="margin-top:12px;padding-top:11px;border-top:1px solid var(--border-soft);">
-              <div class="grid" style="align-items:end;">
-                <div>
-                  <label>Operating Mode for <span id="planDateLabel">Selected Date</span></label>
-                  <select id="planShiftMode" onchange="autoFillPlanCap()">
-                    <option value="FULL_HYDRO">🟢 Full Hydro &amp; Prep Window</option>
-                    <option value="PREP_ONLY">🔧 Prep, Devalve &amp; Drop-Off Only</option>
-                    <option value="ROAD_RUN">🚚 Road Pickup / Delivery &amp; Partial Hydro</option>
-                    <option value="BACKROOM_ONLY">🚪 24/7 Backroom Self-Drop Only</option>
-                  </select>
-                </div>
-                <div>
-                  <label>Hydro Bottle Capacity</label>
-                  <input type="number" id="planCapacity" value="24" min="0" max="120" />
-                </div>
-                <div>
-                  <label>Shift / Dispatch Note (Printed Role-Safe)</label>
-                  <input id="planNotes" placeholder="e.g. Morning road pickup run; afternoon SCBA batch" />
-                </div>
-                <div>
-                  <button class="primary" style="margin-top:0;" onclick="saveDayPlan()">Save Day Window</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="split-2">
-            <!-- LEFT: PHONE PROMISE-DATE HELPER + SCHEDULE NEW PICKUP/DELIVERY/BATCH -->
-            <div>
-              <div class="card" style="border-left:4px solid #16a34a;">
-                <div class="card-hdr">
-                  <h3>📞 Phone Call Quote — "When Can I Promise?"</h3>
-                  <span class="sub-badge">Uses Live Backlog &amp; Hydro Windows</span>
-                </div>
-                <div style="display:flex;gap:8px;align-items:end;">
-                  <div style="flex:1;">
-                    <label>Customer's Bottle Count</label>
-                    <input type="number" id="quoteCountInput" value="6" min="1" max="200" oninput="fetchLiveTurnaroundQuote()" />
-                  </div>
-                  <button class="secondary" style="padding:10px 14px;" onclick="fetchLiveTurnaroundQuote()">↻ Recalculate</button>
-                </div>
-                <div class="quote-grid" id="quoteResultArea"></div>
-              </div>
-
-              <div class="card">
-                <div class="card-hdr"><h3>➕ Add Pickup, Delivery, or Scheduled Batch</h3></div>
-                <div class="grid">
-                  <div>
-                    <label>Job / Run Type</label>
-                    <select id="sjType">
-                      <option value="SHOP_BATCH">📌 Scheduled Shop Drop-Off</option>
-                      <option value="ROAD_PICKUP">🚚 Outbound Cylinder Pickup</option>
-                      <option value="ROAD_DELIVERY">🚚 Outbound Cylinder Delivery</option>
-                      <option value="ONSITE_VISUAL">🔍 On-Site Visual Inspection</option>
-                    </select>
-                  </div>
-                  <div><label>Scheduled Date *</label><input type="date" id="sjDate" /></div>
-                  <div><label>Target Due / Promise Date</label><input type="date" id="sjDueDate" /></div>
-                  <div><label>Customer / Dept *</label><input id="sjCustomer" list="customerSuggest" placeholder="Dept, Shop, or Name" /></div>
-                  <div><label>Cell / Contact #</label><input id="sjPhone" type="tel" placeholder="724-555-0199" /></div>
-                  <div><label>Bottle Count</label><input type="number" id="sjCount" value="4" min="1" /></div>
-                  <div>
-                    <label>Priority Tier</label>
-                    <select id="sjPriority">
-                      <option value="STANDARD">Standard Turnaround</option>
-                      <option value="RUSH">🔥 Paid Rush Service (Fee Applies)</option>
-                      <option value="HIGH">⚡ High Priority / Dept Deadline</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label>Shop Holding Zone</label>
-                    <select id="sjZone">
-                      <option value="ZONE_A_BACKROOM">Zone A • Backroom Drop-Off</option>
-                      <option value="ZONE_B_DEVALVE">Zone B • Devalve &amp; Tag Bench</option>
-                      <option value="ZONE_C_READY_RACK">Zone C • Test Room Ready Rack</option>
-                      <option value="OUTBOUND_TRUCK">🚚 Staged for Road Delivery</option>
-                    </select>
-                  </div>
-                  <div><label>Tank Types</label><input id="sjSummary" placeholder="e.g. 12x 45-Min SCBA" /></div>
-                  <div><label>Address / Pickup Location</label><input id="sjLocation" placeholder="Station / Shop Address" /></div>
-                  <div style="grid-column:1/-1;"><label>Prep Instructions / Notes</label><input id="sjNotes" placeholder="e.g. Ok to bleed, devalve &amp; pre-fill water ahead of hydro window" /></div>
-                </div>
-                <button class="primary" onclick="submitScheduleJob()">Add to Shop Calendar &amp; TV Board</button>
-              </div>
-            </div>
-
-            <!-- RIGHT: UPCOMING RUNS & "JUMP THE GUN" DEVALVE/PREP BOARD -->
-            <div>
-              <div class="card" style="border-left:4px solid var(--amber);">
-                <div class="card-hdr">
-                  <h3>🔧 Active Dispatch, Road Runs &amp; Crew Prep List</h3>
-                  <span class="sub-badge" id="schedActiveBadge">0 Open</span>
-                </div>
-                <div class="notice" style="margin-bottom:10px;">
-                  <strong>Prep Speed Tip:</strong> On <em>Prep &amp; Drop-Off Only</em> shifts, bleed, devalve, tag, scan 4 arcs, and pre-fill bare cylinders with shop-temp water into <strong>Zone C Ready Rack</strong> so zeroing is instant on hydro day.
-                </div>
-                <div id="scheduleJobsList"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- TAB 3: BACKROOM INBOX + AI SCANNER + PRIORITY QUEUE -->
+        <!-- STATION 2: PREP, BATCH LOCK & 360° AI SCANNER -->
         <section id="tab-intake" hidden>
           <div class="card" id="backroomInboxCard" style="border-left:4px solid #f59e0b;" hidden>
             <div class="card-hdr">
-              <h3>🚪 24/7 Backroom Drop-Off &amp; Pickup Check-Ins</h3>
+              <h3>🚪 24/7 Backroom Door Check-Ins</h3>
               <span class="sub-badge" id="backroomCountBadge">0 Waiting</span>
             </div>
             <div id="backroomInboxList"></div>
@@ -310,7 +202,24 @@
             <div>
               <div id="activeBatchBanner" class="active-batch-banner" hidden>
                 <span id="activeBatchText">Importing Batch</span>
-                <button class="secondary" style="padding:4px 9px;font-size:0.75rem;" onclick="clearActiveDropoffBatch()">Done / Clear Batch</button>
+                <button class="secondary" style="padding:4px 9px;font-size:0.75rem;" onclick="clearActiveDropoffBatch()">Clear Active Batch</button>
+              </div>
+
+              <!-- RAPID MULTI-BOTTLE BATCH HEADER LOCK -->
+              <div class="batch-lock-box" id="batchLockBox">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                  <div>
+                    <strong style="font-size:0.9rem;" id="batchLockStatusTxt">🔓 Single-Bottle Mode (Unlocks All Fields After Queue)</strong>
+                    <div style="font-size:0.77rem;color:var(--muted);">Lock when intaking multiple identical cylinders so you only enter <strong>Serial #</strong> &amp; <strong>Tag #</strong>.</div>
+                  </div>
+                  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <label class="inline-check" style="font-size:0.8rem;">
+                      <input type="checkbox" id="chkAutoIncTag" checked />
+                      <span>Auto +1 Tag #</span>
+                    </label>
+                    <button type="button" class="secondary" id="btnBatchLock" onclick="toggleBatchLock()">🔒 Lock Batch Specs</button>
+                  </div>
+                </div>
               </div>
 
               <div class="card">
@@ -410,16 +319,16 @@
                 <div id="compositeAlertBox" class="notice bad" hidden></div>
 
                 <div class="grid" id="intakeFieldsGrid">
+                  <div><label>Serial # *</label><input id="fSerial" placeholder="e.g. GTS-0291277" onkeydown="if(event.key==='Enter')document.getElementById('fValveTag').focus()" /></div>
+                  <div><label>🏷️ Valve / Reg Tag #</label><input id="fValveTag" placeholder="e.g. 14" onkeydown="if(event.key==='Enter')submitIntake(false)" /></div>
                   <div><label>Customer / Owner *</label><input id="fCustomer" list="customerSuggest" placeholder="Dept or Name" /></div>
                   <div><label>Cell Phone</label><input id="fPhone" type="tel" placeholder="724-555-0199" /></div>
-                  <div><label>Serial # *</label><input id="fSerial" placeholder="e.g. GTS-0291277" /></div>
-                  <div><label>🏷️ Valve / Reg Tag #</label><input id="fValveTag" placeholder="e.g. 14" /></div>
-                  <div><label>MFG / Brand</label><input id="fMfg" placeholder="LUXFER / NINJA / WK" /></div>
-                  <div><label>MFG Date (MM-YY)</label><input id="fMfgDate" placeholder="MM-YY" oninput="checkIntakeLifespanLive()" /></div>
-                  <div><label>Gas Service</label><input id="fGas" value="AIR" /></div>
                   <div><label>DOT / Permit Spec *</label><input id="fSpec" placeholder="3AA / 3AL / SP14387" oninput="autoMatchSpecDimensions()" /></div>
                   <div><label>Service PSI *</label><input type="number" id="fSvcPsi" oninput="autoMatchSpecDimensions()" /></div>
                   <div><label>Actual Test PSI</label><input type="number" id="fTestPsi" /></div>
+                  <div><label>MFG Date (MM-YY)</label><input id="fMfgDate" placeholder="MM-YY" oninput="checkIntakeLifespanLive()" /></div>
+                  <div><label>MFG / Brand</label><input id="fMfg" placeholder="LUXFER / NINJA / WK" /></div>
+                  <div><label>Gas Service</label><input id="fGas" value="AIR" /></div>
                   <div><label>Outside Dia (in)</label><input id="fDia" placeholder="e.g. 4.5 or 7" oninput="checkIntakeLifespanLive()" /></div>
                   <div><label>Length (in)</label><input id="fLen" placeholder="e.g. 9.3 or 32 1/2" oninput="checkIntakeLifespanLive()" /></div>
                   <div><label>REE Limit (Composite)</label><input type="number" step="0.1" id="fRee" placeholder="Blank for Steel/Alum" /></div>
@@ -442,8 +351,8 @@
                   </div>
                 </div>
                 <div style="display:flex;gap:8px;margin-top:12px;">
-                  <button class="primary" id="btnVerifyQueue" style="flex:3;margin-top:0;" onclick="submitIntake(false)">✓ Verify &amp; Add to Priority Queue</button>
-                  <button class="secondary" style="flex:1;" onclick="clearIntakeForm()">Clear</button>
+                  <button class="primary" id="btnVerifyQueue" style="flex:3;margin-top:0;" onclick="submitIntake(false)">✓ Queue Bottle &amp; Next</button>
+                  <button class="secondary" style="flex:1;" onclick="clearIntakeForm(true)">Reset All</button>
                 </div>
               </div>
             </div>
@@ -462,8 +371,8 @@
 
               <div class="card">
                 <div class="card-hdr">
-                  <h3>Priority-Ranked Intake Queue</h3>
-                  <span class="sub-badge" id="queueCountBadge">0 Waiting</span>
+                  <h3>Priority-Ranked Queue (Tap 💧 to Load Stand)</h3>
+                  <span class="sub-badge" id="queueCountBadge">0 Ranked</span>
                 </div>
                 <div id="queuePreviewList"></div>
               </div>
@@ -471,18 +380,22 @@
           </div>
         </section>
 
-        <!-- TAB 4: HYDRO TEST STAND -->
+        <!-- STATION 3: HYDRO TEST STAND (1-TAP PILLS + SMART JACKET MATCH) -->
         <section id="tab-bench" hidden>
           <div class="split-2">
             <div class="card">
-              <div class="card-hdr"><h3>Active Priority Cylinder on Hydro Stand</h3></div>
-              <select id="benchSelect" onchange="renderBenchForm()"></select>
-              <div id="benchArea" style="margin-top:12px;"></div>
+              <div class="card-hdr">
+                <h3>💧 Hydro Test Stand — Tap Cylinder Pill to Load</h3>
+                <span class="sub-badge" id="standBinderBadge">Next Row: #1</span>
+              </div>
+              <div id="benchPillBar" class="pill-selector-bar"></div>
+              <select id="benchSelect" onchange="renderBenchForm()" hidden></select>
+              <div id="benchArea" style="margin-top:8px;"></div>
             </div>
 
             <div class="card">
               <div class="card-hdr">
-                <h3>Completed Today → Next: Dry &amp; Stamp/Sticker</h3>
+                <h3>Completed Today → Zone D Dry &amp; Mark</h3>
                 <span class="sub-badge" id="doneCountBadge">0 Done</span>
               </div>
               <div id="doneBatchActions" style="margin-bottom:10px;"></div>
@@ -491,14 +404,14 @@
           </div>
         </section>
 
-        <!-- TAB 5: FINISH BENCH (DRY -> STAMP/STICKER -> REVALVE -> SHELF), ACTIVE TAGS & LOOKUP -->
+        <!-- STATION 4: POST-TEST FINISH BENCH, ACTIVE TAGS & ZONE E PICKUP SHELF -->
         <section id="tab-logs" hidden>
           <div class="card" style="border-left:4px solid #7c3aed;">
             <div class="card-hdr">
-              <h3>🔨 Post-Test Finish Bench: Dry → Stamp / B386 Sticker → Revalve → Shelf</h3>
+              <h3>🔨 Post-Test Finish Lane: Dry → Stamp / B386 Sticker → Revalve → Shelf</h3>
               <div style="display:flex;gap:6px;align-items:center;">
                 <span class="sub-badge" id="finishCountBadge">0 In Post-Test</span>
-                <button class="secondary mob-only-btn" onclick="jumpToTab('print')">🖨️ Print Forms &amp; Stickers</button>
+                <a class="secondary" href="/office">🖨️ Print Stickers / Bill →</a>
               </div>
             </div>
             <div id="finishBenchList"></div>
@@ -514,7 +427,7 @@
             </div>
 
             <div class="card">
-              <div class="card-hdr"><h3>Zone E Pickup Shelf, Dwell Days &amp; SMS Alerts</h3></div>
+              <div class="card-hdr"><h3>📦 Zone E Pickup Shelf &amp; Ready SMS</h3></div>
               <div id="customersListArea"></div>
             </div>
           </div>
@@ -527,157 +440,26 @@
             </div>
             <div id="searchResultsList"></div>
           </div>
-
-          <div class="card">
-            <div class="card-hdr"><h3>Recent Work Dates</h3></div>
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Date</th><th>Clients</th><th>Done / Total</th><th>Open</th></tr></thead>
-                <tbody id="datesListTable"></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- TAB 6: PRINT, MONTHLY STICKER PRE-PRINT & QR SIGN -->
-        <section id="tab-print" hidden>
-          <div class="card" style="background:#f0fdf4;border:1.5px solid #86efac;">
-            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-              <div>
-                <strong style="color:#166534;">⚡ Monthly Speed Workflow — Pre-Print Full Sticker Sheets on the 1st</strong>
-                <div style="font-size:0.83rem;color:#15803d;margin-top:2px;">
-                  DOT B386 stickers only carry <strong>Month + Year</strong> (no day). Keep pre-printed sheets strictly at the Zone D Dryer/Stamping bench to eliminate printer trips mid-shift.
-                </div>
-              </div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                <button class="secondary" style="background:#166534;color:#fff;border:none;" onclick="preprintFullSheet(false)">🖨️ Pre-Print 30 Standard Sheet</button>
-                <button class="secondary" style="background:#0f766e;color:#fff;border:none;" onclick="preprintFullSheet(true)">🎯 Pre-Print 60 Mini HPA Sheet</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-hdr">
-              <h3>1. Print Scope — Date: <span id="pdfDateLabel"></span></h3>
-              <span class="sub-badge">Signed Off as Ryan Pearce (RP)</span>
-            </div>
-            <div class="grid">
-              <div>
-                <label>Filter by Customer (Blank = Full Day)</label>
-                <select id="pdfCustomerFilter"><option value="">-- All Customers on Selected Date --</option></select>
-              </div>
-              <div>
-                <label>Retest Sheet # Override</label>
-                <input type="number" id="pdfSheetNo" value="8095" />
-              </div>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-hdr"><h3>2. Official DOT Forms &amp; Backroom Wall Sign</h3></div>
-            <div class="grid">
-              <button class="pdf-card-btn" onclick="openPdf('retest')">📄 DOT Retest Data Sheet<br /><small style="font-weight:500;opacity:0.9;">12-row Form 393-001 replica (RP)</small></button>
-              <button class="pdf-card-btn" onclick="openPdf('verification')">📄 Daily Verification Sheet<br /><small style="font-weight:500;opacity:0.9;">Method B calibration log (RP)</small></button>
-              <button class="pdf-card-btn" onclick="openPdf('visual')">📄 7-Point Visual Log<br /><small style="font-weight:500;opacity:0.9;">DOT/ICC visual inspection log (RP)</small></button>
-              <button class="pdf-card-btn" style="background:#92400e;" onclick="openPdf('valvetags')">🏷️ Valve &amp; HPA Tag Sheet<br /><small style="font-weight:500;opacity:0.9;">25-row bench clipboard match grid</small></button>
-              <button class="pdf-card-btn" style="background:#0f291e;" onclick="openPdf('poster')">🚪 Backroom 24/7 QR Poster<br /><small style="font-weight:500;opacity:0.9;">Laminated wall sign for drop-off check-in</small></button>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-hdr"><h3>3. Custom Partial B386 Sticker Sheet (Avery 5160 3×10)</h3></div>
-            <div class="grid" style="align-items:end;">
-              <div><label>Stickers Needed</label><input type="number" id="stickerCount" value="12" /></div>
-              <div><label>Skip Used Slots (0–29)</label><input type="number" id="stickerSkip" value="0" /></div>
-              <div>
-                <label class="inline-check" style="padding-bottom:8px;">
-                  <input type="checkbox" id="stickerCompact" />
-                  <span>🎯 <strong>2-Up Mini Paintball HPA Size</strong> (2 per label)</span>
-                </label>
-              </div>
-              <div>
-                <button class="pdf-card-btn" style="background:#047857;width:100%;text-align:center;" onclick="openPdf('stickers')">🏷️ Generate B386 Stickers PDF</button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- TAB 7: BILLING, RUSH FEES, PAYMENTS & RATES -->
-        <section id="tab-billing" hidden>
-          <div class="card">
-            <div class="card-hdr"><h3>1. Build Customer Invoice (Auto-Includes Paid Rush Fees)</h3></div>
-            <div class="grid">
-              <div><label>Customer</label><select id="billCustomer" onchange="loadUnbilledItems()"></select></div>
-              <div><label>Invoice Date / Ref</label><input type="date" id="billDate" onchange="loadUnbilledItems()" /></div>
-              <div><label>Customer Cell #</label><input id="billPhone" type="tel" placeholder="724-555-0199" /></div>
-              <div><label>Tax %</label><input type="number" step="0.01" id="billTax" value="0" oninput="recalcInvoiceDraft()" /></div>
-              <div><label>Status</label><select id="billStatus"><option value="DRAFT">DRAFT</option><option value="SENT">SENT</option><option value="PAID">PAID</option></select></div>
-              <div>
-                <label>Payment Method</label>
-                <select id="billPayMethod">
-                  <option value="">Unpaid / Pending</option>
-                  <option value="Cash">Cash</option>
-                  <option value="Check">Check</option>
-                  <option value="Card / Venmo">Card / Venmo</option>
-                  <option value="Net-30 Dept">Net-30 Dept Invoice</option>
-                </select>
-              </div>
-            </div>
-            <label class="inline-check" style="margin-top:9px;">
-              <input type="checkbox" id="billAllDatesChk" checked onchange="loadUnbilledItems()" />
-              <span>Include all unbilled completed bottles for this customer across multi-day batches</span>
-            </label>
-
-            <div id="draftInvoiceList" style="margin-top:12px;"></div>
-
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-wrap:wrap;gap:10px;">
-              <button class="secondary" onclick="addCustomInvoiceLine()">+ Add Custom Fee / Air Fill</button>
-              <strong id="draftTotalLabel" style="font-size:1.15rem;">Draft Total: $0.00</strong>
-            </div>
-            <input id="billNotes" placeholder="Optional PO#, check #, or Zone E pickup shelf notes..." style="margin-top:10px;" />
-            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
-              <button class="primary" style="flex:2;margin:0;" onclick="submitInvoice()">Save &amp; Open Printable Invoice PDF</button>
-              <button class="secondary" style="flex:1;padding:11px;" onclick="sendCustomerPickupSmsFromBilling()">📲 Text Ready Notice</button>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-hdr"><h3>2. Saved Customer Invoices</h3></div>
-            <div id="invoicesList"></div>
-          </div>
-
-          <div class="card">
-            <div class="card-hdr">
-              <h3>3. Master Service Rate Schedule</h3>
-              <button class="secondary" onclick="addRateScheduleRow()">+ Add Service Rate</button>
-            </div>
-            <div id="pricingList"></div>
-            <button class="primary" onclick="savePricingRates()">Save Master Pricing Rates</button>
-          </div>
         </section>
       </main>
     </div>
 
-    <!-- PHONE FIXED BOTTOM TAB BAR (6 CORE WORKFLOW STOPS) -->
+    <!-- PHONE FIXED BOTTOM TAB BAR (4 PURE SHOP STATIONS) -->
     <nav class="bottom-nav">
-      <button class="bnav-btn active" data-tab="cal" onclick="jumpToTab('cal')"><span class="ico">☀️</span><span>Start</span></button>
-      <button class="bnav-btn" data-tab="schedule" onclick="jumpToTab('schedule')">
-        <span class="ico">📅</span><span>Sched</span><span class="bnav-dot" id="mobBadgeSched" hidden>0</span>
-      </button>
+      <button class="bnav-btn active" data-tab="cal" onclick="jumpToTab('cal')"><span class="ico">☀️</span><span>1. Start</span></button>
       <button class="bnav-btn" data-tab="intake" onclick="jumpToTab('intake')">
-        <span class="ico">📷</span><span>Scan</span><span class="bnav-dot" id="mobBadgeIntake" hidden>0</span>
+        <span class="ico">📷</span><span>2. Prep</span><span class="bnav-dot" id="mobBadgeIntake" hidden>0</span>
       </button>
       <button class="bnav-btn" data-tab="bench" onclick="jumpToTab('bench')">
-        <span class="ico">💧</span><span>Stand</span><span class="bnav-dot" id="mobBadgeBench" hidden>0</span>
+        <span class="ico">💧</span><span>3. Stand</span><span class="bnav-dot" id="mobBadgeBench" hidden>0</span>
       </button>
       <button class="bnav-btn" data-tab="logs" onclick="jumpToTab('logs')">
-        <span class="ico">🔨</span><span>Finish</span><span class="bnav-dot" id="mobBadgeValves" hidden>0</span>
+        <span class="ico">🔨</span><span>4. Finish</span><span class="bnav-dot" id="mobBadgeValves" hidden>0</span>
       </button>
-      <button class="bnav-btn" data-tab="billing" onclick="jumpToTab('billing')"><span class="ico">💲</span><span>Bill</span></button>
     </nav>
   </div>
 
-  <!-- SLIDE-OVER QUICK MENU DRAWER -->
+  <!-- SLIDE-OVER MENU DRAWER -->
   <div id="menuDrawerModal" class="modal-bg" onclick="if(event.target===this)toggleMenuDrawer(false)" hidden>
     <div class="drawer-panel">
       <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -690,7 +472,8 @@
         <small style="color:var(--muted);font-size:0.74rem;">Official DOT forms always sign off as Ryan Pearce (RP).</small>
       </div>
       <button id="btnInstallPwa" class="primary" style="margin:0;background:#d97706;" onclick="installPwaApp()" hidden>📲 Install Ops App on Device</button>
-      <button class="secondary" onclick="toggleMenuDrawer(false);jumpToTab('print')" style="padding:11px;justify-content:flex-start;">🖨️ Print DOT Forms, Stickers &amp; QR Sign</button>
+      <a class="secondary" href="/schedule" style="padding:11px;justify-content:flex-start;">📅 Wall Calendar &amp; Phone Quotes</a>
+      <a class="secondary" href="/office" style="padding:11px;justify-content:flex-start;">💲 Billing, Invoices &amp; DOT Printouts</a>
       <a class="secondary" href="/tv" target="_blank" style="padding:11px;justify-content:flex-start;">📺 Launch Testing Room TV Board</a>
       <button class="secondary" id="drawerSyncBtn" onclick="triggerManualSync()" style="padding:11px;justify-content:flex-start;">☁ Sync Google Sheets Now</button>
       <button class="secondary" onclick="toggleMenuDrawer(false);toggleFeedbackModal(true)" style="padding:11px;justify-content:flex-start;">💬 Crew Feedback &amp; Ideas</button>
@@ -825,7 +608,6 @@
         <h3>⚙ Facility Settings, Crew &amp; Webhooks</h3>
         <button class="secondary" onclick="toggleGuide(false)">✖ Close</button>
       </div>
-
       <div class="card" style="background:#fef2f2;border-color:#fca5a5;padding:12px;">
         <label class="inline-check" style="margin-bottom:10px;">
           <input type="checkbox" id="testingModeChk" />
@@ -833,7 +615,6 @@
         </label>
         <button class="danger-btn" style="width:100%;" onclick="eraseAllTestData()">🗑 Erase All Test Data (App + Google Sheets)</button>
       </div>
-
       <h4 style="margin:12px 0 6px;">Crew Roster (Internal Audit — DOT PDFs Always Sign Off as RP)</h4>
       <div id="crewRosterList" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
       <div class="grid" style="align-items:end;margin-bottom:12px;">
@@ -841,12 +622,10 @@
         <div><label>Initials</label><input id="newCrewInit" maxlength="4" placeholder="e.g. KN" /></div>
         <div><button class="secondary" style="width:100%;padding:10px;" onclick="addCrewMember()">+ Add Crew</button></div>
       </div>
-
       <div class="grid" style="margin-bottom:10px;">
         <div style="grid-column:1/-1;"><label>Master Log Google Sheets Webhook URL</label><input id="webhookInput" placeholder="https://script.google.com/macros/s/.../exec" /></div>
         <div style="grid-column:1/-1;"><label>Crew Feedback Sheet Webhook URL (Optional)</label><input id="fbWebhookInput" placeholder="https://script.google.com/macros/s/.../exec" /></div>
       </div>
-
       <p style="font-size:0.82rem;margin:4px 0 8px;">Gemini Vision Key: <strong id="keyStatusText"></strong></p>
       <div class="grid">
         <div><label>Change Crew PIN</label><input type="password" id="editShopPin" placeholder="Blank = keep current" /></div>
@@ -860,7 +639,7 @@
     </div>
   </div>
 
-  <script src="/static/ops-camera.js?v=6.0"></script>
-  <script src="/static/ops-app.js?v=6.0"></script>
+  <script src="/static/ops-camera.js?v=7.0"></script>
+  <script src="/static/ops-app.js?v=7.0"></script>
 </body>
 </html>

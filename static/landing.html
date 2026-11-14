@@ -3,477 +3,488 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0b2219" />
-  <meta name="description" content="Weber's Tank Testing (DOT RIN B386) at 3086 Legionville Rd, Baden, PA. Certified hydrostatic cylinder testing up to 7,500+ PSI for SCBA, EMS Oxygen, Paintball HPA, Welding, CO2, and Scuba." />
+  <meta name="theme-color" content="#071912" />
+  <meta name="description" content="Weber's Tank Testing (U.S. D.O.T. RIN B386) — Precision hydrostatic cylinder testing & visual requalification up to 7,500+ PSI in Baden, PA. 24/7 backroom drop-off for SCBA, EMS Oxygen, Industrial Gas, Scuba & Paintball HPA." />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-  <title>Weber's Tank Testing | Baden, PA • DOT Hydrostatic &amp; Paintball HPA Testing (RIN B386)</title>
+  <title>Weber's Tank Testing | U.S. D.O.T. RIN B386 Hydrostatic Cylinder Requalification — Baden, PA</title>
   <style>
     :root {
-      --forest: #0b2219; --emerald: #1b4332; --emerald-mid: #2d6a4f; --emerald-soft: #ecfdf5;
-      --amber: #f59e0b; --amber-light: #fef3c7; --crimson: #b91c1c;
-      --slate: #0f172a; --muted: #475569; --bg: #f8fafc; --border: #cbd5e1; --border-soft: #e2e8f0;
+      --obsidian: #061510; --forest: #0b2219; --green: #1b4332; --emerald: #10b981;
+      --gold: #f59e0b; --gold-lt: #fbbf24; --slate: #0f172a; --muted: #475569;
+      --bg: #f8fafc; --card: #ffffff; --border: #e2e8f0;
     }
-    * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; scroll-behavior: smooth; }
     [hidden] { display: none !important; }
-    html { scroll-behavior: smooth; }
-    body { margin: 0; background: var(--bg); color: var(--slate); line-height: 1.6; }
+    body { margin: 0; background: var(--bg); color: var(--slate); line-height: 1.5; }
+    .wrap { max-width: 1220px; margin: 0 auto; padding: 0 20px; }
 
-    .topbar {
-      background: var(--forest); color: #fff; padding: 10px 20px; border-bottom: 3px solid var(--amber);
-      position: sticky; top: 0; z-index: 40; box-shadow: 0 4px 14px rgba(0,0,0,0.24);
-    }
-    .topbar-inner { max-width: 1180px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    /* Executive Utility Bar & Sticky Header */
+    .util-bar { background: #040d0a; color: #cbd5e1; font-size: 0.78rem; font-weight: 600; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .util-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .util-bar a { color: var(--gold-lt); text-decoration: none; font-weight: 700; }
+
+    .site-nav { position: sticky; top: 0; z-index: 50; background: rgba(6,21,16,0.96); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.12); padding: 11px 0; }
+    .nav-inner { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
     .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; color: #fff; }
-    .brand img { width: 46px; height: 46px; border-radius: 50%; border: 2px solid var(--amber); object-fit: cover; background: #000; }
-    .brand h1 { margin: 0; font-size: 1.14rem; letter-spacing: 0.4px; }
-    .brand small { color: #cbd5e1; font-weight: 600; display: block; font-size: 0.74rem; }
-    .nav-links { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-    .nav-links a.link { color: #e2e8f0; text-decoration: none; font-weight: 700; font-size: 0.86rem; }
-    .nav-links a.link:hover { color: #fbbf24; }
-    .btn-fb { background: #1877f2; color: #fff; text-decoration: none; padding: 7px 12px; border-radius: 8px; font-weight: 800; font-size: 0.82rem; }
-    .btn-top-call { background: var(--amber); color: #111827; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-weight: 900; font-size: 0.85rem; }
-    @media (max-width: 780px) { .nav-links a.link { display: none; } }
+    .brand img { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--gold-lt); object-fit: cover; background: #000; }
+    .brand strong { display: block; font-size: 1.06rem; letter-spacing: 0.5px; }
+    .brand small { color: #94a3b8; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.4px; }
+    .nav-links { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+    .nav-links a { color: #e2e8f0; text-decoration: none; font-size: 0.86rem; font-weight: 700; }
+    .nav-links a:hover { color: var(--gold-lt); }
+    .btn-gold { background: var(--gold-lt); color: #111827 !important; padding: 9px 16px; border-radius: 8px; font-weight: 900 !important; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; border: none; cursor: pointer; font-size: 0.88rem; }
+    .btn-gold:hover { background: #f59e0b; }
+    .btn-outline { background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.28); padding: 9px 16px; border-radius: 8px; font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; }
 
-    .hero { background: radial-gradient(circle at 82% 20%, #23533d 0%, #0b2219 68%); color: #fff; padding: 52px 20px 60px; }
-    .hero-inner { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 1.25fr 1fr; gap: 36px; align-items: center; }
-    @media (max-width: 900px) { .hero-inner { grid-template-columns: 1fr; } }
-    .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-    .rin-pill { display: inline-block; background: var(--amber-light); color: #92400e; font-weight: 900; padding: 5px 12px; border-radius: 999px; font-size: 0.76rem; letter-spacing: 0.4px; }
-    .ff-pill { display: inline-block; background: rgba(239,68,68,0.22); border: 1px solid #f87171; color: #fecaca; font-weight: 800; padding: 5px 12px; border-radius: 999px; font-size: 0.76rem; }
-    .tagline { color: #fde68a; font-weight: 900; font-size: 0.96rem; margin: 0 0 10px; letter-spacing: 0.5px; }
-    .hero h2 { font-size: 2.25rem; line-height: 1.15; margin: 0 0 12px; }
-    @media (max-width: 600px) { .hero h2 { font-size: 1.78rem; } }
-    .hero p { color: #e2e8f0; font-size: 1.02rem; margin: 0 0 22px; max-width: 620px; }
-    .cta-row { display: flex; gap: 10px; flex-wrap: wrap; }
-    .btn-amber { background: var(--amber); color: #111827; text-decoration: none; padding: 12px 19px; border-radius: 9px; font-weight: 900; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 6px; }
-    .btn-outline-light { background: rgba(255,255,255,0.12); color: #fff; text-decoration: none; padding: 12px 16px; border-radius: 9px; font-weight: 800; font-size: 0.92rem; border: 1px solid rgba(255,255,255,0.3); }
+    /* Industrial Hero + Live Ticket Tracker */
+    .hero { background: radial-gradient(circle at 18% 20%, #163b2b 0%, var(--obsidian) 70%); color: #fff; padding: 54px 0 48px; border-bottom: 4px solid var(--gold); }
+    .hero-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 30px; align-items: center; }
+    @media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; } .nav-links { display: none; } }
+    .rin-pill { display: inline-flex; align-items: center; gap: 8px; background: rgba(16,185,129,0.16); border: 1px solid rgba(52,211,153,0.45); color: #6ee7b7; font-size: 0.76rem; font-weight: 900; padding: 5px 12px; border-radius: 999px; letter-spacing: 0.5px; text-transform: uppercase; }
+    .hero h1 { font-size: clamp(1.9rem, 3.6vw, 2.85rem); line-height: 1.12; margin: 14px 0 12px; letter-spacing: -0.4px; }
+    .hero p { color: #cbd5e1; font-size: 1.02rem; margin: 0 0 20px; max-width: 620px; }
+    .sla-strip { display: inline-flex; flex-wrap: wrap; gap: 14px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; font-size: 0.84rem; }
 
-    .hero-card { background: #fff; color: var(--slate); border-radius: 16px; padding: 22px; box-shadow: 0 20px 44px rgba(0,0,0,0.32); border-top: 5px solid var(--amber); }
-    .hero-crest-top { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border-soft); }
-    .hero-crest-top img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; background: #000; flex-shrink: 0; }
-    .spec-list { list-style: none; padding: 0; margin: 0; }
-    .spec-list li { padding: 6px 0; border-bottom: 1px solid var(--border-soft); display: flex; justify-content: space-between; gap: 10px; font-size: 0.87rem; }
-    .spec-list li:last-child { border-bottom: none; }
-    .spec-list span { color: var(--muted); }
+    .tracker-card { background: rgba(15,23,42,0.78); border: 1px solid rgba(255,255,255,0.18); border-radius: 14px; padding: 20px; box-shadow: 0 18px 40px rgba(0,0,0,0.35); }
+    .tracker-card h3 { margin: 0 0 4px; font-size: 1.04rem; color: var(--gold-lt); }
+    .dark-in { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.22); background: rgba(0,0,0,0.4); color: #fff; font-size: 0.92rem; font-weight: 700; }
+    .step-dots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 10px; }
+    .step-dot { height: 7px; border-radius: 999px; background: rgba(255,255,255,0.16); }
+    .step-dot.done { background: var(--emerald); }
 
-    .section { max-width: 1180px; margin: 52px auto; padding: 0 20px; }
-    .section-hdr { margin-bottom: 22px; }
-    .section-hdr h3 { margin: 0 0 5px; font-size: 1.55rem; color: var(--forest); }
-    .section-hdr p { margin: 0; color: var(--muted); font-size: 0.96rem; }
+    /* KPI Engineering Bar */
+    .kpi-band { background: #fff; border-bottom: 1px solid var(--border); padding: 20px 0; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; text-align: center; }
+    @media (max-width: 720px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+    .kpi-item strong { display: block; font-size: 1.45rem; font-weight: 900; color: var(--green); }
+    .kpi-item span { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; }
 
-    .cards-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
-    .svc-card { background: #fff; border: 1px solid var(--border-soft); border-radius: 15px; overflow: hidden; box-shadow: 0 4px 12px rgba(15,23,42,0.05); display: flex; flex-direction: column; }
-    .svc-card.highlight { border: 2px solid var(--amber); }
-    .svc-art { width: 100%; height: 168px; background: linear-gradient(135deg, #0f291e, #1e3a8a); position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-    .svc-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .svc-art .fallback-ico { font-size: 3.2rem; }
-    .svc-body { padding: 18px; flex: 1; display: flex; flex-direction: column; }
-    .card-tag { align-self: flex-start; background: var(--emerald-soft); color: var(--emerald); font-size: 0.72rem; font-weight: 900; padding: 3px 9px; border-radius: 6px; text-transform: uppercase; margin-bottom: 8px; }
-    .card-tag.red { background: #fef2f2; color: var(--crimson); }
-    .card-tag.gold { background: var(--amber-light); color: #92400e; }
-    .svc-body h4 { margin: 0 0 7px; color: var(--forest); font-size: 1.06rem; }
-    .svc-body p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+    /* Sections & Capabilities Matrix */
+    .sec { padding: 54px 0; }
+    .sec-hdr { margin-bottom: 26px; }
+    .sec-hdr small { color: var(--green); font-weight: 900; text-transform: uppercase; letter-spacing: 0.8px; font-size: 0.76rem; }
+    .sec-hdr h2 { margin: 4px 0 8px; font-size: 1.8rem; color: var(--slate); }
+    .cap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(265px, 1fr)); gap: 18px; }
+    .cap-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(15,23,42,0.04); display: flex; flex-direction: column; }
+    .cap-card img { width: 100%; height: 180px; object-fit: cover; background: #0f172a; }
+    .cap-body { padding: 16px 18px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    .spec-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; }
+    .spec-tag { font-size: 0.7rem; font-weight: 800; padding: 3px 8px; border-radius: 5px; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
 
-    .ff-feature {
-      background: linear-gradient(135deg, #111827 0%, #1e293b 100%); color: #fff;
-      border-radius: 18px; overflow: hidden; display: grid; grid-template-columns: 1.05fr 1fr;
-      border: 2px solid #334155; box-shadow: 0 14px 34px rgba(15,23,42,0.14);
-    }
-    @media (max-width: 880px) { .ff-feature { grid-template-columns: 1fr; } }
-    .ff-copy { padding: 28px; display: flex; flex-direction: column; justify-content: center; }
-    .ff-art-wrap { min-height: 260px; background: #0f172a; }
-    .ff-art-wrap img { width: 100%; height: 100%; min-height: 260px; object-fit: cover; display: block; }
+    /* First-Responder Fleet Banner (Preserving Both Fire/EMS Visuals) */
+    .fleet-banner { background: linear-gradient(135deg, var(--forest) 0%, #071912 100%); color: #fff; border-radius: 18px; padding: 28px; display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 24px; align-items: center; }
+    @media (max-width: 860px) { .fleet-banner { grid-template-columns: 1fr; padding: 20px; } }
+    .fleet-imgs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .fleet-imgs img { width: 100%; height: 195px; object-fit: cover; border-radius: 11px; border: 2px solid rgba(251,191,36,0.45); }
 
-    .dogs-card {
-      background: #fff; border: 2px solid #cbd5e1; border-radius: 18px; overflow: hidden;
-      display: grid; grid-template-columns: 1.05fr 1fr; box-shadow: 0 8px 24px rgba(15,23,42,0.06);
-    }
-    @media (max-width: 880px) { .dogs-card { grid-template-columns: 1fr; } }
-    .dogs-photo { min-height: 260px; background: #0f291e; display: flex; align-items: center; justify-content: center; }
-    .dogs-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .dogs-info { padding: 26px; display: flex; flex-direction: column; justify-content: center; }
-    .dog-badges { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
-    .dog-pill { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
-    .dog-pill strong { display: block; color: var(--forest); font-size: 0.95rem; }
-    .dog-pill small { color: var(--muted); font-size: 0.79rem; font-weight: 600; }
+    /* 24/7 Check-In & DOT Checker Forms */
+    .portal-grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 24px; align-items: start; }
+    @media (max-width: 860px) { .portal-grid { grid-template-columns: 1fr; } }
+    .box-card { background: #fff; border: 1px solid var(--border); border-radius: 15px; padding: 22px; box-shadow: 0 4px 16px rgba(15,23,42,0.05); }
+    label { display: block; font-size: 0.74rem; font-weight: 800; text-transform: uppercase; color: #334155; margin-bottom: 4px; }
+    input:not([type="checkbox"]), select, textarea { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; color: var(--slate); background: #fff; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+    @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
+    .mode-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .mode-tab { padding: 10px; border-radius: 9px; border: 1.5px solid #cbd5e1; background: #f8fafc; font-weight: 800; cursor: pointer; text-align: center; font-size: 0.85rem; }
+    .mode-tab.active { background: var(--green); color: #fff; border-color: var(--forest); }
+    .btn-submit { width: 100%; background: var(--green); color: #fff; border: none; padding: 13px; border-radius: 9px; font-size: 0.98rem; font-weight: 900; cursor: pointer; margin-top: 12px; }
+    .btn-submit:hover { background: var(--forest); }
+    .alert-box { padding: 13px 15px; border-radius: 10px; font-weight: 700; font-size: 0.9rem; margin-top: 12px; }
+    .alert-ok { background: #ecfdf5; border: 1.5px solid #6ee7b7; color: #065f46; }
+    .alert-warn { background: #fffbeb; border: 1.5px solid #fcd34d; color: #92400e; }
+    .alert-bad { background: #fef2f2; border: 1.5px solid #fca5a5; color: #991b1b; }
 
-    .checkin-shell { background: #fff; border: 2px solid #86efac; border-radius: 16px; overflow: hidden; display: grid; grid-template-columns: 1fr 1.25fr; box-shadow: 0 10px 28px rgba(15,41,30,0.08); }
-    @media (max-width: 880px) { .checkin-shell { grid-template-columns: 1fr; } }
-    .checkin-info { background: linear-gradient(160deg, var(--forest) 0%, var(--emerald) 100%); color: #fff; padding: 26px; display: flex; flex-direction: column; justify-content: space-between; }
-    .checkin-steps { list-style: none; padding: 0; margin: 14px 0; }
-    .checkin-steps li { margin-bottom: 11px; font-size: 0.89rem; color: #e2e8f0; padding-left: 11px; border-left: 3px solid var(--amber); }
-    .checkin-form-pane { padding: 24px; }
-    .mode-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
-    .mode-tab { flex: 1; padding: 9px 11px; border-radius: 8px; border: 1.5px solid var(--border); background: #f8fafc; color: var(--muted); font-weight: 800; font-size: 0.86rem; cursor: pointer; }
-    .mode-tab.active { background: var(--emerald-soft); color: var(--emerald); border-color: var(--emerald-mid); }
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(195px, 1fr)); gap: 11px; }
-    label { display: block; font-size: 0.74rem; font-weight: 800; color: #334155; text-transform: uppercase; margin-bottom: 4px; }
-    input, select, textarea { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.94rem; color: var(--slate); background: #fff; }
-    .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-    .quick-chip { background: #f1f5f9; border: 1px solid var(--border); color: var(--slate); padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
-    .btn-submit { width: 100%; margin-top: 13px; background: var(--emerald); color: #fff; border: none; padding: 13px; border-radius: 9px; font-size: 0.98rem; font-weight: 900; cursor: pointer; }
-
-    .checker-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
-    .checker-result { margin-top: 14px; padding: 13px 15px; border-radius: 10px; font-weight: 700; font-size: 0.93rem; }
-    .checker-result.ok { background: #ecfdf5; border: 1px solid #6ee7b7; color: #065f46; }
-    .checker-result.due { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; }
-    .checker-result.exp { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
-
-    footer { background: #0f172a; color: #cbd5e1; padding: 32px 20px; margin-top: 56px; font-size: 0.87rem; }
-    .footer-inner { max-width: 1180px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; }
-    .footer-inner a { color: #fbbf24; text-decoration: none; font-weight: 800; }
+    footer { background: #040d0a; color: #94a3b8; padding: 34px 0; font-size: 0.84rem; border-top: 3px solid var(--gold); }
+    footer a { color: #e2e8f0; text-decoration: none; }
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-inner">
+  <!-- COMPLIANCE UTILITY BAR -->
+  <div class="util-bar">
+    <div class="wrap util-inner">
+      <div>U.S. D.O.T. Certified Facility • <strong>RIN B386</strong> (49 CFR §180.215) • 3086 Legionville Rd, Baden, PA 15005</div>
+      <div>Hours: Mon &amp; Fri 9–4 | Tue–Thu 9–2 | <strong>24/7 Backroom Drop-Off</strong> • <a href="tel:7242668008">📞 724-266-8008</a> • <a href="https://ops.weberstanktesting.com/ops">Crew Login</a></div>
+    </div>
+  </div>
+
+  <!-- STICKY NAVIGATION -->
+  <header class="site-nav">
+    <div class="wrap nav-inner">
       <a href="#" class="brand">
-        <img src="/static/images/logo-crest.jpg" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.jpg" alt="Weber's Tank Testing RIN B386" onerror="this.src='/icon.svg'" />
         <div>
-          <h1>WEBER'S TANK TESTING</h1>
-          <small>3086 Legionville Rd, Baden, PA • DOT RIN B386</small>
+          <strong>WEBER'S TANK TESTING</strong>
+          <small>U.S. D.O.T. RIN B386 • BADEN, PENNSYLVANIA</small>
         </div>
       </a>
-      <div class="nav-links">
-        <a class="link" href="#dropoff">24/7 Drop-Off</a>
-        <a class="link" href="#services">Cylinders &amp; HPA</a>
-        <a class="link" href="#firefighter-tested">Firefighter-Tested</a>
-        <a class="link" href="#shop-dogs">Shop Dogs</a>
-        <a class="link" href="#checker">Is My Tank Due?</a>
-        <a class="btn-fb" href="https://www.facebook.com/share/1K52tfW568/" target="_blank" rel="noopener">f Facebook</a>
-        <a class="btn-top-call" href="tel:7242668008">📞 724-266-8008</a>
-      </div>
+      <nav class="nav-links">
+        <a href="#capabilities">Capabilities</a>
+        <a href="#departments">Fire &amp; Fleet</a>
+        <a href="#dropoff">24/7 Check-In</a>
+        <a href="#checker">DOT Date Checker</a>
+        <a href="#shop-dogs">Baden Facility</a>
+      </nav>
+      <a href="#dropoff" class="btn-gold">📥 24/7 Drop-Off Check-In</a>
     </div>
   </header>
 
+  <!-- EXECUTIVE HERO + LIVE TICKET TRACKER -->
   <section class="hero">
-    <div class="hero-inner">
+    <div class="wrap hero-grid">
       <div>
-        <div class="badge-row">
-          <span class="rin-pill">U.S. D.O.T. CERTIFIED • RIN B386</span>
-          <span class="ff-pill">🚒 Firefighter-Tested • Baden, PA</span>
-        </div>
-        <div class="tagline">WE TEST IT. WE PRESSURE IT. WE STAND BEHIND IT.</div>
-        <h2>Hydrostatic Cylinder, SCBA &amp; Paintball HPA Requalification</h2>
+        <span class="rin-pill">✓ Authorized U.S. D.O.T. Requalification Facility • RIN B386</span>
+        <h1>Precision Hydrostatic Testing &amp; High-Pressure Cylinder Certification.</h1>
         <p>
-          Certified 49 CFR §180.215 water-jacket testing up to 7,500+ PSI for fire departments, EMS squads, paintball &amp; airsoft players, welding &amp; medical gas suppliers, beverage CO2, and dive operations across Beaver County and Western PA.
+          Calibrated water-jacket volumetric expansion testing up to <strong>7,500+ PSI</strong> and 7-point internal/external visual requalification for Municipal Fire &amp; EMS, Industrial Gas Fleets, Scuba, and Competitive HPA Systems.
         </p>
-        <div class="cta-row">
-          <a class="btn-amber" href="#dropoff">📥 Log 24/7 Backroom Drop-Off</a>
-          <a class="btn-outline-light" href="tel:7242668008">📞 Call 724-266-8008</a>
-          <a class="btn-outline-light" href="sms:7242668008">💬 Text Shop</a>
+        <div class="sla-strip">
+          <div>🟢 <strong>Est. Standard Ready:</strong> <span id="slaStdTxt">Checking live schedule...</span></div>
+          <div>🔥 <strong>Paid Rush Service:</strong> <span id="slaRushTxt" style="color:var(--gold-lt);">Checking...</span></div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <a href="#dropoff" class="btn-gold">📥 Log 24/7 Backroom Drop-Off</a>
+          <a href="tel:7242668008" class="btn-outline">📞 Call / Text 724-266-8008</a>
         </div>
       </div>
 
-      <div class="hero-card">
-        <div class="hero-crest-top">
-          <img src="/static/images/logo-crest.jpg" alt="Weber's Tank Testing Crest" onerror="this.src='/icon.svg'" />
-          <div>
-            <strong style="color:var(--emerald);font-size:1.05rem;display:block;">Shop Hours &amp; Specs</strong>
-            <span style="color:#d97706;font-size:0.84rem;font-weight:800;">★★★★★ 5.0 Local Rating</span>
-          </div>
+      <!-- LIVE TICKET STATUS TRACKER -->
+      <div class="tracker-card" id="tracker">
+        <h3>🔍 Track Your Drop-Off Ticket</h3>
+        <p style="margin:0 0 12px;font-size:0.82rem;color:#cbd5e1;">Enter the <strong>BR-XXXX</strong> ticket number from your backroom check-in:</p>
+        <div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:8px;margin-bottom:10px;">
+          <input class="dark-in" id="trkTicket" placeholder="Ticket # (e.g. BR-0001)" onkeydown="if(event.key==='Enter')lookupTicket()" />
+          <input class="dark-in" id="trkLast4" maxlength="4" inputmode="numeric" placeholder="Last 4 Phone" onkeydown="if(event.key==='Enter')lookupTicket()" />
         </div>
-        <ul class="spec-list">
-          <li><span>Shop Address</span><strong>3086 Legionville Rd, Baden, PA 15005</strong></li>
-          <li><span>Mon &amp; Fri Hours</span><strong>9:00 AM – 4:00 PM</strong></li>
-          <li><span>Tue, Wed &amp; Thu Hours</span><strong>9:00 AM – 2:00 PM</strong></li>
-          <li><span>After-Hours &amp; Weekends</span><strong>24/7 Backroom Drop-Off</strong></li>
-          <li><span>Calibrated Test Range</span><strong>Up to 7,500+ PSI (RIN B386)</strong></li>
-          <li><span>Facility Manager</span><strong>Ryan Pearce</strong></li>
-        </ul>
+        <button class="btn-gold" style="width:100%;justify-content:center;" onclick="lookupTicket()">Check Live Shop Status</button>
+        <div id="trkResult" style="margin-top:12px;" hidden></div>
       </div>
     </div>
   </section>
 
-  <!-- 24/7 BACKROOM DROP-OFF & PICKUP CHECK-IN -->
-  <section id="dropoff" class="section">
-    <div class="checkin-shell">
-      <div class="checkin-info">
+  <!-- KPI TRUST BAND -->
+  <section class="kpi-band">
+    <div class="wrap kpi-grid">
+      <div class="kpi-item"><strong>7,500+ PSI</strong><span>Calibrated Dual-Jacket Stand</span></div>
+      <div class="kpi-item"><strong>±1.0% Method B</strong><span>Daily Master Cyl Verification</span></div>
+      <div class="kpi-item"><strong>100% Tagged</strong><span>Valve &amp; HPA Regulator Match</span></div>
+      <div class="kpi-item"><strong>24/7 Access</strong><span>Self-Serve Backroom Drop-Off</span></div>
+    </div>
+  </section>
+
+  <!-- TECHNICAL CAPABILITIES MATRIX -->
+  <section class="sec" id="capabilities">
+    <div class="wrap">
+      <div class="sec-hdr">
+        <small>49 CFR §180.205 – §180.215 Compliance</small>
+        <h2>Certified Cylinder Categories &amp; Capabilities</h2>
+      </div>
+      <div class="cap-grid">
+        <div class="cap-card">
+          <img src="/static/images/fire-rescue.jpg" alt="Firefighter SCBA & Cascade Cylinder Testing" />
+          <div class="cap-body">
+            <div>
+              <h3 style="margin:0 0 6px;font-size:1.05rem;">Fire &amp; Rescue SCBA / Cascade</h3>
+              <p style="margin:0;font-size:0.86rem;color:var(--muted);">30-, 45-, and 60-minute carbon-wrapped SCBA bottles and 6,000 PSI station cascade cylinders with exact REE verification and epoxy B386 labeling.</p>
+            </div>
+            <div class="spec-tags"><span class="spec-tag">DOT-SP Carbon</span><span class="spec-tag">2216 / 4500 / 6000 PSI</span><span class="spec-tag">15-Yr Life Check</span></div>
+          </div>
+        </div>
+
+        <div class="cap-card">
+          <img src="/static/images/ems-oxygen.jpg" alt="EMS Medical Oxygen & Industrial Gas Cylinders" />
+          <div class="cap-body">
+            <div>
+              <h3 style="margin:0 0 6px;font-size:1.05rem;">EMS Oxygen &amp; Industrial Gas</h3>
+              <p style="margin:0;font-size:0.86rem;color:var(--muted);">Medical D, E, and M oxygen cylinders alongside welding Argon, Nitrogen, Helium, and C25/75-25 mix cylinders—including 10-year star (★) steel qualification.</p>
+            </div>
+            <div class="spec-tags"><span class="spec-tag">DOT-3A / 3AA ★</span><span class="spec-tag">DOT-3AL Alum</span><span class="spec-tag">O2 / N2 / Ar / Mix</span></div>
+          </div>
+        </div>
+
+        <div class="cap-card">
+          <img src="/static/images/paintball-hpa.jpg" alt="Paintball & Airsoft HPA Carbon Fiber Tanks" />
+          <div class="cap-body">
+            <div>
+              <h3 style="margin:0 0 6px;font-size:1.05rem;">Paintball &amp; Airsoft HPA Systems</h3>
+              <p style="margin:0;font-size:0.86rem;color:var(--muted);">48ci/3000 aluminum and 68ci–90ci/4500 carbon fiber HPA bottles (Ninja, HK Army, Empire, First Strike). Every regulator is numbered and matched back to your tank.</p>
+            </div>
+            <div class="spec-tags"><span class="spec-tag">3000 &amp; 4500 PSI HPA</span><span class="spec-tag">Regulator Tagged</span><span class="spec-tag">Mini B386 Label</span></div>
+          </div>
+        </div>
+
+        <div class="cap-card">
+          <img src="/static/images/scuba-co2.jpg" alt="Scuba Dive Tanks & Beverage CO2 Cylinders" />
+          <div class="cap-body">
+            <div>
+              <h3 style="margin:0 0 6px;font-size:1.05rem;">Scuba, Beverage CO2 &amp; Safety</h3>
+              <p style="margin:0;font-size:0.86rem;color:var(--muted);">AL80, compact pony bottles, steel dive cylinders, kegerator/homebrew CO2 (5 lb–50 lb), fire suppression bottles, and burst-disc / O-ring service.</p>
+            </div>
+            <div class="spec-tags"><span class="spec-tag">AL80 &amp; Steel Dive</span><span class="spec-tag">5–50 lb CO2</span><span class="spec-tag">Precision Neck Stamp</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FIRST-RESPONDER OPERATED & FLEET BANNER (RETAINING BOTH FIRE APPARATUS VISUALS) -->
+  <section class="sec" id="departments" style="padding-top:0;">
+    <div class="wrap">
+      <div class="fleet-banner">
         <div>
-          <span class="rin-pill" style="margin-bottom:8px;">24/7 BACKROOM CHECK-IN</span>
-          <h3 style="margin:6px 0 8px;font-size:1.35rem;">Dropping Off or Picking Up Tanks?</h3>
-          <p style="color:#cbd5e1;font-size:0.9rem;margin:0;">
-            Log your batch below so it posts straight to our shop schedule and we can text you as soon as your bottles are certified and staged on the pickup shelf.
+          <span class="rin-pill" style="margin-bottom:10px;">First-Responder Operated Standards</span>
+          <h2 style="margin:0 0 10px;font-size:1.75rem;">Built for Fire Departments, EMS Agencies &amp; Commercial Fleets</h2>
+          <p style="margin:0 0 14px;color:#cbd5e1;font-size:0.95rem;">
+            Operated by active Beaver County emergency service personnel, our Baden facility delivers audit-ready <strong>Form 393-001 Retest Data Sheets</strong>, Method B calibration logs, Net-30 municipal billing, and scheduled regional station pickup &amp; delivery runs.
           </p>
-          <ul class="checkin-steps">
-            <li><strong>Repeat Customers &amp; Departments:</strong> Set cylinders neatly in the backroom drop-off zone at <strong>3086 Legionville Rd</strong> and submit this 20-second check-in.</li>
-            <li><strong>First-Time After-Hours Drop-Off?</strong> Call or text <strong>724-266-8008</strong> ahead of time for backroom access instructions and turnaround estimates.</li>
-            <li><strong>🐾 Shop K9 Greeting Crew:</strong> Stopping by during shop hours? Pongo, Zeke, and Pierce are usually on duty in the garage!</li>
+          <ul style="margin:0 0 18px;padding-left:18px;color:#e2e8f0;font-size:0.88rem;line-height:1.7;">
+            <li><strong>Zero Mixed Valves:</strong> Every removed SCBA valve or HPA regulator receives a dedicated numbered tag matched to its serial number.</li>
+            <li><strong>Strict Dry &amp; Mark Gate:</strong> Heated internal drying followed by clean neck stamping or epoxy-coated <code>B386</code> composite labels.</li>
+            <li><strong>Instant Ready Texts:</strong> Automated SMS notification the moment your rack reaches our backroom pickup shelf.</li>
           </ul>
+          <a href="tel:7242668008" class="btn-gold">📞 Schedule Department / Fleet Batch: 724-266-8008</a>
         </div>
-        <div style="font-size:0.8rem;color:#fde68a;font-weight:700;">
-          ⚠️ Safety Note: Never leave actively leaking cylinders inside an enclosed room.
+        <div class="fleet-imgs">
+          <img src="/static/images/fire-rescue.jpg" alt="Fire Rescue Apparatus" />
+          <img src="/static/images/ems-oxygen.jpg" alt="Emergency Response & Medical Gas Service" />
         </div>
       </div>
+    </div>
+  </section>
 
-      <div class="checkin-form-pane">
-        <div id="dropoffFormWrap">
-          <div class="mode-tabs">
-            <button type="button" class="mode-tab active" id="tabDrop" onclick="setCheckinMode('DROPOFF')">📥 Log Tank Drop-Off</button>
-            <button type="button" class="mode-tab" id="tabPick" onclick="setCheckinMode('PICKUP_NOTICE')">🚚 Log Completed Pickup</button>
+  <!-- 24/7 BACKROOM DROP-OFF & PICKUP CHECK-IN PORTAL -->
+  <section class="sec" id="dropoff" style="background:#f1f5f9;border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+    <div class="wrap">
+      <div class="sec-hdr">
+        <small>Open 24 Hours • 3086 Legionville Rd, Baden, PA</small>
+        <h2>24/7 Self-Serve Backroom Drop-Off &amp; Pickup Check-In</h2>
+      </div>
+      <div class="portal-grid">
+        <div class="box-card">
+          <h3 style="margin-top:0;color:var(--green);">How Our 24/7 Backroom Works</h3>
+          <ol style="padding-left:18px;font-size:0.9rem;color:#334155;line-height:1.7;">
+            <li><strong>Arrive Anytime:</strong> Pull around to our self-serve cylinder drop-off &amp; pickup room at <strong>3086 Legionville Rd, Baden, PA 15005</strong>—even outside staffed bench hours.</li>
+            <li><strong>Log Below in 20 Seconds:</strong> Submit your name/department, cell number, and cylinder count to alert our testing stand and receive your <strong>BR-XXXX</strong> tracking ticket.</li>
+            <li><strong>Pickup Ready Text:</strong> As soon as your cylinders pass hydro, dry, receive their <code>B386</code> mark, and return to the pickup shelf, we text you directly.</li>
+          </ol>
+          <div class="alert-box alert-warn" style="font-size:0.83rem;">
+            ⚠️ <strong>Safety Reminder:</strong> Never leave actively leaking cylinders inside the enclosed room. Call <a href="tel:7242668008" style="color:#92400e;">724-266-8008</a> for leaking valve assistance.
           </div>
-          <form onsubmit="submitDropoffForm(event)">
-            <input type="text" id="hpField" autocomplete="off" tabindex="-1" style="position:absolute;left:-9999px;" />
-            <div class="form-grid">
-              <div><label>Name, Dept, or Company *</label><input id="doName" required placeholder="Your Name or Department" /></div>
-              <div><label>Cell Phone (For Pickup Text) *</label><input id="doPhone" type="tel" required placeholder="724-555-0199" /></div>
-              <div><label>Tank Count *</label><input id="doCount" type="number" min="1" max="250" value="1" required /></div>
-              <div id="svcSelectWrap">
-                <label>Service Needed</label>
-                <select id="doService">
-                  <option value="Hydro + Visual">DOT Hydrostatic + Visual Test</option>
-                  <option value="RUSH Hydro Service">🔥 Rush Turnaround Hydro (Fee Applies)</option>
-                  <option value="Paintball HPA Hydro">Paintball / Airsoft HPA Hydro</option>
-                  <option value="Hydro + Air/HPA Fill">DOT Hydro Test + Air / HPA Fill</option>
-                  <option value="Visual Inspection Only">Visual Inspection Only</option>
-                </select>
-              </div>
+        </div>
+
+        <div class="box-card">
+          <div class="mode-tabs">
+            <button type="button" class="mode-tab active" id="tabDrop" onclick="setCheckinMode('DROPOFF')">📥 Dropping Off Cylinders</button>
+            <button type="button" class="mode-tab" id="tabPick" onclick="setCheckinMode('PICKUP_NOTICE')">🚚 Logging Completed Pickup</button>
+          </div>
+          <input type="text" id="hpField" style="display:none;" tabindex="-1" autocomplete="off" />
+          <div class="form-grid">
+            <div><label>Name, Fire Dept, or Company *</label><input id="ciName" placeholder="e.g. Baden VFD or John Smith" /></div>
+            <div><label>Cell Phone (For Ready Text) *</label><input id="ciPhone" type="tel" placeholder="724-555-0199" /></div>
+            <div><label>Cylinder Count *</label><input type="number" id="ciCount" min="1" max="250" value="2" oninput="refreshPublicSla(this.value)" /></div>
+            <div id="ciSvcWrap">
+              <label>Service Needed</label>
+              <select id="ciService">
+                <option value="Hydro + Visual">Hydrostatic Test + Visual</option>
+                <option value="Paintball HPA Hydro">Paintball / Airsoft HPA Hydro</option>
+                <option value="Visual Inspection Only">Visual Inspection Only (Annual)</option>
+              </select>
             </div>
-            <div style="margin-top:10px;">
-              <label>Tank Type(s)</label>
-              <input id="doSummary" placeholder="e.g. 2x 68/4500 Paintball HPA, 4x 45-Min SCBA" />
-              <div class="chip-row">
-                <button type="button" class="quick-chip" onclick="appendTankType('Paintball 4500# Carbon HPA')">🎯 Paintball 4500#</button>
-                <button type="button" class="quick-chip" onclick="appendTankType('Paintball 3000# Alum')">🎯 Paintball 3000#</button>
-                <button type="button" class="quick-chip" onclick="appendTankType('Fire SCBA')">🚒 Fire SCBA</button>
-                <button type="button" class="quick-chip" onclick="appendTankType('EMS / Medical O2')">🚑 Medical O2</button>
-                <button type="button" class="quick-chip" onclick="appendTankType('Beverage CO2 / Welding')">⚙️ CO2 / Welding</button>
-                <button type="button" class="quick-chip" onclick="appendTankType('Scuba Tank')">🤿 Scuba</button>
-              </div>
+            <div style="grid-column:1/-1;"><label>Tank Types / Brands (Optional)</label><input id="ciSummary" placeholder="e.g. 2x Ninja 68/4500 HPA, 4x Scott SCBA, 1x 20lb CO2" /></div>
+            <div id="ciRushWrap" style="grid-column:1/-1;background:#fef2f2;border:1px solid #fca5a5;padding:9px 12px;border-radius:8px;">
+              <label style="display:flex;align-items:center;gap:9px;margin:0;text-transform:none;font-size:0.86rem;color:#991b1b;cursor:pointer;">
+                <input type="checkbox" id="ciRush" style="width:18px;height:18px;accent-color:#dc2626;" />
+                <span>🔥 <strong>Request Priority / Paid Rush Turnaround</strong> (Est. Ready: <span id="formRushSla">soonest window</span>)</span>
+              </label>
             </div>
-            <div style="margin-top:10px;">
-              <label>Needed-By Date / PO# / Notes (Optional)</label>
-              <textarea id="doNotes" rows="2" placeholder="Target deadline, PO#, regulator notes, or tournament date..."></textarea>
-            </div>
-            <div id="doError" class="checker-result exp" hidden></div>
-            <button type="submit" class="btn-submit" id="btnSubmitDrop">✓ Submit Backroom Drop-Off Notice</button>
-          </form>
-        </div>
-
-        <div id="dropoffSuccessWrap" hidden style="text-align:center;padding:20px 10px;">
-          <div style="font-size:2.4rem;">✅</div>
-          <h3 style="margin:6px 0;color:var(--emerald);" id="succTitle">Posted to Shop Testing Board!</h3>
-          <p style="margin:6px 0 12px;color:var(--muted);" id="succDetail"></p>
-          <div style="display:inline-block;background:var(--emerald-soft);border:1.5px solid #6ee7b7;padding:9px 18px;border-radius:10px;font-weight:900;color:var(--forest);" id="succTicket"></div><br/>
-          <button type="button" class="quick-chip" style="padding:8px 14px;margin-top:12px;" onclick="resetDropoffForm()">+ Log Another Batch</button>
+            <div style="grid-column:1/-1;"><label>Notes / PO # (Optional)</label><input id="ciNotes" placeholder="Leave regulators attached, PO #, etc." /></div>
+          </div>
+          <button class="btn-submit" id="btnCheckinSubmit" onclick="submitPublicCheckin()">Complete Backroom Check-In</button>
+          <div id="ciConfirm" hidden></div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ILLUSTRATED CYLINDER SERVICES -->
-  <section id="services" class="section">
-    <div class="section-hdr">
-      <h3>Hydrotesting • Inspections • Quality • Safety</h3>
-      <p>Every removed valve and paintball HPA regulator is numbered and matched to your exact cylinder serial number.</p>
-    </div>
-    <div class="cards-4">
-      <div class="svc-card">
-        <div class="svc-art">
-          <img src="/static/images/fire-rescue.jpg" alt="Fire Rescue SCBA Testing" onerror="this.hidden=true;this.nextElementSibling.hidden=false;" />
-          <span class="fallback-ico" hidden>🚒</span>
+  <!-- INTERACTIVE DOT HYDRO DATE & 15-YEAR COMPOSITE CHECKER -->
+  <section class="sec" id="checker">
+    <div class="wrap">
+      <div class="box-card">
+        <div class="sec-hdr" style="margin-bottom:14px;">
+          <small>Instant Stamp &amp; Label Calculator</small>
+          <h2 style="margin:2px 0;">Is My Cylinder Due for Hydro Testing?</h2>
         </div>
-        <div class="svc-body">
-          <span class="card-tag red">Fire &amp; Rescue</span>
-          <h4>SCBA, Escape &amp; Cascade Bottles</h4>
-          <p>Precision water-jacket expansion &amp; REE testing for 2216, 3000, and 4500 PSI composite SCBA packs and 6000 PSI station cascade banks.</p>
+        <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));align-items:end;">
+          <div>
+            <label>Cylinder Category</label>
+            <select id="chkType" onchange="runDotDateCheck()">
+              <option value="5">Standard 5-Year (Scuba, CO2, Steel/Alum, 3000# HPA)</option>
+              <option value="15">Carbon / Fiberglass Composite (5-Yr Hydro + 15-Yr Max Life)</option>
+              <option value="10">10-Year Star-Stamped Steel (DOT-3A / 3AA with ★)</option>
+            </select>
+          </div>
+          <div><label>Last Stamp / Label Month (1–12)</label><input type="number" id="chkMonth" min="1" max="12" placeholder="MM (e.g. 06)" oninput="runDotDateCheck()" /></div>
+          <div><label>Last Stamp / Label Year</label><input type="number" id="chkYear" placeholder="YY or YYYY (e.g. 21)" oninput="runDotDateCheck()" /></div>
+          <div id="origMfgWrap" hidden><label>Original Born Year (Composites)</label><input type="number" id="chkOrigYear" placeholder="YYYY (e.g. 2014)" oninput="runDotDateCheck()" /></div>
         </div>
-      </div>
-
-      <div class="svc-card">
-        <div class="svc-art">
-          <img src="/static/images/ems-oxygen.jpg" alt="EMS Medical Oxygen Cylinders" onerror="this.hidden=true;this.nextElementSibling.hidden=false;" />
-          <span class="fallback-ico" hidden>🚑</span>
-        </div>
-        <div class="svc-body">
-          <span class="card-tag">EMS, Medical &amp; Industrial</span>
-          <h4>Medical Oxygen &amp; Welding Gas</h4>
-          <p>5-year and 10-year ★ DOT requalification for EMS D/E/M oxygen bottles plus steel &amp; aluminum argon, nitrogen, and industrial cylinders.</p>
-        </div>
-      </div>
-
-      <div class="svc-card highlight">
-        <div class="svc-art">
-          <img src="/static/images/paintball-hpa.jpg" alt="Paintball HPA Carbon Tanks" onerror="this.hidden=true;this.nextElementSibling.hidden=false;" />
-          <span class="fallback-ico" hidden>🎯</span>
-        </div>
-        <div class="svc-body">
-          <span class="card-tag gold">Fast Local Turnaround</span>
-          <h4>Paintball &amp; Airsoft HPA Tanks</h4>
-          <p>Skip mailing bottles away for weeks. We test 3000# aluminum (13ci–48ci) and 4500# carbon HPA bottles (45ci–90ci) locally up to 7,500 PSI.</p>
-        </div>
-      </div>
-
-      <div class="svc-card">
-        <div class="svc-art">
-          <img src="/static/images/scuba-co2.jpg" alt="Scuba and Beverage CO2 Cylinders" onerror="this.hidden=true;this.nextElementSibling.hidden=false;" />
-          <span class="fallback-ico" hidden>🤿</span>
-        </div>
-        <div class="svc-body">
-          <span class="card-tag">Dive, Beverage &amp; Safety</span>
-          <h4>Scuba, Kegerator CO2 &amp; Extinguishers</h4>
-          <p>Full hydrostatic testing, internal/neck thread inspection, safety burst-disc replacement, and official B386 certification for scuba and CO2 tanks.</p>
-        </div>
+        <div id="chkOutput" class="alert-box alert-ok" style="margin-top:14px;">Enter the most recent <code>MM - YY</code> date stamped on the neck or printed on the gel-coat label to check its DOT status.</div>
       </div>
     </div>
   </section>
 
-  <!-- GENERIC FIREFIGHTER-TESTED FEATURE (ZERO DEPT AFFILIATIONS) -->
-  <section id="firefighter-tested" class="section">
-    <div class="ff-feature">
-      <div class="ff-copy">
-        <span class="rin-pill" style="align-self:flex-start;margin-bottom:10px;">FIRST-RESPONDER STANDARDS</span>
-        <h3 style="margin:0 0 10px;font-size:1.5rem;">Firefighter-Tested Precision on Every Bottle</h3>
-        <p style="margin:0 0 12px;color:#cbd5e1;font-size:0.94rem;">
-          Facility Manager <strong>Ryan Pearce</strong> brings active first-responder experience directly to the test stand—treating every life-safety breathing air cylinder, medical oxygen bottle, industrial tank, and HPA rig with the same strict attention to detail you count on under pressure.
-        </p>
-        <p style="margin:0;color:#94a3b8;font-size:0.89rem;">
-          Need scheduled department pickup/delivery or rush turnaround before a weekend event? Call or text <strong>724-266-8008</strong> to get on our shop dispatch calendar.
-        </p>
-      </div>
-      <div class="ff-art-wrap">
-        <img src="/static/images/fire-rescue.jpg" alt="Firefighter-Tested SCBA &amp; Cylinder Requalification" onerror="this.style.display='none'" />
-      </div>
-    </div>
-  </section>
-
-  <!-- MEET THE SHOP DOGS: PONGO, ZEKE & PIERCE -->
-  <section id="shop-dogs" class="section">
-    <div class="dogs-card">
-      <div class="dogs-photo">
-        <img src="/static/images/shop-dogs.jpg" alt="Pongo, Zeke, and Pierce — Weber's Tank Testing Shop Dogs" onerror="this.hidden=true;this.nextElementSibling.hidden=false;" />
-        <div hidden style="color:#fff;font-size:3rem;padding:24px;">🐾 🐕‍🦺 🐾</div>
-      </div>
-      <div class="dogs-info">
-        <span class="card-tag gold">Official K9 Quality Control Crew</span>
-        <h3 style="margin:0 0 8px;font-size:1.45rem;color:var(--forest);">Meet Pongo, Zeke &amp; Pierce</h3>
-        <p style="margin:0;color:var(--muted);font-size:0.93rem;">
-          Drop bottles off at Legionville Road and you'll likely meet our three full-time shop companions—two spotted Dalmatians and a fluffy long-haired German Shepherd keeping watch over the garage.
-        </p>
-        <div class="dog-badges">
-          <div class="dog-pill"><strong>🐾 Pongo (Oldest)</strong><small>Senior Dalmatian &amp; Chief Greeter</small></div>
-          <div class="dog-pill"><strong>🦁 Zeke (Middle)</strong><small>Long-Haired Shepherd &amp; Backroom Boss</small></div>
-          <div class="dog-pill"><strong>🐾 Pierce (Youngest)</strong><small>Junior Dalmatian &amp; Bench Sidekick</small></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- INTERACTIVE DOT HYDRO DATE CHECKER -->
-  <section id="checker" class="section">
-    <div class="section-hdr">
-      <h3>Interactive DOT Hydro Date Checker</h3>
-      <p>Type the <strong>MM-YY</strong> born date stamped on your cylinder neck or composite label to check eligibility.</p>
-    </div>
-    <div class="checker-card">
-      <div class="form-grid">
+  <!-- BADEN FACILITY & SHOP DOGS -->
+  <section class="sec" id="shop-dogs" style="padding-top:0;">
+    <div class="wrap">
+      <div class="portal-grid" style="align-items:center;">
         <div>
-          <label>1. Cylinder Type</label>
-          <select id="chkType" onchange="evaluateTankDate()">
-            <option value="COMP_5">Carbon Paintball HPA / SCBA (5-Yr Hydro / 15-Yr Max Life)</option>
-            <option value="ALUM_5">Aluminum DOT-3AL (3000# HPA, CO2, Scuba, O2 — 5 Yr)</option>
-            <option value="STEEL_5">Steel DOT-3A / 3AA Standard (Welding, Gas, CO2 — 5 Yr)</option>
-            <option value="STEEL_10">Steel DOT-3A / 3AA with ★ Star Stamp (10 Yr)</option>
-          </select>
+          <img src="/static/images/shop-dogs.jpg" alt="Pongo, Zeke, and Pierce — Weber's Tank Testing Shop Dogs" style="width:100%;border-radius:16px;border:3px solid var(--gold);box-shadow:0 10px 26px rgba(15,23,42,0.12);" />
         </div>
-        <div><label>2. Original Born Date (MM-YY)</label><input id="chkMfg" placeholder="e.g. 06-19" maxlength="7" oninput="evaluateTankDate()" /></div>
-        <div><label>3. Last Retest Date (Optional)</label><input id="chkLast" placeholder="Blank if first retest" maxlength="7" oninput="evaluateTankDate()" /></div>
+        <div>
+          <small style="color:var(--green);font-weight:900;text-transform:uppercase;">Local Family-Operated Facility • Baden, PA</small>
+          <h2 style="margin:6px 0 10px;font-size:1.75rem;">Visit Us on Legionville Road &amp; Meet Pongo, Zeke &amp; Pierce</h2>
+          <p style="color:var(--muted);margin:0 0 14px;">
+            Conveniently located just minutes off Route 65 &amp; I-79 for Beaver, Butler, and Allegheny County departments, dive clubs, paintball players, and welding shops—supervised on-site by our three shop dogs: Dalmatians <strong>Pongo</strong> and <strong>Pierce</strong> alongside German Shepherd <strong>Zeke</strong>.
+          </p>
+          <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;font-size:0.9rem;margin-bottom:14px;">
+            <div>📍 <strong>Address:</strong> 3086 Legionville Rd, Baden, PA 15005</div>
+            <div>🕒 <strong>Staffed Hours:</strong> Mon &amp; Fri 9:00 AM – 4:00 PM | Tue–Thu 9:00 AM – 2:00 PM</div>
+            <div>🚪 <strong>After-Hours:</strong> 24/7 Self-Serve Backroom Drop-Off &amp; Pickup</div>
+            <div>📞 <strong>Phone / Text:</strong> <a href="tel:7242668008" style="color:var(--green);font-weight:800;">724-266-8008</a></div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <a class="btn-submit" style="width:auto;margin:0;padding:10px 18px;text-decoration:none;" href="https://www.google.com/maps/search/?api=1&query=3086+Legionville+Rd+Baden+PA+15005" target="_blank">🗺️ Get Google Maps Directions</a>
+            <a class="btn-submit" style="width:auto;margin:0;padding:10px 18px;background:#1877f2;text-decoration:none;" href="https://www.facebook.com/share/1K52tfW568/" target="_blank">👍 Follow on Facebook</a>
+          </div>
+        </div>
       </div>
-      <div id="chkOutput" class="checker-result due">Enter your cylinder's original <strong>MM-YY</strong> manufacture date above to check its status.</div>
     </div>
   </section>
 
   <footer>
-    <div class="footer-inner">
-      <div>
-        <strong>WEBER'S TANK TESTING</strong> • 3086 Legionville Rd, Baden, PA 15005 • U.S. D.O.T. RIN B386<br/>
-        <span style="color:#94a3b8;">Hours: Mon &amp; Fri 9AM–4PM • Tue–Thu 9AM–2PM • 24/7 Backroom Drop-Off</span>
-      </div>
-      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
-        <a href="https://www.facebook.com/share/1K52tfW568/" target="_blank" rel="noopener">Facebook Page →</a>
-        <a href="tel:7242668008">📞 724-266-8008</a>
-      </div>
+    <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+      <div><strong>Weber's Tank Testing</strong> • U.S. D.O.T. RIN B386 • 3086 Legionville Rd, Baden, PA 15005 • 724-266-8008</div>
+      <div><a href="#dropoff">24/7 Check-In</a> &nbsp;|&nbsp; <a href="#tracker">Track Ticket</a> &nbsp;|&nbsp; <a href="https://www.facebook.com/share/1K52tfW568/" target="_blank">Facebook</a> &nbsp;|&nbsp; <a href="https://ops.weberstanktesting.com/ops">Crew Ops Portal</a></div>
     </div>
   </footer>
 
   <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister())).catch(() => {});
-    }
     let CHECKIN_MODE = 'DROPOFF';
-    function setCheckinMode(mode) {
-      CHECKIN_MODE = mode;
-      const isDrop = mode === 'DROPOFF';
-      document.getElementById('tabDrop').classList.toggle('active', isDrop);
-      document.getElementById('tabPick').classList.toggle('active', !isDrop);
-      document.getElementById('svcSelectWrap').hidden = !isDrop;
-      document.getElementById('btnSubmitDrop').textContent = isDrop ? '✓ Submit Backroom Drop-Off Notice' : '✓ Notify Shop Batch Was Picked Up';
+
+    function esc(s) {
+      return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
     }
-    function appendTankType(label) {
-      const el = document.getElementById('doSummary');
-      el.value = el.value.trim() ? `${el.value.trim()}, ${label}` : label;
-    }
-    async function submitDropoffForm(e) {
-      e.preventDefault();
-      const errEl = document.getElementById('doError');
-      const btn = document.getElementById('btnSubmitDrop');
-      errEl.hidden = true; btn.disabled = true; btn.textContent = '⏳ Posting to Shop Board...';
+
+    async function refreshPublicSla(bottles = 4) {
       try {
-        const res = await fetch('/api/public/dropoff', {
-          method: 'POST', headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            entry_type: CHECKIN_MODE,
-            customer_name: document.getElementById('doName').value,
-            customer_phone: document.getElementById('doPhone').value,
-            bottle_count: parseInt(document.getElementById('doCount').value || '1', 10),
-            tank_summary: document.getElementById('doSummary').value,
-            service_requested: CHECKIN_MODE === 'PICKUP_NOTICE' ? 'Completed Batch Picked Up' : document.getElementById('doService').value,
-            notes: document.getElementById('doNotes').value,
-            website_hp: document.getElementById('hpField').value,
-          })
-        });
-        const data = await res.json();
-        if (!res.ok) { errEl.textContent = data.detail || 'Error submitting.'; errEl.hidden = false; return; }
-        document.getElementById('dropoffFormWrap').hidden = true;
-        document.getElementById('dropoffSuccessWrap').hidden = false;
-        document.getElementById('succTicket').textContent = `Ticket: ${data.ticket_no}`;
-        document.getElementById('succDetail').textContent = `Recorded at ${data.created_at} EST. We'll text your cell as soon as your bottles are ready!`;
-      } catch (_) {
-        errEl.textContent = 'Network error — please call or text 724-266-8008.'; errEl.hidden = false;
-      } finally { btn.disabled = false; setCheckinMode(CHECKIN_MODE); }
+        const res = await fetch('/api/public/turnaround?bottles=' + Math.max(1, parseInt(bottles || '4', 10)));
+        if (!res.ok) return;
+        const d = await res.json();
+        document.getElementById('slaStdTxt').textContent = '~' + d.standard_ready_label;
+        document.getElementById('slaRushTxt').textContent = '~' + d.rush_ready_label;
+        document.getElementById('formRushSla').textContent = '~' + d.rush_ready_label;
+      } catch (_) {}
     }
-    function resetDropoffForm() {
-      document.getElementById('doCount').value = '1'; document.getElementById('doSummary').value = ''; document.getElementById('doNotes').value = '';
-      document.getElementById('dropoffSuccessWrap').hidden = true; document.getElementById('dropoffFormWrap').hidden = false;
-    }
-    function parseMmYy(str) {
-      const m = String(str || '').trim().match(/^(\d{1,2})\s*[-/\.]\s*(\d{2,4})$/);
-      if (!m) return null;
-      const mo = parseInt(m[1], 10); let yr = parseInt(m[2], 10);
-      if (mo < 1 || mo > 12) return null;
-      const curYr = new Date().getFullYear();
-      if (yr < 100) yr = yr <= ((curYr % 100) + 1) ? 2000 + yr : 1900 + yr;
-      return { month: mo, year: yr };
-    }
-    function evaluateTankDate() {
-      const out = document.getElementById('chkOutput');
-      const kind = document.getElementById('chkType').value;
-      const mfg = parseMmYy(document.getElementById('chkMfg').value);
-      const last = parseMmYy(document.getElementById('chkLast').value);
-      if (!mfg) { out.className = 'checker-result due'; out.innerHTML = 'Enter a valid <strong>MM-YY</strong> date (e.g. <code>05-20</code>).'; return; }
-      const now = new Date(); const curMo = now.getFullYear() * 12 + (now.getMonth() + 1);
-      if (kind === 'COMP_5' && curMo > ((mfg.year + 15) * 12 + mfg.month)) {
-        out.className = 'checker-result exp';
-        out.innerHTML = `⛔ <strong>PAST 15-YEAR COMPOSITE LIFE:</strong> Retired <strong>${String(mfg.month).padStart(2,'0')}-${mfg.year + 15}</strong> and can no longer be hydrotested.`;
+
+    async function lookupTicket() {
+      const t = document.getElementById('trkTicket').value.trim();
+      const l4 = document.getElementById('trkLast4').value.trim();
+      const box = document.getElementById('trkResult');
+      if (!t) { alert('Enter your Ticket # (for example BR-0001).'); return; }
+      const res = await fetch(`/api/public/track?ticket=${encodeURIComponent(t)}&phone_last4=${encodeURIComponent(l4)}`);
+      const data = await res.json();
+      box.hidden = false;
+      if (!res.ok) {
+        box.innerHTML = `<div style="background:rgba(239,68,68,0.2);border:1px solid #f87171;padding:10px;border-radius:8px;font-size:0.84rem;">${esc(data.detail || 'Ticket not found.')}</div>`;
         return;
       }
-      const base = last || mfg; const dueYr = base.year + (kind === 'STEEL_10' ? 10 : 5);
-      const rem = (dueYr * 12 + base.month) - curMo;
-      const expTxt = kind === 'COMP_5' ? ` (15-yr retirement: ${String(mfg.month).padStart(2,'0')}-${mfg.year + 15})` : '';
-      if (rem < 0) { out.className = 'checker-result due'; out.innerHTML = `🟡 <strong>DUE FOR HYDRO NOW:</strong> Window ended <strong>${String(base.month).padStart(2,'0')}-${dueYr}</strong>${expTxt}.`; }
-      else if (rem <= 3) { out.className = 'checker-result due'; out.innerHTML = `🟡 <strong>DUE SOON:</strong> Next hydro due <strong>${String(base.month).padStart(2,'0')}-${dueYr}</strong>${expTxt}.`; }
-      else { out.className = 'checker-result ok'; out.innerHTML = `✅ <strong>IN DATE:</strong> Certified through <strong>${String(base.month).padStart(2,'0')}-${dueYr}</strong>${expTxt}.`; }
+      let dots = '';
+      for (let i = 1; i <= 5; i++) dots += `<div class="step-dot ${i <= data.step_num ? 'done' : ''}"></div>`;
+      box.innerHTML = `
+        <div style="background:rgba(16,185,129,0.14);border:1px solid rgba(52,211,153,0.45);padding:12px;border-radius:9px;">
+          <div style="display:flex;justify-content:space-between;font-size:0.82rem;color:#a7f3d0;font-weight:800;">
+            <span>TICKET ${esc(data.ticket_no)} (${data.bottle_count} Cyl)</span>
+            <span>${data.estimated_ready ? 'Est: ' + esc(data.estimated_ready) : ''}</span>
+          </div>
+          <div style="font-size:0.98rem;font-weight:900;margin-top:4px;color:#fff;">${esc(data.stage_label)}</div>
+          <div class="step-dots">${dots}</div>
+        </div>`;
     }
+
+    function setCheckinMode(mode) {
+      CHECKIN_MODE = mode;
+      document.getElementById('tabDrop').classList.toggle('active', mode === 'DROPOFF');
+      document.getElementById('tabPick').classList.toggle('active', mode === 'PICKUP_NOTICE');
+      document.getElementById('ciSvcWrap').hidden = (mode !== 'DROPOFF');
+      document.getElementById('ciRushWrap').hidden = (mode !== 'DROPOFF');
+      document.getElementById('btnCheckinSubmit').textContent = mode === 'DROPOFF' ? 'Complete Backroom Drop-Off Check-In' : 'Log Completed Batch Pickup';
+    }
+
+    async function submitPublicCheckin() {
+      const name = document.getElementById('ciName').value.trim();
+      const phone = document.getElementById('ciPhone').value.trim();
+      if (!name || !phone) { alert('Please enter your Name/Dept and Cell Phone so we can text you when ready.'); return; }
+      const btn = document.getElementById('btnCheckinSubmit');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/public/dropoff', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entry_type: CHECKIN_MODE,
+            customer_name: name,
+            customer_phone: phone,
+            bottle_count: parseInt(document.getElementById('ciCount').value || '1', 10),
+            service_requested: document.getElementById('ciService').value,
+            tank_summary: document.getElementById('ciSummary').value,
+            rush_requested: document.getElementById('ciRush').checked,
+            notes: document.getElementById('ciNotes').value,
+            website_hp: document.getElementById('hpField').value,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.detail || 'Check-in failed.'); return; }
+        const box = document.getElementById('ciConfirm');
+        box.hidden = false;
+        box.className = 'alert-box alert-ok';
+        box.innerHTML = CHECKIN_MODE === 'DROPOFF'
+          ? `✅ <strong>Checked In! Your Ticket # is ${esc(data.ticket_no)}</strong><br />Estimated Ready Date: <strong>${esc(data.estimated_ready)}</strong>. Save your Ticket # to track status anytime above—we'll text ${esc(phone)} as soon as your cylinders hit the pickup shelf!`
+          : `✅ <strong>Pickup Logged (${esc(data.ticket_no)})!</strong> Thank you for trusting Weber's Tank Testing.`;
+        document.getElementById('trkTicket').value = data.ticket_no;
+        ['ciName', 'ciSummary', 'ciNotes'].forEach(id => { document.getElementById(id).value = ''; });
+        document.getElementById('ciRush').checked = false;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function runDotDateCheck() {
+      const interval = parseInt(document.getElementById('chkType').value, 10);
+      document.getElementById('origMfgWrap').hidden = (interval !== 15);
+      const mo = parseInt(document.getElementById('chkMonth').value || '0', 10);
+      let yr = parseInt(document.getElementById('chkYear').value || '0', 10);
+      const out = document.getElementById('chkOutput');
+      if (!(mo >= 1 && mo <= 12) || !yr) return;
+      const now = new Date(), curY = now.getFullYear(), curM = now.getMonth() + 1;
+      if (yr < 100) yr = yr <= ((curY % 100) + 1) ? 2000 + yr : 1900 + yr;
+
+      if (interval === 15) {
+        let bornY = parseInt(document.getElementById('chkOrigYear').value || String(yr), 10);
+        if (bornY < 100) bornY = bornY <= ((curY % 100) + 1) ? 2000 + bornY : 1900 + bornY;
+        if ((bornY + 15) < curY || ((bornY + 15) === curY && mo < curM)) {
+          out.className = 'alert-box alert-bad';
+          out.innerHTML = `⛔ <strong>RETIRED (15-Year Composite Limit Reached in ${String(mo).padStart(2,'0')}-${bornY + 15}):</strong> Standard DOT-SP carbon/fiberglass cylinders cannot be hydrotested past 15 years from original manufacture.`;
+          return;
+        }
+      }
+      const cycle = interval === 10 ? 10 : 5;
+      const dueY = yr + cycle;
+      const expired = (dueY < curY) || (dueY === curY && mo < curM);
+      out.className = 'alert-box ' + (expired ? 'alert-warn' : 'alert-ok');
+      out.innerHTML = expired
+        ? `⚠️ <strong>DUE FOR HYDRO TEST NOW:</strong> Requalification expired at the end of <strong>${String(mo).padStart(2,'0')}-${dueY}</strong>. Drop it off anytime in our 24/7 Baden backroom!`
+        : `✅ <strong>IN-DATE &amp; VALID THROUGH ${String(mo).padStart(2,'0')}-${dueY}:</strong> Next ${cycle}-year DOT hydro test is due by ${String(mo).padStart(2,'0')}-${dueY}.`;
+    }
+
+    refreshPublicSla(4);
   </script>
 </body>
 </html>

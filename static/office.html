@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b2219" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/static/ops.css?v=7.0" />
+  <title>Weber's Tank Testing — Billing, Payments &amp; DOT Printouts | RIN B386</title>
+</head>
+<body>
+  <!-- CREW PIN LOGIN GATE -->
+  <div id="loginScreen" class="login-wrap" hidden>
+    <div class="login-card">
+      <img src="/static/images/logo-crest.jpg" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
+      <h2 style="margin:4px 0;color:var(--green);">Weber's Office &amp; Print Center</h2>
+      <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter Crew PIN for Billing, Payments &amp; Official DOT Forms</p>
+      <div style="text-align:left;">
+        <label>Crew Access PIN</label>
+        <input type="password" inputmode="numeric" id="loginPinInput" placeholder="••••"
+          onkeydown="if(event.key==='Enter')submitLoginPin()"
+          style="text-align:center;font-size:1.35rem;letter-spacing:6px;font-weight:800;" />
+      </div>
+      <div id="loginError" class="notice bad" style="margin-top:12px;" hidden>Incorrect Shop PIN.</div>
+      <button class="primary" onclick="submitLoginPin()">Unlock Office &amp; Printouts</button>
+    </div>
+  </div>
+
+  <!-- AUTHENTICATED OFFICE & PRINTOUTS SHELL -->
+  <div id="appShell" hidden>
+    <header class="app-topbar">
+      <a href="/ops" class="top-brand">
+        <img src="/static/images/logo-crest.jpg" alt="B386" onerror="this.src='/icon.svg'" />
+        <div class="top-brand-txt">
+          <h1>OFFICE &amp; PRINT</h1>
+          <small>RIN B386 • Billing &amp; DOT Forms</small>
+        </div>
+      </a>
+
+      <nav class="ws-switcher">
+        <a href="/ops" class="ws-link">🔧 Shop Ops <span id="wsOpsBadge"></span></a>
+        <a href="/schedule" class="ws-link">📅 Schedule <span id="wsSchedBadge"></span></a>
+        <a href="/office" class="ws-link active">💲 Office &amp; Print <span id="wsBillBadge"></span></a>
+        <a href="/tv" target="_blank" class="ws-link">📺 Live TV</a>
+      </nav>
+
+      <div class="top-controls">
+        <input type="date" id="globalDate" class="top-date" onchange="changeOfficeDate()" />
+        <button class="menu-pill" id="syncBtnTop" onclick="triggerManualSync()">☁ Sync</button>
+        <button class="menu-pill" onclick="logoutCrew()" title="Sign Out">🔒</button>
+      </div>
+    </header>
+
+    <main class="ops-single-workspace">
+      <!-- QUICK SECTION FILTER PILLS -->
+      <div class="pill-selector-bar">
+        <button class="tap-pill active" data-sec="all" onclick="setOfficeSection('all')">📋 Show All Office Tools</button>
+        <button class="tap-pill" data-sec="billing" onclick="setOfficeSection('billing')">💲 Invoicing &amp; Payments</button>
+        <button class="tap-pill" data-sec="print" onclick="setOfficeSection('print')">🖨️ DOT Sheets &amp; B386 Stickers</button>
+        <button class="tap-pill" data-sec="rates" onclick="setOfficeSection('rates')">⚙️ Master Service Rates</button>
+      </div>
+
+      <!-- SECTION 1: INVOICING, BILLING & PAYMENTS -->
+      <div id="sec-billing">
+        <div class="split-2">
+          <div class="card" style="border-top:4px solid var(--green);">
+            <div class="card-hdr">
+              <h3>💲 Create Customer Invoice</h3>
+              <span class="sub-badge" id="draftTotalLabel">Draft Total: $0.00</span>
+            </div>
+
+            <div id="unbilledPillsWrap" style="margin-bottom:10px;"></div>
+
+            <div class="grid" style="margin-bottom:10px;">
+              <div>
+                <label>Customer / Department</label>
+                <select id="billCustomer" onchange="loadUnbilledItems()"></select>
+              </div>
+              <div><label>Customer Cell #</label><input id="billPhone" type="tel" placeholder="724-555-0199" /></div>
+              <div><label>Invoice / Service Date</label><input type="date" id="billDate" onchange="loadUnbilledItems()" /></div>
+              <div><label>Tax %</label><input type="number" step="0.01" id="billTax" value="0" oninput="recalcInvoiceDraft()" /></div>
+              <div>
+                <label>Payment Status</label>
+                <select id="billStatus">
+                  <option value="DRAFT">DRAFT</option>
+                  <option value="SENT">SENT / NET-30</option>
+                  <option value="PAID">PAID IN FULL</option>
+                </select>
+              </div>
+              <div>
+                <label>Payment Method</label>
+                <select id="billPayMethod">
+                  <option value="">Pending / Unpaid</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Check">Check</option>
+                  <option value="Card / Venmo">Card / Venmo</option>
+                  <option value="Net-30 Municipal">Net-30 Dept / Fleet</option>
+                </select>
+              </div>
+            </div>
+
+            <label class="inline-check" style="margin-bottom:10px;">
+              <input type="checkbox" id="billAllDatesChk" checked onchange="loadUnbilledItems()" />
+              <span>Include all unbilled completed cylinders across any test date</span>
+            </label>
+
+            <div id="draftInvoiceList"></div>
+
+            <div style="display:flex;gap:8px;margin:10px 0;flex-wrap:wrap;">
+              <button class="secondary" onclick="addCustomInvoiceLine()">+ Add Air Fill / Valve / Custom Fee</button>
+              <button class="secondary" onclick="sendCustomerPickupSmsFromBilling()">📲 Text Ready + Total</button>
+            </div>
+
+            <label>Invoice Footer Notes (Optional)</label>
+            <input id="billNotes" placeholder="PO #, check #, burst disc note, thank you..." />
+            <button class="primary" onclick="submitInvoice()">💾 Save &amp; Open Printable Invoice PDF</button>
+          </div>
+
+          <div class="card">
+            <div class="card-hdr">
+              <h3>Saved Customer Invoices &amp; Payment Status</h3>
+              <span class="sub-badge" id="invCountBadge">0 Saved</span>
+            </div>
+            <div id="invoicesList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 2: OFFICIAL DOT PRINTOUTS, STICKERS & QR POSTER -->
+      <div id="sec-print">
+        <div class="split-2">
+          <div class="card" style="border-top:4px solid #1e3a8a;">
+            <div class="card-hdr">
+              <h3>🖨️ Official DOT Compliance Sheets (<span id="pdfDateLabel">Selected Date</span>)</h3>
+              <span class="sub-badge">Signed Off: Ryan Pearce (RP)</span>
+            </div>
+            <div class="grid" style="margin-bottom:12px;">
+              <div>
+                <label>Filter Customer (Optional)</label>
+                <select id="pdfCustomerFilter"></select>
+              </div>
+              <div>
+                <label>Retest Sheet # Override</label>
+                <input type="number" id="pdfSheetNo" value="8095" />
+              </div>
+            </div>
+            <div class="grid-2">
+              <button class="pdf-card-btn" onclick="openPdf('retest')">📄 1. DOT Retest Data Sheet<br /><small style="font-weight:500;opacity:0.85;">12-Row Landscape Form 393-001</small></button>
+              <button class="pdf-card-btn" onclick="openPdf('verification')">📊 2. Daily Verification Sheet<br /><small style="font-weight:500;opacity:0.85;">Method B Calibration Ladder (±1.0%)</small></button>
+              <button class="pdf-card-btn" onclick="openPdf('visual')">🔍 3. 7-Point Visual Log<br /><small style="font-weight:500;opacity:0.85;">CGA External / Internal Inspection</small></button>
+              <button class="pdf-card-btn" style="background:#92400e;" onclick="openPdf('valvetags')">🏷️ 4. Active Valve Tag Sheet<br /><small style="font-weight:500;opacity:0.85;">Shop Clipboard Match Grid</small></button>
+            </div>
+            <button class="pdf-card-btn" style="width:100%;margin-top:10px;background:#0f291e;border:2px solid var(--gold);" onclick="openPdf('poster')">
+              🚪 5. Printable 24/7 Backroom Drop-Off &amp; Pickup QR Wall Sign (8.5×11)
+            </button>
+          </div>
+
+          <div>
+            <div class="card" style="border-top:4px solid #7c3aed;">
+              <div class="card-hdr">
+                <h3>🏷️ Monthly &amp; Custom B386 Retest Stickers</h3>
+                <span class="sub-badge">49 CFR §180.213 • Avery 5160</span>
+              </div>
+              <p style="margin:0 0 10px;font-size:0.83rem;color:var(--muted);">
+                Pre-print a full sheet on the 1st of the month for Zone D, or print exact counts skipping already-peeled label slots:
+              </p>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+                <button class="secondary" style="flex:1;padding:10px;background:#ede9fe;color:#5b21b6;border-color:#c4b5fd;" onclick="preprintFullSheet(false)">🖨️ Full Sheet: 30 Standard SCBA</button>
+                <button class="secondary" style="flex:1;padding:10px;background:#fef3c7;color:#92400e;border-color:#fcd34d;" onclick="preprintFullSheet(true)">🖨️ Full Sheet: 60 Mini Paintball HPA</button>
+              </div>
+              <div class="grid" style="align-items:end;">
+                <div><label>Sticker Count</label><input type="number" id="stickerCount" min="1" value="12" /></div>
+                <div><label>Skip Used Slots (0–29)</label><input type="number" id="stickerSkip" min="0" max="29" value="0" /></div>
+              </div>
+              <label class="inline-check" style="margin-top:10px;">
+                <input type="checkbox" id="stickerCompact" />
+                <span><strong>Compact 2-Up Mini Paintball HPA Mode</strong> (2 mini labels per 1"×2-5/8" slot)</span>
+              </label>
+              <button class="primary" style="background:#5b21b6;" onclick="openPdf('stickers')">Open Custom B386 Sticker PDF</button>
+            </div>
+
+            <div class="card">
+              <div class="card-hdr"><h3>Past Test Dates Quick-Jump</h3></div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Work Date</th><th>Customers</th><th>Completed</th><th>Load</th></tr></thead>
+                  <tbody id="datesListTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 3: MASTER SERVICE RATE SCHEDULE -->
+      <div id="sec-rates">
+        <div class="card">
+          <div class="card-hdr">
+            <h3>⚙️ Master Service Rate Schedule</h3>
+            <span class="sub-badge">Auto-Fills Customer Invoices</span>
+          </div>
+          <div id="pricingList"></div>
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+            <button class="secondary" onclick="addRateScheduleRow()">+ Add Custom Rate Code</button>
+            <button class="primary" style="width:auto;margin:0;padding:10px 20px;" onclick="savePricingRates()">Save Master Pricing Rates</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let STATE = { db_version: 0, pricing_rates: [], customers_summary: [], invoices: [] };
+    let DRAFT_ITEMS = [];
+    let EDITABLE_RATES = [];
+    let INITIAL_BOOT = true;
+
+    function escHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    function setOfficeSection(sec) {
+      document.querySelectorAll('.pill-selector-bar .tap-pill').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-sec') === sec);
+      });
+      ['billing', 'print', 'rates'].forEach(k => {
+        document.getElementById('sec-' + k).hidden = (sec !== 'all' && sec !== k);
+      });
+    }
+
+    async function bootOffice() {
+      const params = new URLSearchParams(location.search);
+      if (params.get('date')) document.getElementById('globalDate').value = params.get('date');
+      if (params.get('sec')) setOfficeSection(params.get('sec'));
+
+      const res = await fetch('/api/auth/status');
+      const auth = await res.json();
+      if (!auth.authenticated) {
+        document.getElementById('loginScreen').hidden = false;
+        document.getElementById('appShell').hidden = true;
+        document.getElementById('loginPinInput').focus();
+        return;
+      }
+      document.getElementById('loginScreen').hidden = true;
+      document.getElementById('appShell').hidden = false;
+      await loadOfficeState();
+    }
+
+    async function submitLoginPin() {
+      const pin = document.getElementById('loginPinInput').value;
+      const res = await fetch('/api/auth/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }),
+      });
+      if (!res.ok) { document.getElementById('loginError').hidden = false; return; }
+      document.getElementById('loginError').hidden = true;
+      bootOffice();
+    }
+
+    async function logoutCrew() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      bootOffice();
+    }
+
+    function changeOfficeDate() {
+      const d = document.getElementById('globalDate').value;
+      document.getElementById('billDate').value = d;
+      loadOfficeState();
+    }
+
+    function jumpToDate(d) {
+      document.getElementById('globalDate').value = d;
+      document.getElementById('billDate').value = d;
+      loadOfficeState();
+    }
+
+    async function loadOfficeState() {
+      const wDate = document.getElementById('globalDate').value || '';
+      const res = await fetch('/api/bootstrap' + (wDate ? `?work_date=${encodeURIComponent(wDate)}` : ''));
+      if (res.status === 401) { bootOffice(); return; }
+      const prevVer = STATE.db_version;
+      STATE = await res.json();
+
+      if (!document.getElementById('globalDate').value) document.getElementById('globalDate').value = STATE.selected_date;
+      if (!document.getElementById('billDate').value) document.getElementById('billDate').value = STATE.selected_date;
+      if (INITIAL_BOOT) document.getElementById('billTax').value = STATE.default_tax_rate ?? 0;
+
+      document.getElementById('pdfDateLabel').textContent = STATE.selected_date;
+      document.getElementById('pdfSheetNo').value = STATE.binder_state?.active_sheet_no || STATE.starting_sheet_no;
+      const syncTxt = STATE.has_sheets_webhook
+        ? (STATE.unsynced_count ? `↻ Sync (${STATE.unsynced_count})` : '☁ Synced')
+        : `Local (${STATE.unsynced_count})`;
+      document.getElementById('syncBtnTop').textContent = syncTxt;
+
+      const queued = (STATE.records || []).filter(r => r.status === 'QUEUED');
+      const doneToday = (STATE.records || []).filter(r => r.status === 'COMPLETED');
+      const openSched = (STATE.schedule_jobs || []).filter(j => j.status !== 'COMPLETED');
+      const totalUnbilled = (STATE.customers_summary || []).reduce((s, c) => s + (c.unbilled_count || 0), 0);
+      document.getElementById('wsOpsBadge').textContent = queued.length ? `(${queued.length})` : '';
+      document.getElementById('wsSchedBadge').textContent = openSched.length ? `(${openSched.length})` : '';
+      document.getElementById('wsBillBadge').textContent = totalUnbilled ? `(${totalUnbilled})` : '';
+
+      document.getElementById('stickerCount').value = Math.max(1, doneToday.filter(r => r.hydro_disposition === 'A').length);
+
+      const allDayCusts = [...new Set((STATE.records || []).map(r => r.customer_name))];
+      document.getElementById('pdfCustomerFilter').innerHTML = '<option value="">-- All Customers on Selected Date --</option>' +
+        allDayCusts.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
+
+      document.getElementById('datesListTable').innerHTML = (STATE.dates_summary || []).length
+        ? STATE.dates_summary.map(d => `
+          <tr>
+            <td><strong>${escHtml(d.work_date)}</strong></td><td>${d.customer_count}</td>
+            <td>${d.completed_bottles} / ${d.total_bottles}</td>
+            <td><button class="secondary" onclick="jumpToDate('${d.work_date}')">Load Date</button></td>
+          </tr>`).join('')
+        : '<tr><td colspan="4">No test dates recorded yet.</td></tr>';
+
+      // 1-Tap Unbilled Customer Pills + Smart Default Selection
+      const params = new URLSearchParams(location.search);
+      const urlCust = params.get('customer');
+      const billSel = document.getElementById('billCustomer');
+      const firstUnbilled = (STATE.customers_summary.find(c => c.unbilled_count > 0) || {}).customer_name || '';
+      const targetCust = INITIAL_BOOT ? (urlCust || firstUnbilled || (STATE.customers_summary[0]?.customer_name || '')) : billSel.value;
+
+      billSel.innerHTML = STATE.customers_summary.length
+        ? STATE.customers_summary.map(c =>
+            `<option value="${escHtml(c.customer_name)}" ${c.customer_name === targetCust ? 'selected' : ''}>${escHtml(c.customer_name)} (${c.unbilled_count} unbilled)</option>`
+          ).join('')
+        : '<option value="">No customers yet</option>';
+
+      const unbilledCusts = STATE.customers_summary.filter(c => c.unbilled_count > 0);
+      document.getElementById('unbilledPillsWrap').innerHTML = unbilledCusts.length
+        ? `<small style="display:block;font-weight:800;color:var(--muted);margin-bottom:5px;">⚡ TAP UNBILLED CUSTOMER:</small><div class="pill-selector-bar" style="margin-bottom:4px;">` +
+          unbilledCusts.map(c => `<button type="button" class="tap-pill ${c.customer_name === billSel.value ? 'active' : ''}" onclick="selectBillingCustomer('${c.customer_name.replace(/'/g, "\\'")}')">${escHtml(c.customer_name)} (${c.unbilled_count})</button>`).join('') +
+          `</div>`
+        : '';
+
+      if (prevVer !== STATE.db_version) {
+        EDITABLE_RATES = STATE.pricing_rates.map(p => ({ ...p, isNew: false }));
+        renderRateScheduleTable();
+      }
+      renderInvoicesList();
+      if (INITIAL_BOOT) {
+        INITIAL_BOOT = false;
+        await loadUnbilledItems();
+      }
+    }
+
+    function selectBillingCustomer(cust) {
+      document.getElementById('billCustomer').value = cust;
+      loadUnbilledItems();
+      loadOfficeState();
+    }
+
+    function getRate(code) {
+      const found = STATE.pricing_rates.find(r => r.code === code);
+      return found ? Number(found.unit_price) : 0;
+    }
+
+    function isPaintballCylinder(r) {
+      const dia = parseFloat(r.outside_dia || '0'), len = parseFloat(r.length_in || '0');
+      const mfg = (r.mfg_id || '').toUpperCase();
+      if (['NINJA', 'HK ARMY', 'EMPIRE', 'FIRST STRIKE', 'JT', 'VALKEN', 'IMMORTAL'].some(b => mfg.includes(b))) return true;
+      return dia > 0 && dia <= 4.8 && len > 0 && len <= 12.0;
+    }
+
+    async function loadUnbilledItems() {
+      const d = document.getElementById('billDate').value || STATE.selected_date;
+      const allDates = document.getElementById('billAllDatesChk').checked;
+      const cust = document.getElementById('billCustomer').value;
+      const custMeta = STATE.customers_summary.find(c => c.customer_name === cust);
+      document.getElementById('billPhone').value = custMeta?.customer_phone || '';
+      if (!cust) { DRAFT_ITEMS = []; renderDraftInvoice(); return; }
+
+      const res = await fetch(`/api/unbilled?customer_name=${encodeURIComponent(cust)}&work_date=${encodeURIComponent(d)}&all_dates=${allDates}`);
+      const recs = await res.json();
+      DRAFT_ITEMS = [];
+      for (const r of recs) {
+        const isPb = isPaintballCylinder(r);
+        const isSp = (r.dot_spec || '').startsWith('SP') || (r.dot_spec || '').startsWith('E-');
+        const pbRate = getRate('HYDRO_PAINTBALL');
+        const code = r.service_mode === 'VISUAL_ONLY' ? 'VISUAL_ONLY' : (isPb && pbRate > 0 ? 'HYDRO_PAINTBALL' : (isSp ? 'HYDRO_SCBA' : 'HYDRO_STD'));
+        DRAFT_ITEMS.push({
+          record_id: r.id,
+          description: `SN ${r.serial_number} (${r.dot_spec}-${r.service_psi} ${r.gas_service}) - ${r.service_mode === 'VISUAL_ONLY' ? 'Visual Insp' : (isPb ? 'HPA Hydro' : 'Hydro + Visual')} [${r.hydro_disposition}]`,
+          qty: 1,
+          unit_price: getRate(code),
+        });
+        if (r.rush_fee || r.priority === 'RUSH') {
+          DRAFT_ITEMS.push({ record_id: null, description: `SN ${r.serial_number} - Priority / Rush Turnaround Service`, qty: 1, unit_price: getRate('RUSH_FEE') });
+        }
+        if (r.relief_valve_changed === 'Yes') {
+          DRAFT_ITEMS.push({ record_id: null, description: `SN ${r.serial_number} - Relief / Burst Disc Replacement`, qty: 1, unit_price: getRate('VALVE_RELIEF') });
+        }
+      }
+      renderDraftInvoice();
+    }
+
+    function addCustomInvoiceLine() {
+      DRAFT_ITEMS.push({ record_id: null, description: 'Breathing Air / HPA Fill', qty: 1, unit_price: getRate('AIR_FILL') });
+      renderDraftInvoice();
+    }
+
+    function removeDraftInvoiceLine(idx) {
+      DRAFT_ITEMS.splice(idx, 1);
+      renderDraftInvoice();
+    }
+
+    function renderDraftInvoice() {
+      document.getElementById('draftInvoiceList').innerHTML = DRAFT_ITEMS.length
+        ? DRAFT_ITEMS.map((it, i) => `
+          <div class="inv-line-row">
+            <div class="desc-col"><input value="${escHtml(it.description)}" oninput="DRAFT_ITEMS[${i}].description=this.value" /></div>
+            <div><input type="number" step="1" value="${it.qty}" oninput="DRAFT_ITEMS[${i}].qty=parseFloat(this.value||0);recalcInvoiceDraft()" /></div>
+            <div><input type="number" step="0.01" value="${it.unit_price}" oninput="DRAFT_ITEMS[${i}].unit_price=parseFloat(this.value||0);recalcInvoiceDraft()" /></div>
+            <div id="lineTot_${i}"><strong>$${(it.qty * it.unit_price).toFixed(2)}</strong></div>
+            <div><button class="secondary" onclick="removeDraftInvoiceLine(${i})">✕</button></div>
+          </div>`).join('')
+        : '<div style="color:var(--muted);font-size:0.86rem;padding:8px 0;">No unbilled completed bottles for this customer — pick an unbilled customer pill above or add a custom line.</div>';
+      recalcInvoiceDraft();
+    }
+
+    function recalcInvoiceDraft() {
+      let sub = 0;
+      DRAFT_ITEMS.forEach((it, i) => {
+        const lt = (it.qty || 0) * (it.unit_price || 0);
+        sub += lt;
+        const cell = document.getElementById('lineTot_' + i);
+        if (cell) cell.innerHTML = `<strong>$${lt.toFixed(2)}</strong>`;
+      });
+      const taxPct = parseFloat(document.getElementById('billTax').value || '0');
+      const tot = sub + sub * (taxPct / 100);
+      document.getElementById('draftTotalLabel').textContent = `Draft Total: $${tot.toFixed(2)}`;
+      return tot;
+    }
+
+    async function submitInvoice() {
+      const cust = document.getElementById('billCustomer').value;
+      if (!cust || !DRAFT_ITEMS.length) { alert('Select a customer with completed bottles or add a custom line.'); return; }
+      const zeroLines = DRAFT_ITEMS.filter(it => !(Number(it.unit_price) > 0)).length;
+      if (zeroLines > 0 && !confirm(`${zeroLines} line item(s) currently have a $0.00 unit price.\n\nSave this invoice with $0.00 item(s) anyway, or press Cancel to enter prices / update Master Service Rates?`)) {
+        return;
+      }
+      const res = await fetch('/api/invoices', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          work_date: document.getElementById('billDate').value || STATE.selected_date,
+          customer_name: cust,
+          customer_phone: document.getElementById('billPhone').value,
+          tax_rate: parseFloat(document.getElementById('billTax').value || '0'),
+          status: document.getElementById('billStatus').value,
+          payment_method: document.getElementById('billPayMethod').value,
+          created_by: localStorage.getItem('webers_active_crew') || 'RP',
+          notes: document.getElementById('billNotes').value,
+          items: DRAFT_ITEMS,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.detail); return; }
+      window.open(`/api/pdf/invoice/${data.id}`, '_blank');
+      await loadOfficeState();
+      loadUnbilledItems();
+    }
+
+    function sendPickupSms(custName, phone, count, invExtra) {
+      let ph = (phone || '').trim() || prompt(`Enter cell phone number for ${custName}:`, '') || '';
+      if (!ph.trim()) return;
+      const cleanDigits = ph.replace(/\D/g, '');
+      const msg = `Weber's Tank Testing (RIN B386): Hi ${custName}, your ${count} cylinder(s) are tested, stamped/labeled, and ready on our backroom pickup shelf at 3086 Legionville Rd${invExtra ? ' (' + invExtra + ')' : ''}. Questions? Call/text ${STATE.shop_phone || '724-266-8008'}.`;
+      const sep = /iPad|iPhone|iPod/i.test(navigator.userAgent) ? '&' : '?';
+      window.location.href = `sms:${cleanDigits}${sep}body=${encodeURIComponent(msg)}`;
+    }
+
+    function sendCustomerPickupSmsFromBilling() {
+      const cust = document.getElementById('billCustomer').value;
+      if (!cust) { alert('Select a customer first.'); return; }
+      const tot = recalcInvoiceDraft().toFixed(2);
+      sendPickupSms(cust, document.getElementById('billPhone').value, Math.max(1, DRAFT_ITEMS.filter(x => x.record_id).length || DRAFT_ITEMS.length), `Total: $${tot}`);
+    }
+
+    function renderInvoicesList() {
+      document.getElementById('invCountBadge').textContent = `${STATE.invoices.length} Saved`;
+      document.getElementById('invoicesList').innerHTML = STATE.invoices.length
+        ? STATE.invoices.map(inv => `
+          <div class="rec-item">
+            <div class="rec-main">
+              <div class="rec-title">
+                <span>${escHtml(inv.invoice_no)} — ${escHtml(inv.customer_name)}</span>
+                <span class="${inv.status === 'PAID' ? 'pass' : ''}">$${Number(inv.total_amount).toFixed(2)} (${escHtml(inv.status)}${inv.payment_method ? ' • ' + escHtml(inv.payment_method) : ''})</span>
+              </div>
+              <div class="rec-sub">Service Date: ${escHtml(inv.work_date)}${inv.customer_phone ? ' • 📞 ' + escHtml(inv.customer_phone) : ''}</div>
+            </div>
+            <div class="rec-actions">
+              <a class="secondary" href="/api/pdf/invoice/${inv.id}" target="_blank">📄 PDF</a>
+              <button class="secondary" onclick="sendPickupSms('${inv.customer_name.replace(/'/g, "\\'")}', '${escHtml(inv.customer_phone || '')}', 1, '${inv.invoice_no}: $${Number(inv.total_amount).toFixed(2)}')">📲 Text</button>
+              ${inv.status !== 'PAID' ? `<button class="secondary" style="background:#dcfce7;color:#166534;" onclick="markInvoicePaid(${inv.id})">✓ Mark Paid</button>` : ''}
+            </div>
+          </div>`).join('')
+        : '<div style="color:var(--muted);font-size:0.86rem;">No invoices generated yet.</div>';
+    }
+
+    async function markInvoicePaid(id) {
+      const method = prompt('Payment method (Cash, Check, Card / Venmo, Net-30):', 'Cash');
+      if (method === null) return;
+      await fetch(`/api/invoices/${id}/status`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'PAID', payment_method: method }),
+      });
+      loadOfficeState();
+    }
+
+    function preprintFullSheet(compact) {
+      const d = STATE.today || STATE.selected_date;
+      window.open(`/api/pdf/stickers?work_date=${encodeURIComponent(d)}&count=${compact ? 60 : 30}&skip=0&compact=${compact}`, '_blank');
+    }
+
+    function openPdf(kind) {
+      if (kind === 'poster') {
+        window.open('/api/pdf/poster?checkin_url=' + encodeURIComponent('https://weberstanktesting.com/#dropoff'), '_blank');
+        return;
+      }
+      const d = STATE.selected_date;
+      const cust = document.getElementById('pdfCustomerFilter').value;
+      const sheetNo = document.getElementById('pdfSheetNo').value || '8095';
+      const cnt = document.getElementById('stickerCount').value || '12';
+      const skip = document.getElementById('stickerSkip').value || '0';
+      const compact = document.getElementById('stickerCompact').checked;
+      let url = `/api/pdf/${kind}?work_date=${encodeURIComponent(d)}`;
+      if (cust) url += `&customer=${encodeURIComponent(cust)}`;
+      if (kind === 'retest') url += `&sheet_no=${encodeURIComponent(sheetNo)}`;
+      if (kind === 'stickers') url += `&count=${encodeURIComponent(cnt)}&skip=${encodeURIComponent(skip)}&compact=${compact}`;
+      window.open(url, '_blank');
+    }
+
+    function renderRateScheduleTable() {
+      document.getElementById('pricingList').innerHTML = EDITABLE_RATES.map((p, i) => `
+        <div class="rate-edit-row">
+          <div><input value="${escHtml(p.code)}" ${p.isNew ? '' : 'readonly style="background:#f1f5f9;font-weight:800;"'} placeholder="CODE_NAME" oninput="EDITABLE_RATES[${i}].code=this.value.toUpperCase()" /></div>
+          <div class="rate-desc-col"><input value="${escHtml(p.description || '')}" placeholder="Service description" oninput="EDITABLE_RATES[${i}].description=this.value" /></div>
+          <div><input type="number" step="0.01" value="${p.unit_price}" oninput="EDITABLE_RATES[${i}].unit_price=parseFloat(this.value||0)" /></div>
+          <div><button class="secondary" style="color:#b91c1c;" onclick="deleteRateRow(${i})">🗑</button></div>
+        </div>`).join('');
+    }
+
+    function addRateScheduleRow() {
+      EDITABLE_RATES.push({ code: '', description: '', unit_price: 0, sort_order: (EDITABLE_RATES.length + 1) * 10, isNew: true });
+      renderRateScheduleTable();
+    }
+
+    async function deleteRateRow(idx) {
+      const r = EDITABLE_RATES[idx];
+      if (!r) return;
+      if (!r.isNew && r.code) {
+        if (!confirm(`Delete "${r.code}" from Master Rates?`)) return;
+        await fetch(`/api/pricing/${encodeURIComponent(r.code)}`, { method: 'DELETE' });
+      }
+      EDITABLE_RATES.splice(idx, 1);
+      renderRateScheduleTable();
+      loadOfficeState();
+    }
+
+    async function savePricingRates() {
+      const payload = EDITABLE_RATES.filter(r => r.code && r.code.trim()).map((r, idx) => ({
+        code: r.code.trim().toUpperCase(),
+        description: r.description || r.code,
+        unit_price: parseFloat(r.unit_price || 0),
+        sort_order: (idx + 1) * 10,
+      }));
+      await fetch('/api/pricing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      alert('Master pricing rates saved!');
+      await loadOfficeState();
+      loadUnbilledItems();
+    }
+
+    async function triggerManualSync() {
+      document.getElementById('syncBtnTop').textContent = '↻...';
+      const res = await fetch('/api/sync-now', { method: 'POST' });
+      const data = await res.json();
+      alert(res.ok ? (data.synced ? `Synced ${data.pushed} item(s) to Google Sheets!` : data.reason) : data.detail);
+      loadOfficeState();
+    }
+
+    bootOffice();
+  </script>
+</body>
+</html>

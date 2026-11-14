@@ -1,4 +1,4 @@
-// Weber's Tank Testing — Operations, Dispatch & Priority Controller (v6.0)
+// Weber's Tank Testing — Pure 4-Station Shop Floor Controller (v7.0)
 const VIS_FIELDS = [
   { key: 'chk_corrosion', label: 'Corrosion' },
   { key: 'chk_dents_dings', label: 'Dents / Dings' },
@@ -13,24 +13,23 @@ var STATE = {
   testing_mode: true, shop_phone: '724-266-8008', calibration_targets: [], cga_specs: [],
   records: [], in_shop_post_test: [], active_valves: [], dropoffs: [], schedule_jobs: [],
   day_plans: [], binder_state: {}, huddle: {}, verifications: [], jacket_ceilings: {},
-  pricing_rates: [], invoices: [], dates_summary: [], customers_summary: [],
-  crew: [], feedback_items: [], default_tax_rate: 0, daily_hydro_capacity: 24, db_version: 0,
+  customers_summary: [], crew: [], feedback_items: [], default_tax_rate: 0,
+  daily_hydro_capacity: 24, db_version: 0,
 };
 window.ACTIVE_DROPOFF_ID = null;
 window.ACTIVE_SCHEDULE_JOB_ID = null;
 
 let CURRENT_TAB = 'cal';
 let CAL_FORCE_EXPANDED = false;
+let BATCH_LOCKED = false;
 let LADDER = [];
 let ACTIVE_STEP = 0;
 let BENCH_VIS = {};
 let EDIT_VIS = {};
 let BENCH_SUBMITTING = false;
-let DRAFT_ITEMS = [];
-let EDITABLE_RATES = [];
 let LAST_SEARCH_ROWS = [];
-let LAST_QUOTE = null;
 let DEFERRED_PWA = null;
+let DEEP_LINK_APPLIED = false;
 
 const IS_OPS_HOST = !['weberstanktesting.com', 'www.weberstanktesting.com'].includes(location.hostname.toLowerCase());
 if (IS_OPS_HOST && 'serviceWorker' in navigator) {
@@ -40,7 +39,8 @@ window.addEventListener('beforeinstallprompt', (e) => {
   if (!IS_OPS_HOST) return;
   e.preventDefault();
   DEFERRED_PWA = e;
-  document.getElementById('btnInstallPwa').hidden = false;
+  const btn = document.getElementById('btnInstallPwa');
+  if (btn) btn.hidden = false;
 });
 
 async function installPwaApp() {
@@ -67,7 +67,7 @@ function priorityBadgeHtml(r) {
 
 function dwellBadgeHtml(days, prefix = '⏳') {
   if (!days || days < 1) return '';
-  return `<span class="dwell-badge ${days >= 5 ? 'old' : ''}">${prefix} ${days}d</span>`;
+  return `<span class="dwell-badge ${days >= 4 ? 'old' : ''}">${prefix} ${days}d</span>`;
 }
 
 function stageBadgeHtml(r) {
@@ -94,8 +94,25 @@ function saveActiveCrew() {
   document.getElementById('menuCrewInitials').textContent = val;
 }
 
-// --- AUTH, NAVIGATION & MODALS ---
+function getNextFreeValveTag(curTag) {
+  const n = parseInt(String(curTag || '').trim(), 10);
+  if (isNaN(n) || n < 1) return '';
+  const busy = new Set(
+    [...STATE.active_valves, ...STATE.records.filter(r => !r.valve_reinstalled && r.valve_tag)]
+      .map(r => String(r.valve_tag).trim().toUpperCase())
+  );
+  busy.add(String(n));
+  let cand = n + 1;
+  while (busy.has(String(cand)) && cand < n + 500) cand++;
+  return String(cand);
+}
+
+// --- AUTH, DEEP LINKS & STATION NAVIGATION ---
 async function checkAuthAndBoot() {
+  const params = new URLSearchParams(location.search);
+  const urlDate = params.get('date');
+  if (urlDate) document.getElementById('globalDate').value = urlDate;
+
   const res = await fetch('/api/auth/status');
   const data = await res.json();
   if (!data.authenticated) {
@@ -107,6 +124,24 @@ async function checkAuthAndBoot() {
     document.getElementById('appShell').hidden = false;
     if (typeof syncAutoShutterBtn === 'function') syncAutoShutterBtn();
     await loadState(true);
+    applyUrlDeepLink();
+  }
+}
+
+function applyUrlDeepLink() {
+  if (DEEP_LINK_APPLIED) return;
+  DEEP_LINK_APPLIED = true;
+  const params = new URLSearchParams(location.search);
+  const jobId = parseInt(params.get('job') || '0', 10);
+  const dropId = parseInt(params.get('dropoff') || '0', 10);
+  const tab = params.get('tab');
+  if (jobId) {
+    importScheduleJobToIntake(jobId);
+  } else if (dropId) {
+    importDropoffToIntake(dropId);
+    jumpToTab('intake');
+  } else if (tab && ['cal', 'intake', 'bench', 'logs'].includes(tab)) {
+    jumpToTab(tab);
   }
 }
 
@@ -142,27 +177,18 @@ function jumpToTab(name) {
   CURRENT_TAB = name;
   if (name !== 'intake' && typeof closeLiveCamera === 'function') closeLiveCamera();
   document.querySelectorAll('main.ops-workspace > section').forEach(s => { s.hidden = true; });
-  document.getElementById('tab-' + name).hidden = false;
+  const target = document.getElementById('tab-' + name);
+  if (target) target.hidden = false;
   document.querySelectorAll('.rail-btn, .bnav-btn').forEach(b => {
     b.classList.toggle('active', b.getAttribute('data-tab') === name);
   });
-  if (name === 'schedule') fetchLiveTurnaroundQuote();
   if (name === 'logs') runSearch(false);
-  if (name === 'billing') loadUnbilledItems();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function changeWorkingDate() {
   CAL_FORCE_EXPANDED = false;
-  const d = document.getElementById('globalDate').value;
-  document.getElementById('billDate').value = d;
-  document.getElementById('sjDate').value = d;
   loadState(true);
-}
-
-function selectCalendarDay(isoDate) {
-  document.getElementById('globalDate').value = isoDate;
-  changeWorkingDate();
 }
 
 function setCalExpanded(exp) {
@@ -198,15 +224,10 @@ async function loadState(rebuildLadder = false) {
   const wDate = document.getElementById('globalDate').value || '';
   const res = await fetch('/api/bootstrap' + (wDate ? `?work_date=${encodeURIComponent(wDate)}` : ''));
   if (res.status === 401) { checkAuthAndBoot(); return; }
-  const prevVer = STATE.db_version;
   STATE = await res.json();
 
   if (!document.getElementById('globalDate').value) {
     document.getElementById('globalDate').value = STATE.selected_date;
-    document.getElementById('billDate').value = STATE.selected_date;
-  }
-  if (!document.getElementById('sjDate').value) {
-    document.getElementById('sjDate').value = STATE.selected_date;
   }
 
   document.getElementById('testModeChip').hidden = !STATE.testing_mode;
@@ -228,12 +249,9 @@ async function loadState(rebuildLadder = false) {
       ${c.initials !== 'RP' ? `<button onclick="removeCrewMember(${c.id})" style="border:none;background:none;color:#dc2626;cursor:pointer;font-weight:900;">×</button>` : ''}
     </span>`).join('');
 
-  document.getElementById('pdfDateLabel').textContent = STATE.selected_date;
-  document.getElementById('pdfSheetNo').value = STATE.binder_state?.active_sheet_no || STATE.starting_sheet_no;
   document.getElementById('editSheetNo').value = STATE.starting_sheet_no;
   document.getElementById('editDailyCap').value = STATE.daily_hydro_capacity || 24;
   document.getElementById('editDefaultTax').value = STATE.default_tax_rate ?? 0;
-  if (prevVer === 0) document.getElementById('billTax').value = STATE.default_tax_rate ?? 0;
   document.getElementById('calSerialLabel').textContent = STATE.calibrated_serial;
   document.getElementById('editCalSerial').value = STATE.calibrated_serial;
   document.getElementById('webhookInput').value = STATE.sheets_webhook_url || '';
@@ -246,7 +264,7 @@ async function loadState(rebuildLadder = false) {
   document.getElementById('railSyncChip').textContent = syncTxt;
   document.getElementById('drawerSyncBtn').textContent = syncTxt;
 
-  // Jacket Pills & Nav Badges
+  // Jacket Pills & Workspace / Nav Badges
   const sCeil = STATE.jacket_ceilings['Short Jacket'] || { max_calibrated_psi: 0, max_allowed_test_psi: 0 };
   const tCeil = STATE.jacket_ceilings['Tall Jacket'] || { max_calibrated_psi: 0, max_allowed_test_psi: 0 };
   const pShort = document.getElementById('pillShort'), pTall = document.getElementById('pillTall');
@@ -269,134 +287,32 @@ async function loadState(rebuildLadder = false) {
   const needsFinish = (STATE.in_shop_post_test || []).filter(r => r.shop_stage !== 'READY_BACKROOM' && r.shop_stage !== 'PICKED_UP').length + STATE.active_valves.length;
   const totalUnbilled = STATE.customers_summary.reduce((s, c) => s + (c.unbilled_count || 0), 0);
 
+  document.getElementById('wsSchedBadge').textContent = openSched.length ? `(${openSched.length})` : '';
+  document.getElementById('wsBillBadge').textContent = totalUnbilled ? `(${totalUnbilled})` : '';
+
   document.getElementById('navBadgeCal').textContent = (sCeil.max_calibrated_psi && tCeil.max_calibrated_psi) ? '✓' : '!';
   document.getElementById('navBadgeCal').className = 'nav-badge ' + ((sCeil.max_calibrated_psi && tCeil.max_calibrated_psi) ? 'green' : 'amber');
-  document.getElementById('navBadgeSched').textContent = String(openSched.length);
   document.getElementById('navBadgeIntake').textContent = waitingDrops.length ? `${waitingDrops.length}🚪` : String(queued.length);
   document.getElementById('navBadgeBench').textContent = String(queued.length);
   document.getElementById('navBadgeBench').className = 'nav-badge ' + ((STATE.huddle?.rush_queued_count || 0) > 0 ? 'red' : '');
   document.getElementById('navBadgeValves').textContent = String((STATE.huddle?.needs_stamp_count || 0) + STATE.active_valves.length);
-  document.getElementById('navBadgeBill').textContent = String(totalUnbilled);
 
   const setMobDot = (id, n) => { const el = document.getElementById(id); if (el) { el.hidden = !n; el.textContent = n; } };
-  setMobDot('mobBadgeSched', openSched.length);
   setMobDot('mobBadgeIntake', waitingDrops.length);
   setMobDot('mobBadgeBench', queued.length);
   setMobDot('mobBadgeValves', needsFinish);
 
-  document.getElementById('stickerCount').value = Math.max(1, doneToday.filter(r => r.hydro_disposition === 'A').length);
+  const b = STATE.binder_state || {};
+  document.getElementById('standBinderBadge').textContent =
+    `Sheet #${b.active_sheet_no || STATE.starting_sheet_no} • Row #${b.next_row_number || 1}/12`;
 
   renderStartOfDayHuddle(queued, openSched, waitingDrops);
-  renderScheduleTab(openSched);
-
-  // Calibration Ladder & Smart Recommended Max PSI
-  const recCal = STATE.huddle?.recommended_cal_psi || 0;
-  const recBadge = document.getElementById('calRecommendedBadge');
-  recBadge.textContent = recCal
-    ? `Queue Max: ${STATE.huddle.max_queued_test_psi}# → Calibrate to ${recCal} PSI`
-    : '49 CFR §180.215 (±1.0%)';
-  recBadge.className = recCal ? 'sub-badge ai-verified' : 'sub-badge';
-
-  const maxSel = document.getElementById('calMaxPsi');
-  const fallbackMax = calJacketSel.value === 'Short Jacket' ? '3000' : String(recCal || 4000);
-  const curMax = rebuildLadder ? fallbackMax : (maxSel.value || fallbackMax);
-  maxSel.innerHTML = STATE.calibration_targets.map((t, idx) => {
-    const allow = t.pressure_psi >= 3000 ? t.pressure_psi + 500 : Math.round(t.pressure_psi * 1.1);
-    return `<option value="${t.pressure_psi}" ${String(t.pressure_psi) === String(curMax) ? 'selected' : ''}>${t.pressure_psi} PSI (${idx + 1} steps → ≤${allow})</option>`;
-  }).join('');
-  if (rebuildLadder || !LADDER.length) buildCalibrationLadder();
-
-  document.getElementById('calTable').innerHTML = STATE.verifications.length
-    ? STATE.verifications.map(v => `
-      <tr>
-        <td>${escHtml(v.test_time)}</td><td>${escHtml(v.jacket_type)}</td><td><strong>${v.target_pressure_psi}</strong></td>
-        <td>${v.expected_cc}</td><td>${v.actual_total_cc}</td><td>${v.permanent_cc}</td>
-        <td>${v.percent_deviation}%</td><td>${escHtml(v.logged_by || 'RP')}</td>
-        <td class="${v.passed ? 'pass' : 'fail'}">${v.passed ? 'PASS' : 'FAIL'}</td>
-      </tr>`).join('')
-    : '<tr><td colspan="9">No calibrations logged for this date yet.</td></tr>';
-
+  renderCalibrationControls();
   renderBackroomInbox();
-
-  // Presets & Autocomplete
-  document.getElementById('cgaPreset').innerHTML = '<option value="">-- Auto-Detect or Pick Standard / Paintball Size --</option>' +
-    STATE.cga_specs.map((s, idx) => `<option value="${idx}">${escHtml(s.category)}: ${escHtml(s.label)} (${s.dot_spec}-${s.service_psi})</option>`).join('');
-  document.getElementById('customerSuggest').innerHTML = STATE.customers_summary.map(c => `<option value="${escHtml(c.customer_name)}">`).join('');
-  document.getElementById('serialSuggest').innerHTML = STATE.records.map(r =>
-    `<option value="${escHtml(r.serial_number)}">${escHtml(r.customer_name)} (${r.dot_spec}-${r.service_psi})</option>`
-  ).join('');
-
-  // Priority-Ranked Intake Queue
-  document.getElementById('queueCountBadge').textContent = `${queued.length} Ranked`;
-  const activeTagInput = document.activeElement && document.activeElement.classList.contains('inline-vtag');
-  if (!activeTagInput) {
-    document.getElementById('queuePreviewList').innerHTML = queued.length
-      ? queued.map((r, idx) => `
-        <div class="rec-item">
-          <div class="rec-main">
-            <div class="rec-title">
-              <span style="color:var(--muted);font-size:0.78rem;">#${idx + 1}</span>
-              <span>${escHtml(r.serial_number)}</span>
-              ${priorityBadgeHtml(r)}
-              ${dwellBadgeHtml(r.pre_test_days)}
-              <small style="color:var(--muted);">${escHtml(r.dot_spec)}-${r.service_psi} (${r.test_psi}#)</small>
-            </div>
-            <div class="rec-sub">
-              ${escHtml(r.customer_name)}${r.promised_date ? ` • <strong>Due ${escHtml(r.promised_date)}</strong>` : ''} • <span class="zone-badge">${escHtml((r.holding_zone_label || 'Zone C').split('•')[0])}</span>
-            </div>
-            ${r.composite_warning ? `<div style="color:#b91c1c;font-size:0.74rem;font-weight:800;margin-top:2px;">⛔ ${escHtml(r.composite_warning)}</div>` : ''}
-          </div>
-          <div class="rec-actions">
-            <button class="secondary" title="Toggle Paid Rush / High Priority" onclick="cycleRecordPriority(${r.id}, '${escHtml(r.priority || 'STANDARD')}', ${Boolean(r.rush_fee)})">🔥</button>
-            <input class="inline-vtag" value="${r.valve_tag && !r.valve_reinstalled ? escHtml(r.valve_tag) : ''}" placeholder="Tag #"
-              style="width:70px;padding:5px 7px;font-weight:800;font-size:0.81rem;"
-              onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
-              onchange="saveInlineValveTag(${r.id}, this)" />
-            <button class="secondary" onclick="openEditModal(${r.id})">Edit</button>
-            <button class="secondary" style="color:#b91c1c;" onclick="removeRecord(${r.id})">✕</button>
-          </div>
-        </div>`).join('')
-      : '<div style="color:var(--muted);font-size:0.86rem;padding:8px 0;">Priority queue is clear.</div>';
-  }
-
-  // Hydro Stand & Completed Section
-  const benchSel = document.getElementById('benchSelect');
-  const prevBenchId = benchSel.value;
-  const activeId = document.activeElement ? document.activeElement.id : '';
-  const typingOnBench = BENCH_SUBMITTING || ['bJacket', 'bTotal', 'bPerm', 'bValveTag', 'bCoat', 'bValve', 'bNotes', 'bValveReinst', 'bRinType'].includes(activeId);
-  benchSel.innerHTML = queued.length
-    ? queued.map((r, i) => `<option value="${r.id}" ${String(r.id) === String(prevBenchId) ? 'selected' : ''}>#${i + 1} ${(r.rush_fee || r.priority === 'RUSH') ? '🔥 RUSH ' : ''}[${escHtml(r.customer_name)}] SN ${escHtml(r.serial_number)} — ${r.test_psi}#${r.valve_tag && !r.valve_reinstalled ? ' • Tag #' + escHtml(r.valve_tag) : ''}</option>`).join('')
-    : '<option value="">No bottles waiting in queue</option>';
-  if (!typingOnBench && (benchSel.value !== prevBenchId || !document.getElementById('btnCompleteBench') || !queued.length)) {
-    renderBenchForm();
-  }
-
+  renderIntakeAndQueue(queued);
+  renderStandPillsAndBench(queued);
   renderCompletedSection(doneToday);
   renderFinishValvesAndCustomers();
-
-  const allDayCustomers = [...new Set(STATE.records.map(r => r.customer_name))];
-  document.getElementById('pdfCustomerFilter').innerHTML = '<option value="">-- All Customers on Selected Date --</option>' +
-    allDayCustomers.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
-
-  document.getElementById('datesListTable').innerHTML = STATE.dates_summary.length
-    ? STATE.dates_summary.map(d => `
-      <tr>
-        <td><strong>${escHtml(d.work_date)}</strong></td><td>${d.customer_count}</td>
-        <td>${d.completed_bottles} / ${d.total_bottles}</td>
-        <td><button class="secondary" onclick="jumpToDate('${d.work_date}')">Open</button></td>
-      </tr>`).join('')
-    : '<tr><td colspan="4">No dates recorded yet.</td></tr>';
-
-  const prevBillCust = document.getElementById('billCustomer').value;
-  document.getElementById('billCustomer').innerHTML = STATE.customers_summary.map(c =>
-    `<option value="${escHtml(c.customer_name)}" ${c.customer_name === prevBillCust ? 'selected' : ''}>${escHtml(c.customer_name)} (${c.unbilled_count} unbilled)</option>`
-  ).join('');
-
-  if (prevVer !== STATE.db_version) {
-    EDITABLE_RATES = STATE.pricing_rates.map(p => ({ ...p, isNew: false }));
-    renderRateScheduleTable();
-  }
-  renderInvoicesList();
 
   document.getElementById('feedbackTable').innerHTML = STATE.feedback_items.length
     ? STATE.feedback_items.map(fb => `
@@ -418,8 +334,10 @@ setInterval(async () => {
     }
   } catch (_) {}
 }, 3500);
+let LAST_CAL_DATE = '';
+let LOCKED_SNAPSHOT = null;
 
-// --- START-OF-DAY HUDDLE & BINDER CONTINUITY ---
+// --- STATION 1: START-OF-DAY HUDDLE & CALIBRATION LADDER ---
 function renderStartOfDayHuddle(queued, openSched, waitingDrops) {
   const b = STATE.binder_state || {};
   const hud = STATE.huddle || {};
@@ -430,14 +348,15 @@ function renderStartOfDayHuddle(queued, openSched, waitingDrops) {
   const used = b.rows_used_on_active || 0;
   const nxt = b.next_row_number || 1;
   document.getElementById('binderSheetTitle').textContent =
-    `Active DOT Retest Sheet #${shNo} — Next Hydro Entry: Row ${nxt} of 12 (${12 - used} open rows left)`;
+    `Active DOT Retest Sheet #${shNo} — Next Completed Row: #${nxt} of 12 (${12 - used} open left)`;
 
   if (b.last_recorded) {
     const lr = b.last_recorded;
     document.getElementById('binderLastNote').textContent =
-      `Last logged: Sheet #${lr.sheet_no} ended at Row ${lr.row_ended_at}/12 on ${lr.work_date} (SN ${lr.serial_number} • ${lr.customer_name}).`;
+      `Last completed: Sheet #${lr.sheet_no} Row ${lr.row_ended_at}/12 on ${lr.work_date} (SN ${lr.serial_number} • ${lr.customer_name}).`;
   } else {
-    document.getElementById('binderLastNote').textContent = `No prior hydro rows in binder yet — starting clean on Sheet #${shNo}, Row 1.`;
+    document.getElementById('binderLastNote').textContent =
+      `Starting clean on Sheet #${shNo}, Row 1 (sheet # assigns strictly when each hydro test completes).`;
   }
 
   let slotsHtml = '';
@@ -447,32 +366,30 @@ function renderStartOfDayHuddle(queued, openSched, waitingDrops) {
   }
   document.getElementById('binderSlotsGrid').innerHTML = slotsHtml;
 
-  const todayRuns = openSched.filter(j => j.scheduled_date <= STATE.selected_date);
   document.getElementById('huddleKpiRow').innerHTML = `
     <div class="huddle-kpi"><small>Queued Ready</small><strong>${queued.length} Cyl${hud.rush_queued_count ? ` (${hud.rush_queued_count} 🔥)` : ''}</strong></div>
-    <div class="huddle-kpi"><small>Backroom Door</small><strong>${waitingDrops.length} Check-In(s)</strong></div>
-    <div class="huddle-kpi"><small>Needs Stamp/Lbl</small><strong>${hud.needs_stamp_count || 0} Dried</strong></div>
+    <div class="huddle-kpi"><small>Backroom Door</small><strong>${waitingDrops.length} Waiting</strong></div>
+    <div class="huddle-kpi"><small>Needs B386 Mark</small><strong>${hud.needs_stamp_count || 0} Dried</strong></div>
     <div class="huddle-kpi"><small>Zone E Shelf</small><strong>${hud.ready_shelf_count || 0} Ready</strong></div>`;
 
-  const lineupItems = [];
-  todayRuns.slice(0, 4).forEach(j => {
-    const ico = j.job_type === 'ROAD_PICKUP' ? '🚚 Pickup Run' : (j.job_type === 'ROAD_DELIVERY' ? '🚚 Delivery Run' : '📌 Scheduled Batch');
-    lineupItems.push(`
-      <div class="rec-item">
-        <div class="rec-main">
-          <div class="rec-title"><span>${ico}: ${escHtml(j.customer_name)} (${j.bottle_count})</span>${j.rush_fee ? '<span class="rush-badge">🔥 RUSH</span>' : ''}</div>
-          <div class="rec-sub">${escHtml(j.scheduled_date)}${j.location_notes ? ' • ' + escHtml(j.location_notes) : ''}${j.tank_summary ? ' • ' + escHtml(j.tank_summary) : ''}</div>
-        </div>
-        <div class="rec-actions">
-          <button class="secondary" onclick="importScheduleJobToIntake(${j.id})">↳ Prep / Scan</button>
-          <button class="secondary" onclick="jumpToTab('schedule')">Calendar</button>
-        </div>
-      </div>`);
-  });
-
-  if (lineupItems.length) {
+  const todayRuns = openSched.filter(j => j.scheduled_date <= STATE.selected_date);
+  if (todayRuns.length) {
     document.getElementById('huddleLineupList').innerHTML =
-      `<small style="font-weight:800;color:var(--muted);display:block;margin-bottom:4px;">TODAY'S PRIORITY DISPATCH &amp; RUNS:</small>` + lineupItems.join('');
+      `<small style="font-weight:800;color:var(--muted);display:block;margin-bottom:4px;">TODAY'S SCHEDULED BATCHES &amp; ROAD RUNS:</small>` +
+      todayRuns.slice(0, 4).map(j => {
+        const ico = j.job_type === 'ROAD_PICKUP' ? '🚚 Pickup' : (j.job_type === 'ROAD_DELIVERY' ? '🚚 Delivery' : '📌 Batch');
+        return `
+          <div class="rec-item">
+            <div class="rec-main">
+              <div class="rec-title"><span>${ico}: ${escHtml(j.customer_name)} (${j.bottle_count})</span>${j.rush_fee ? '<span class="rush-badge">🔥 RUSH</span>' : ''}</div>
+              <div class="rec-sub">${escHtml(j.scheduled_date)}${j.location_notes ? ' • 📍 ' + escHtml(j.location_notes) : ''}${j.tank_summary ? ' • ' + escHtml(j.tank_summary) : ''}</div>
+            </div>
+            <div class="rec-actions">
+              <button class="secondary" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7;" onclick="importScheduleJobToIntake(${j.id})">↳ Lock &amp; Prep</button>
+              <a class="secondary" href="/schedule">📅 Calendar</a>
+            </div>
+          </div>`;
+      }).join('');
   } else {
     document.getElementById('huddleLineupList').innerHTML = '';
   }
@@ -498,289 +415,39 @@ async function setCustomBinderSheet() {
   loadState(false);
 }
 
-// --- TAB 2: 14-DAY WALL CALENDAR, SHIFT WINDOWS & PHONE QUOTE ENGINE ---
-function renderScheduleTab(openSched) {
-  const plans = STATE.day_plans || [];
-  const selDate = STATE.selected_date;
-  const selPlan = plans.find(p => p.work_date === selDate) || STATE.huddle?.selected_day_plan || {};
+function renderCalibrationControls() {
+  if (LAST_CAL_DATE !== STATE.selected_date) {
+    LAST_CAL_DATE = STATE.selected_date;
+    LADDER = [];
+  }
+  const recCal = STATE.huddle?.recommended_cal_psi || 0;
+  const recBadge = document.getElementById('calRecommendedBadge');
+  recBadge.textContent = recCal
+    ? `Queue Max: ${STATE.huddle.max_queued_test_psi}# → Calibrate to ${recCal} PSI`
+    : '49 CFR §180.215 (±1.0%)';
+  recBadge.className = recCal ? 'sub-badge ai-verified' : 'sub-badge';
 
-  document.getElementById('planDateLabel').textContent = selDate;
-  if (document.activeElement !== document.getElementById('planShiftMode')) {
-    document.getElementById('planShiftMode').value = selPlan.shift_mode || 'FULL_HYDRO';
-  }
-  if (document.activeElement !== document.getElementById('planCapacity')) {
-    document.getElementById('planCapacity').value = selPlan.bottle_capacity ?? 24;
-  }
-  if (document.activeElement !== document.getElementById('planNotes')) {
-    document.getElementById('planNotes').value = selPlan.day_notes || '';
-  }
-
-  document.getElementById('calStripGrid').innerHTML = plans.map(p => {
-    const dayJobs = openSched.filter(j => j.scheduled_date === p.work_date);
-    const modeCls = p.shift_mode === 'PREP_ONLY' ? 'prep-mode'
-      : (p.shift_mode === 'ROAD_RUN' ? 'road-mode' : (p.shift_mode === 'FULL_HYDRO' ? 'hydro-mode' : 'closed-mode'));
-    const shortMode = p.shift_mode === 'PREP_ONLY' ? '🔧 Prep Only'
-      : (p.shift_mode === 'ROAD_RUN' ? `🚚 Road (${p.bottle_capacity})`
-      : (p.shift_mode === 'FULL_HYDRO' ? `🟢 Hydro (${p.bottle_capacity})` : '🚪 Backroom'));
-    const rushCnt = dayJobs.filter(j => j.rush_fee || j.priority === 'RUSH').length;
-    return `
-      <div class="day-tile ${modeCls} ${p.work_date === selDate ? 'selected' : ''}" onclick="selectCalendarDay('${p.work_date}')">
-        <div style="display:flex;justify-content:space-between;font-weight:900;font-size:0.8rem;">
-          <span>${escHtml(p.weekday)} ${escHtml(p.work_date.slice(5))}</span>
-          ${rushCnt ? '<span class="rush-badge">🔥</span>' : ''}
-        </div>
-        <div style="font-size:0.73rem;font-weight:800;color:var(--green);">${shortMode}</div>
-        <div style="font-size:0.72rem;color:var(--muted);">
-          ${dayJobs.length ? `<strong>${dayJobs.length} run(s)</strong> (${dayJobs.reduce((s, x) => s + x.bottle_count, 0)} cyl)` : (p.day_notes ? escHtml(p.day_notes.slice(0, 22)) : 'Open')}
-        </div>
-      </div>`;
+  const maxSel = document.getElementById('calMaxPsi');
+  const calJacketSel = document.getElementById('calJacket');
+  const fallbackMax = calJacketSel.value === 'Short Jacket' ? '3000' : String(recCal || 4000);
+  const curMax = !LADDER.length ? fallbackMax : (maxSel.value || fallbackMax);
+  maxSel.innerHTML = STATE.calibration_targets.map((t, idx) => {
+    const allow = t.pressure_psi >= 3000 ? t.pressure_psi + 500 : Math.round(t.pressure_psi * 1.1);
+    return `<option value="${t.pressure_psi}" ${String(t.pressure_psi) === String(curMax) ? 'selected' : ''}>${t.pressure_psi} PSI (${idx + 1} steps → ≤${allow})</option>`;
   }).join('');
+  if (!LADDER.length) buildCalibrationLadder();
 
-  if (!LAST_QUOTE && STATE.huddle?.quote_preview) {
-    LAST_QUOTE = STATE.huddle.quote_preview;
-    renderQuoteCards(LAST_QUOTE);
-  }
-
-  document.getElementById('schedActiveBadge').textContent = `${openSched.length} Active`;
-  document.getElementById('scheduleJobsList').innerHTML = openSched.length
-    ? openSched.map(j => {
-        const ico = j.job_type === 'ROAD_PICKUP' ? '🚚 Pickup' : (j.job_type === 'ROAD_DELIVERY' ? '🚚 Delivery' : (j.job_type === 'ONSITE_VISUAL' ? '🔍 On-Site' : '📌 Batch'));
-        const isPrepped = j.prep_status === 'DEVALVED_TAGGED';
-        return `
-          <div class="rec-item">
-            <div class="rec-main">
-              <div class="rec-title">
-                <span>${ico}: ${escHtml(j.customer_name)} (${j.bottle_count})</span>
-                ${j.rush_fee || j.priority === 'RUSH' ? '<span class="rush-badge">🔥 RUSH</span>' : (j.priority === 'HIGH' ? '<span class="high-badge">⚡ HIGH</span>' : '')}
-                ${isPrepped ? '<span class="stage-chip ready">✓ Prepped Zone C</span>' : '<span class="stage-chip">Needs Prep</span>'}
-                ${dwellBadgeHtml(j.dwell_days)}
-              </div>
-              <div class="rec-sub">
-                Sched: <strong>${escHtml(j.scheduled_date)}</strong>${j.due_date ? ` • Due: <strong>${escHtml(j.due_date)}</strong>` : ''} • <span class="zone-badge">${escHtml((j.holding_zone_label || '').split('•')[0])}</span>
-                ${j.location_notes ? ` • 📍 ${escHtml(j.location_notes)}` : ''}${j.tank_summary ? ` • ${escHtml(j.tank_summary)}` : ''}
-              </div>
-              ${j.notes ? `<div style="font-size:0.75rem;color:#92400e;margin-top:2px;">Note: ${escHtml(j.notes)}</div>` : ''}
-            </div>
-            <div class="rec-actions">
-              <button class="secondary" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7;" onclick="importScheduleJobToIntake(${j.id})">↳ Scan / Intake</button>
-              ${!isPrepped ? `<button class="secondary" onclick="markScheduleJobPrepped(${j.id})">🔧 Prepped</button>` : ''}
-              <button class="secondary" title="Toggle Paid Rush" onclick="toggleJobRush(${j.id}, ${Boolean(j.rush_fee)})">🔥</button>
-              <button class="secondary" onclick="completeScheduleJob(${j.id})">✓ Done</button>
-              <button class="secondary" style="color:#b91c1c;" onclick="deleteScheduleJob(${j.id})">✕</button>
-            </div>
-          </div>`;
-      }).join('')
-    : '<div style="color:var(--muted);font-size:0.86rem;padding:8px 0;">No open pickups, deliveries, or scheduled batches yet.</div>';
+  document.getElementById('calTable').innerHTML = STATE.verifications.length
+    ? STATE.verifications.map(v => `
+      <tr>
+        <td>${escHtml(v.test_time)}</td><td>${escHtml(v.jacket_type)}</td><td><strong>${v.target_pressure_psi}</strong></td>
+        <td>${v.expected_cc}</td><td>${v.actual_total_cc}</td><td>${v.permanent_cc}</td>
+        <td>${v.percent_deviation}%</td><td>${escHtml(v.logged_by || 'RP')}</td>
+        <td class="${v.passed ? 'pass' : 'fail'}">${v.passed ? 'PASS' : 'FAIL'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="9">No calibrations logged for this date yet.</td></tr>';
 }
 
-function autoFillPlanCap() {
-  const m = document.getElementById('planShiftMode').value;
-  document.getElementById('planCapacity').value = m === 'FULL_HYDRO' ? (STATE.daily_hydro_capacity || 24) : (m === 'ROAD_RUN' ? 10 : 0);
-}
-
-async function saveDayPlan() {
-  await fetch('/api/schedule/day-plan', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      work_date: STATE.selected_date,
-      shift_mode: document.getElementById('planShiftMode').value,
-      bottle_capacity: parseInt(document.getElementById('planCapacity').value || '0', 10),
-      day_notes: document.getElementById('planNotes').value,
-    }),
-  });
-  await loadState(false);
-  fetchLiveTurnaroundQuote();
-}
-
-async function fetchLiveTurnaroundQuote() {
-  const cnt = Math.max(1, parseInt(document.getElementById('quoteCountInput').value || '1', 10));
-  const res = await fetch(`/api/schedule/quote?bottles=${cnt}`);
-  if (!res.ok) return;
-  LAST_QUOTE = await res.json();
-  renderQuoteCards(LAST_QUOTE);
-}
-
-function renderQuoteCards(q) {
-  if (!q) return;
-  document.getElementById('quoteResultArea').innerHTML = `
-    <div class="quote-card std">
-      <div style="font-size:0.74rem;font-weight:900;color:#166534;">🟢 STANDARD TURNAROUND</div>
-      <div style="font-size:1.18rem;font-weight:900;margin:3px 0;">Ready: ${escHtml(q.standard_promise_label)}</div>
-      <div style="font-size:0.76rem;color:var(--muted);">Clears ${q.total_backlog_bottles} cyl backlog + dry/stamp</div>
-      <button class="secondary" style="width:100%;margin-top:7px;" onclick="prefillScheduleFromQuote(false, '${q.standard_promise_date}', ${q.requested_bottles})">➕ Book Standard</button>
-    </div>
-    <div class="quote-card rush">
-      <div style="font-size:0.74rem;font-weight:900;color:#991b1b;">🔥 PAID RUSH SERVICE</div>
-      <div style="font-size:1.18rem;font-weight:900;margin:3px 0;">Ready: ${escHtml(q.rush_promise_label)}</div>
-      <div style="font-size:0.76rem;color:var(--muted);">Ahead of standard (${q.rush_backlog_bottles} rush ahead)</div>
-      <button class="secondary" style="width:100%;margin-top:7px;background:#fee2e2;color:#991b1b;border-color:#fca5a5;" onclick="prefillScheduleFromQuote(true, '${q.rush_promise_date}', ${q.requested_bottles})">➕ Book Paid Rush</button>
-    </div>`;
-}
-
-function prefillScheduleFromQuote(isRush, promiseDate, count) {
-  document.getElementById('sjDate').value = STATE.today || STATE.selected_date;
-  document.getElementById('sjDueDate').value = promiseDate;
-  document.getElementById('sjCount').value = count;
-  document.getElementById('sjPriority').value = isRush ? 'RUSH' : 'STANDARD';
-  document.getElementById('sjCustomer').focus();
-}
-
-async function submitScheduleJob() {
-  const cust = document.getElementById('sjCustomer').value.trim();
-  if (!cust) { alert('Enter Customer / Fire Dept name first.'); return; }
-  const pri = document.getElementById('sjPriority').value;
-  const res = await fetch('/api/schedule/jobs', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      job_type: document.getElementById('sjType').value,
-      scheduled_date: document.getElementById('sjDate').value || STATE.selected_date,
-      due_date: document.getElementById('sjDueDate').value || '',
-      customer_name: cust,
-      customer_phone: document.getElementById('sjPhone').value,
-      bottle_count: parseInt(document.getElementById('sjCount').value || '1', 10),
-      priority: pri,
-      rush_fee: pri === 'RUSH',
-      holding_zone: document.getElementById('sjZone').value,
-      tank_summary: document.getElementById('sjSummary').value,
-      location_notes: document.getElementById('sjLocation').value,
-      notes: document.getElementById('sjNotes').value,
-    }),
-  });
-  if (!res.ok) { alert((await res.json()).detail || 'Could not save schedule entry.'); return; }
-  ['sjCustomer', 'sjPhone', 'sjSummary', 'sjLocation', 'sjNotes'].forEach(id => { document.getElementById(id).value = ''; });
-  await loadState(false);
-  fetchLiveTurnaroundQuote();
-}
-
-function importScheduleJobToIntake(jobId) {
-  const j = (STATE.schedule_jobs || []).find(x => x.id === jobId);
-  if (!j) return;
-  window.ACTIVE_SCHEDULE_JOB_ID = j.id;
-  window.ACTIVE_DROPOFF_ID = null;
-  document.getElementById('inCustomer').value = j.customer_name;
-  document.getElementById('inPhone').value = j.customer_phone || '';
-  document.getElementById('fCustomer').value = j.customer_name;
-  document.getElementById('fPhone').value = j.customer_phone || '';
-  document.getElementById('fPriority').value = j.rush_fee ? 'RUSH' : (j.priority || 'STANDARD');
-  document.getElementById('fPromisedDate').value = j.due_date || '';
-  document.getElementById('activeBatchBanner').hidden = false;
-  document.getElementById('activeBatchText').textContent =
-    `📌 Scheduled Batch: ${j.customer_name} (${j.bottle_count} cyl${j.rush_fee ? ' • 🔥 RUSH' : ''})`;
-  jumpToTab('intake');
-}
-
-async function markScheduleJobPrepped(jobId) {
-  await fetch(`/api/schedule/jobs/${jobId}`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prep_status: 'DEVALVED_TAGGED', holding_zone: 'ZONE_C_READY_RACK', status: 'PREPPED' }),
-  });
-  loadState(false);
-}
-
-async function toggleJobRush(jobId, curRush) {
-  const nextRush = !curRush;
-  await fetch(`/api/schedule/jobs/${jobId}`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rush_fee: nextRush, priority: nextRush ? 'RUSH' : 'STANDARD' }),
-  });
-  loadState(false);
-}
-
-async function completeScheduleJob(jobId) {
-  await fetch(`/api/schedule/jobs/${jobId}`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'COMPLETED' }),
-  });
-  loadState(false);
-}
-
-async function deleteScheduleJob(jobId) {
-  if (!confirm('Remove this entry from the shop schedule?')) return;
-  await fetch(`/api/schedule/jobs/${jobId}`, { method: 'DELETE' });
-  loadState(false);
-}
-
-// --- BACKROOM 24/7 DROP-OFF INBOX ---
-function renderBackroomInbox() {
-  const active = (STATE.dropoffs || []).filter(d => d.status !== 'ARCHIVED');
-  const card = document.getElementById('backroomInboxCard');
-  card.hidden = !active.length;
-  document.getElementById('backroomCountBadge').textContent = `${active.length} Active`;
-  document.getElementById('backroomInboxList').innerHTML = active.map(d => {
-    const isPickup = d.entry_type === 'PICKUP_NOTICE' || d.status === 'PICKUP_LOGGED';
-    return `
-      <div class="dropoff-card ${isPickup ? 'pickup' : ''}">
-        <div>
-          <div style="font-weight:800;font-size:0.91rem;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-            <span>${isPickup ? '🚚 PICKUP LOGGED:' : '📥 DROP-OFF:'} ${escHtml(d.customer_name)}</span>
-            <span class="tag-chip">${d.bottle_count} Cyl</span>
-            ${d.rush_requested ? '<span class="rush-badge">🔥 RUSH</span>' : ''}
-            ${dwellBadgeHtml(d.dwell_days)}
-            ${d.imported_count ? `<span class="stage-chip ready">${d.imported_count}/${d.bottle_count} Scanned</span>` : ''}
-          </div>
-          <div style="font-size:0.79rem;color:var(--muted);margin-top:2px;">
-            ${escHtml(d.service_requested)}${d.promised_date ? ` • Target: <strong>${escHtml(d.promised_date)}</strong>` : ''}${d.tank_summary ? ' • ' + escHtml(d.tank_summary) : ''}${d.customer_phone ? ' • 📞 ' + escHtml(d.customer_phone) : ''}
-          </div>
-          ${d.notes ? `<div style="font-size:0.77rem;color:#92400e;margin-top:2px;">Note: ${escHtml(d.notes)}</div>` : ''}
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          ${!isPickup ? `<button class="primary" style="width:auto;margin:0;padding:6px 11px;font-size:0.79rem;" onclick="importDropoffToIntake(${d.id})">↳ Import Batch</button>` : ''}
-          ${!isPickup ? `<button class="secondary" title="Toggle Paid Rush" onclick="toggleDropoffRush(${d.id}, ${Boolean(d.rush_requested)})">🔥</button>` : ''}
-          <button class="secondary" onclick="archiveDropoff(${d.id})">✓ Done</button>
-        </div>
-      </div>`;
-  }).join('');
-
-  if (window.ACTIVE_DROPOFF_ID) {
-    const cur = active.find(d => d.id === window.ACTIVE_DROPOFF_ID);
-    if (cur) {
-      document.getElementById('activeBatchBanner').hidden = false;
-      document.getElementById('activeBatchText').textContent =
-        `📥 Drop-Off Batch: ${cur.customer_name} (${cur.imported_count || 0}/${cur.bottle_count} scanned${cur.rush_requested ? ' • 🔥 RUSH' : ''})`;
-    } else {
-      clearActiveDropoffBatch();
-    }
-  }
-}
-
-function importDropoffToIntake(id) {
-  const d = (STATE.dropoffs || []).find(x => x.id === id);
-  if (!d) return;
-  window.ACTIVE_DROPOFF_ID = d.id;
-  window.ACTIVE_SCHEDULE_JOB_ID = null;
-  document.getElementById('inCustomer').value = d.customer_name;
-  document.getElementById('inPhone').value = d.customer_phone || '';
-  document.getElementById('fCustomer').value = d.customer_name;
-  document.getElementById('fPhone').value = d.customer_phone || '';
-  document.getElementById('fPriority').value = d.rush_requested ? 'RUSH' : 'STANDARD';
-  document.getElementById('fPromisedDate').value = d.promised_date || '';
-  if ((d.service_requested || '').toLowerCase().includes('visual inspection only')) {
-    document.getElementById('inMode').value = 'VISUAL_ONLY';
-  }
-  renderBackroomInbox();
-}
-
-function clearActiveDropoffBatch() {
-  window.ACTIVE_DROPOFF_ID = null;
-  window.ACTIVE_SCHEDULE_JOB_ID = null;
-  document.getElementById('activeBatchBanner').hidden = true;
-}
-
-async function toggleDropoffRush(id, curRush) {
-  await fetch(`/api/dropoffs/${id}/status`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rush_requested: !curRush }),
-  });
-  loadState(false);
-}
-
-async function archiveDropoff(id) {
-  await fetch(`/api/dropoffs/${id}/status`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'ARCHIVED' }),
-  });
-  if (window.ACTIVE_DROPOFF_ID === id) clearActiveDropoffBatch();
-  loadState(false);
-}
-
-// --- CALIBRATION LADDER ---
 function buildCalibrationLadder() {
   const jacket = document.getElementById('calJacket').value;
   const maxSel = document.getElementById('calMaxPsi');
@@ -868,7 +535,186 @@ async function submitCalibrationLadder() {
   }
 }
 
-// --- INTAKE, PRIORITY BUMP & 15-YEAR COMPOSITE GUARD ---
+// --- STATION 2: BACKROOM INBOX, BATCH LOCK & INTAKE QUEUE ---
+function renderBackroomInbox() {
+  const active = STATE.dropoffs || [];
+  document.getElementById('backroomInboxCard').hidden = !active.length;
+  document.getElementById('backroomCountBadge').textContent = `${active.length} Waiting`;
+  document.getElementById('backroomInboxList').innerHTML = active.map(d => {
+    const isPickup = d.entry_type === 'PICKUP_NOTICE' || d.status === 'PICKUP_LOGGED';
+    const rem = Math.max(0, d.bottle_count - (d.imported_count || 0));
+    return `
+      <div class="dropoff-card ${isPickup ? 'pickup' : ''}">
+        <div>
+          <div style="font-weight:800;font-size:0.91rem;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <span>${isPickup ? '🚚 PICKUP NOTICE:' : '📥 DROP-OFF:'} ${escHtml(d.customer_name)}</span>
+            <span class="tag-chip">${isPickup ? d.bottle_count + ' Cyl' : rem + ' of ' + d.bottle_count + ' Left'}</span>
+            ${d.rush_requested ? '<span class="rush-badge">🔥 RUSH</span>' : ''}
+            ${dwellBadgeHtml(d.dwell_days)}
+          </div>
+          <div style="font-size:0.79rem;color:var(--muted);margin-top:2px;">
+            ${escHtml(d.service_requested)}${d.promised_date ? ` • Est Ready: <strong>${escHtml(d.promised_date)}</strong>` : ''}${d.tank_summary ? ' • ' + escHtml(d.tank_summary) : ''}${d.customer_phone ? ' • 📞 ' + escHtml(d.customer_phone) : ''}
+          </div>
+          ${d.notes ? `<div style="font-size:0.77rem;color:#92400e;margin-top:2px;">Note: ${escHtml(d.notes)}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${!isPickup ? `<button class="primary" style="width:auto;margin:0;padding:6px 11px;font-size:0.79rem;" onclick="importDropoffToIntake(${d.id})">↳ Lock &amp; Scan Batch</button>` : ''}
+          ${!isPickup ? `<button class="secondary" title="Toggle Paid Rush" onclick="toggleDropoffRush(${d.id}, ${Boolean(d.rush_requested)})">🔥</button>` : ''}
+          <button class="secondary" onclick="archiveDropoff(${d.id})">✓ Clear</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  if (window.ACTIVE_DROPOFF_ID) {
+    const cur = active.find(d => d.id === window.ACTIVE_DROPOFF_ID);
+    if (cur) {
+      document.getElementById('activeBatchBanner').hidden = false;
+      document.getElementById('activeBatchText').textContent =
+        `📥 Drop-Off Batch: ${cur.customer_name} (${cur.imported_count || 0}/${cur.bottle_count} scanned${cur.rush_requested ? ' • 🔥 RUSH' : ''})`;
+    } else {
+      clearActiveDropoffBatch();
+    }
+  }
+}
+
+function setBatchLockState(locked) {
+  BATCH_LOCKED = locked;
+  const box = document.getElementById('batchLockBox');
+  const btn = document.getElementById('btnBatchLock');
+  const txt = document.getElementById('batchLockStatusTxt');
+  box.classList.toggle('locked', locked);
+  btn.textContent = locked ? '🔓 Unlock Batch' : '🔒 Lock Batch Specs';
+  txt.textContent = locked
+    ? '🔒 Batch Specs Locked — Only Serial # & Tag # Reset Between Bottles'
+    : '🔓 Single-Bottle Mode (Unlocks All Fields After Queue)';
+  if (locked) captureBatchSnapshot();
+  else LOCKED_SNAPSHOT = null;
+}
+
+function toggleBatchLock() {
+  setBatchLockState(!BATCH_LOCKED);
+}
+
+function captureBatchSnapshot() {
+  LOCKED_SNAPSHOT = {
+    customer: document.getElementById('fCustomer').value || document.getElementById('inCustomer').value,
+    phone: document.getElementById('fPhone').value || document.getElementById('inPhone').value,
+    spec: document.getElementById('fSpec').value,
+    svcPsi: document.getElementById('fSvcPsi').value,
+    testPsi: document.getElementById('fTestPsi').value,
+    mfg: document.getElementById('fMfg').value,
+    gas: document.getElementById('fGas').value || 'AIR',
+    dia: document.getElementById('fDia').value,
+    len: document.getElementById('fLen').value,
+    ree: document.getElementById('fRee').value,
+    priority: document.getElementById('fPriority').value || 'STANDARD',
+    promised: document.getElementById('fPromisedDate').value,
+    zone: document.getElementById('fHoldingZone').value || 'ZONE_C_READY_RACK',
+  };
+}
+
+function importScheduleJobToIntake(jobId) {
+  const j = (STATE.schedule_jobs || []).find(x => x.id === jobId);
+  if (!j) return;
+  window.ACTIVE_SCHEDULE_JOB_ID = j.id;
+  window.ACTIVE_DROPOFF_ID = null;
+  document.getElementById('inCustomer').value = j.customer_name;
+  document.getElementById('inPhone').value = j.customer_phone || '';
+  document.getElementById('fCustomer').value = j.customer_name;
+  document.getElementById('fPhone').value = j.customer_phone || '';
+  document.getElementById('fPriority').value = j.rush_fee ? 'RUSH' : (j.priority || 'STANDARD');
+  document.getElementById('fPromisedDate').value = j.due_date || '';
+  setBatchLockState(true);
+  document.getElementById('activeBatchBanner').hidden = false;
+  document.getElementById('activeBatchText').textContent =
+    `📌 Scheduled Batch: ${j.customer_name} (${j.bottle_count} cyl${j.rush_fee ? ' • 🔥 RUSH' : ''})`;
+  jumpToTab('intake');
+}
+
+function importDropoffToIntake(id) {
+  const d = (STATE.dropoffs || []).find(x => x.id === id);
+  if (!d) return;
+  window.ACTIVE_DROPOFF_ID = d.id;
+  window.ACTIVE_SCHEDULE_JOB_ID = null;
+  document.getElementById('inCustomer').value = d.customer_name;
+  document.getElementById('inPhone').value = d.customer_phone || '';
+  document.getElementById('fCustomer').value = d.customer_name;
+  document.getElementById('fPhone').value = d.customer_phone || '';
+  document.getElementById('fPriority').value = d.rush_requested ? 'RUSH' : 'STANDARD';
+  document.getElementById('fPromisedDate').value = d.promised_date || '';
+  if ((d.service_requested || '').toLowerCase().includes('visual inspection only')) {
+    document.getElementById('inMode').value = 'VISUAL_ONLY';
+  }
+  setBatchLockState(true);
+  renderBackroomInbox();
+}
+
+function clearActiveDropoffBatch() {
+  window.ACTIVE_DROPOFF_ID = null;
+  window.ACTIVE_SCHEDULE_JOB_ID = null;
+  document.getElementById('activeBatchBanner').hidden = true;
+  setBatchLockState(false);
+}
+
+async function toggleDropoffRush(id, curRush) {
+  await fetch(`/api/dropoffs/${id}/status`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rush_requested: !curRush }),
+  });
+  loadState(false);
+}
+
+async function archiveDropoff(id) {
+  await fetch(`/api/dropoffs/${id}/status`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'ARCHIVED' }),
+  });
+  if (window.ACTIVE_DROPOFF_ID === id) clearActiveDropoffBatch();
+  loadState(false);
+}
+
+function renderIntakeAndQueue(queued) {
+  const presetSel = document.getElementById('cgaPreset');
+  const prevPreset = presetSel.value;
+  presetSel.innerHTML = '<option value="">-- Auto-Detect or Pick Size --</option>' +
+    STATE.cga_specs.map((s, idx) => `<option value="${idx}" ${String(idx) === String(prevPreset) ? 'selected' : ''}>${escHtml(s.category)}: ${escHtml(s.label)} (${s.dot_spec}-${s.service_psi})</option>`).join('');
+  document.getElementById('customerSuggest').innerHTML = STATE.customers_summary.map(c => `<option value="${escHtml(c.customer_name)}">`).join('');
+  document.getElementById('serialSuggest').innerHTML = STATE.records.map(r =>
+    `<option value="${escHtml(r.serial_number)}">${escHtml(r.customer_name)} (${r.dot_spec}-${r.service_psi})</option>`
+  ).join('');
+
+  document.getElementById('queueCountBadge').textContent = `${queued.length} Ranked`;
+  const activeTagInput = document.activeElement && document.activeElement.classList.contains('inline-vtag');
+  if (!activeTagInput) {
+    document.getElementById('queuePreviewList').innerHTML = queued.length
+      ? queued.map((r, idx) => `
+        <div class="rec-item">
+          <div class="rec-main">
+            <div class="rec-title">
+              <span style="color:var(--muted);font-size:0.78rem;">#${idx + 1}</span>
+              <span>${escHtml(r.serial_number)}</span>
+              ${priorityBadgeHtml(r)}
+              ${dwellBadgeHtml(r.pre_test_days)}
+              <small style="color:var(--muted);">${escHtml(r.dot_spec)}-${r.service_psi} (${r.test_psi}#)</small>
+            </div>
+            <div class="rec-sub">
+              ${escHtml(r.customer_name)}${r.promised_date ? ` • <strong>Due ${escHtml(r.promised_date)}</strong>` : ''} • <span class="zone-badge">${escHtml((r.holding_zone_label || 'Zone C').split('•')[0])}</span>
+            </div>
+            ${r.composite_warning ? `<div style="color:#b91c1c;font-size:0.74rem;font-weight:800;margin-top:2px;">⛔ ${escHtml(r.composite_warning)}</div>` : ''}
+          </div>
+          <div class="rec-actions">
+            <button class="secondary" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7;" onclick="loadBottleToStand(${r.id})">💧 Stand</button>
+            <button class="secondary" title="Cycle Rush / High Priority" onclick="cycleRecordPriority(${r.id}, '${escHtml(r.priority || 'STANDARD')}', ${Boolean(r.rush_fee)})">🔥</button>
+            <input class="inline-vtag" value="${r.valve_tag && !r.valve_reinstalled ? escHtml(r.valve_tag) : ''}" placeholder="Tag #"
+              style="width:66px;padding:5px 6px;font-weight:800;font-size:0.81rem;"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+              onchange="saveInlineValveTag(${r.id}, this)" />
+            <button class="secondary" onclick="openEditModal(${r.id})">Edit</button>
+            <button class="secondary" style="color:#b91c1c;" onclick="removeRecord(${r.id})">✕</button>
+          </div>
+        </div>`).join('')
+      : '<div style="color:var(--muted);font-size:0.86rem;padding:8px 0;">Priority queue is clear.</div>';
+  }
+}
+// --- INTAKE HELPERS, BATCH LOCK & 15-YEAR COMPOSITE GUARD ---
 function checkIntakeLifespanLive(serverLife = null) {
   const box = document.getElementById('compositeAlertBox');
   const sp = (document.getElementById('fSpec').value || '').trim().toUpperCase().replace('SP-', 'SP');
@@ -930,6 +776,7 @@ function applyPreset() {
   document.getElementById('fDia').value = s.outside_dia;
   document.getElementById('fLen').value = s.length_in;
   document.getElementById('fRee').value = s.ree_limit ?? '';
+  if (BATCH_LOCKED) captureBatchSnapshot();
   checkIntakeLifespanLive();
 }
 
@@ -952,22 +799,51 @@ function autoMatchSpecDimensions() {
   checkIntakeLifespanLive();
 }
 
-function clearIntakeForm() {
-  ['fSerial', 'fValveTag', 'fMfg', 'fMfgDate', 'fSpec', 'fSvcPsi', 'fTestPsi', 'fDia', 'fLen', 'fRee'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-  document.getElementById('fGas').value = 'AIR';
-  document.getElementById('cgaPreset').value = '';
+function clearIntakeForm(forceUnlock = false) {
+  if (forceUnlock) {
+    setBatchLockState(false);
+    ['fSerial', 'fValveTag', 'fCustomer', 'fPhone', 'fMfg', 'fMfgDate', 'fSpec', 'fSvcPsi', 'fTestPsi', 'fDia', 'fLen', 'fRee', 'fPromisedDate'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('fGas').value = 'AIR';
+    document.getElementById('fPriority').value = 'STANDARD';
+    document.getElementById('cgaPreset').value = '';
+  } else if (BATCH_LOCKED && LOCKED_SNAPSHOT) {
+    document.getElementById('fSerial').value = '';
+    document.getElementById('fMfgDate').value = '';
+    document.getElementById('fCustomer').value = LOCKED_SNAPSHOT.customer;
+    document.getElementById('fPhone').value = LOCKED_SNAPSHOT.phone;
+    document.getElementById('fSpec').value = LOCKED_SNAPSHOT.spec;
+    document.getElementById('fSvcPsi').value = LOCKED_SNAPSHOT.svcPsi;
+    document.getElementById('fTestPsi').value = LOCKED_SNAPSHOT.testPsi;
+    document.getElementById('fMfg').value = LOCKED_SNAPSHOT.mfg;
+    document.getElementById('fGas').value = LOCKED_SNAPSHOT.gas;
+    document.getElementById('fDia').value = LOCKED_SNAPSHOT.dia;
+    document.getElementById('fLen').value = LOCKED_SNAPSHOT.len;
+    document.getElementById('fRee').value = LOCKED_SNAPSHOT.ree;
+    document.getElementById('fPriority').value = LOCKED_SNAPSHOT.priority;
+    document.getElementById('fPromisedDate').value = LOCKED_SNAPSHOT.promised;
+    document.getElementById('fHoldingZone').value = LOCKED_SNAPSHOT.zone;
+  } else {
+    ['fSerial', 'fValveTag', 'fMfg', 'fMfgDate', 'fSpec', 'fSvcPsi', 'fTestPsi', 'fDia', 'fLen', 'fRee'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('fGas').value = 'AIR';
+    document.getElementById('cgaPreset').value = '';
+  }
   document.getElementById('compositeAlertBox').hidden = true;
   document.getElementById('intakeFieldsGrid').classList.remove('ai-filled');
   document.getElementById('sizeSourceBadge').className = 'sub-badge';
-  document.getElementById('sizeSourceBadge').textContent = 'Ready';
+  document.getElementById('sizeSourceBadge').textContent = BATCH_LOCKED ? '🔒 Batch Locked' : 'Ready';
 }
 
 async function submitIntake(allowDup = false) {
   const cust = document.getElementById('fCustomer').value.trim() || document.getElementById('inCustomer').value.trim();
   const ph = document.getElementById('fPhone').value.trim() || document.getElementById('inPhone').value.trim();
   const pri = document.getElementById('fPriority').value || 'STANDARD';
+  const prevTag = document.getElementById('fValveTag').value.trim();
+  if (BATCH_LOCKED) captureBatchSnapshot();
+
   const res = await fetch('/api/intake', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -982,7 +858,7 @@ async function submitIntake(allowDup = false) {
       holding_zone: document.getElementById('fHoldingZone').value || 'ZONE_C_READY_RACK',
       service_mode: document.getElementById('inMode').value,
       serial_number: document.getElementById('fSerial').value,
-      valve_tag: document.getElementById('fValveTag').value,
+      valve_tag: prevTag,
       mfg_id: document.getElementById('fMfg').value,
       mfg_date: document.getElementById('fMfgDate').value,
       gas_service: document.getElementById('fGas').value,
@@ -1002,14 +878,22 @@ async function submitIntake(allowDup = false) {
     return;
   }
   if (!res.ok) { alert(data.detail || 'Verify Customer, Serial #, Spec, and Service PSI.'); return; }
+
   document.getElementById('inCustomer').value = cust;
   document.getElementById('inPhone').value = ph;
-  clearIntakeForm();
+  await loadState(false);
+
+  clearIntakeForm(false);
   if (typeof clearReferenceGallery === 'function') clearReferenceGallery();
   document.getElementById('fCustomer').value = cust;
   document.getElementById('fPhone').value = ph;
+  if (prevTag && document.getElementById('chkAutoIncTag').checked) {
+    document.getElementById('fValveTag').value = getNextFreeValveTag(prevTag);
+  } else {
+    document.getElementById('fValveTag').value = '';
+  }
   document.getElementById('scanFeedback').hidden = true;
-  await loadState(false);
+  document.getElementById('fSerial').focus();
 }
 
 async function cycleRecordPriority(id, curPri, curRush) {
@@ -1031,7 +915,7 @@ async function assignTagBySerial(serialInputId, tagInputId) {
   });
   if (!res.ok) { alert((await res.json()).detail); return; }
   document.getElementById(serialInputId).value = '';
-  document.getElementById(tagInputId).value = '';
+  document.getElementById(tagInputId).value = document.getElementById('chkAutoIncTag').checked ? getNextFreeValveTag(vtag) : '';
   loadState(false);
 }
 
@@ -1042,7 +926,7 @@ async function saveInlineValveTag(recordId, inputEl) {
   });
   if (!res.ok) { alert((await res.json()).detail); loadState(false); return; }
   inputEl.classList.add('saved-flash');
-  setTimeout(() => { inputEl.classList.remove('saved-flash'); loadState(false); }, 400);
+  setTimeout(() => { inputEl.classList.remove('saved-flash'); loadState(false); }, 350);
 }
 
 async function releaseValveTag(recordId) {
@@ -1060,7 +944,67 @@ async function removeRecord(id) {
   loadState(false);
 }
 
-// --- TAB 4: HYDRO STAND & COMPLETED STAGING ---
+// --- STATION 3: HYDRO STAND (1-TAP PILLS + SMART CALIBRATED JACKET MATCH) ---
+function loadBottleToStand(recordId) {
+  jumpToTab('bench');
+  selectStandBottle(recordId);
+}
+
+function selectStandBottle(recordId) {
+  const sel = document.getElementById('benchSelect');
+  sel.value = String(recordId);
+  document.querySelectorAll('#benchPillBar .tap-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-id') === String(recordId));
+  });
+  renderBenchForm();
+  setTimeout(() => {
+    const tot = document.getElementById('bTotal');
+    if (tot) tot.focus();
+  }, 40);
+}
+
+function pickBestCalibratedJacket(rec) {
+  const reqPsi = parseInt(rec.test_psi || '0', 10);
+  const sAllow = STATE.jacket_ceilings['Short Jacket']?.max_allowed_test_psi || 0;
+  const tAllow = STATE.jacket_ceilings['Tall Jacket']?.max_allowed_test_psi || 0;
+  const sCovers = sAllow >= reqPsi && sAllow > 0;
+  const tCovers = tAllow >= reqPsi && tAllow > 0;
+  if (sCovers && !tCovers) return 'Short Jacket';
+  if (tCovers && !sCovers) return 'Tall Jacket';
+  if (sCovers && tCovers) {
+    const len = parseFloat(rec.length_in || '0');
+    return (len > 0 && len <= 16.5) ? 'Short Jacket' : 'Tall Jacket';
+  }
+  return tAllow > 0 ? 'Tall Jacket' : (sAllow > 0 ? 'Short Jacket' : 'Tall Jacket');
+}
+
+function renderStandPillsAndBench(queued) {
+  const benchSel = document.getElementById('benchSelect');
+  const prevBenchId = benchSel.value;
+  const activeId = document.activeElement ? document.activeElement.id : '';
+  const typingOnBench = BENCH_SUBMITTING || ['bJacket', 'bTotal', 'bPerm', 'bValveTag', 'bCoat', 'bValve', 'bNotes', 'bValveReinst', 'bRinType'].includes(activeId);
+
+  benchSel.innerHTML = queued.length
+    ? queued.map(r => `<option value="${r.id}" ${String(r.id) === String(prevBenchId) ? 'selected' : ''}>${escHtml(r.serial_number)}</option>`).join('')
+    : '<option value="">Empty</option>';
+
+  const curSelectedId = benchSel.value;
+  document.getElementById('benchPillBar').innerHTML = queued.length
+    ? queued.map((r, idx) => {
+        const isRush = Boolean(r.rush_fee || r.priority === 'RUSH');
+        const isAct = String(r.id) === String(curSelectedId);
+        return `<button type="button" class="tap-pill ${isRush ? 'rush' : ''} ${isAct ? 'active' : ''}" data-id="${r.id}" onclick="selectStandBottle(${r.id})">
+          <span>#${idx + 1} ${isRush ? '🔥 ' : ''}${escHtml(r.serial_number)}</span>
+          <small style="opacity:0.86;">${r.test_psi}#${r.valve_tag && !r.valve_reinstalled ? ' • 🏷️#' + escHtml(r.valve_tag) : ''}</small>
+        </button>`;
+      }).join('')
+    : '';
+
+  if (!typingOnBench && (benchSel.value !== prevBenchId || !document.getElementById('btnCompleteBench') || !queued.length)) {
+    renderBenchForm();
+  }
+}
+
 function renderVisPillsHtml(stateObj, toggleFnName) {
   return VIS_FIELDS.map(f => {
     const isFail = (stateObj[f.key] || 'OK') !== 'OK';
@@ -1081,27 +1025,31 @@ function renderBenchForm() {
   const id = parseInt(document.getElementById('benchSelect').value || '0', 10);
   const area = document.getElementById('benchArea');
   const rec = STATE.records.find(r => r.id === id);
-  if (!rec) { area.innerHTML = '<p style="color:var(--muted);margin:0;">No queued bottles waiting—scan or prep a batch on Tab 3.</p>'; return; }
+  if (!rec) {
+    area.innerHTML = '<p style="color:var(--muted);margin:0;">No queued bottles waiting — tap <strong>2. Prep &amp; Scan</strong> to queue the next batch.</p>';
+    return;
+  }
 
   BENCH_VIS = {};
   VIS_FIELDS.forEach(f => { BENCH_VIS[f.key] = rec[f.key] || 'OK'; });
   const isHydro = rec.service_mode === 'HYDRO_AND_VISUAL';
-  const tallOk = (STATE.jacket_ceilings['Tall Jacket']?.max_calibrated_psi || 0) > 0;
-  const shortOk = (STATE.jacket_ceilings['Short Jacket']?.max_calibrated_psi || 0) > 0;
-  const defJacket = tallOk ? 'Tall Jacket' : (shortOk ? 'Short Jacket' : 'Tall Jacket');
+  const defJacket = pickBestCalibratedJacket(rec);
+  const sAllow = STATE.jacket_ceilings['Short Jacket']?.max_allowed_test_psi || 0;
+  const tAllow = STATE.jacket_ceilings['Tall Jacket']?.max_allowed_test_psi || 0;
   const effRee = (['3A', '3AA', '3AL'].includes((rec.dot_spec || '').toUpperCase()) && rec.ree_limit === 7.2) ? null : rec.ree_limit;
+  const b = STATE.binder_state || {};
 
   area.innerHTML = `
     <div class="notice" id="benchPreview">
-      ${priorityBadgeHtml(rec)} <strong>[${escHtml(rec.customer_name)}]</strong> • SN <strong>${escHtml(rec.serial_number)}</strong> • Target: <strong>${rec.test_psi} PSI</strong>${rec.valve_tag && !rec.valve_reinstalled ? ` • 🏷️ #<strong>${escHtml(rec.valve_tag)}</strong>` : ''}${effRee ? ` • REE ≤ <strong>${effRee} cc</strong>` : ''} • Sheet #<strong>${rec.sheet_no}</strong>
+      ${priorityBadgeHtml(rec)} <strong>[${escHtml(rec.customer_name)}]</strong> • SN <strong>${escHtml(rec.serial_number)}</strong> • Target: <strong>${rec.test_psi} PSI</strong>${rec.valve_tag && !rec.valve_reinstalled ? ` • 🏷️ #<strong>${escHtml(rec.valve_tag)}</strong>` : ''}${effRee ? ` • REE ≤ <strong>${effRee} cc</strong>` : ''} • Binder: <strong>#${b.active_sheet_no || 8095} Row ${b.next_row_number || 1}</strong>
     </div>
     ${rec.composite_warning ? `<div class="notice bad">⛔ ${escHtml(rec.composite_warning)}</div>` : ''}
     <div class="grid">
       ${isHydro ? `
-        <div><label>Water Jacket</label>
+        <div><label>Water Jacket (Auto-Matched)</label>
           <select id="bJacket">
-            <option value="Short Jacket" ${defJacket === 'Short Jacket' ? 'selected' : ''}>Short Jacket</option>
-            <option value="Tall Jacket" ${defJacket === 'Tall Jacket' ? 'selected' : ''}>Tall Jacket</option>
+            <option value="Short Jacket" ${defJacket === 'Short Jacket' ? 'selected' : ''}>Short Jacket (${sAllow ? '≤' + sAllow + '#' : 'Uncal'})</option>
+            <option value="Tall Jacket" ${defJacket === 'Tall Jacket' ? 'selected' : ''}>Tall Jacket (${tAllow ? '≤' + tAllow + '#' : 'Uncal'})</option>
           </select>
         </div>
         <div><label>Total Exp (cc) *</label><input type="number" step="0.1" id="bTotal" oninput="previewBenchMath(${effRee ?? 'null'})" onkeydown="if(event.key==='Enter')document.getElementById('bPerm').focus()" /></div>
@@ -1126,7 +1074,7 @@ function renderBenchForm() {
       <input type="checkbox" id="bValveReinst" />
       <span>Valve / HPA regulator already reinstalled (frees reusable Tag #)</span>
     </label>
-    <button class="primary" id="btnCompleteBench" onclick="completeBottle(${rec.id}, ${isHydro})">Certify &amp; Send to Zone D Dryer / Finish (RP)</button>`;
+    <button class="primary" id="btnCompleteBench" onclick="completeBottle(${rec.id}, ${isHydro})">Certify &amp; Advance to Next Cylinder (RP)</button>`;
 }
 
 function previewBenchMath(reeLimit) {
@@ -1152,7 +1100,7 @@ async function completeBottle(id, isHydro) {
   const btn = document.getElementById('btnCompleteBench');
   const rinType = document.getElementById('bRinType').value;
   BENCH_SUBMITTING = true;
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving & Syncing...'; }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Certifying...'; }
   try {
     const res = await fetch(`/api/records/${id}/complete`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1175,9 +1123,11 @@ async function completeBottle(id, isHydro) {
     if (!res.ok) { alert((await res.json()).detail); return; }
   } finally {
     BENCH_SUBMITTING = false;
-    if (btn) { btn.disabled = false; btn.textContent = 'Certify & Send to Zone D Dryer / Finish (RP)'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Certify & Advance to Next Cylinder (RP)'; }
   }
   await loadState(false);
+  const nextTot = document.getElementById('bTotal');
+  if (nextTot) nextTot.focus();
 }
 
 function renderCompletedSection(done) {
@@ -1191,7 +1141,7 @@ function renderCompletedSection(done) {
       <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:6px 10px;background:#f8fafc;border-radius:8px;margin-bottom:6px;flex-wrap:wrap;">
         <strong style="font-size:0.82rem;">${escHtml(c)} (${cRows.length})</strong>
         <div style="display:flex;gap:5px;flex-wrap:wrap;">
-          <button class="secondary" onclick="stageCustomerBatch('${safeC}', 'STAMPED_STICKERED', 'MARKED')">🔨 Mark Batch Stamped/Lbl</button>
+          <button class="secondary" onclick="stageCustomerBatch('${safeC}', 'STAMPED_STICKERED', 'MARKED')">🔨 Mark Batch B386</button>
           <button class="secondary" onclick="stageCustomerBatch('${safeC}', 'READY_BACKROOM', '')">📦 Revalve &amp; Shelf</button>
           <button class="secondary" onclick="sendPickupSms('${safeC}', '${escHtml(ph)}', ${cRows.length}, '')">📲 Text</button>
         </div>
@@ -1225,7 +1175,7 @@ function recordFinishRowHtml(r) {
           ? `<button class="secondary" style="background:#ede9fe;color:#5b21b6;border-color:#c4b5fd;" onclick="setRecordStage(${r.id}, 'STAMPED_STICKERED', '${defMark}')">${isComp ? '🏷️ Stickered' : '🔨 Stamped'}</button>`
           : ''}
         ${r.shop_stage !== 'READY_BACKROOM' && r.shop_stage !== 'PICKED_UP'
-          ? `<button class="secondary" style="background:#dcfce7;color:#166534;border-color:#86efac;" onclick="setRecordStage(${r.id}, 'READY_BACKROOM', '${defMark}')">📦 Shelf</button>`
+          ? `<button class="secondary" style="background:#dcfce7;color:#166534;border-color:#86efac;" onclick="setRecordStage(${r.id}, 'READY_BACKROOM', '${defMark}')">📦 Revalve &amp; Shelf</button>`
           : ''}
         ${r.shop_stage === 'READY_BACKROOM'
           ? `<button class="secondary" onclick="setRecordStage(${r.id}, 'PICKED_UP', '')">✓ Picked Up</button>`
@@ -1240,6 +1190,9 @@ async function setRecordStage(id, stage, markType = '', force = false) {
   if (stage === 'STAMPED_STICKERED') {
     body.rin_marked = true;
     body.rin_mark_type = markType || 'STAMPED';
+  }
+  if (stage === 'READY_BACKROOM' || stage === 'PICKED_UP') {
+    body.valve_reinstalled = true;
   }
   const res = await fetch(`/api/records/${id}/stage`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -1269,7 +1222,7 @@ async function stageCustomerBatch(cust, stage, markType = '', allDates = false) 
   });
   if (res.status === 400 && stage === 'READY_BACKROOM') {
     const err = await res.json();
-    if (confirm(err.detail + '\n\nMark entire batch Stamped/Stickered AND stage to Zone E Pickup Shelf now?')) {
+    if (confirm(err.detail + '\n\nMark entire batch Stamped/Stickered, Revalved, AND move to Zone E Shelf now?')) {
       payload.rin_marked = true;
       payload.rin_mark_type = 'MARKED';
       await fetch('/api/batch/stage', {
@@ -1280,7 +1233,7 @@ async function stageCustomerBatch(cust, stage, markType = '', allDates = false) 
   loadState(false);
 }
 
-// --- TAB 5: FINISH BENCH, ACTIVE TAGS, PICKUP SHELF & LOOKUP ---
+// --- STATION 4: FINISH LANE, ACTIVE TAGS, PICKUP SHELF & SEARCH ---
 function sendPickupSms(custName, phone, count, invExtra) {
   let ph = (phone || '').trim();
   if (!ph) {
@@ -1330,19 +1283,12 @@ function renderFinishValvesAndCustomers() {
             <div class="rec-actions">
               ${c.ready_backroom_count ? `<button class="secondary" onclick="stageCustomerBatch('${safeC}', 'PICKED_UP', '', true)">✓ Picked Up</button>` : ''}
               <button class="secondary" onclick="sendPickupSms('${safeC}', '${escHtml(c.customer_phone || '')}', ${c.ready_backroom_count || c.total_bottles}, '')">📲 Text</button>
+              ${c.unbilled_count ? `<a class="secondary" href="/office?customer=${encodeURIComponent(c.customer_name)}">💲 Bill (${c.unbilled_count})</a>` : ''}
               <button class="secondary" onclick="filterCustomerHistory('${safeC}')">History</button>
             </div>
           </div>`;
       }).join('')
     : '<div style="color:var(--muted);font-size:0.86rem;">No customer records yet.</div>';
-}
-
-function jumpToDate(d) {
-  document.getElementById('globalDate').value = d;
-  document.getElementById('billDate').value = d;
-  loadState(true);
-  document.getElementById('searchBox').value = d;
-  runSearch(false);
 }
 
 async function filterCustomerHistory(cust) {
@@ -1366,18 +1312,18 @@ function renderSearchRows(rows) {
           <div class="rec-title">
             <span>${escHtml(r.serial_number)}</span>
             ${priorityBadgeHtml(r)}
-            <span class="${r.hydro_disposition === 'A' ? 'pass' : 'fail'}">${escHtml(r.hydro_disposition)}</span>
+            <span class="${r.hydro_disposition === 'A' ? 'pass' : 'fail'}">${escHtml(r.hydro_disposition || r.status)}</span>
             ${stageBadgeHtml(r)}
             ${r.valve_tag && !r.valve_reinstalled ? `<span class="tag-chip">#${escHtml(r.valve_tag)}</span>` : ''}
           </div>
-          <div class="rec-sub">${escHtml(r.work_date)} • ${escHtml(r.customer_name)} • ${escHtml(r.dot_spec)}-${r.service_psi} • Sheet #${r.sheet_no} • Perm: ${fmtPctTenth(r.percent_permanent)}</div>
+          <div class="rec-sub">${escHtml(r.work_date)} • ${escHtml(r.customer_name)} • ${escHtml(r.dot_spec)}-${r.service_psi} • Sheet #${r.sheet_no || 'Queued'} • Perm: ${fmtPctTenth(r.percent_permanent)}</div>
         </div>
         <button class="secondary" onclick="openEditModal(${r.id})">Edit</button>
       </div>`).join('')
     : '<div style="color:var(--muted);font-size:0.86rem;padding:8px 0;">No matching cylinder records found.</div>';
 }
 
-// --- EDIT RECORD MODAL ---
+// --- EDIT MODAL, SYNC, CREW & SETTINGS ---
 function toggleEditVis(key) {
   EDIT_VIS[key] = EDIT_VIS[key] === 'OK' ? 'FAIL' : 'OK';
   document.getElementById('erVisPills').innerHTML = renderVisPillsHtml(EDIT_VIS, 'toggleEditVis');
@@ -1475,225 +1421,6 @@ async function deleteRecordFromModal() {
   if (CURRENT_TAB === 'logs') runSearch(false);
 }
 
-// --- TAB 6: PRINT, MONTHLY STICKER PRE-PRINT & QR POSTER ---
-function preprintFullSheet(compact) {
-  const d = STATE.today || STATE.selected_date;
-  const cnt = compact ? 60 : 30;
-  window.open(`/api/pdf/stickers?work_date=${encodeURIComponent(d)}&count=${cnt}&skip=0&compact=${compact}`, '_blank');
-}
-
-function openPdf(kind) {
-  if (kind === 'poster') {
-    window.open('/api/pdf/poster?checkin_url=' + encodeURIComponent('https://weberstanktesting.com/#dropoff'), '_blank');
-    return;
-  }
-  const d = STATE.selected_date;
-  const cust = document.getElementById('pdfCustomerFilter').value;
-  const sheetNo = document.getElementById('pdfSheetNo').value || '8095';
-  const cnt = document.getElementById('stickerCount').value || '12';
-  const skip = document.getElementById('stickerSkip').value || '0';
-  const compact = document.getElementById('stickerCompact').checked;
-  let url = `/api/pdf/${kind}?work_date=${encodeURIComponent(d)}`;
-  if (cust) url += `&customer=${encodeURIComponent(cust)}`;
-  if (kind === 'retest') url += `&sheet_no=${encodeURIComponent(sheetNo)}`;
-  if (kind === 'stickers') url += `&count=${encodeURIComponent(cnt)}&skip=${encodeURIComponent(skip)}&compact=${compact}`;
-  window.open(url, '_blank');
-}
-
-// --- TAB 7: BILLING, AUTO-RUSH FEES, PAYMENTS & RATES ---
-function getRate(code) {
-  const found = STATE.pricing_rates.find(r => r.code === code);
-  return found ? Number(found.unit_price) : 0;
-}
-
-function isPaintballCylinder(r) {
-  const dia = parseFloat(r.outside_dia || '0'), len = parseFloat(r.length_in || '0');
-  const mfg = (r.mfg_id || '').toUpperCase();
-  if (['NINJA', 'HK ARMY', 'EMPIRE', 'FIRST STRIKE', 'JT', 'VALKEN', 'IMMORTAL'].some(b => mfg.includes(b))) return true;
-  return dia > 0 && dia <= 4.8 && len > 0 && len <= 12.0;
-}
-
-async function loadUnbilledItems() {
-  const d = document.getElementById('billDate').value || STATE.selected_date;
-  const allDates = document.getElementById('billAllDatesChk').checked;
-  const cust = document.getElementById('billCustomer').value;
-  const custMeta = STATE.customers_summary.find(c => c.customer_name === cust);
-  document.getElementById('billPhone').value = custMeta?.customer_phone || '';
-  if (!cust) { DRAFT_ITEMS = []; renderDraftInvoice(); return; }
-
-  const res = await fetch(`/api/unbilled?customer_name=${encodeURIComponent(cust)}&work_date=${encodeURIComponent(d)}&all_dates=${allDates}`);
-  const recs = await res.json();
-  DRAFT_ITEMS = [];
-  for (const r of recs) {
-    const isPb = isPaintballCylinder(r);
-    const isSp = (r.dot_spec || '').startsWith('SP') || (r.dot_spec || '').startsWith('E-');
-    const pbRate = getRate('HYDRO_PAINTBALL');
-    const code = r.service_mode === 'VISUAL_ONLY'
-      ? 'VISUAL_ONLY'
-      : (isPb && pbRate > 0 ? 'HYDRO_PAINTBALL' : (isSp ? 'HYDRO_SCBA' : 'HYDRO_STD'));
-    DRAFT_ITEMS.push({
-      record_id: r.id,
-      description: `SN ${r.serial_number} (${r.dot_spec}-${r.service_psi} ${r.gas_service}) - ${r.service_mode === 'VISUAL_ONLY' ? 'Visual Insp' : (isPb ? 'HPA Hydro' : 'Hydro + Visual')} [${r.hydro_disposition}]`,
-      qty: 1,
-      unit_price: getRate(code),
-    });
-    if (r.rush_fee || r.priority === 'RUSH') {
-      DRAFT_ITEMS.push({ record_id: null, description: `SN ${r.serial_number} - Priority / Rush Turnaround Service`, qty: 1, unit_price: getRate('RUSH_FEE') });
-    }
-    if (r.relief_valve_changed === 'Yes') {
-      DRAFT_ITEMS.push({ record_id: null, description: `SN ${r.serial_number} - Relief / Burst Disc Replacement`, qty: 1, unit_price: getRate('VALVE_RELIEF') });
-    }
-  }
-  renderDraftInvoice();
-}
-
-function addCustomInvoiceLine() {
-  DRAFT_ITEMS.push({ record_id: null, description: 'Breathing Air / HPA Fill', qty: 1, unit_price: getRate('AIR_FILL') });
-  renderDraftInvoice();
-}
-
-function removeDraftInvoiceLine(idx) {
-  DRAFT_ITEMS.splice(idx, 1);
-  renderDraftInvoice();
-}
-
-function renderDraftInvoice() {
-  document.getElementById('draftInvoiceList').innerHTML = DRAFT_ITEMS.length
-    ? DRAFT_ITEMS.map((it, i) => `
-      <div class="inv-line-row">
-        <div class="desc-col"><input value="${escHtml(it.description)}" oninput="DRAFT_ITEMS[${i}].description=this.value" placeholder="Line item description" /></div>
-        <div><input type="number" step="1" value="${it.qty}" oninput="DRAFT_ITEMS[${i}].qty=parseFloat(this.value||0);recalcInvoiceDraft()" title="Qty" /></div>
-        <div><input type="number" step="0.01" value="${it.unit_price}" oninput="DRAFT_ITEMS[${i}].unit_price=parseFloat(this.value||0);recalcInvoiceDraft()" title="Unit Price" /></div>
-        <div id="lineTot_${i}"><strong>$${(it.qty * it.unit_price).toFixed(2)}</strong></div>
-        <div><button class="secondary" onclick="removeDraftInvoiceLine(${i})">✕</button></div>
-      </div>`).join('')
-    : '<div style="color:var(--muted);font-size:0.86rem;padding:8px 0;">No unbilled completed bottles for this customer yet.</div>';
-  recalcInvoiceDraft();
-}
-
-function recalcInvoiceDraft() {
-  let sub = 0;
-  DRAFT_ITEMS.forEach((it, i) => {
-    const lt = (it.qty || 0) * (it.unit_price || 0);
-    sub += lt;
-    const cell = document.getElementById('lineTot_' + i);
-    if (cell) cell.innerHTML = `<strong>$${lt.toFixed(2)}</strong>`;
-  });
-  const taxPct = parseFloat(document.getElementById('billTax').value || '0');
-  const tot = sub + sub * (taxPct / 100);
-  document.getElementById('draftTotalLabel').textContent = `Draft Total: $${tot.toFixed(2)}`;
-  return tot;
-}
-
-async function submitInvoice() {
-  const cust = document.getElementById('billCustomer').value;
-  if (!cust || !DRAFT_ITEMS.length) { alert('Select a customer with completed bottles or add a custom line.'); return; }
-  const res = await fetch('/api/invoices', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      work_date: document.getElementById('billDate').value || STATE.selected_date,
-      customer_name: cust,
-      customer_phone: document.getElementById('billPhone').value,
-      tax_rate: parseFloat(document.getElementById('billTax').value || '0'),
-      status: document.getElementById('billStatus').value,
-      payment_method: document.getElementById('billPayMethod').value,
-      created_by: getActiveCrew(),
-      notes: document.getElementById('billNotes').value,
-      items: DRAFT_ITEMS,
-    }),
-  });
-  const data = await res.json();
-  if (!res.ok) { alert(data.detail); return; }
-  window.open(`/api/pdf/invoice/${data.id}`, '_blank');
-  await loadState(false);
-  loadUnbilledItems();
-}
-
-function sendCustomerPickupSmsFromBilling() {
-  const cust = document.getElementById('billCustomer').value;
-  if (!cust) { alert('Select a customer first.'); return; }
-  const ph = document.getElementById('billPhone').value;
-  const tot = recalcInvoiceDraft().toFixed(2);
-  sendPickupSms(cust, ph, Math.max(1, DRAFT_ITEMS.filter(x => x.record_id).length || DRAFT_ITEMS.length), `Total: $${tot}`);
-}
-
-function renderInvoicesList() {
-  document.getElementById('invoicesList').innerHTML = STATE.invoices.length
-    ? STATE.invoices.map(inv => `
-      <div class="rec-item">
-        <div class="rec-main">
-          <div class="rec-title">
-            <span>${escHtml(inv.invoice_no)} — ${escHtml(inv.customer_name)}</span>
-            <span class="${inv.status === 'PAID' ? 'pass' : ''}">$${Number(inv.total_amount).toFixed(2)} (${escHtml(inv.status)}${inv.payment_method ? ' • ' + escHtml(inv.payment_method) : ''})</span>
-          </div>
-          <div class="rec-sub">Service Date: ${escHtml(inv.work_date)}${inv.customer_phone ? ' • 📞 ' + escHtml(inv.customer_phone) : ''}</div>
-        </div>
-        <div class="rec-actions">
-          <a class="secondary" href="/api/pdf/invoice/${inv.id}" target="_blank">📄 PDF</a>
-          ${inv.customer_phone ? `<button class="secondary" onclick="sendPickupSms('${inv.customer_name.replace(/'/g, "\\'")}', '${escHtml(inv.customer_phone)}', ${inv.bottle_count || 1}, '${inv.invoice_no}: $${Number(inv.total_amount).toFixed(2)}')">📲 Text</button>` : ''}
-          ${inv.status !== 'PAID' ? `<button class="secondary" style="background:#dcfce7;color:#166534;" onclick="markInvoicePaid(${inv.id})">✓ Mark Paid</button>` : ''}
-        </div>
-      </div>`).join('')
-    : '<div style="color:var(--muted);font-size:0.86rem;">No invoices generated yet.</div>';
-}
-
-async function markInvoicePaid(id) {
-  const method = prompt('Payment method (Cash, Check, Card / Venmo, Net-30):', 'Cash');
-  if (method === null) return;
-  await fetch(`/api/invoices/${id}/status`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: 'PAID', payment_method: method }),
-  });
-  loadState(false);
-}
-
-function renderRateScheduleTable() {
-  document.getElementById('pricingList').innerHTML = EDITABLE_RATES.map((p, i) => `
-    <div class="rate-edit-row">
-      <div>
-        <input value="${escHtml(p.code)}" ${p.isNew ? '' : 'readonly style="background:#f1f5f9;font-weight:800;"'}
-          placeholder="CODE_NAME" oninput="EDITABLE_RATES[${i}].code=this.value.toUpperCase()" />
-      </div>
-      <div class="rate-desc-col">
-        <input value="${escHtml(p.description || '')}" placeholder="Service description" oninput="EDITABLE_RATES[${i}].description=this.value" />
-      </div>
-      <div>
-        <input type="number" step="0.01" value="${p.unit_price}" oninput="EDITABLE_RATES[${i}].unit_price=parseFloat(this.value||0)" />
-      </div>
-      <div><button class="secondary" style="color:#b91c1c;" onclick="deleteRateRow(${i})">🗑</button></div>
-    </div>`).join('');
-}
-
-function addRateScheduleRow() {
-  EDITABLE_RATES.push({ code: '', description: '', unit_price: 0, sort_order: (EDITABLE_RATES.length + 1) * 10, isNew: true });
-  renderRateScheduleTable();
-}
-
-async function deleteRateRow(idx) {
-  const r = EDITABLE_RATES[idx];
-  if (!r) return;
-  if (!r.isNew && r.code) {
-    if (!confirm(`Delete "${r.code}" from Master Rates?`)) return;
-    await fetch(`/api/pricing/${encodeURIComponent(r.code)}`, { method: 'DELETE' });
-  }
-  EDITABLE_RATES.splice(idx, 1);
-  renderRateScheduleTable();
-  loadState(false);
-}
-
-async function savePricingRates() {
-  const payload = EDITABLE_RATES.filter(r => r.code && r.code.trim()).map((r, idx) => ({
-    code: r.code.trim().toUpperCase(),
-    description: r.description || r.code,
-    unit_price: parseFloat(r.unit_price || 0),
-    sort_order: (idx + 1) * 10,
-  }));
-  await fetch('/api/pricing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-  alert('Master pricing rates saved!');
-  loadState(false);
-}
-
-// --- SYNC, CREW, FEEDBACK & SETTINGS ---
 async function triggerManualSync() {
   document.getElementById('railSyncChip').textContent = '↻ Syncing...';
   const res = await fetch('/api/sync-now', { method: 'POST' });
@@ -1762,7 +1489,6 @@ async function saveAllSettings() {
   await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   document.getElementById('apiKeyInput').value = '';
   document.getElementById('editShopPin').value = '';
-  document.getElementById('billTax').value = body.default_tax_rate;
   alert('Facility settings saved!');
   loadState(true);
 }
