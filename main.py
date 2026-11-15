@@ -5130,7 +5130,7 @@ def _build_dynamic_pwa_icon_png(theme: dict, size: int = 512, maskable: bool = F
     """Composites Warm Cream + Active Holiday Wreath + Dogs-Free Crest Backplate + Shop Dogs into PNG icon."""
     t_key = theme.get("key", "NONE") if (theme.get("active") and (theme.get("enable_public") or theme.get("enable_ops"))) else "NONE"
     dog_file = theme.get("dog_image", "dogs-classic.png") if t_key != "NONE" else "dogs-classic.png"
-    cache_key = ("v11", t_key, dog_file, size, maskable)
+    cache_key = ("v11_5", t_key, dog_file, size, maskable)
     if cache_key in _PWA_ICON_CACHE:
         return _PWA_ICON_CACHE[cache_key]
 
@@ -5147,13 +5147,13 @@ def _build_dynamic_pwa_icon_png(theme: dict, size: int = 512, maskable: bool = F
         draw.rectangle((0, 0, S, S), fill=(245, 233, 206, 255))
         draw.ellipse((20, 16, S - 20, S - 16), fill=(253, 248, 238, 255))
         crest_d, crest_cy = 276, 212
-        dogs_max_w, dogs_max_h, dogs_bottom_y = 374, 202, 452
+        dogs_max_w, dogs_max_h, dogs_bottom_y = 152, 100, 316
     else:
         draw.rounded_rectangle((6, 6, S - 7, S - 7), radius=104, fill=(12, 38, 27, 255))
         draw.rounded_rectangle((16, 16, S - 17, S - 17), radius=94, fill=(217, 155, 38, 255))
         draw.rounded_rectangle((24, 24, S - 25, S - 25), radius=86, fill=(253, 248, 238, 255))
         crest_d, crest_cy = 324, 210
-        dogs_max_w, dogs_max_h, dogs_bottom_y = 446, 240, 488
+        dogs_max_w, dogs_max_h, dogs_bottom_y = 178, 116, 332
 
     img_dir = STATIC_DIR / "images"
 
