@@ -4,344 +4,507 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#fdf8ee" />
-  <meta name="description" content="Weber's Tank Testing (U.S. D.O.T. RIN B386) — Hydrostatic cylinder testing & visual requalification in Baden, PA. 24/7 Back Room drop-off via our Loading Dock for SCBA, EMS Oxygen, Industrial Gas, Scuba & Paintball HPA." />
+  <meta name="description" content="Weber's Tank Testing (U.S. D.O.T. RIN B386) — Certified hydrostatic cylinder testing & visual requalification in Baden, PA. 24/7 Back Room drop-off via our Loading Dock for SCBA, EMS Oxygen, Industrial Gas, Scuba & Paintball HPA." />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
   <title>Weber's Tank Testing | U.S. D.O.T. RIN B386 — Baden, PA</title>
   <style>
     :root {
       --cream: #fdf8ee;
-      --cream-deep: #f4e8ce;
-      --forest: #0f2e20;
-      --green: #1b4332;
+      --cream-deep: #f3e6ca;
+      --forest: #0c261b;
+      --green: #163a2a;
+      --green-mid: #1f513b;
       --emerald: #059669;
       --gold: #d97706;
-      --gold-lt: #fbbf24;
+      --gold-lt: #f59e0b;
+      --gold-bright: #fbbf24;
       --slate: #0f172a;
-      --muted: #334155;
-      --glass: rgba(255, 255, 255, 0.70);
-      --glass-strong: rgba(255, 255, 255, 0.76);
-      --border: rgba(27, 67, 50, 0.18);
+      --ink-soft: #334155;
+      --muted: #526071;
+      --glass: rgba(255, 253, 248, 0.72);
+      --glass-strong: rgba(255, 253, 249, 0.80);
+      --border: rgba(15, 46, 32, 0.13);
+      --border-strong: rgba(15, 46, 32, 0.22);
+      --shadow-card: 0 1px 2px rgba(15, 46, 32, 0.04), 0 14px 34px -10px rgba(15, 46, 32, 0.10);
+      --font-display: 'Barlow Condensed', system-ui, sans-serif;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, monospace;
     }
-    * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; scroll-behavior: smooth; }
+
+    * { box-sizing: border-box; scroll-behavior: smooth; }
     [hidden] { display: none !important; }
+
     body {
       margin: 0;
-      background: radial-gradient(circle at 50% 22%, #fffefa 0%, var(--cream) 62%, var(--cream-deep) 100%);
+      font-family: var(--font-sans);
+      background: radial-gradient(circle at 50% 18%, #fffefb 0%, var(--cream) 58%, var(--cream-deep) 100%);
       background-attachment: fixed;
       color: var(--slate);
-      line-height: 1.5;
+      line-height: 1.55;
       overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
     }
 
-    .wrap { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+    .mono { font-family: var(--font-mono); letter-spacing: -0.02em; }
+    .ico { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 0 22px; }
 
-    /* STICKY TOP CHROME */
+    /* =====================================================================
+       CONSOLIDATED TOP COMPLIANCE BAR + ARCHITECTURAL STICKY HEADER
+       ===================================================================== */
     .top-chrome { position: relative; z-index: 62; }
-    .pub-holiday-bar {
-      background: linear-gradient(90deg, #1b4332, #991b1b, #b45309);
-      color: #ffffff; text-align: center; padding: 5px 12px;
-      font-size: 0.78rem; font-weight: 900; letter-spacing: 0.5px;
-    }
     .util-bar {
-      background: var(--forest); color: #f1f5f9; font-size: 0.75rem; font-weight: 600;
-      padding: 6px 0; border-bottom: 2px solid var(--gold-lt);
+      background: var(--forest);
+      color: #e2e8f0;
+      font-size: 0.76rem;
+      font-weight: 600;
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(251, 191, 36, 0.35);
     }
-    .util-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-    .util-bar a { color: var(--gold-lt); text-decoration: none; font-weight: 800; }
+    .util-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .util-left, .util-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .util-rin {
+      font-family: var(--font-mono); font-size: 0.71rem; font-weight: 700;
+      background: rgba(251, 191, 36, 0.16); color: #fde68a; border: 1px solid rgba(251, 191, 36, 0.4);
+      padding: 2px 8px; border-radius: 4px; letter-spacing: 0.03em;
+    }
+    .util-holiday-chip {
+      font-family: var(--font-mono); font-size: 0.71rem; font-weight: 700;
+      background: linear-gradient(90deg, rgba(180, 83, 9, 0.45), rgba(153, 27, 27, 0.45));
+      color: #fef3c7; border: 1px solid rgba(251, 191, 36, 0.5);
+      padding: 2px 9px; border-radius: 999px;
+    }
+    .util-bar a { color: #fde68a; text-decoration: none; font-weight: 700; transition: opacity 0.15s; }
+    .util-bar a:hover { opacity: 0.85; text-decoration: underline; }
+    .sep-dot { opacity: 0.35; }
 
     .site-nav {
       position: sticky; top: 0; z-index: 60;
-      background: rgba(253, 248, 238, 0.92);
-      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border); padding: 8px 0;
+      background: rgba(253, 248, 238, 0.86);
+      backdrop-filter: blur(16px) saturate(140%);
+      -webkit-backdrop-filter: blur(16px) saturate(140%);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 0;
+      transition: box-shadow 0.2s ease, background 0.2s ease;
     }
-    .nav-inner { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: nowrap; }
-    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--forest); flex-shrink: 0; }
-    .brand img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover; background: #0b2219; }
-    .brand strong { display: block; font-size: 1rem; letter-spacing: 0.3px; font-weight: 900; white-space: nowrap; }
-    .brand small { color: var(--muted); font-size: 0.68rem; font-weight: 800; white-space: nowrap; }
-    .nav-links { display: flex; align-items: center; gap: 15px; white-space: nowrap; }
-    .nav-links a { color: var(--forest); text-decoration: none; font-size: 0.84rem; font-weight: 800; }
-    .nav-links a:hover { color: var(--gold); }
+    .site-nav.scrolled {
+      background: rgba(253, 248, 238, 0.94);
+      box-shadow: 0 8px 24px -12px rgba(12, 38, 27, 0.16);
+    }
+    .nav-inner { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--forest); flex-shrink: 0; }
+    .brand img {
+      width: 42px; height: 42px; border-radius: 50%;
+      border: 2px solid var(--gold-bright); object-fit: cover; background: #0b2219;
+      box-shadow: 0 2px 8px rgba(12, 38, 27, 0.18);
+    }
+    .brand-title {
+      display: block; font-family: var(--font-display); font-size: 1.34rem;
+      font-weight: 800; letter-spacing: 0.03em; line-height: 1; color: var(--forest); text-transform: uppercase;
+    }
+    .brand-sub {
+      display: block; font-family: var(--font-mono); font-size: 0.66rem;
+      font-weight: 700; color: var(--muted); letter-spacing: 0.04em; margin-top: 2px;
+    }
+
+    .nav-links { display: flex; align-items: center; gap: 22px; }
+    .nav-links a {
+      color: var(--ink-soft); text-decoration: none; font-size: 0.85rem; font-weight: 700;
+      padding: 4px 0; position: relative; transition: color 0.15s;
+    }
+    .nav-links a::after {
+      content: ''; position: absolute; left: 0; right: 0; bottom: -2px; height: 2px;
+      background: var(--gold); transform: scaleX(0); transform-origin: center; transition: transform 0.18s ease;
+    }
+    .nav-links a:hover { color: var(--forest); }
+    .nav-links a:hover::after { transform: scaleX(1); }
     @media (max-width: 980px) { .nav-links { display: none; } }
 
+    /* Tactile Industrial Buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 16px; border-radius: 8px; font-family: var(--font-sans);
+      font-size: 0.84rem; font-weight: 700; text-decoration: none; cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.15s ease, background 0.15s ease;
+      white-space: nowrap; border: 1px solid transparent;
+    }
+    .btn:active { transform: translateY(1px); }
     .btn-gold {
-      background: var(--gold-lt); color: #111827 !important; padding: 9px 15px; border-radius: 9px;
-      font-weight: 900 !important; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
-      border: 1.5px solid #d97706; cursor: pointer; font-size: 0.84rem; white-space: nowrap;
-      box-shadow: 0 4px 12px rgba(217,119,6,0.18);
+      background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+      color: #0f172a !important; border-color: #d97706; font-weight: 800;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 4px 12px rgba(217, 119, 6, 0.22);
     }
-    .btn-gold:hover { background: #f59e0b; }
-    .btn-green {
-      background: var(--green); color: #ffffff !important; padding: 9px 15px; border-radius: 9px;
-      font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
-      border: none; font-size: 0.84rem; white-space: nowrap; cursor: pointer;
+    .btn-gold:hover { background: linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%); box-shadow: 0 6px 16px rgba(217, 119, 6, 0.30); }
+    .btn-forest {
+      background: var(--green); color: #ffffff !important; border-color: var(--forest);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 12px rgba(12, 38, 27, 0.16);
     }
+    .btn-forest:hover { background: var(--forest); }
+    .btn-outline {
+      background: rgba(255, 255, 255, 0.85); color: var(--forest) !important;
+      border-color: var(--border-strong);
+    }
+    .btn-outline:hover { background: #ffffff; border-color: var(--forest); }
 
     /* =====================================================================
-       FIXED CENTERPIECE STAGE: 100% OPAQUE & UNBLOCKED AT TOP,
-       SMOOTHLY RECEDES INTO THE BACKGROUND AS YOU SCROLL!
+       FIXED CENTERPIECE STAGE (CREST + ILLUSTRATED WREATH + SHOP DOGS)
        ===================================================================== */
     .fixed-brand-stage {
       position: fixed;
-      left: 0; right: 0; top: 96px;
-      height: calc(100svh - 96px);
+      left: 0; right: 0; top: 88px;
+      height: calc(100svh - 88px);
       z-index: 1;
       pointer-events: none;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
-      padding-top: clamp(8px, 2.2vh, 26px);
+      padding-top: clamp(6px, 1.8vh, 22px);
       will-change: opacity, transform;
       transform-origin: center 42%;
     }
     .crest-arch-wrap {
       position: relative;
-      width: clamp(290px, 41vh, 420px);
-      height: clamp(290px, 41vh, 420px);
+      width: clamp(285px, 40vh, 415px);
+      height: clamp(285px, 40vh, 415px);
       flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
-      margin-top: clamp(22px, 3.6vh, 38px);
+      margin-top: clamp(20px, 3.4vh, 36px);
     }
     .stage-holiday-arch-img {
-      position: absolute;
-      inset: -19%;
-      width: 138%;
-      height: 138%;
-      object-fit: contain;
-      z-index: 0;
-      pointer-events: none;
-      filter: drop-shadow(0 8px 18px rgba(44, 24, 16, 0.16));
+      position: absolute; inset: -19%; width: 138%; height: 138%;
+      object-fit: contain; z-index: 0; pointer-events: none;
+      filter: drop-shadow(0 8px 18px rgba(44, 24, 16, 0.15));
     }
     .stage-crest-logo {
-      width: 100%; height: 100%;
-      border-radius: 50%;
-      border: 6px solid var(--gold-lt);
-      object-fit: cover;
-      background: #0b2219;
-      box-shadow: 0 18px 46px rgba(15, 46, 32, 0.25);
-      position: relative; z-index: 1;
+      width: 100%; height: 100%; border-radius: 50%;
+      border: 5px solid var(--gold-bright); object-fit: cover; background: #0b2219;
+      box-shadow: 0 20px 50px rgba(12, 38, 27, 0.26); position: relative; z-index: 1;
     }
     .stage-dogs-cutout {
-      width: min(690px, 93vw);
-      max-height: clamp(195px, 33vh, 330px);
+      width: min(680px, 92vw);
+      max-height: clamp(190px, 32vh, 320px);
       object-fit: contain;
-      margin-top: clamp(-88px, -9.6vh, -62px);
-      position: relative;
-      z-index: 2;
-      filter: drop-shadow(0 14px 24px rgba(15, 23, 42, 0.2));
+      margin-top: clamp(-86px, -9.4vh, -60px);
+      position: relative; z-index: 2;
+      filter: drop-shadow(0 14px 24px rgba(15, 23, 42, 0.20));
       flex-shrink: 0;
     }
     .stage-dogs-cutout.photo-fallback {
-      width: min(520px, 88vw);
-      max-height: 270px;
-      object-fit: cover;
-      border-radius: 18px;
-      border: 3px solid var(--gold-lt);
-      margin-top: -54px;
+      width: min(510px, 88vw); max-height: 250px; object-fit: cover;
+      border-radius: 14px; border: 3px solid var(--gold-bright); margin-top: -48px;
     }
 
     /* =====================================================================
-       SCROLLING FOREGROUND LAYER:
-       - Top 100svh is OPEN AIR except the Dogs' Greeting Bubble (which fades out on scroll!)
-       - Everything below scrolls over the Crest + Dogs in translucent glass!
+       SCROLLING FOREGROUND LAYER & SPEECH CALLOUT
        ===================================================================== */
     .scroll-foreground { position: relative; z-index: 5; background: transparent; }
 
     .hero-opening-spacer {
-      min-height: calc(100svh - 102px);
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-end;
-      align-items: center;
-      padding: 0 16px clamp(16px, 3vh, 32px);
+      min-height: calc(100svh - 94px);
+      display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+      padding: 0 16px clamp(14px, 2.5vh, 26px);
       pointer-events: none;
     }
     .greeting-fade-wrap {
-      pointer-events: auto;
-      text-align: center;
-      max-width: 650px;
-      width: 100%;
+      pointer-events: auto; text-align: center; max-width: 660px; width: 100%;
       will-change: opacity, transform;
     }
     .dog-speech-bubble {
-      background: rgba(255, 255, 255, 0.96);
-      border: 2.5px solid var(--green);
-      border-radius: 18px;
-      padding: 12px 18px;
-      margin: 0 auto 10px;
-      font-size: clamp(0.86rem, 1.4vw, 0.98rem);
-      font-weight: 800;
+      position: relative;
+      background: rgba(255, 253, 249, 0.96);
+      border: 1.5px solid var(--border-strong);
+      border-top: 3px solid var(--green);
+      border-radius: 14px;
+      padding: 13px 20px 14px;
+      margin: 0 auto 12px;
+      font-size: clamp(0.86rem, 1.3vw, 0.95rem);
+      font-weight: 700;
       color: var(--forest);
-      box-shadow: 0 12px 30px rgba(15, 46, 32, 0.18);
+      box-shadow: 0 14px 34px -8px rgba(12, 38, 27, 0.20);
     }
+    .dog-speech-bubble::before {
+      content: ''; position: absolute; top: -9px; left: 50%;
+      width: 14px; height: 14px; background: rgba(255, 253, 249, 0.98);
+      border-top: 2px solid var(--green); border-left: 2px solid var(--green);
+      transform: translateX(-50%) rotate(45deg);
+    }
+    .speech-eyebrow {
+      display: block; font-family: var(--font-mono); font-size: 0.65rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold); margin-bottom: 3px;
+    }
+
     .hero-quick-bar {
-      display: inline-flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255, 255, 255, 0.82);
-      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      padding: 7px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      box-shadow: 0 6px 18px rgba(15, 46, 32, 0.1);
+      display: inline-flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px;
+      background: rgba(255, 253, 248, 0.86);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      padding: 6px; border-radius: 11px; border: 1px solid var(--border);
+      box-shadow: 0 8px 22px -6px rgba(12, 38, 27, 0.14);
     }
     .scroll-hint {
-      margin-top: 6px;
-      font-size: 0.74rem;
-      font-weight: 900;
-      color: var(--forest);
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      opacity: 0.78;
+      margin-top: 8px; font-family: var(--font-mono); font-size: 0.68rem; font-weight: 700;
+      color: var(--green); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.72;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
     }
 
-    /* TRANSLUCENT FROSTED GLASS CARDS (KEEP BACKGROUND DOGS & CREST VISIBLE!) */
+    /* =====================================================================
+       ARCHITECTURAL FROSTED GLASS CARDS & EDITORIAL SECTION HEADERS
+       ===================================================================== */
     .glass-card {
       background: var(--glass-strong);
-      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      border: 1.5px solid rgba(255, 255, 255, 0.85);
-      outline: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 22px;
-      box-shadow: 0 12px 32px rgba(15, 46, 32, 0.08);
-    }
-    .rin-pill {
-      display: inline-flex; align-items: center; gap: 7px; background: rgba(236, 253, 245, 0.9);
-      border: 1.5px solid #6ee7b7; color: #065f46; font-size: 0.74rem; font-weight: 900;
-      padding: 5px 12px; border-radius: 999px; letter-spacing: 0.4px; text-transform: uppercase;
+      backdrop-filter: blur(12px) saturate(135%);
+      -webkit-backdrop-filter: blur(12px) saturate(135%);
+      border: 1px solid var(--border);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88), var(--shadow-card);
+      border-radius: 14px;
+      padding: 24px;
     }
 
-    .top-action-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 22px; align-items: stretch; }
+    .sec { padding: 42px 0; background: transparent; }
+    .sec-hdr { margin-bottom: 22px; }
+    .sec-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold);
+      background: rgba(255, 253, 248, 0.82); padding: 4px 10px; border-radius: 6px;
+      border: 1px solid rgba(217, 119, 6, 0.25);
+    }
+    .sec-hdr h2 {
+      margin: 8px 0 0; font-family: var(--font-display); font-size: clamp(1.85rem, 3vw, 2.25rem);
+      font-weight: 800; letter-spacing: 0.01em; color: var(--forest); line-height: 1.08;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    .badge-rin {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--font-mono); font-size: 0.71rem; font-weight: 700;
+      background: rgba(236, 253, 245, 0.92); border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #065f46; padding: 4px 10px; border-radius: 6px; text-transform: uppercase;
+    }
+
+    .top-action-grid { display: grid; grid-template-columns: 1.08fr 0.92fr; gap: 22px; align-items: stretch; }
     @media (max-width: 880px) { .top-action-grid { grid-template-columns: 1fr; } }
 
-    .step-dots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 10px; }
-    .step-dot { height: 8px; border-radius: 999px; background: rgba(203, 213, 225, 0.8); }
+    .sla-tile {
+      padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.78);
+    }
+    .sla-tile.std { border-left: 3px solid var(--emerald); }
+    .sla-tile.rush { border-left: 3px solid var(--gold); }
+    .sla-tile small {
+      display: block; font-family: var(--font-mono); font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 3px;
+    }
+    .sla-tile strong { font-family: var(--font-display); font-size: 1.35rem; font-weight: 800; color: var(--forest); letter-spacing: 0.01em; }
+
+    .step-dots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 10px; }
+    .step-dot { height: 6px; border-radius: 999px; background: rgba(148, 163, 184, 0.35); }
     .step-dot.done { background: var(--emerald); }
 
+    /* KPI Telemetry Strip */
     .kpi-band {
-      margin: 28px 0;
+      margin: 26px 0;
       background: var(--glass);
-      backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
-      border-top: 1.5px solid rgba(255,255,255,0.8);
-      border-bottom: 1.5px solid rgba(255,255,255,0.8);
-      outline: 1px solid var(--border);
-      padding: 18px 0;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      padding: 20px 0;
     }
-    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; text-align: center; }
-    @media (max-width: 720px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
-    .kpi-item strong { display: block; font-size: 1.4rem; font-weight: 900; color: var(--green); }
-    .kpi-item span { font-size: 0.75rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; }
-
-    .sec { padding: 38px 0; background: transparent; }
-    .sec-hdr {
-      display: inline-block;
-      background: rgba(255, 255, 255, 0.62);
-      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-      padding: 8px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.8);
-      margin-bottom: 18px;
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .kpi-item { text-align: center; border-right: 1px solid var(--border); padding: 0 10px; }
+    .kpi-item:last-child { border-right: none; }
+    @media (max-width: 720px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 18px; }
+      .kpi-item:nth-child(2) { border-right: none; }
     }
-    .sec-hdr small { color: var(--gold); font-weight: 900; text-transform: uppercase; letter-spacing: 0.8px; font-size: 0.75rem; display: block; }
-    .sec-hdr h2 { margin: 2px 0 0; font-size: 1.68rem; color: var(--forest); }
+    .kpi-item strong {
+      display: block; font-family: var(--font-display); font-size: 1.85rem;
+      font-weight: 800; color: var(--forest); line-height: 1.05; letter-spacing: 0.02em;
+    }
+    .kpi-item span {
+      display: block; font-family: var(--font-mono); font-size: 0.69rem; font-weight: 700;
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 3px;
+    }
 
-    .cap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+    /* Portal Steps & Clean Segmented Switcher */
+    .portal-grid { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 22px; align-items: start; }
+    @media (max-width: 880px) { .portal-grid { grid-template-columns: 1fr; } }
+
+    .step-list { list-style: none; padding: 0; margin: 14px 0 18px; display: flex; flex-direction: column; gap: 13px; }
+    .step-list li { display: grid; grid-template-columns: 28px 1fr; gap: 11px; align-items: start; font-size: 0.88rem; color: var(--ink-soft); }
+    .step-num {
+      width: 26px; height: 26px; border-radius: 6px; background: var(--forest); color: #fde68a;
+      font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; margin-top: 1px;
+    }
+
+    .seg-track {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;
+      background: rgba(15, 46, 32, 0.06); padding: 5px; border-radius: 10px;
+      border: 1px solid var(--border); margin-bottom: 16px;
+    }
+    @media (max-width: 540px) { .seg-track { grid-template-columns: 1fr; } }
+    .mode-tab {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px 8px; border-radius: 7px; border: 1px solid transparent;
+      background: transparent; font-family: var(--font-sans); font-weight: 700;
+      font-size: 0.78rem; color: var(--ink-soft); cursor: pointer; transition: all 0.15s;
+    }
+    .mode-tab:hover { color: var(--forest); background: rgba(255, 255, 255, 0.55); }
+    .mode-tab.active-drop { background: var(--green); color: #ffffff; box-shadow: 0 2px 8px rgba(12, 38, 27, 0.18); }
+    .mode-tab.active-pick { background: #0369a1; color: #ffffff; box-shadow: 0 2px 8px rgba(3, 105, 161, 0.22); }
+    .mode-tab.active-truck { background: #b45309; color: #ffffff; box-shadow: 0 2px 8px rgba(180, 83, 9, 0.22); }
+
+    .acct-pills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-bottom: 14px; }
+    @media (max-width: 500px) { .acct-pills { grid-template-columns: 1fr; } }
+    .acct-pill {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 9px 8px; border-radius: 8px; border: 1px solid #cbd5e1;
+      background: rgba(255, 255, 255, 0.88); font-family: var(--font-sans);
+      font-weight: 700; font-size: 0.8rem; cursor: pointer; color: var(--ink-soft); transition: all 0.14s;
+    }
+    .acct-pill:hover { border-color: var(--green-mid); color: var(--forest); }
+    .acct-pill.active { background: #ecfdf5; border-color: var(--emerald); color: #065f46; box-shadow: inset 0 0 0 1px var(--emerald); }
+
+    /* Calm Sentence-Case Form Typography */
+    label {
+      display: block; font-size: 0.79rem; font-weight: 700;
+      color: var(--slate); margin-bottom: 5px; letter-spacing: -0.01em;
+    }
+    label .opt { font-weight: 500; color: var(--muted); font-size: 0.74rem; }
+    input:not([type="checkbox"]), select, textarea {
+      width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px;
+      font-family: var(--font-sans); font-size: 0.92rem; color: var(--slate);
+      background: rgba(255, 255, 255, 0.94); transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:not([type="checkbox"]):focus, select:focus, textarea:focus {
+      outline: none; border-color: var(--green-mid); box-shadow: 0 0 0 3px rgba(31, 81, 59, 0.14); background: #ffffff;
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
+
+    .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 8px; }
+    .quick-chip {
+      background: rgba(255, 255, 255, 0.9); color: var(--green); border: 1px solid rgba(22, 58, 42, 0.25);
+      border-radius: 6px; padding: 5px 10px; font-family: var(--font-mono); font-size: 0.73rem;
+      font-weight: 700; cursor: pointer; transition: all 0.12s;
+    }
+    .quick-chip:hover { background: #ecfdf5; border-color: var(--emerald); color: #065f46; }
+
+    .rush-toggle-box {
+      grid-column: 1 / -1; background: rgba(255, 251, 235, 0.9);
+      border: 1px solid rgba(217, 119, 6, 0.38); padding: 10px 13px; border-radius: 8px;
+    }
+    .btn-submit {
+      width: 100%; background: var(--green); color: #ffffff; border: 1px solid var(--forest);
+      padding: 13px 16px; border-radius: 8px; font-family: var(--font-sans); font-size: 0.94rem;
+      font-weight: 800; cursor: pointer; margin-top: 14px; display: inline-flex;
+      align-items: center; justify-content: center; gap: 8px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 4px 12px rgba(12, 38, 27, 0.16);
+      transition: background 0.15s;
+    }
+    .btn-submit:hover { background: var(--forest); }
+
+    .alert-box { padding: 11px 14px; border-radius: 9px; font-weight: 600; font-size: 0.84rem; margin-top: 10px; line-height: 1.48; }
+    .alert-ok { background: rgba(236, 253, 245, 0.92); border: 1px solid rgba(16, 185, 129, 0.4); color: #065f46; }
+    .alert-warn { background: rgba(255, 251, 235, 0.92); border: 1px solid rgba(245, 158, 11, 0.45); color: #78350f; }
+    .alert-bad { background: rgba(254, 242, 242, 0.94); border: 1px solid rgba(239, 68, 68, 0.45); color: #991b1b; }
+
+    /* Capability Cards & Fleet Split */
+    .cap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(255px, 1fr)); gap: 18px; }
     .cap-card {
       background: var(--glass);
-      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      border: 1.5px solid rgba(255, 255, 255, 0.82);
-      outline: 1px solid var(--border);
-      border-radius: 16px; overflow: hidden;
-      box-shadow: 0 8px 22px rgba(15, 46, 32, 0.06); display: flex; flex-direction: column;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border); border-radius: 13px; overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), var(--shadow-card);
+      display: flex; flex-direction: column; transition: transform 0.18s ease, box-shadow 0.18s ease;
     }
-    .cap-card img { width: 100%; height: 170px; object-fit: cover; }
-    .cap-body { padding: 15px 17px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
-    .spec-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; }
-    .spec-tag { font-size: 0.7rem; font-weight: 800; padding: 3px 8px; border-radius: 5px; background: rgba(236, 253, 245, 0.9); color: #065f46; border: 1px solid #a7f3d0; }
+    .cap-card:hover { transform: translateY(-3px); box-shadow: 0 18px 36px -12px rgba(12, 38, 27, 0.16); }
+    .cap-img-wrap { height: 168px; overflow: hidden; border-bottom: 1px solid var(--border); }
+    .cap-card img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.35s ease; }
+    .cap-card:hover img { transform: scale(1.04); }
+    .cap-body { padding: 16px 18px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    .cap-body h3 { margin: 0 0 6px; font-family: var(--font-display); font-size: 1.32rem; font-weight: 800; color: var(--forest); letter-spacing: 0.01em; }
+    .spec-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 12px; }
+    .spec-tag {
+      font-family: var(--font-mono); font-size: 0.68rem; font-weight: 700; padding: 3px 7px;
+      border-radius: 4px; background: rgba(15, 46, 32, 0.06); color: var(--forest); border: 1px solid var(--border);
+    }
 
     .fleet-banner {
       background: var(--glass-strong);
-      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      border: 2px solid rgba(217, 119, 6, 0.4);
-      border-radius: 20px; padding: 24px;
-      display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 24px; align-items: center;
-      box-shadow: 0 12px 30px rgba(15, 46, 32, 0.08);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-strong); border-left: 4px solid var(--gold);
+      border-radius: 14px; padding: 28px;
+      display: grid; grid-template-columns: 1.08fr 0.92fr; gap: 26px; align-items: center;
+      box-shadow: var(--shadow-card);
     }
-    @media (max-width: 860px) { .fleet-banner { grid-template-columns: 1fr; padding: 18px; } }
-    .fleet-imgs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .fleet-imgs img { width: 100%; height: 185px; object-fit: cover; border-radius: 12px; border: 2px solid var(--gold-lt); }
+    @media (max-width: 860px) { .fleet-banner { grid-template-columns: 1fr; padding: 20px; } }
+    .check-list { list-style: none; padding: 0; margin: 0 0 20px; display: flex; flex-direction: column; gap: 9px; font-size: 0.88rem; color: var(--ink-soft); }
+    .check-list li { display: flex; align-items: flex-start; gap: 9px; }
+    .check-list svg { color: var(--emerald); margin-top: 3px; }
+    .fleet-imgs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .fleet-imgs img { width: 100%; height: 192px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border-strong); }
 
-    .portal-grid { display: grid; grid-template-columns: 0.86fr 1.14fr; gap: 22px; align-items: start; }
-    @media (max-width: 860px) { .portal-grid { grid-template-columns: 1fr; } }
-    label { display: block; font-size: 0.73rem; font-weight: 800; text-transform: uppercase; color: #1e293b; margin-bottom: 4px; }
-    input:not([type="checkbox"]), select, textarea {
-      width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px;
-      font-size: 0.94rem; color: var(--slate); background: rgba(255, 255, 255, 0.9);
+    footer {
+      background: var(--forest); color: #cbd5e1; padding: 28px 0; font-size: 0.82rem;
+      border-top: 2px solid var(--gold-bright); position: relative; z-index: 6; margin-top: 28px;
     }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
-    @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
-
-    .mode-tab { padding: 10px 6px; border-radius: 9px; border: 1.5px solid #cbd5e1; background: rgba(255,255,255,0.9); font-weight: 900; cursor: pointer; text-align: center; font-size: 0.76rem; color: var(--slate); }
-    .mode-tab.active { background: var(--green); color: #fff; border-color: var(--forest); }
-
-    .acct-pills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
-    @media (max-width: 500px) { .acct-pills { grid-template-columns: 1fr; } }
-    .acct-pill { padding: 8px 6px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: rgba(255,255,255,0.9); font-weight: 800; font-size: 0.78rem; cursor: pointer; text-align: center; color: var(--slate); }
-    .acct-pill.active { background: #ecfdf5; border-color: #10b981; color: #065f46; }
-
-    .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 5px 0 8px; }
-    .quick-chip { background: rgba(240, 253, 244, 0.95); color: #065f46; border: 1px solid #86efac; border-radius: 7px; padding: 5px 9px; font-size: 0.75rem; font-weight: 800; cursor: pointer; }
-    .quick-chip:hover { background: #dcfce7; }
-
-    .btn-submit { width: 100%; background: var(--green); color: #fff; border: none; padding: 13px; border-radius: 9px; font-size: 0.98rem; font-weight: 900; cursor: pointer; margin-top: 12px; }
-    .btn-submit:hover { background: var(--forest); }
-    .alert-box { padding: 12px 14px; border-radius: 10px; font-weight: 700; font-size: 0.88rem; margin-top: 11px; }
-    .alert-ok { background: rgba(236, 253, 245, 0.92); border: 1.5px solid #6ee7b7; color: #065f46; }
-    .alert-warn { background: rgba(255, 251, 235, 0.92); border: 1.5px solid #fcd34d; color: #92400e; }
-    .alert-bad { background: rgba(254, 242, 242, 0.94); border: 1.5px solid #fca5a5; color: #991b1b; }
-
-    footer { background: var(--forest); color: #cbd5e1; padding: 28px 0; font-size: 0.84rem; border-top: 3px solid var(--gold-lt); position: relative; z-index: 6; margin-top: 24px; }
     footer a { color: #fde68a; text-decoration: none; font-weight: 700; }
+    footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
-  <!-- STICKY TOP BARS -->
+  <!-- CONSOLIDATED DOT COMPLIANCE + HOLIDAY BAR -->
   <div class="top-chrome" id="topChrome">
-    <div id="pubHolidayBanner" class="pub-holiday-bar" hidden></div>
     <div class="util-bar">
       <div class="wrap util-inner">
-        <div>U.S. D.O.T. Certified Facility • <strong>RIN B386</strong> (49 CFR §180.215) • 3086 Legionville Rd, Baden, PA 15005</div>
-        <div>Mon &amp; Fri 9–4 | Tue–Thu 9–2 | <strong>24/7 Back Room (Loading Dock)</strong> • <a href="tel:7242668008">📞 724-266-8008</a> • <a href="https://ops.weberstanktesting.com/ops">Crew Login</a></div>
+        <div class="util-left">
+          <span class="util-rin">DOT RIN B386</span>
+          <span>49 CFR §180.215 Certified Requalifier</span>
+          <span class="sep-dot">•</span>
+          <span>3086 Legionville Rd, Baden, PA 15005</span>
+        </div>
+        <div class="util-right">
+          <span id="pubHolidayBanner" class="util-holiday-chip" hidden></span>
+          <span>Mon &amp; Fri 9–4 | Tue–Thu 9–2 | <strong>24/7 Dock</strong></span>
+          <span class="sep-dot">•</span>
+          <a href="tel:7242668008" class="mono">724-266-8008</a>
+          <span class="sep-dot">•</span>
+          <a href="https://ops.weberstanktesting.com/ops">Crew Portal →</a>
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- STICKY ARCHITECTURAL GLASS HEADER -->
   <header class="site-nav" id="stickySiteNav">
-      <div class="wrap nav-inner">
-        <a href="#" class="brand">
-          <img src="/static/images/logo-crest.jpg" alt="Weber's Tank Testing RIN B386" onerror="this.src='/icon.svg'" />
-          <div>
-            <strong>WEBER'S TANK TESTING</strong>
-            <small>U.S. D.O.T. RIN B386 • BADEN, PA</small>
-          </div>
-        </a>
-        <nav class="nav-links">
-          <a href="#dropoff">24/7 Check-In</a>
-          <a href="#tracker">Track Ticket</a>
-          <a href="#capabilities">Cylinder Types</a>
-          <a href="#departments">Fire &amp; Fleet</a>
-          <a href="#checker">DOT Date Checker</a>
-          <a href="#facility">Location</a>
-        </nav>
-        <a href="#dropoff" class="btn-gold">📥 24/7 Drop-Off &amp; Pick-Up</a>
-      </div>
+    <div class="wrap nav-inner">
+      <a href="#" class="brand">
+        <img src="/static/images/logo-crest.jpg" alt="Weber's Tank Testing RIN B386" onerror="this.src='/icon.svg'" />
+        <div>
+          <span class="brand-title">Weber's Tank Testing</span>
+          <span class="brand-sub">U.S. D.O.T. RIN B386 • BADEN, PA</span>
+        </div>
+      </a>
+      <nav class="nav-links">
+        <a href="#dropoff">24/7 Check-In</a>
+        <a href="#tracker">Track Ticket</a>
+        <a href="#capabilities">Capabilities</a>
+        <a href="#departments">Fire &amp; Fleet</a>
+        <a href="#checker">Date Checker</a>
+        <a href="#facility">Location</a>
+      </nav>
+      <a href="#dropoff" class="btn btn-gold">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+        <span>24/7 Drop-Off &amp; Pick-Up</span>
+      </a>
+    </div>
   </header>
 
-  <!-- ========================================================================
-       FIXED CENTERPIECE STAGE:
-       100% Solid & Unblocked on Open -> Smoothly Falls Into Background on Scroll
-       ======================================================================== -->
+  <!-- FIXED CENTERPIECE STAGE: 100% Solid at Top -> Smoothly Recedes Behind Frosted Cards on Scroll -->
   <div class="fixed-brand-stage" id="fixedBrandStage" aria-hidden="true">
     <div class="crest-arch-wrap">
       <img id="heroHolidayArchImg" class="stage-holiday-arch-img" alt="" hidden />
@@ -350,142 +513,203 @@
     <img id="heroDogsImg" src="/static/images/dogs-thanksgiving.png" alt="Pongo, Zeke & Pierce" class="stage-dogs-cutout" onerror="this.onerror=null;this.src='/static/images/shop-dogs.jpg';this.classList.add('photo-fallback');" />
   </div>
 
-  <!-- ========================================================================
-       SCROLLING FOREGROUND LAYER
-       ======================================================================== -->
+  <!-- SCROLLING FOREGROUND LAYER -->
   <div class="scroll-foreground">
-    <!-- OPENING SCREEN: Unblocked Crest + Dogs, with Greeting Bubble that disappears as you scroll -->
     <section class="hero-opening-spacer">
       <div class="greeting-fade-wrap" id="greetingFadeBox">
-        <div class="dog-speech-bubble" id="heroDogsBubble">
-          🐾 Welcome to Weber's Tank Testing from Pongo, Zeke &amp; Pierce! Pull up to our Loading Dock for 24/7 Back Room drop-off &amp; pickup anytime!
+        <div class="dog-speech-bubble">
+          <span class="speech-eyebrow">Shop Crew Greeting • Pongo, Zeke &amp; Pierce</span>
+          <span id="heroDogsBubble">🐾 Welcome to Weber's Tank Testing! Pull up to our Loading Dock for 24/7 Back Room drop-off &amp; pickup anytime!</span>
         </div>
         <div class="hero-quick-bar">
-          <a href="#dropoff" class="btn-gold">📥 24/7 Back Room Check-In</a>
-          <a href="#dropoff" onclick="setCheckinMode('TRUCK_REQUEST')" class="btn-green">🚚 Truck Pickup</a>
-          <a href="#tracker" class="btn-green" style="background:#334155;">🔍 Track Ticket #</a>
+          <a href="#dropoff" onclick="setCheckinMode('DROPOFF')" class="btn btn-gold">
+            <svg class="ico" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+            <span>24/7 Back Room Check-In</span>
+          </a>
+          <a href="#dropoff" onclick="setCheckinMode('TRUCK_REQUEST')" class="btn btn-forest">
+            <svg class="ico" viewBox="0 0 24 24"><path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+            <span>Request Truck Pickup</span>
+          </a>
+          <a href="#tracker" class="btn btn-outline">
+            <svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+            <span>Track Ticket #</span>
+          </a>
         </div>
-        <div class="scroll-hint">⌄ Scroll for Check-In, Live Tracking &amp; Capabilities ⌄</div>
+        <div class="scroll-hint">
+          <svg class="ico" style="width:14px;height:14px;" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+          <span>Scroll for Live Turnaround, Check-In &amp; Specs</span>
+        </div>
       </div>
     </section>
 
-    <!-- LIVE READY TIMES & TICKET TRACKER (FIRST GLASS CARDS THAT SCROLL OVER THE DOGS + CREST) -->
-    <section class="sec" id="tracker" style="padding-top:12px;">
+    <!-- LIVE TURNAROUND & TICKET TRACKER -->
+    <section class="sec" id="tracker" style="padding-top:14px;">
       <div class="wrap top-action-grid">
-        <div class="glass-card" style="display:flex;flex-direction:column;justify-content:space-between;gap:12px;">
+        <div class="glass-card" style="display:flex;flex-direction:column;justify-content:space-between;gap:14px;">
           <div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-              <span class="rin-pill">✓ Authorized U.S. D.O.T. Facility • RIN B386</span>
-              <span class="rin-pill" id="heroHolidayPill" style="background:#fef3c7;border-color:#f59e0b;color:#92400e;" hidden></span>
+              <span class="badge-rin">✓ Authorized U.S. D.O.T. Facility • RIN B386</span>
+              <span class="badge-rin" id="heroHolidayPill" style="background:#fffbeb;border-color:#f59e0b;color:#92400e;" hidden></span>
             </div>
-            <h2 style="margin:0 0 6px;font-size:1.5rem;color:var(--forest);">Live Baden Shop Turnaround</h2>
-            <p style="margin:0;font-size:0.9rem;color:var(--muted);">
-              Calibrated water-jacket hydrostatic testing up to <strong>7,500+ PSI</strong> for Fire/EMS, Industrial, Scuba &amp; Paintball HPA—with <strong>24/7 Loading Dock Back Room</strong> drop-off &amp; pickup.
+            <h2 style="margin:0 0 6px;font-family:var(--font-display);font-size:1.85rem;font-weight:800;color:var(--forest);">Live Baden Shop Turnaround</h2>
+            <p style="margin:0;font-size:0.9rem;color:var(--ink-soft);">
+              Calibrated water-jacket hydrostatic testing up to <strong class="mono">7,500+ PSI</strong> for Fire/EMS, Industrial, Scuba &amp; Paintball HPA—with <strong>24/7 Loading Dock Back Room</strong> access.
             </p>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <div style="background:rgba(236,253,245,0.88);border:1.5px solid #6ee7b7;padding:10px 12px;border-radius:10px;">
-              <small style="font-weight:900;color:#065f46;display:block;font-size:0.72rem;">🟢 EST. STANDARD READY</small>
-              <strong id="slaStdTxt" style="font-size:1.05rem;color:var(--forest);">Checking...</strong>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="sla-tile std">
+              <small>Standard Turnaround</small>
+              <strong id="slaStdTxt">Checking...</strong>
             </div>
-            <div style="background:rgba(255,251,235,0.9);border:1.5px solid #fcd34d;padding:10px 12px;border-radius:10px;">
-              <small style="font-weight:900;color:#92400e;display:block;font-size:0.72rem;">🔥 PAID RUSH TURNAROUND</small>
-              <strong id="slaRushTxt" style="font-size:1.05rem;color:#b45309;">Checking...</strong>
+            <div class="sla-tile rush">
+              <small>Paid Rush Service</small>
+              <strong id="slaRushTxt" style="color:#b45309;">Checking...</strong>
             </div>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <a href="#dropoff" class="btn-gold">📥 Log 24/7 Back Room Drop-Off</a>
-            <a href="tel:7242668008" class="btn-green" style="background:#334155;">📞 Call / Text 724-266-8008</a>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <a href="#dropoff" class="btn btn-gold">
+              <svg class="ico" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+              <span>Log 24/7 Back Room Drop-Off</span>
+            </a>
+            <a href="tel:7242668008" class="btn btn-outline mono">
+              <svg class="ico" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+              <span>724-266-8008</span>
+            </a>
           </div>
         </div>
 
-        <div class="glass-card">
-          <h3 style="margin:0 0 4px;font-size:1.12rem;color:var(--forest);">🔍 Track Your Drop-Off Ticket</h3>
-          <p style="margin:0 0 12px;font-size:0.86rem;color:var(--muted);">
-            Enter the <strong>BR-XXXX</strong> ticket number from your Back Room check-in:
-          </p>
-          <div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:8px;margin-bottom:10px;">
-            <input id="trkTicket" placeholder="Ticket # (e.g. BR-0001)" onkeydown="if(event.key==='Enter')lookupTicket()" style="font-weight:800;" />
-            <input id="trkLast4" maxlength="4" inputmode="numeric" placeholder="Last 4 Phone" onkeydown="if(event.key==='Enter')lookupTicket()" style="font-weight:800;" />
+        <div class="glass-card" style="display:flex;flex-direction:column;justify-content:space-between;">
+          <div>
+            <h3 style="margin:0 0 4px;font-family:var(--font-display);font-size:1.55rem;font-weight:800;color:var(--forest);">Track Your Drop-Off Ticket</h3>
+            <p style="margin:0 0 14px;font-size:0.86rem;color:var(--ink-soft);">
+              Enter the <strong class="mono">BR-XXXX</strong> ticket number from your Back Room check-in receipt:
+            </p>
+            <div style="display:grid;grid-template-columns:1.25fr 0.75fr;gap:10px;margin-bottom:10px;">
+              <input id="trkTicket" class="mono" placeholder="BR-0001" onkeydown="if(event.key==='Enter')lookupTicket()" style="font-weight:700;text-transform:uppercase;" />
+              <input id="trkLast4" class="mono" maxlength="4" inputmode="numeric" placeholder="Last 4 Ph" onkeydown="if(event.key==='Enter')lookupTicket()" style="font-weight:700;" />
+            </div>
+            <button type="button" class="btn btn-forest" style="width:100%;padding:12px;" onclick="lookupTicket()">
+              <svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+              <span>Check Live Shop Status</span>
+            </button>
+            <div id="trkResult" style="margin-top:12px;" hidden></div>
           </div>
-          <button class="btn-gold" style="width:100%;justify-content:center;padding:12px;" onclick="lookupTicket()">Check Live Shop Status</button>
-          <div id="trkResult" style="margin-top:12px;" hidden></div>
-          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:0.81rem;color:var(--muted);">
-            <strong style="color:var(--forest);">📍 3086 Legionville Rd, Baden, PA 15005</strong> — Pull up to our right-side <strong>Loading Dock / Ramp</strong> anytime 24/7!
+
+          <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);font-size:0.81rem;color:var(--ink-soft);display:flex;align-items:center;gap:8px;">
+            <svg class="ico" style="color:var(--gold);" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span><strong>3086 Legionville Rd, Baden, PA 15005</strong> — Right-side Loading Dock &amp; Ramp open 24/7.</span>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- FROSTED KPI BAND -->
+    <!-- TELEMETRY KPI STRIP -->
     <section class="kpi-band">
       <div class="wrap kpi-grid">
         <div class="kpi-item"><strong>7,500+ PSI</strong><span>Dual Water-Jacket Stand</span></div>
         <div class="kpi-item"><strong>±1.0% Method B</strong><span>Daily Calibrated Accuracy</span></div>
         <div class="kpi-item"><strong>100% Tagged</strong><span>Valve &amp; Regulator Match</span></div>
-        <div class="kpi-item"><strong>24/7 Access</strong><span>Loading Dock Back Room</span></div>
+        <div class="kpi-item"><strong>24/7 Dock</strong><span>Loading Dock Back Room</span></div>
       </div>
     </section>
 
-    <!-- 24/7 BACK ROOM CHECK-IN & TRUCK PICKUP / DELIVERY PORTAL -->
+    <!-- 24/7 BACK ROOM CHECK-IN & TRUCK DISPATCH PORTAL -->
     <section class="sec" id="dropoff">
       <div class="wrap">
         <div class="sec-hdr">
-          <small>24/7 Loading Dock Back Room + Regional Truck Service • 3086 Legionville Rd, Baden, PA</small>
-          <h2>24/7 Back Room Check-In &amp; Truck Pickup / Delivery</h2>
+          <span class="sec-eyebrow">01 / Self-Serve Dock &amp; Regional Truck Dispatch</span>
+          <h2>24/7 Back Room Check-In &amp; Truck Pickup</h2>
         </div>
+
         <div class="portal-grid">
           <div class="glass-card">
-            <h3 style="margin-top:0;color:var(--green);">Where to Drop Off &amp; Pick Up</h3>
-            <ol style="padding-left:18px;font-size:0.9rem;color:#1e293b;line-height:1.7;">
-              <li><strong>Pull Up to the Loading Dock:</strong> Drive around to the right side of <strong>3086 Legionville Rd, Baden</strong> to our <strong>Loading Dock &amp; Ramp</strong> to step right inside our <strong>24/7 Back Room</strong>.</li>
-              <li><strong>📥 BACKROOM DROP-OFF:</strong> Set your tanks inside the Back Room and submit the form to save your <strong>BR-XXXX</strong> ticket PDF.</li>
-              <li><strong>✅ BACKROOM PICK-UP:</strong> Once we text you that your finished batch is staged by the Loading Dock door, tap <strong>BACKROOM PICK-UP</strong> to sign them out.</li>
-              <li><strong>🚚 TRUCK PICKUP &amp; DELIVERY:</strong> Need our truck at your fire station or business? Request a pickup/delivery run anytime.</li>
+            <h3 style="margin:0;font-family:var(--font-display);font-size:1.5rem;color:var(--forest);">How Our 24/7 Loading Dock Works</h3>
+            <ol class="step-list">
+              <li>
+                <span class="step-num">01</span>
+                <div><strong>Pull Up to the Loading Dock:</strong> Drive around to the right side of <strong>3086 Legionville Rd, Baden</strong> to our Loading Dock &amp; Ramp to step inside our 24/7 Back Room.</div>
+              </li>
+              <li>
+                <span class="step-num">02</span>
+                <div><strong>Backroom Drop-Off:</strong> Set your cylinders inside the Back Room and submit this form to receive your <strong class="mono">BR-XXXX</strong> ticket PDF.</div>
+              </li>
+              <li>
+                <span class="step-num">03</span>
+                <div><strong>Backroom Pick-Up:</strong> Once we text you that your batch is staged by the Loading Dock door, switch to <strong>Backroom Pick-Up</strong> to sign them out.</div>
+              </li>
+              <li>
+                <span class="step-num">04</span>
+                <div><strong>Truck Pickup &amp; Delivery:</strong> Need our truck at your Fire Station, EMS base, or business? Request a regional pickup/delivery run anytime.</div>
+              </li>
             </ol>
-            <div class="alert-box alert-ok" style="font-size:0.83rem;margin-top:10px;">
-              ℹ️ <strong>Testing Facility Only:</strong> Weber's performs DOT hydrostatic &amp; visual testing only—<strong>we do not refill cylinders</strong>. Passing tanks return clean, dried, revalved, and depressurized.
+
+            <div class="alert-box alert-ok">
+              <strong>Testing Facility Only:</strong> Weber's performs certified DOT hydrostatic &amp; visual requalification only—<strong>we do not refill cylinders</strong>. Passing tanks return clean, heated-air dried, revalved, and depressurized.
             </div>
-            <div class="alert-box alert-warn" style="font-size:0.83rem;">
-              ⚠️ <strong>Safety Reminder:</strong> Never leave actively leaking cylinders inside the enclosed Back Room. Call <a href="tel:7242668008" style="color:#92400e;">724-266-8008</a> for assistance.
+            <div class="alert-box alert-warn">
+              <strong>Safety Notice:</strong> Never leave actively leaking cylinders inside the enclosed Back Room. Call <a href="tel:7242668008" class="mono" style="color:#78350f;font-weight:700;">724-266-8008</a> for immediate assistance.
             </div>
           </div>
 
           <div class="glass-card" id="checkinCardTop">
-            <div id="checkinModeTabs" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px;">
-              <button type="button" class="mode-tab active" id="tabDrop" onclick="setCheckinMode('DROPOFF')">📥 BACKROOM DROP-OFF</button>
-              <button type="button" class="mode-tab" id="tabPick" onclick="setCheckinMode('PICKUP_NOTICE')">✅ BACKROOM PICK-UP</button>
-              <button type="button" class="mode-tab" id="tabTruck" onclick="setCheckinMode('TRUCK_REQUEST')">🚚 TRUCK PICKUP &amp; DELIVERY</button>
+            <div id="checkinModeTabs" class="seg-track">
+              <button type="button" class="mode-tab active-drop" id="tabDrop" onclick="setCheckinMode('DROPOFF')">
+                <svg class="ico" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+                <span>Backroom Drop-Off</span>
+              </button>
+              <button type="button" class="mode-tab" id="tabPick" onclick="setCheckinMode('PICKUP_NOTICE')">
+                <svg class="ico" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+                <span>Backroom Pick-Up</span>
+              </button>
+              <button type="button" class="mode-tab" id="tabTruck" onclick="setCheckinMode('TRUCK_REQUEST')">
+                <svg class="ico" viewBox="0 0 24 24"><path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                <span>Truck Pickup / Delivery</span>
+              </button>
             </div>
             <input type="text" id="hpField" style="display:none;" tabindex="-1" autocomplete="off" />
 
+            <!-- FORM 1: DROP-OFF -->
             <div id="formDropoff">
-              <label>Account Type</label>
+              <label>Customer Account Type</label>
               <div class="acct-pills" id="pubAcctBar">
-                <button type="button" class="acct-pill active" data-acct="WALK_IN" onclick="setPubAcct('WALK_IN')">👤 Walk-In</button>
-                <button type="button" class="acct-pill" data-acct="FIRE_EMS" onclick="setPubAcct('FIRE_EMS')">🚒 Fire / EMS</button>
-                <button type="button" class="acct-pill" data-acct="COMMERCIAL" onclick="setPubAcct('COMMERCIAL')">🏢 Commercial</button>
+                <button type="button" class="acct-pill active" data-acct="WALK_IN" onclick="setPubAcct('WALK_IN')">
+                  <svg class="ico" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  <span>Walk-In</span>
+                </button>
+                <button type="button" class="acct-pill" data-acct="FIRE_EMS" onclick="setPubAcct('FIRE_EMS')">
+                  <svg class="ico" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span>Fire / EMS</span>
+                </button>
+                <button type="button" class="acct-pill" data-acct="COMMERCIAL" onclick="setPubAcct('COMMERCIAL')">
+                  <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 8h2M15 12h2M15 16h2"/></svg>
+                  <span>Commercial</span>
+                </button>
               </div>
 
               <div class="form-grid">
                 <div><label id="lblDropName">Your Full Name *</label><input id="dropName" placeholder="e.g. John Smith" /></div>
                 <div id="dropContactWrap" hidden><label>Dropped Off By (Your Name) *</label><input id="dropContact" placeholder="e.g. Capt. Mike Miller" /></div>
-                <div><label>10-Digit Cell / Contact Phone *</label><input id="dropPhone" type="tel" placeholder="724-555-0199" oninput="formatPubPhone(this)" /></div>
-                <div><label>Email for Instant Ticket Receipt (Optional)</label><input id="dropEmail" type="email" placeholder="you@example.com" /></div>
-                <div><label>How Many Cylinders? *</label><input type="number" id="dropCount" min="1" max="250" value="1" oninput="refreshPublicSla(this.value)" /></div>
-                <div id="dropPoWrap" hidden><label>Station # or PO # (Optional)</label><input id="dropPo" placeholder="e.g. Station 47 / PO #204" /></div>
+                <div><label>10-Digit Contact Phone *</label><input id="dropPhone" class="mono" type="tel" placeholder="724-555-0199" oninput="formatPubPhone(this)" /></div>
+                <div><label>Email for Ticket Receipt <span class="opt">(Optional)</span></label><input id="dropEmail" type="email" placeholder="you@example.com" /></div>
+                <div><label>Cylinder Count *</label><input type="number" id="dropCount" class="mono" min="1" max="250" value="1" oninput="refreshPublicSla(this.value)" /></div>
+                <div id="dropPoWrap" hidden><label>Station # or PO # <span class="opt">(Optional)</span></label><input id="dropPo" placeholder="e.g. Station 47 / PO #204" /></div>
 
-                <div style="grid-column:1/-1;"><label>Billing / Mailing Street Address (For Invoices &amp; 5-Yr Re-Cert Notice) *</label><input id="dropStreet" placeholder="e.g. 123 State St" autocomplete="street-address" /></div>
-                <div style="grid-column:1/-1;display:grid;grid-template-columns:1.5fr 74px 1fr;gap:8px;">
-                  <div><label>City *</label><input id="dropCity" placeholder="e.g. Baden" autocomplete="address-level2" /></div>
-                  <div><label>State</label><input id="dropState" value="PA" maxlength="2" autocomplete="address-level1" /></div>
-                  <div><label>ZIP Code *</label><input id="dropZip" inputmode="numeric" maxlength="10" placeholder="15005" autocomplete="postal-code" /></div>
+                <div style="grid-column:1/-1;">
+                  <label>Billing / Mailing Street Address * <span class="opt">(For invoices &amp; 5-yr recall notice)</span></label>
+                  <input id="dropStreet" placeholder="e.g. 123 State St" autocomplete="street-address" />
+                </div>
+                <div style="grid-column:1/-1;display:grid;grid-template-columns:1.5fr 78px 1fr;gap:10px;">
+                  <div><label>City *</label><input id="dropCity" placeholder="Baden" autocomplete="address-level2" /></div>
+                  <div><label>State</label><input id="dropState" class="mono" value="PA" maxlength="2" autocomplete="address-level1" /></div>
+                  <div><label>ZIP Code *</label><input id="dropZip" class="mono" inputmode="numeric" maxlength="10" placeholder="15005" autocomplete="postal-code" /></div>
                 </div>
 
                 <div style="grid-column:1/-1;">
                   <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <label style="margin:0;">Cylinder Types / Notes (Tap to Add or Type)</label>
-                    <button type="button" onclick="resetPubTankChips()" style="border:none;background:none;color:var(--green);font-weight:800;font-size:0.74rem;cursor:pointer;">Reset</button>
+                    <label style="margin:0;">Cylinder Types / Notes <span class="opt">(Tap to add or type)</span></label>
+                    <button type="button" onclick="resetPubTankChips()" style="border:none;background:none;color:var(--green);font-weight:700;font-size:0.76rem;cursor:pointer;">Reset</button>
                   </div>
                   <div class="chip-row">
                     <button type="button" class="quick-chip" onclick="addPubTankChip('SCBA')">+ SCBA</button>
@@ -495,68 +719,79 @@
                     <button type="button" class="quick-chip" onclick="addPubTankChip('Medical O2')">+ Medical O2</button>
                     <button type="button" class="quick-chip" onclick="addPubTankChip('Welding/Ind')">+ Welding/Ind</button>
                   </div>
-                  <input id="dropSummary" placeholder="e.g. 2x Ninja 68/4500 HPA, or any special notes..." />
+                  <input id="dropSummary" placeholder="e.g. 2x Ninja 68/4500 HPA, or special notes..." />
                 </div>
 
-                <div style="grid-column:1/-1;background:rgba(254,242,242,0.92);border:1px solid #fca5a5;padding:9px 12px;border-radius:8px;">
-                  <label style="display:flex;align-items:center;gap:9px;margin:0;text-transform:none;font-size:0.86rem;color:#991b1b;cursor:pointer;">
-                    <input type="checkbox" id="dropRush" style="width:18px;height:18px;accent-color:#dc2626;" />
-                    <span>🔥 <strong>Request Paid Rush Turnaround</strong> (Est. Ready: <span id="formRushSla">soonest window</span>)</span>
+                <div class="rush-toggle-box">
+                  <label style="display:flex;align-items:center;gap:10px;margin:0;font-size:0.85rem;color:#78350f;cursor:pointer;">
+                    <input type="checkbox" id="dropRush" style="width:18px;height:18px;accent-color:#d97706;" />
+                    <span><strong>Request Priority / Paid Rush Turnaround</strong> <span class="opt">(Est. Ready: <strong id="formRushSla" class="mono">soonest window</strong>)</span></span>
                   </label>
                 </div>
               </div>
 
-              <button type="button" class="btn-submit" id="btnSubmitDrop" onclick="submitDropoffForm()">📥 Submit Backroom Drop-Off</button>
+              <button type="button" class="btn-submit" id="btnSubmitDrop" onclick="submitDropoffForm()">
+                <svg class="ico" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                <span>Submit Backroom Drop-Off</span>
+              </button>
             </div>
 
+            <!-- FORM 2: PICK-UP -->
             <div id="formPickup" hidden>
-              <p style="margin:0 0 12px;font-size:0.86rem;color:var(--muted);font-weight:600;">
+              <p style="margin:0 0 14px;font-size:0.87rem;color:var(--ink-soft);">
                 Picking up finished cylinders from our <strong>Back Room (Loading Dock Door)</strong>? Sign them out below:
               </p>
               <div class="form-grid">
                 <div><label>Customer / Dept Name on Batch *</label><input id="pickCustName" placeholder="e.g. Baden VFD or John Smith" /></div>
                 <div><label>Picked Up By (Your Full Name) *</label><input id="pickPersonName" placeholder="Who is taking the cylinders today" /></div>
-                <div><label>10-Digit Cell / Contact Phone *</label><input id="pickPhone" type="tel" placeholder="724-555-0199" oninput="formatPubPhone(this)" /></div>
-                <div><label>Cylinders Picked Up *</label><input type="number" id="pickCount" min="1" max="250" value="1" /></div>
-                <div style="grid-column:1/-1;"><label>Ticket # from Text or Claim Slip (Optional)</label><input id="pickTicket" placeholder="e.g. BR-0004" /></div>
+                <div><label>10-Digit Contact Phone *</label><input id="pickPhone" class="mono" type="tel" placeholder="724-555-0199" oninput="formatPubPhone(this)" /></div>
+                <div><label>Cylinders Picked Up *</label><input type="number" id="pickCount" class="mono" min="1" max="250" value="1" /></div>
+                <div style="grid-column:1/-1;"><label>Ticket # from Text or Claim Slip <span class="opt">(Optional)</span></label><input id="pickTicket" class="mono" placeholder="BR-0004" /></div>
               </div>
-              <button type="button" class="btn-submit" id="btnSubmitPick" style="background:#0369a1;" onclick="submitPickupForm()">✅ Confirm Backroom Pick-Up</button>
+              <button type="button" class="btn-submit" id="btnSubmitPick" style="background:#0369a1;border-color:#075985;" onclick="submitPickupForm()">
+                <svg class="ico" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+                <span>Confirm Backroom Pick-Up</span>
+              </button>
             </div>
 
+            <!-- FORM 3: TRUCK PICKUP & DELIVERY -->
             <div id="formTruck" hidden>
-              <p style="margin:0 0 10px;font-size:0.85rem;color:#92400e;background:#fffbeb;border:1px solid #fcd34d;padding:8px 11px;border-radius:8px;font-weight:700;">
-                🚚 Request Weber's truck to pick up and/or return cylinders at your Fire Station, EMS base, or shop:
-              </p>
+              <div class="alert-box alert-warn" style="margin:0 0 14px;">
+                Request Weber's truck to pick up and/or return cylinders at your Fire Station, EMS base, or commercial facility:
+              </div>
               <div class="form-grid">
                 <div style="grid-column:1/-1;">
-                  <label>Truck Service Needed *</label>
+                  <label>Truck Dispatch Service Needed *</label>
                   <select id="trkMode">
-                    <option value="ROAD_ROUNDTRIP">🔄 Round-Trip: Truck Pickup &amp; Return Delivery</option>
-                    <option value="ROAD_PICKUP">🚚 Truck Pickup Only (Customer Will Pick Up at Shop)</option>
-                    <option value="ROAD_DELIVERY">📦 Return Truck Delivery Only (Tanks Already at Shop)</option>
+                    <option value="ROAD_ROUNDTRIP">Round-Trip: Truck Pickup &amp; Return Delivery</option>
+                    <option value="ROAD_PICKUP">Truck Pickup Only (Will Pick Up at Baden Shop)</option>
+                    <option value="ROAD_DELIVERY">Return Truck Delivery Only (Cylinders Already at Shop)</option>
                   </select>
                 </div>
-                <div><label>Fire Dept / Business / Name *</label><input id="trkCustName" placeholder="e.g. Baden VFD Station 47" /></div>
+                <div><label>Fire Dept / Business Name *</label><input id="trkCustName" placeholder="e.g. Baden VFD Station 47" /></div>
                 <div><label>Point of Contact Name *</label><input id="trkContact" placeholder="e.g. Chief Mike Miller" /></div>
-                <div><label>10-Digit Cell / Station Phone *</label><input id="trkPhone" type="tel" placeholder="724-555-0199" oninput="formatPubPhone(this)" /></div>
-                <div><label>Email for Ticket Confirmation (Optional)</label><input id="trkEmail" type="email" placeholder="chief@dept.org" /></div>
-                <div style="grid-column:1/-1;"><label>Pickup / Delivery Street Address *</label><input id="trkAddress" placeholder="e.g. 123 State St (Bay door / access notes)" autocomplete="street-address" /></div>
-                <div style="grid-column:1/-1;display:grid;grid-template-columns:1.5fr 74px 1fr;gap:8px;">
-                  <div><label>City / Town *</label><input id="trkCity" placeholder="e.g. Baden" autocomplete="address-level2" /></div>
-                  <div><label>State</label><input id="trkState" value="PA" maxlength="2" autocomplete="address-level1" /></div>
-                  <div><label>ZIP Code *</label><input id="trkZip" inputmode="numeric" maxlength="10" placeholder="15005" autocomplete="postal-code" /></div>
+                <div><label>10-Digit Contact Phone *</label><input id="trkPhone" class="mono" type="tel" placeholder="724-555-0199" oninput="formatPubPhone(this)" /></div>
+                <div><label>Confirmation Email <span class="opt">(Optional)</span></label><input id="trkEmail" type="email" placeholder="chief@dept.org" /></div>
+                <div style="grid-column:1/-1;"><label>Station / Facility Street Address *</label><input id="trkAddress" placeholder="e.g. 123 State St (include bay door notes)" autocomplete="street-address" /></div>
+                <div style="grid-column:1/-1;display:grid;grid-template-columns:1.5fr 78px 1fr;gap:10px;">
+                  <div><label>City / Town *</label><input id="trkCity" placeholder="Baden" autocomplete="address-level2" /></div>
+                  <div><label>State</label><input id="trkState" class="mono" value="PA" maxlength="2" autocomplete="address-level1" /></div>
+                  <div><label>ZIP Code *</label><input id="trkZip" class="mono" inputmode="numeric" maxlength="10" placeholder="15005" autocomplete="postal-code" /></div>
                 </div>
-                <div><label>Preferred Pickup Date</label><input type="date" id="trkPrefDate" /></div>
-                <div><label>Approx. Cylinder Count *</label><input type="number" id="trkCount" min="1" max="250" value="6" /></div>
-                <div style="grid-column:1/-1;"><label>Cylinder Types / PO # / Gate Notes</label><input id="trkSummary" placeholder="e.g. 12x 4500# SCBA, 4x Med O2 • Call 15 min prior" /></div>
-                <div style="grid-column:1/-1;background:rgba(254,242,242,0.92);border:1px solid #fca5a5;padding:8px 12px;border-radius:8px;">
-                  <label style="display:flex;align-items:center;gap:9px;margin:0;text-transform:none;font-size:0.85rem;color:#991b1b;cursor:pointer;">
-                    <input type="checkbox" id="trkRush" style="width:18px;height:18px;accent-color:#dc2626;" />
-                    <span>🔥 <strong>Priority / Paid Rush Turnaround Needed</strong></span>
+                <div><label>Preferred Pickup Date</label><input type="date" id="trkPrefDate" class="mono" /></div>
+                <div><label>Approx. Cylinder Count *</label><input type="number" id="trkCount" class="mono" min="1" max="250" value="6" /></div>
+                <div style="grid-column:1/-1;"><label>Cylinder Types / PO # / Access Notes</label><input id="trkSummary" placeholder="e.g. 12x 4500# SCBA, 4x Med O2 • Call 15 min prior" /></div>
+                <div class="rush-toggle-box">
+                  <label style="display:flex;align-items:center;gap:10px;margin:0;font-size:0.85rem;color:#78350f;cursor:pointer;">
+                    <input type="checkbox" id="trkRush" style="width:18px;height:18px;accent-color:#d97706;" />
+                    <span><strong>Priority / Paid Rush Turnaround Needed</strong></span>
                   </label>
                 </div>
               </div>
-              <button type="button" class="btn-submit" id="btnSubmitTruck" style="background:#b45309;" onclick="submitTruckForm()">🚚 Request Truck Pickup / Delivery</button>
+              <button type="button" class="btn-submit" id="btnSubmitTruck" style="background:#b45309;border-color:#78350f;" onclick="submitTruckForm()">
+                <svg class="ico" viewBox="0 0 24 24"><path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                <span>Request Truck Pickup / Delivery</span>
+              </button>
             </div>
 
             <div id="ciConfirm" hidden></div>
@@ -565,52 +800,52 @@
       </div>
     </section>
 
-    <!-- CYLINDER CAPABILITIES -->
+    <!-- CERTIFIED CYLINDER CAPABILITIES -->
     <section class="sec" id="capabilities">
       <div class="wrap">
         <div class="sec-hdr">
-          <small>49 CFR §180.205 – §180.215 Certified Testing</small>
+          <span class="sec-eyebrow">02 / 49 CFR §180.205 – §180.215 Certified Scope</span>
           <h2>Cylinders We Test &amp; Certify</h2>
         </div>
         <div class="cap-grid">
           <div class="cap-card">
-            <img src="/static/images/fire-rescue.jpg" alt="Firefighter SCBA & Cascade Cylinder Testing" />
+            <div class="cap-img-wrap"><img src="/static/images/fire-rescue.jpg" alt="Firefighter SCBA & Cascade Cylinder Testing" /></div>
             <div class="cap-body">
               <div>
-                <h3 style="margin:0 0 6px;font-size:1.05rem;color:var(--forest);">Fire &amp; Rescue SCBA / Cascade</h3>
-                <p style="margin:0;font-size:0.86rem;color:var(--muted);">30-, 45-, and 60-minute carbon-wrapped SCBA bottles and 6,000 PSI cascade cylinders with REE verification and epoxy B386 labeling.</p>
+                <h3>Fire &amp; Rescue SCBA / Cascade</h3>
+                <p style="margin:0;font-size:0.86rem;color:var(--ink-soft);">30-, 45-, and 60-minute carbon-wrapped SCBA bottles and 6,000 PSI cascade cylinders with REE verification and epoxy B386 labeling.</p>
               </div>
-              <div class="spec-tags"><span class="spec-tag">DOT-SP Carbon</span><span class="spec-tag">2216 / 4500 / 6000 PSI</span><span class="spec-tag">15-Yr Life Check</span></div>
+              <div class="spec-tags"><span class="spec-tag">DOT-SP Carbon</span><span class="spec-tag">2216–6000 PSI</span><span class="spec-tag">15-Yr Life</span></div>
             </div>
           </div>
           <div class="cap-card">
-            <img src="/static/images/ems-oxygen.jpg" alt="EMS Medical Oxygen & Industrial Gas Cylinders" />
+            <div class="cap-img-wrap"><img src="/static/images/ems-oxygen.jpg" alt="EMS Medical Oxygen & Industrial Gas Cylinders" /></div>
             <div class="cap-body">
               <div>
-                <h3 style="margin:0 0 6px;font-size:1.05rem;color:var(--forest);">EMS Oxygen &amp; Industrial Gas</h3>
-                <p style="margin:0;font-size:0.86rem;color:var(--muted);">Medical D, E, and M oxygen cylinders alongside welding Argon, Nitrogen, Helium, and C25 mix cylinders—including 10-year star (★) steel qualification.</p>
+                <h3>EMS Oxygen &amp; Industrial Gas</h3>
+                <p style="margin:0;font-size:0.86rem;color:var(--ink-soft);">Medical D, E, and M oxygen cylinders alongside welding Argon, Nitrogen, Helium, and C25 mix cylinders—including 10-year star (★) steel qualification.</p>
               </div>
-              <div class="spec-tags"><span class="spec-tag">DOT-3A / 3AA ★</span><span class="spec-tag">DOT-3AL Alum</span><span class="spec-tag">O2 / N2 / Ar / Mix</span></div>
+              <div class="spec-tags"><span class="spec-tag">DOT-3A / 3AA ★</span><span class="spec-tag">DOT-3AL</span><span class="spec-tag">O2 / N2 / Ar</span></div>
             </div>
           </div>
           <div class="cap-card">
-            <img src="/static/images/paintball-hpa.jpg" alt="Paintball & Airsoft HPA Carbon Fiber Tanks" />
+            <div class="cap-img-wrap"><img src="/static/images/paintball-hpa.jpg" alt="Paintball & Airsoft HPA Carbon Fiber Tanks" /></div>
             <div class="cap-body">
               <div>
-                <h3 style="margin:0 0 6px;font-size:1.05rem;color:var(--forest);">Paintball &amp; Airsoft HPA Systems</h3>
-                <p style="margin:0;font-size:0.86rem;color:var(--muted);">48ci/3000 aluminum and 68ci–90ci/4500 carbon fiber HPA bottles (Ninja, HK Army, Empire, First Strike). Every regulator is tagged and matched back to your tank.</p>
+                <h3>Paintball &amp; Airsoft HPA Systems</h3>
+                <p style="margin:0;font-size:0.86rem;color:var(--ink-soft);">48ci/3000 aluminum and 68ci–90ci/4500 carbon fiber HPA bottles (Ninja, HK Army, Empire, First Strike). Every regulator is tagged and matched back to your tank.</p>
               </div>
-              <div class="spec-tags"><span class="spec-tag">3000 &amp; 4500 PSI HPA</span><span class="spec-tag">Regulator Tagged</span><span class="spec-tag">Mini B386 Label</span></div>
+              <div class="spec-tags"><span class="spec-tag">3000 &amp; 4500 HPA</span><span class="spec-tag">Reg Tagged</span><span class="spec-tag">Mini B386</span></div>
             </div>
           </div>
           <div class="cap-card">
-            <img src="/static/images/scuba-co2.jpg" alt="Scuba Dive Tanks & Beverage CO2 Cylinders" />
+            <div class="cap-img-wrap"><img src="/static/images/scuba-co2.jpg" alt="Scuba Dive Tanks & Beverage CO2 Cylinders" /></div>
             <div class="cap-body">
               <div>
-                <h3 style="margin:0 0 6px;font-size:1.05rem;color:var(--forest);">Scuba, Beverage CO2 &amp; Safety</h3>
-                <p style="margin:0;font-size:0.86rem;color:var(--muted);">AL80, pony bottles, steel dive tanks, kegerator/homebrew CO2 (5 lb–50 lb), fire suppression bottles, and O-ring / burst-disc replacement.</p>
+                <h3>Scuba, Beverage CO2 &amp; Safety</h3>
+                <p style="margin:0;font-size:0.86rem;color:var(--ink-soft);">AL80, pony bottles, steel dive tanks, kegerator/homebrew CO2 (5 lb–50 lb), fire suppression bottles, and O-ring / burst-disc replacement.</p>
               </div>
-              <div class="spec-tags"><span class="spec-tag">AL80 &amp; Steel Dive</span><span class="spec-tag">5–50 lb CO2</span><span class="spec-tag">Neck Stamped</span></div>
+              <div class="spec-tags"><span class="spec-tag">AL80 &amp; Steel</span><span class="spec-tag">5–50 lb CO2</span><span class="spec-tag">Neck Stamp</span></div>
             </div>
           </div>
         </div>
@@ -618,21 +853,33 @@
     </section>
 
     <!-- FIRE & FLEET BANNER -->
-    <section class="sec" id="departments" style="padding-top:0;">
+    <section class="sec" id="departments" style="padding-top:6px;">
       <div class="wrap">
         <div class="fleet-banner">
           <div>
-            <span class="rin-pill" style="margin-bottom:10px;">First-Responder Operated Standards</span>
-            <h2 style="margin:0 0 10px;font-size:1.7rem;color:var(--forest);">Built for Fire Departments, EMS Agencies &amp; Commercial Fleets</h2>
-            <p style="margin:0 0 14px;color:var(--muted);font-size:0.94rem;">
+            <span class="badge-rin" style="margin-bottom:10px;">First-Responder Operated Facility</span>
+            <h2 style="margin:0 0 10px;font-family:var(--font-display);font-size:2rem;font-weight:800;color:var(--forest);line-height:1.08;">Built for Fire Departments, EMS Agencies &amp; Commercial Fleets</h2>
+            <p style="margin:0 0 16px;color:var(--ink-soft);font-size:0.92rem;">
               Operated by active Beaver County emergency service personnel, our Baden shop delivers audit-ready <strong>Form 393-001 Retest Data Sheets</strong>, Method B calibration logs, Net-30 municipal billing, and regional station truck pickup &amp; return delivery runs.
             </p>
-            <ul style="margin:0 0 18px;padding-left:18px;color:var(--slate);font-size:0.88rem;line-height:1.7;">
-              <li><strong>Zero Mixed Valves:</strong> Every pulled valve or HPA regulator gets a dedicated numbered tag at our Stamp &amp; Valve Bench.</li>
-              <li><strong>Heated Dry &amp; Mark Gate:</strong> Full drying rack cycle followed by clean neck stamping or epoxy-sealed <code>B386</code> composite labels.</li>
-              <li><strong>Instant Ready Texts:</strong> Direct SMS alert with a printed pickup slip on your batch inside our Back Room.</li>
+            <ul class="check-list">
+              <li>
+                <svg class="ico" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+                <span><strong>Zero Mixed Valves:</strong> Every pulled valve or HPA regulator receives a dedicated numbered tag at our Stamp &amp; Valve Bench.</span>
+              </li>
+              <li>
+                <svg class="ico" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+                <span><strong>Heated Dry &amp; Mark Gate:</strong> Full drying rack cycle followed by clean neck stamping or epoxy-sealed <code class="mono">B386</code> composite labels.</span>
+              </li>
+              <li>
+                <svg class="ico" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+                <span><strong>Instant Ready Alerts:</strong> Direct SMS notification with a printed claim slip staged on your batch inside our Back Room.</span>
+              </li>
             </ul>
-            <a href="#dropoff" onclick="setCheckinMode('TRUCK_REQUEST')" class="btn-gold">🚚 Schedule Department Truck Run</a>
+            <a href="#dropoff" onclick="setCheckinMode('TRUCK_REQUEST')" class="btn btn-gold">
+              <svg class="ico" viewBox="0 0 24 24"><path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              <span>Schedule Department Truck Run</span>
+            </a>
           </div>
           <div class="fleet-imgs">
             <img src="/static/images/fire-rescue.jpg" alt="Fire Rescue Apparatus" />
@@ -642,13 +889,13 @@
       </div>
     </section>
 
-    <!-- DOT HYDRO DATE CHECKER -->
-    <section class="sec" id="checker" style="padding-top:0;">
+    <!-- DOT HYDRO DATE CALCULATOR -->
+    <section class="sec" id="checker" style="padding-top:6px;">
       <div class="wrap">
         <div class="glass-card">
-          <div style="margin-bottom:14px;">
-            <small style="color:var(--gold);font-weight:900;text-transform:uppercase;font-size:0.75rem;">Instant Stamp &amp; Label Calculator</small>
-            <h2 style="margin:2px 0;color:var(--forest);">Is My Cylinder Due for Hydro Testing?</h2>
+          <div style="margin-bottom:16px;">
+            <span class="sec-eyebrow">03 / Instant DOT Stamp &amp; Label Calculator</span>
+            <h2 style="margin:6px 0 0;font-family:var(--font-display);font-size:1.85rem;font-weight:800;color:var(--forest);">Is My Cylinder Due for Hydro Testing?</h2>
           </div>
           <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));align-items:end;">
             <div>
@@ -659,29 +906,35 @@
                 <option value="10">10-Year Star-Stamped Steel (DOT-3A / 3AA with ★)</option>
               </select>
             </div>
-            <div><label>Last Stamp / Label Month (1–12)</label><input type="number" id="chkMonth" min="1" max="12" placeholder="MM (e.g. 06)" oninput="runDotDateCheck()" /></div>
-            <div><label>Last Stamp / Label Year</label><input type="number" id="chkYear" placeholder="YY or YYYY (e.g. 21)" oninput="runDotDateCheck()" /></div>
-            <div id="origMfgWrap" hidden><label>Original Born Year (Composites)</label><input type="number" id="chkOrigYear" placeholder="YYYY (e.g. 2014)" oninput="runDotDateCheck()" /></div>
+            <div><label>Last Stamp Month (1–12)</label><input type="number" id="chkMonth" class="mono" min="1" max="12" placeholder="MM (e.g. 06)" oninput="runDotDateCheck()" /></div>
+            <div><label>Last Stamp Year</label><input type="number" id="chkYear" class="mono" placeholder="YY or YYYY (e.g. 21)" oninput="runDotDateCheck()" /></div>
+            <div id="origMfgWrap" hidden><label>Original Born Year (Composites)</label><input type="number" id="chkOrigYear" class="mono" placeholder="YYYY (e.g. 2014)" oninput="runDotDateCheck()" /></div>
           </div>
-          <div id="chkOutput" class="alert-box alert-ok" style="margin-top:14px;">Enter the most recent <code>MM - YY</code> date stamped on the neck or printed on the gel-coat label to check its DOT status.</div>
+          <div id="chkOutput" class="alert-box alert-ok" style="margin-top:14px;">Enter the most recent <code class="mono">MM - YY</code> date stamped on the cylinder shoulder or printed on the composite label to verify DOT eligibility.</div>
         </div>
       </div>
     </section>
 
     <!-- BADEN FACILITY & DIRECTIONS -->
-    <section class="sec" id="facility" style="padding-top:0;">
+    <section class="sec" id="facility" style="padding-top:6px;">
       <div class="wrap">
-        <div class="glass-card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px;">
-          <div style="max-width:680px;">
-            <small style="color:var(--gold);font-weight:900;text-transform:uppercase;">Local Family-Operated Facility • Baden, PA</small>
-            <h2 style="margin:4px 0 8px;color:var(--forest);">3086 Legionville Rd, Baden, PA 15005</h2>
-            <p style="margin:0 0 10px;color:var(--muted);font-size:0.92rem;">
+        <div class="glass-card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;">
+          <div style="max-width:670px;">
+            <span class="sec-eyebrow">04 / Baden Facility &amp; Directions</span>
+            <h2 style="margin:6px 0 8px;font-family:var(--font-display);font-size:1.95rem;font-weight:800;color:var(--forest);">3086 Legionville Rd, Baden, PA 15005</h2>
+            <p style="margin:0;color:var(--ink-soft);font-size:0.91rem;">
               Minutes off Route 65 &amp; I-79 serving Beaver, Butler, and Allegheny County. Staffed <strong>Mon &amp; Fri 9–4</strong> and <strong>Tue–Thu 9–2</strong>, with <strong>24/7 Back Room Drop-Off &amp; Pickup</strong> right inside our Loading Dock door.
             </p>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <a class="btn-green" href="https://www.google.com/maps/search/?api=1&query=3086+Legionville+Rd+Baden+PA+15005" target="_blank" rel="noopener">🗺️ Google Maps Directions</a>
-            <a class="btn-green" style="background:#1877f2;" href="https://www.facebook.com/share/1K52tfW568/" target="_blank" rel="noopener">👍 Follow on Facebook</a>
+            <a class="btn btn-forest" href="https://www.google.com/maps/search/?api=1&query=3086+Legionville+Rd+Baden+PA+15005" target="_blank" rel="noopener">
+              <svg class="ico" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span>Google Maps Directions</span>
+            </a>
+            <a class="btn btn-outline" href="https://www.facebook.com/share/1K52tfW568/" target="_blank" rel="noopener">
+              <svg class="ico" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
+              <span>Follow on Facebook</span>
+            </a>
           </div>
         </div>
       </div>
@@ -689,7 +942,7 @@
 
     <footer>
       <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-        <div><strong>Weber's Tank Testing</strong> • U.S. D.O.T. RIN B386 • 3086 Legionville Rd, Baden, PA 15005 • 724-266-8008</div>
+        <div><strong>Weber's Tank Testing</strong> • <span class="mono">U.S. D.O.T. RIN B386</span> • 3086 Legionville Rd, Baden, PA 15005 • <span class="mono">724-266-8008</span></div>
         <div><a href="#dropoff">24/7 Check-In</a> &nbsp;|&nbsp; <a href="#tracker">Track Ticket</a> &nbsp;|&nbsp; <a href="https://www.facebook.com/share/1K52tfW568/" target="_blank" rel="noopener">Facebook</a> &nbsp;|&nbsp; <a href="https://ops.weberstanktesting.com/ops">Crew Ops Portal</a></div>
       </div>
     </footer>
@@ -705,81 +958,13 @@
       return String(s ?? '').replace(/[&<>"]/g, m => map[m]);
     }
 
-    // 60FPS SCROLL CHOREOGRAPHY:
-    // At top (scrollY = 0): Crest + Dogs are 100% solid & unblocked; Greeting Bubble is crisp.
-    // On scroll: Greeting Bubble fades & disappears; Crest + Dogs recede smoothly into fixed background!
-
-    function buildOuterHolidayArchSvg(holidayKey) {
-      const cx = 250, cy = 250, R = 214, ink = '#2b1911';
-      const rad = d => (d * Math.PI) / 180;
-      const pt = (deg, r = R) => [(cx + r * Math.cos(rad(deg))).toFixed(1), (cy + r * Math.sin(rad(deg))).toFixed(1)];
-      const isXmas = holidayKey === 'CHRISTMAS';
-      const isAutumn = holidayKey === 'THANKSGIVING' || holidayKey === 'HALLOWEEN';
-      const isPatriotic = ['JULY_4TH', 'MEMORIAL_DAY', 'VETERANS_DAY', 'LABOR_DAY'].includes(holidayKey);
-      let out = [];
-
-      const vine = (a0, a1) => {
-        let d = '';
-        for (let i = 0; i <= 24; i++) {
-          const a = a0 + ((a1 - a0) * i) / 24;
-          const [x, y] = pt(a, R + Math.sin(i * 1.4) * 2);
-          d += (i ? ' L ' : 'M ') + x + ' ' + y;
-        }
-        return `<path d="${d}" fill="none" stroke="#5c3a21" stroke-width="4.2" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${ink}" stroke-width="1.3" opacity="0.7"/>`;
-      };
-      out.push(vine(155, 267), vine(25, -87));
-
-      const leaf = (x, y, rot, sc, fill, kind) => {
-        const p = kind === 'oak'
-          ? 'M0,0 C-5,-5 -9,-10 -6,-15 C-10,-18 -8,-24 -3,-24 C-5,-29 0,-34 0,-34 C0,-34 5,-29 3,-24 C8,-24 10,-18 6,-15 C9,-10 5,-5 0,0 Z'
-          : (kind === 'holly' ? 'M0,0 C-7,-4 -10,-12 -5,-16 C-9,-21 -5,-28 0,-33 C5,-28 9,-21 5,-16 C10,-12 7,-4 0,0 Z' : 'M0,0 C-8,-9 -8,-22 0,-32 C8,-22 8,-9 0,0 Z');
-        return `<g transform="translate(${x},${y}) rotate(${rot}) scale(${sc})"><path d="${p}" fill="${fill}" stroke="${ink}" stroke-width="1.5" stroke-linejoin="round"/><path d="M0,-2 L0,-27" stroke="${ink}" stroke-width="1" opacity="0.55"/></g>`;
-      };
-      const wheat = (x, y, rot, sc) => `<g transform="translate(${x},${y}) rotate(${rot}) scale(${sc})">
-        <path d="M0,0 L0,-38 M0,-38 L-4,-46 M0,-38 L0,-48 M0,-38 L4,-46" stroke="#92400e" stroke-width="1.3" stroke-linecap="round"/>
-        <ellipse cx="-3.5" cy="-13" rx="2.5" ry="5" transform="rotate(-22 -3.5 -13)" fill="#f59e0b" stroke="${ink}" stroke-width="1.2"/>
-        <ellipse cx="3.5" cy="-13" rx="2.5" ry="5" transform="rotate(22 3.5 -13)" fill="#fbbf24" stroke="${ink}" stroke-width="1.2"/>
-        <ellipse cx="-3.3" cy="-23" rx="2.4" ry="4.8" transform="rotate(-20 -3.3 -23)" fill="#fde68a" stroke="${ink}" stroke-width="1.2"/>
-        <ellipse cx="3.3" cy="-23" rx="2.4" ry="4.8" transform="rotate(20 3.3 -23)" fill="#f59e0b" stroke="${ink}" stroke-width="1.2"/>
-      </g>`;
-      const berries = (x, y, c1, c2) => `<g transform="translate(${x},${y})"><circle cx="-3.4" cy="-2" r="3.3" fill="${c1}" stroke="${ink}" stroke-width="1.2"/><circle cx="3.4" cy="-2" r="3.1" fill="${c2}" stroke="${ink}" stroke-width="1.2"/><circle cx="0" cy="-6" r="3.4" fill="${c1}" stroke="${ink}" stroke-width="1.2"/></g>`;
-
-      const autPal = ['#c2410c', '#d97706', '#9a3412', '#ea580c', '#65a30d'];
-      const xmasPal = ['#166534', '#15803d', '#14532d', '#1b4332'];
-      const genPal = isPatriotic ? ['#1e3a8a', '#b91c1c', '#d97706'] : ['#15803d', '#10b981', '#fbbf24'];
-
-      [true, false].forEach(isLeft => {
-        for (let i = 0; i <= 11; i++) {
-          const t = i / 11;
-          const deg = isLeft ? (155 + t * 109) : (25 - t * 109);
-          const upRot = isLeft ? (deg - 180) : deg;
-          const sgn = isLeft ? -1 : 1;
-          const [bx, by] = pt(deg, R);
-          const sc = (0.76 + Math.sin(t * Math.PI) * 0.25).toFixed(2);
-          if (isAutumn) {
-            if (i % 2 === 0 && i < 11) { const [wx, wy] = pt(deg, R + 5); out.push(wheat(wx, wy, upRot + sgn * 25, sc)); }
-            out.push(leaf(bx, by, upRot + sgn * 27, sc, autPal[i % 5], 'oak'));
-            out.push(leaf(bx, by, upRot - sgn * 13, (sc * 0.84).toFixed(2), autPal[(i + 2) % 5], 'oak'));
-            if (i % 3 === 1) { const [rx, ry] = pt(deg, R + 3); out.push(berries(rx, ry, '#dc2626', '#f59e0b')); }
-          } else if (isXmas) {
-            out.push(leaf(bx, by, upRot + sgn * 29, sc, xmasPal[i % 4], 'holly'));
-            out.push(leaf(bx, by, upRot - sgn * 14, (sc * 0.85).toFixed(2), xmasPal[(i + 1) % 4], 'holly'));
-            if (i % 2 === 1) { const [rx, ry] = pt(deg, R + 2); out.push(berries(rx, ry, '#dc2626', '#ef4444')); }
-            else { const [lx, ly] = pt(deg, R + 12); out.push(`<circle cx="${lx}" cy="${ly}" r="3.4" fill="${['#fde047','#ef4444','#60a5fa'][i%3]}" stroke="${ink}" stroke-width="1"/>`); }
-          } else {
-            out.push(leaf(bx, by, upRot + sgn * 26, sc, genPal[i % 3], 'laurel'));
-            out.push(leaf(bx, by, upRot - sgn * 13, (sc * 0.84).toFixed(2), genPal[(i + 1) % 3], 'laurel'));
-          }
-        }
-      });
-      out.push(berries(250, 38, isXmas ? '#dc2626' : '#ea580c', '#fbbf24'));
-      return out.join('');
-    }
-
     function updateHeroScrollEffect() {
       const y = window.scrollY || window.pageYOffset || 0;
       const stage = document.getElementById('fixedBrandStage');
       const greet = document.getElementById('greetingFadeBox');
+      const nav = document.getElementById('stickySiteNav');
+
+      if (nav) nav.classList.toggle('scrolled', y > 24);
 
       if (greet) {
         const gProg = Math.min(1, Math.max(0, y / 190));
@@ -790,11 +975,11 @@
 
       if (stage) {
         const sProg = Math.min(1, Math.max(0, y / 360));
-        const ribbonsH = document.getElementById('topChrome')?.offsetHeight || 58;
-        const navH = document.getElementById('stickySiteNav')?.offsetHeight || 56;
+        const ribbonsH = document.getElementById('topChrome')?.offsetHeight || 36;
+        const navH = nav?.offsetHeight || 62;
         stage.style.top = `${Math.max(navH + 6, navH + ribbonsH - y)}px`;
-        const stageOpacity = 1 - (sProg * 0.74); // 1.00 solid at top -> 0.26 visible background behind glass!
-        const stageScale = 1 - (sProg * 0.08);   // subtle depth recede
+        const stageOpacity = 1 - (sProg * 0.74); // 1.00 solid at top -> 0.26 visible background behind glass
+        const stageScale = 1 - (sProg * 0.08);
         stage.style.opacity = stageOpacity.toFixed(3);
         stage.style.transform = `translate3d(0, 0, 0) scale(${stageScale.toFixed(3)})`;
       }
@@ -816,10 +1001,10 @@
         const img = document.getElementById('heroDogsImg');
         const pill = document.getElementById('heroHolidayPill');
         const bar = document.getElementById('pubHolidayBanner');
+        const archImg = document.getElementById('heroHolidayArchImg');
 
         if (bubble && t.dog_message) bubble.textContent = t.dog_message;
 
-        const archImg = document.getElementById('heroHolidayArchImg');
         if (t.active && t.enable_public) {
           if (archImg) {
             const archMap = { THANKSGIVING: 'arch-thanksgiving', HALLOWEEN: 'arch-thanksgiving', CHRISTMAS: 'arch-christmas' };
@@ -837,7 +1022,7 @@
             pA.src = tryPng;
           }
           if (pill && t.countdown_label) { pill.hidden = false; pill.textContent = t.countdown_label; }
-          if (bar && t.countdown_label) { bar.hidden = false; bar.textContent = `${t.countdown_label}  •  24/7 Loading Dock Back Room Open All Holiday Week!`; }
+          if (bar && t.countdown_label) { bar.hidden = false; bar.textContent = t.countdown_label; }
           if (img && t.dog_image) {
             const stem = t.dog_image.replace(/\.(jpg|jpeg|png)$/i, '');
             const pngUrl = `/static/images/${stem}.png`;
@@ -869,25 +1054,13 @@
       const tabTruck = document.getElementById('tabTruck');
       document.getElementById('checkinModeTabs').hidden = false;
 
-      const isDrop = mode === 'DROPOFF';
-      const isPick = mode === 'PICKUP_NOTICE';
-      const isTruck = mode === 'TRUCK_REQUEST';
+      tabDrop.className = 'mode-tab' + (mode === 'DROPOFF' ? ' active-drop' : '');
+      tabPick.className = 'mode-tab' + (mode === 'PICKUP_NOTICE' ? ' active-pick' : '');
+      tabTruck.className = 'mode-tab' + (mode === 'TRUCK_REQUEST' ? ' active-truck' : '');
 
-      tabDrop.classList.toggle('active', isDrop);
-      tabPick.classList.toggle('active', isPick);
-      tabTruck.classList.toggle('active', isTruck);
-
-      tabPick.style.background = isPick ? '#0369a1' : 'rgba(255,255,255,0.9)';
-      tabPick.style.borderColor = isPick ? '#075985' : '#cbd5e1';
-      tabPick.style.color = isPick ? '#ffffff' : 'var(--slate)';
-
-      tabTruck.style.background = isTruck ? '#b45309' : 'rgba(255,255,255,0.9)';
-      tabTruck.style.borderColor = isTruck ? '#92400e' : '#cbd5e1';
-      tabTruck.style.color = isTruck ? '#ffffff' : 'var(--slate)';
-
-      document.getElementById('formDropoff').hidden = !isDrop;
-      document.getElementById('formPickup').hidden = !isPick;
-      document.getElementById('formTruck').hidden = !isTruck;
+      document.getElementById('formDropoff').hidden = mode !== 'DROPOFF';
+      document.getElementById('formPickup').hidden = mode !== 'PICKUP_NOTICE';
+      document.getElementById('formTruck').hidden = mode !== 'TRUCK_REQUEST';
       document.getElementById('ciConfirm').hidden = true;
     }
 
@@ -951,15 +1124,15 @@
       let dots = '';
       for (let i = 1; i <= 5; i++) dots += `<div class="step-dot ${i <= data.step_num ? 'done' : ''}"></div>`;
       box.innerHTML = `
-        <div style="background:rgba(236,253,245,0.95);border:1.5px solid #6ee7b7;padding:12px;border-radius:10px;">
-          <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:#065f46;font-weight:900;">
-            <span>TICKET ${esc(data.ticket_no)} (${data.bottle_count} Cyl)</span>
-            <span>${data.estimated_ready ? 'Est: ' + esc(data.estimated_ready) : ''}</span>
+        <div style="background:rgba(236,253,245,0.95);border:1px solid rgba(16,185,129,0.45);padding:13px;border-radius:10px;">
+          <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.76rem;color:#065f46;font-weight:700;">
+            <span>TICKET ${esc(data.ticket_no)} (${data.bottle_count} CYL)</span>
+            <span>${data.estimated_ready ? 'EST: ' + esc(data.estimated_ready) : ''}</span>
           </div>
-          <div style="font-size:0.96rem;font-weight:900;margin-top:4px;color:var(--forest);">${esc(data.stage_label)}</div>
+          <div style="font-size:0.95rem;font-weight:800;margin-top:4px;color:var(--forest);">${esc(data.stage_label)}</div>
           <div class="step-dots">${dots}</div>
-          <div style="margin-top:8px;text-align:right;">
-            <a href="/api/public/receipt/${encodeURIComponent(data.ticket_no)}.pdf?p=${encodeURIComponent(l4)}" style="color:#065f46;font-size:0.78rem;font-weight:900;">📄 Download Ticket PDF</a>
+          <div style="margin-top:9px;text-align:right;">
+            <a href="/api/public/receipt/${encodeURIComponent(data.ticket_no)}.pdf?p=${encodeURIComponent(l4)}" style="color:#065f46;font-size:0.78rem;font-weight:800;text-decoration:none;">Download Ticket PDF →</a>
           </div>
         </div>`;
     }
@@ -968,7 +1141,7 @@
       if (navigator.clipboard) {
         navigator.clipboard.writeText(code);
         const orig = btnEl.textContent;
-        btnEl.textContent = '✓ Copied!';
+        btnEl.textContent = 'Copied!';
         setTimeout(() => { btnEl.textContent = orig; }, 2000);
       }
     }
@@ -1001,30 +1174,29 @@
       const isPick = meta.mode === 'PICKUP_NOTICE';
       const isTruck = meta.mode === 'TRUCK_REQUEST';
       const hdrTxt = isTruck
-        ? '🚚 Truck Pickup / Delivery Request Logged!'
-        : (isPick ? '✅ Backroom Pick-Up Confirmed' : '✅ Backroom Drop-Off Checked In — Save Your Ticket #');
+        ? 'Truck Dispatch Request Logged'
+        : (isPick ? 'Backroom Pick-Up Confirmed' : 'Backroom Drop-Off Checked In — Save Ticket #');
 
       box.innerHTML = `
-        <div style="background:linear-gradient(145deg,#0f2e20 0%,#1b4332 100%);color:#fff;border-radius:14px;padding:22px;text-align:center;border:2px solid #fbbf24;box-shadow:0 12px 28px rgba(0,0,0,0.18);">
-          <div style="font-size:0.76rem;font-weight:900;letter-spacing:0.8px;color:#fde68a;text-transform:uppercase;">${hdrTxt}</div>
-          <div style="font-size:2.75rem;font-weight:900;letter-spacing:2px;margin:6px 0;color:#ffffff;">${esc(data.ticket_no)}</div>
-          <div style="font-size:0.95rem;font-weight:800;color:#a7f3d0;margin-bottom:12px;">
+        <div style="background:linear-gradient(155deg,#0c261b 0%,#163a2a 100%);color:#fff;border-radius:12px;padding:24px;text-align:center;border:1.5px solid #f59e0b;box-shadow:0 16px 34px -8px rgba(12,38,27,0.35);">
+          <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;letter-spacing:0.08em;color:#fde68a;text-transform:uppercase;">${hdrTxt}</div>
+          <div style="font-family:var(--font-mono);font-size:2.7rem;font-weight:700;letter-spacing:0.04em;margin:6px 0;color:#ffffff;">${esc(data.ticket_no)}</div>
+          <div style="font-size:0.92rem;font-weight:700;color:#a7f3d0;margin-bottom:14px;">
             ${isPick ? `Signed Out By: ${esc(meta.personName || meta.name)}` : `Estimated Ready / Return: ~${esc(data.estimated_ready)}`}
           </div>
-          <div style="background:rgba(255,255,255,0.1);border-radius:9px;padding:10px 12px;text-align:left;font-size:0.84rem;line-height:1.55;margin-bottom:14px;">
+          <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);border-radius:8px;padding:11px 14px;text-align:left;font-size:0.84rem;line-height:1.6;margin-bottom:14px;">
             <div><strong>Customer / Dept:</strong> ${esc(meta.name)} (${meta.bottle_count} Cylinder${meta.bottle_count > 1 ? 's' : ''})</div>
             ${meta.address ? `<div><strong>Address:</strong> ${esc(meta.address)}</div>` : ''}
-            <div><strong>Contact Phone:</strong> ${esc(meta.phone)}</div>
-            ${data.email_queued ? `<div style="color:#fde68a;"><strong>✉️ Instant Email Receipt:</strong> Sent to ${esc(meta.email)}</div>` : ''}
-            <div style="color:#cbd5e1;font-size:0.77rem;margin-top:4px;">💡 Screenshot this card or tap <strong>Save Ticket PDF</strong> below (saved to this browser automatically).</div>
+            <div><strong>Contact Phone:</strong> <span class="mono">${esc(meta.phone)}</span></div>
+            ${data.email_queued ? `<div style="color:#fde68a;"><strong>Email Receipt:</strong> Queued to ${esc(meta.email)}</div>` : ''}
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-            <a href="${esc(data.receipt_pdf_url)}" class="btn-gold" style="justify-content:center;padding:11px 10px;font-size:0.85rem;">📄 Save Ticket PDF</a>
-            <button type="button" onclick="shareTicketReceipt()" class="btn-green" style="justify-content:center;padding:11px 10px;font-size:0.85rem;background:#334155;cursor:pointer;">📲 Text / Save to Phone</button>
+            <a href="${esc(data.receipt_pdf_url)}" class="btn btn-gold" style="padding:11px 10px;">Save Ticket PDF</a>
+            <button type="button" onclick="shareTicketReceipt()" class="btn btn-forest" style="background:#334155;border-color:#1e293b;padding:11px 10px;">Text / Save Link</button>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <button type="button" onclick="copyTicketCode('${esc(data.ticket_no)}', this)" class="btn-green" style="justify-content:center;padding:9px;font-size:0.8rem;background:#334155;cursor:pointer;">📋 Copy ${esc(data.ticket_no)}</button>
-            <button type="button" onclick="resetForAnotherEntry('${meta.mode}')" class="btn-green" style="justify-content:center;padding:9px;font-size:0.8rem;background:#334155;cursor:pointer;">➕ Log Another</button>
+            <button type="button" onclick="copyTicketCode('${esc(data.ticket_no)}', this)" class="btn btn-forest" style="background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.2);padding:9px;">Copy ${esc(data.ticket_no)}</button>
+            <button type="button" onclick="resetForAnotherEntry('${meta.mode}')" class="btn btn-forest" style="background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.2);padding:9px;">+ Log Another</button>
           </div>
         </div>`;
       document.getElementById('checkinCardTop')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1159,7 +1331,7 @@
         if (bornY < 100) bornY = bornY <= ((curY % 100) + 1) ? 2000 + bornY : 1900 + bornY;
         if ((bornY + 15) < curY || ((bornY + 15) === curY && mo < curM)) {
           out.className = 'alert-box alert-bad';
-          out.innerHTML = `⛔ <strong>RETIRED (15-Year Composite Limit Reached in ${String(mo).padStart(2,'0')}-${bornY + 15}):</strong> Standard DOT-SP carbon/fiberglass cylinders cannot be hydrotested past 15 years from original manufacture.`;
+          out.innerHTML = `<strong>RETIRED (15-Year Composite Limit Reached in ${String(mo).padStart(2,'0')}-${bornY + 15}):</strong> Standard DOT-SP carbon/fiberglass cylinders cannot be hydrotested past 15 years from original manufacture.`;
           return;
         }
       }
@@ -1168,8 +1340,8 @@
       const expired = (dueY < curY) || (dueY === curY && mo < curM);
       out.className = 'alert-box ' + (expired ? 'alert-warn' : 'alert-ok');
       out.innerHTML = expired
-        ? `⚠️ <strong>DUE FOR HYDRO TEST NOW:</strong> Requalification expired at the end of <strong>${String(mo).padStart(2,'0')}-${dueY}</strong>. Pull up to our Loading Dock for 24/7 Back Room drop-off!`
-        : `✅ <strong>IN-DATE &amp; VALID THROUGH ${String(mo).padStart(2,'0')}-${dueY}:</strong> Next ${cycle}-year DOT hydro test is due by ${String(mo).padStart(2,'0')}-${dueY}.`;
+        ? `<strong>DUE FOR HYDRO TEST NOW:</strong> Requalification expired at the end of <strong class="mono">${String(mo).padStart(2,'0')}-${dueY}</strong>. Pull up to our Loading Dock for 24/7 Back Room drop-off.`
+        : `<strong>IN-DATE &amp; VALID THROUGH <span class="mono">${String(mo).padStart(2,'0')}-${dueY}</span>:</strong> Next ${cycle}-year DOT hydro test is due by <span class="mono">${String(mo).padStart(2,'0')}-${dueY}</span>.`;
     }
 
     (function initStorefront() {
