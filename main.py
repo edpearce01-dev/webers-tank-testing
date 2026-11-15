@@ -5152,7 +5152,7 @@ def _build_dynamic_pwa_icon_png(theme: dict, size: int = 512, maskable: bool = F
 
     # Layer 1: Active Holiday Wreath Arch (if active)
     if t_key != "NONE":
-        arch_map = {"THANKSGIVING": "arch-thanksgiving.png", "HALLOWEEN": "arch-thanksgiving.png", "CHRISTMAS": "arch-christmas.png"}
+        arch_map = {"THANKSGIVING": "arch-thanksgiving.png", "HALLOWEEN": "arch-thanksgiving.png", "CHRISTMAS": "arch-christmas.png", "NEW_YEAR": "arch-newyear.png"}
         arch_name = arch_map.get(t_key, "arch-thanksgiving.png")
         arch_p = img_dir / arch_name
         if arch_p.exists():
