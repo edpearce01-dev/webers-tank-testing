@@ -390,6 +390,7 @@ async function loadState(rebuildLadder = false) {
   renderStandPillsAndBench(queued);
   renderCompletedSection(doneToday);
   renderFinishValvesAndCustomers();
+  refreshOpsDispatchRadar();
 
   document.getElementById('feedbackTable').innerHTML = STATE.feedback_items.length
     ? STATE.feedback_items.map(fb => `
@@ -1841,4 +1842,122 @@ function renderLiveFloorPlanMap() {
         </div>
       </div>
     </div>`}`;
+}
+
+
+let RADAR_EXPANDED = false;
+
+function formatTruckBadge(modeStr) {
+  const m = String(modeStr || '').toUpperCase();
+  if (m.includes('ROUND')) return { cls: 'roundtrip', lbl: '🚚 PICKUP & DELIVER BACK' };
+  if (m.includes('DELIV')) return { cls: 'delivery', lbl: '📤 DELIVER BACK TO CUSTOMER' };
+  if (m.includes('PICKUP') || m.includes('ROAD') || m.includes('TRUCK')) return { cls: 'pickup', lbl: '📥 TRUCK PICKUP AT CUSTOMER' };
+  return { cls: 'walkin', lbl: '🚪 SCHEDULED DROP-OFF' };
+}
+
+async function refreshOpsDispatchRadar() {
+  const box = document.getElementById('opsDispatchRadar');
+  if (!box) return;
+  try {
+    const res = await fetch('/api/ops/dispatch-radar');
+    if (!res.ok) return;
+    const data = await res.json();
+    const today = data.today || '';
+    const allJobs = data.jobs || [];
+
+    const isTruckJob = j => {
+      const dm = String(j.delivery_mode || j.truck_mode || j.job_type || '').toUpperCase();
+      return dm && dm !== 'SHOP_BATCH' && dm !== 'CUSTOMER_DROPOFF' && dm !== 'WALK_IN' && dm !== 'DROP_OFF' && dm !== 'NONE';
+    };
+
+    const truckJobs = allJobs.filter(isTruckJob);
+    const dueTodayOrPast = truckJobs.filter(j => (j.scheduled_date || '') <= today);
+    const upcomingTruck = truckJobs.filter(j => (j.scheduled_date || '') > today);
+
+    // Update top Schedule nav badge if open truck runs exist
+    const schedLink = document.querySelector('.ws-switcher a[href="/schedule"]');
+    if (schedLink && !schedLink.querySelector('.radar-cnt')) {
+      const sp = document.createElement('span');
+      sp.className = 'radar-cnt';
+      sp.style.cssText = 'margin-left:4px;padding:1px 6px;border-radius:999px;font-size:0.68rem;font-weight:800;background:#fbbf24;color:#111827;';
+      schedLink.appendChild(sp);
+    }
+    const cntEl = schedLink?.querySelector('.radar-cnt');
+    if (cntEl) {
+      const badgeCnt = dueTodayOrPast.length || truckJobs.length;
+      cntEl.hidden = badgeCnt === 0;
+      cntEl.textContent = String(badgeCnt);
+    }
+
+    box.hidden = false;
+    if (dueTodayOrPast.length === 0 && !RADAR_EXPANDED) {
+      box.className = 'ops-dispatch-radar calm';
+      box.innerHTML = `
+        <div class="radar-hdr">
+          <div style="font-size:0.82rem;font-weight:700;color:#334155;">
+            🚚 <strong>Truck Pickups &amp; Deliveries Today:</strong> None due today
+            ${upcomingTruck.length ? ` • <strong style="color:#b45309;">${upcomingTruck.length} upcoming scheduled run(s)</strong>` : ''}
+            ${allJobs.length - truckJobs.length > 0 ? ` • ${allJobs.length - truckJobs.length} scheduled drop-off(s)` : ''}
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            ${truckJobs.length ? `<button type="button" class="secondary" style="padding:4px 10px;font-size:0.74rem;" onclick="RADAR_EXPANDED=true;refreshOpsDispatchRadar()">Show ${truckJobs.length} Upcoming Run(s) ▾</button>` : ''}
+            <a class="secondary" style="padding:4px 10px;font-size:0.74rem;" href="/schedule">📅 Schedule / Book Run →</a>
+          </div>
+        </div>`;
+      return;
+    }
+
+    box.className = 'ops-dispatch-radar';
+    const shown = RADAR_EXPANDED ? truckJobs : dueTodayOrPast;
+    box.innerHTML = `
+      <div class="radar-hdr">
+        <div>
+          <strong style="font-size:0.92rem;color:#0c261b;">🚚 Scheduled Truck Pickups &amp; Deliveries (${dueTodayOrPast.length} Due Today${upcomingTruck.length ? ` • ${upcomingTruck.length} Upcoming` : ''})</strong>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${upcomingTruck.length ? `<button type="button" class="secondary" style="padding:4px 10px;font-size:0.74rem;" onclick="RADAR_EXPANDED=!RADAR_EXPANDED;refreshOpsDispatchRadar()">${RADAR_EXPANDED ? 'Today Only ▴' : `Show All (${truckJobs.length}) ▾`}</button>` : ''}
+          <a class="secondary" style="padding:4px 10px;font-size:0.74rem;" href="/schedule">📅 Full Calendar &amp; Booking →</a>
+        </div>
+      </div>
+      <div class="radar-list">
+        ${shown.map(j => {
+          const b = formatTruckBadge(j.delivery_mode || j.truck_mode || j.job_type);
+          const addr = (j.location_notes || j.address || j.street_address || '').trim();
+          const ph = (j.customer_phone || '').trim();
+          const mapsUrl = addr ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}` : '';
+          return `
+            <div class="radar-card">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;">
+                <span class="radar-badge ${b.cls}">${b.lbl}</span>
+                <span class="mono" style="font-size:0.74rem;font-weight:800;color:${(j.scheduled_date||'') < today ? '#b91c1c' : '#0c261b'};">
+                  ${(j.scheduled_date||'') < today ? '⚠️ OVERDUE ' : ''}${escHtml(j.scheduled_date || today)}
+                </span>
+              </div>
+              <div style="font-weight:800;font-size:0.94rem;color:#0f172a;">
+                ${escHtml(j.customer_name)} <span style="color:#b45309;">• ${j.bottle_count || 1} cyl</span>
+                ${j.priority === 'RUSH' ? '<span class="sub-badge" style="background:#fee2e2;color:#991b1b;">RUSH</span>' : ''}
+              </div>
+              <div style="font-size:0.78rem;color:#475569;">
+                ${addr ? `📍 ${escHtml(addr)}` : '📍 Address pending'}${j.contact_person ? ` • 👤 ${escHtml(j.contact_person)}` : ''}${j.tank_summary ? ` • ${escHtml(j.tank_summary)}` : ''}
+                ${j.notes ? ` • <em>${escHtml(j.notes)}</em>` : ''}
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;">
+                <button type="button" class="secondary" style="padding:5px 9px;font-size:0.74rem;background:#ecfdf5;color:#065f46;border-color:#6ee7b7;font-weight:800;" onclick="importScheduleJobToIntake(${j.id});jumpToTab('intake')">📥 Load to Prep</button>
+                ${mapsUrl ? `<a class="secondary" style="padding:5px 9px;font-size:0.74rem;" href="${mapsUrl}" target="_blank" rel="noopener">🗺️ Maps</a>` : ''}
+                ${ph ? `<a class="secondary" style="padding:5px 9px;font-size:0.74rem;" href="tel:${escHtml(ph)}">📞 ${escHtml(ph)}</a>` : ''}
+                <button type="button" class="secondary" style="padding:5px 9px;font-size:0.74rem;" onclick="completeTruckRunFromOps(${j.id})">✓ Done</button>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>`;
+  } catch (_) {}
+}
+
+async function completeTruckRunFromOps(jobId) {
+  if (!confirm('Mark this scheduled truck pickup/delivery complete?')) return;
+  await fetch(`/api/schedule/jobs/${jobId}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'COMPLETED' }),
+  });
+  refreshOpsDispatchRadar();
+  loadState(false);
 }

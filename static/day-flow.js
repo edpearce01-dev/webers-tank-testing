@@ -148,6 +148,10 @@
       <button type="button" class="rail-btn" onclick="window.openEndDayModal()">
         <span>${isBoss ? 'End Your Day' : 'Wrap Up Shift'}</span>
         <span class="nav-badge">EOD</span>
+      </button>
+      <button type="button" class="rail-btn" onclick="location.href='/merch'">
+        <span>👕 Crew Merch</span>
+        <span class="nav-badge">Gear</span>
       </button>`;
   }
 

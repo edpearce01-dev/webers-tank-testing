@@ -7,14 +7,14 @@
   <link rel="manifest" href="/manifest.json" />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/ops.css?v=11.1" />
+  <link rel="stylesheet" href="/static/ops.css?v=11.3" />
   <title>Weber's Tank Testing — Month Schedule &amp; Dispatch | DOT B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=11.1" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
+      <img src="/static/images/logo-crest.png?v=11.3" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Schedule &amp; Dispatch</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter your Individual PIN (Access resets daily at Midnight)</p>
       <div style="text-align:left;">
@@ -32,7 +32,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=11.1" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=11.3" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>WALL SCHEDULE</h1>
           <small>RIN B386 • Calendar &amp; Dispatch</small>
@@ -104,7 +104,25 @@
               </div>
 
               <div class="month-scroll">
-                <div class="month-dow-grid">
+                              <div class="sched-filter-bar" id="schedFilterBar">
+                <div style="display:flex;gap:5px;flex-wrap:wrap;" id="calFilterPills">
+                  <button type="button" class="tap-pill active" data-cfilter="ALL" onclick="setCalFilter('ALL')">All</button>
+                  <button type="button" class="tap-pill" data-cfilter="TRUCK" onclick="setCalFilter('TRUCK')">🚚 Pickups &amp; Deliveries</button>
+                  <button type="button" class="tap-pill" data-cfilter="WALKIN" onclick="setCalFilter('WALKIN')">🚪 Drop-Offs</button>
+                  <button type="button" class="tap-pill" data-cfilter="RUSH" onclick="setCalFilter('RUSH')">🚨 Rush</button>
+                  <button type="button" class="tap-pill" data-cfilter="OPEN" onclick="setCalFilter('OPEN')">⏳ Open Only</button>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <select id="calSortMode" onchange="applyCalSortAndFilter()" style="width:auto;padding:5px 9px;font-size:0.76rem;font-weight:700;">
+                    <option value="TRUCK_FIRST">Sort: 🚚 Truck Runs First</option>
+                    <option value="DATE_ASC">Sort: Date (Soonest)</option>
+                    <option value="RUSH_FIRST">Sort: 🚨 Rush First</option>
+                    <option value="BOTTLES_DESC">Sort: Largest Batch</option>
+                    <option value="NAME_ASC">Sort: Customer (A–Z)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="month-dow-grid">
                   <div class="month-dow-cell">Sun</div>
                   <div class="month-dow-cell">Mon</div>
                   <div class="month-dow-cell">Tue</div>
@@ -177,12 +195,16 @@
 
               <div class="grid">
                 <div>
-                  <label>Dispatch Type</label>
-                  <select id="sjType">
-                    <option value="SHOP_BATCH">📌 Scheduled Shop Batch</option>
-                    <option value="ROAD_ROUNDTRIP">🔄 Round-Trip: Truck Pickup &amp; Return Delivery</option>
-                    <option value="ROAD_PICKUP">🚚 Truck Pickup Only</option>
-                    <option value="ROAD_DELIVERY">🚚 Outbound Delivery Run</option>
+                  <label>How Cylinders Arrive / Return</label>
+                  <div class="transport-mode-toggle" id="bookingTransportToggle">
+                    <button type="button" class="tmode-btn active" id="tmodeWalkinBtn" onclick="setBookingTransportType('WALKIN')">🚪 Customer Drops Off</button>
+                    <button type="button" class="tmode-btn" id="tmodeTruckBtn" onclick="setBookingTransportType('TRUCK')">🚚 Weber's Truck Run</button>
+                  </div>
+                  <select id="sjType" onchange="syncBookingAddressVisibility()">
+                    <option value="SHOP_BATCH">🚪 Customer Drops Off &amp; Picks Up at Shop</option>
+                    <option value="ROAD_ROUNDTRIP">🔄 We Pick Up &amp; Deliver Back (Full Round-Trip)</option>
+                    <option value="ROAD_PICKUP">📥 We Pick Up Only (Customer Picks Up at Shop)</option>
+                    <option value="ROAD_DELIVERY">📤 Deliver Back Only (Tanks Already at Shop)</option>
                     <option value="ONSITE_VISUAL">🔍 On-Site Visual Inspection</option>
                   </select>
                 </div>
@@ -210,7 +232,7 @@
                   <input id="sjPoStation" placeholder="e.g. Station #2 / PO-1042" />
                 </div>
                 <div><label>Total Cylinder Count *</label><input type="number" id="sjCount" min="1" value="1" /></div>
-                <input type="hidden" id="sjZone" value="ZONE_A_BACKROOM" />
+                <input type="checkbox" id="sjNeedsFill" hidden /><input type="hidden" id="sjZone" value="ZONE_A_BACKROOM" />
               </div>
 
               <div style="margin-top:10px;">
@@ -351,7 +373,8 @@
       }
       document.getElementById('loginScreen').hidden = true;
       document.getElementById('appShell').hidden = false;
-      if (window.syncAuthAndRoleUI) await window.syncAuthAndRoleUI(auth.user, false);
+      if (window.syncAuthAndRoleUI) await window.syncAuthAndRoleUI(auth.user, Boolean(window._justLoggedInToast));
+      window._justLoggedInToast = false;
       await loadScheduleState();
       fetchLiveTurnaroundQuote();
     }
@@ -363,9 +386,8 @@
       });
       if (!res.ok) { document.getElementById('loginError').hidden = false; return; }
       document.getElementById('loginError').hidden = true;
-      const d = await res.json();
-      await bootSchedule();
-      if (window.syncAuthAndRoleUI) window.syncAuthAndRoleUI(d.user, true);
+      window._justLoggedInToast = true;
+      bootSchedule();
     }
 
     async function logoutCrew() {
@@ -423,7 +445,8 @@
       const res = await fetch(`/api/calendar/month?year=${VIEW_YEAR}&month=${VIEW_MONTH}`);
       if (res.ok) {
         MONTH_DATA = await res.json();
-        renderMonthGrid();
+        RAW_MONTH_DAYS = (MONTH_DATA.days || []).map(d => ({ ...d, jobs: [...(d.jobs || [])] }));
+        window.applyCalSortAndFilter();
       }
     }
 
@@ -434,7 +457,8 @@
       const res = await fetch(`/api/calendar/month?year=${VIEW_YEAR}&month=${VIEW_MONTH}`);
       if (res.ok) {
         MONTH_DATA = await res.json();
-        renderMonthGrid();
+        RAW_MONTH_DAYS = (MONTH_DATA.days || []).map(d => ({ ...d, jobs: [...(d.jobs || [])] }));
+        window.applyCalSortAndFilter();
       }
     }
 
@@ -453,6 +477,8 @@
       const res = await fetch('/api/bootstrap?' + q.toString());
       if (res.status === 401) { bootSchedule(); return; }
       STATE = await res.json();
+      RAW_ALL_JOBS = [...(STATE.schedule_jobs || [])];
+      RAW_MONTH_DAYS = (STATE.month_calendar?.days || []).map(d => ({ ...d, jobs: [...(d.jobs || [])] }));
       MONTH_DATA = STATE.month_calendar;
       VIEW_YEAR = MONTH_DATA.year;
       VIEW_MONTH = MONTH_DATA.month;
@@ -494,9 +520,7 @@
       ])].sort((a, b) => a.localeCompare(b));
       document.getElementById('customerSuggest').innerHTML = names.map(n => `<option value="${escHtml(n)}">`).join('');
 
-      renderMonthGrid();
-      renderSelectedDayInspector(openSched);
-      renderActiveRunsList(openSched);
+      window.applyCalSortAndFilter();
       renderBackroomDoorTab(drops);
     }
 
@@ -796,9 +820,102 @@
     }, 4000);
 
     bootSchedule();
+  
+    // v11.3 Calendar Filter, Sort & Clean Booking Transport Toggle (Wired to Real STATE.schedule_jobs & #sjLocation)
+    let CAL_FILTER = 'ALL';
+    let RAW_ALL_JOBS = [];
+    let RAW_MONTH_DAYS = [];
+
+    function isJobTruckRun(j) {
+      const jt = String(j.job_type || '').toUpperCase();
+      return jt.startsWith('ROAD_') || jt === 'ONSITE_VISUAL';
+    }
+
+    function matchesCalFilter(j) {
+      const truck = isJobTruckRun(j);
+      const open = !['COMPLETED', 'DONE', 'CANCELLED'].includes(String(j.status || '').toUpperCase());
+      if (CAL_FILTER === 'TRUCK' && !truck) return false;
+      if (CAL_FILTER === 'WALKIN' && truck) return false;
+      if (CAL_FILTER === 'RUSH' && !(j.rush_fee || String(j.priority || '').toUpperCase() === 'RUSH')) return false;
+      if (CAL_FILTER === 'OPEN' && !open) return false;
+      return true;
+    }
+
+    function sortJobsArray(arr, sortMode) {
+      return [...arr].sort((a, b) => {
+        if (sortMode === 'TRUCK_FIRST') {
+          const ta = isJobTruckRun(a) ? 0 : 1, tb = isJobTruckRun(b) ? 0 : 1;
+          if (ta !== tb) return ta - tb;
+        } else if (sortMode === 'RUSH_FIRST') {
+          const ra = (a.rush_fee || a.priority === 'RUSH') ? 0 : 1;
+          const rb = (b.rush_fee || b.priority === 'RUSH') ? 0 : 1;
+          if (ra !== rb) return ra - rb;
+        } else if (sortMode === 'BOTTLES_DESC') {
+          return (b.bottle_count || 0) - (a.bottle_count || 0);
+        } else if (sortMode === 'NAME_ASC') {
+          return String(a.customer_name || '').localeCompare(String(b.customer_name || ''));
+        }
+        return String(a.scheduled_date || '').localeCompare(String(b.scheduled_date || ''));
+      });
+    }
+
+    window.setCalFilter = function (mode) {
+      CAL_FILTER = mode;
+      document.querySelectorAll('#calFilterPills .tap-pill').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-cfilter') === mode);
+      });
+      window.applyCalSortAndFilter();
+    };
+
+    window.applyCalSortAndFilter = function () {
+      if (!STATE || !MONTH_DATA) return;
+      const sortMode = document.getElementById('calSortMode')?.value || 'TRUCK_FIRST';
+      const filteredJobs = sortJobsArray((RAW_ALL_JOBS || []).filter(matchesCalFilter), sortMode);
+      STATE.schedule_jobs = filteredJobs;
+
+      if (RAW_MONTH_DAYS && RAW_MONTH_DAYS.length) {
+        MONTH_DATA.days = RAW_MONTH_DAYS.map(d => ({
+          ...d,
+          jobs: sortJobsArray((d.jobs || []).filter(matchesCalFilter), sortMode),
+        }));
+      }
+
+      const openSched = filteredJobs.filter(j => j.status !== 'COMPLETED');
+      renderMonthGrid();
+      renderSelectedDayInspector(openSched);
+      renderActiveRunsList(openSched);
+    };
+
+    window.syncBookingAddressVisibility = function () {
+      const sel = document.getElementById('sjType');
+      if (!sel) return;
+      const isTruck = sel.value !== 'SHOP_BATCH';
+      document.getElementById('tmodeWalkinBtn')?.classList.toggle('active', !isTruck);
+      document.getElementById('tmodeTruckBtn')?.classList.toggle('active', isTruck);
+      sel.style.display = isTruck ? '' : 'none';
+
+      const locInput = document.getElementById('sjLocation');
+      if (locInput && locInput.parentElement) {
+        locInput.parentElement.style.display = isTruck ? '' : 'none';
+        const lbl = locInput.parentElement.querySelector('label');
+        if (lbl) lbl.textContent = isTruck ? 'Station / Pickup & Delivery Address *' : 'Road Pickup / Delivery Address';
+      }
+    };
+
+    window.setBookingTransportType = function (kind) {
+      const sel = document.getElementById('sjType');
+      if (!sel) return;
+      if (kind === 'WALKIN') {
+        sel.value = 'SHOP_BATCH';
+      } else if (sel.value === 'SHOP_BATCH') {
+        sel.value = 'ROAD_ROUNDTRIP';
+      }
+      window.syncBookingAddressVisibility();
+    };
+    setTimeout(() => window.syncBookingAddressVisibility && window.syncBookingAddressVisibility(), 80);
   </script>
-  <script src="/static/day-flow.js?v=11.1"></script>
-  <script src="/static/theme-engine.js?v=11.1"></script>
-  <script src="/static/help-bot.js?v=11.1"></script>
+  <script src="/static/day-flow.js?v=11.3"></script>
+  <script src="/static/theme-engine.js?v=11.3"></script>
+  <script src="/static/help-bot.js?v=11.3"></script>
 </body>
 </html>

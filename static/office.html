@@ -7,14 +7,14 @@
   <link rel="manifest" href="/manifest.json" />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/ops.css?v=11.1" />
+  <link rel="stylesheet" href="/static/ops.css?v=11.3" />
   <title>Weber's Tank Testing — Office, Rolodex, Printouts &amp; Supplies | RIN B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=11.1" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
+      <img src="/static/images/logo-crest.png?v=11.3" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Office &amp; Print Center</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter your Individual PIN (Access resets daily at Midnight)</p>
       <div style="text-align:left;">
@@ -32,7 +32,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=11.1" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=11.3" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>OFFICE &amp; PRINT</h1>
           <small>RIN B386 • Billing, Rolodex &amp; Supply</small>
@@ -789,7 +789,8 @@
       }
       document.getElementById('loginScreen').hidden = true;
       document.getElementById('appShell').hidden = false;
-      if (window.syncAuthAndRoleUI) await window.syncAuthAndRoleUI(auth.user, false);
+      if (window.syncAuthAndRoleUI) await window.syncAuthAndRoleUI(auth.user, Boolean(window._justLoggedInToast));
+      window._justLoggedInToast = false;
       await loadOfficeState();
       await fetchQsQuote();
       await fetchTdQuote();
@@ -803,9 +804,8 @@
       });
       if (!res.ok) { document.getElementById('loginError').hidden = false; return; }
       document.getElementById('loginError').hidden = true;
-      const d = await res.json();
-      await bootOffice();
-      if (window.syncAuthAndRoleUI) window.syncAuthAndRoleUI(d.user, true);
+      window._justLoggedInToast = true;
+      bootOffice();
     }
 
     async function logoutCrew() {
@@ -1636,7 +1636,7 @@
       let ph = (phone || '').trim() || prompt(`Enter cell phone number for ${custName}:`, '') || '';
       if (!ph.trim()) return;
       const cleanDigits = ph.replace(/\D/g, '');
-      const msg = `Weber's Tank Testing (RIN B386): Hi ${custName}, your ${count} cylinder(s) are tested, stamped/labeled, and ready on our Zone E backroom pickup shelf at 3086 Legionville Rd${invExtra ? ' (' + invExtra + ')' : ''}. Questions? Call/text ${STATE.shop_phone || '724-266-8008'}.`;
+      const msg = `Weber's Tank Testing (RIN B386): Hi ${custName}, your ${count} cylinder(s) are tested, stamped/labeled, and ready in our 24/7 Back Room pickup area (Loading Dock door) at 3086 Legionville Rd${invExtra ? ' (' + invExtra + ')' : ''}. Questions? Call/text ${STATE.shop_phone || '724-266-8008'}.`;
       const sep = /iPad|iPhone|iPod/i.test(navigator.userAgent) ? '&' : '?';
       window.location.href = `sms:${cleanDigits}${sep}body=${encodeURIComponent(msg)}`;
     }
@@ -2023,8 +2023,8 @@
 
     bootOffice();
   </script>
-  <script src="/static/day-flow.js?v=11.1"></script>
-  <script src="/static/theme-engine.js?v=11.1"></script>
-  <script src="/static/help-bot.js?v=11.1"></script>
+  <script src="/static/day-flow.js?v=11.3"></script>
+  <script src="/static/theme-engine.js?v=11.3"></script>
+  <script src="/static/help-bot.js?v=11.3"></script>
 </body>
 </html>

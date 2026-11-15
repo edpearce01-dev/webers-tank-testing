@@ -649,6 +649,96 @@
       .arch-layer, .crest-circle, .stage-dogs-cutout, .crest-gold-sheen { animation: none !important; }
     }
 
+  
+    /* =====================================================================
+       v11.2 ENLARGED CREST + WREATH & SCROLL-INTO-LOGO DOG DOCKING
+       ===================================================================== */
+    .fixed-brand-stage {
+      position: fixed !important;
+      inset: 0 !important;
+      padding-top: clamp(86px, 9.5dvh, 104px) !important;
+      display: flex !important;
+      align-items: flex-start !important;
+      justify-content: center !important;
+      pointer-events: none;
+      overflow: hidden;
+      perspective: 1150px;
+    }
+    .crest-dock-stage {
+      --crest-sz: min(78vw, 55dvh, 535px);
+      position: relative;
+      width: var(--crest-sz);
+      height: var(--crest-sz);
+      transform-style: preserve-3d;
+      will-change: transform;
+    }
+    .crest-dock-stage .arch-layer {
+      position: absolute !important;
+      width: 134% !important;
+      height: 134% !important;
+      left: -17% !important;
+      top: -15% !important;
+      object-fit: contain !important;
+      z-index: 1 !important;
+      pointer-events: none;
+    }
+    .crest-dock-stage .crest-circle {
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+      z-index: 2 !important;
+      border: none !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      filter: drop-shadow(0 20px 34px rgba(12, 38, 27, 0.24));
+    }
+    .crest-dock-stage .stage-dogs-cutout {
+      position: absolute !important;
+      left: 50% !important;
+      bottom: 18.2% !important;
+      width: 55% !important;
+      max-height: none !important;
+      height: auto !important;
+      margin: 0 !important;
+      z-index: 3 !important;
+      transform-origin: center bottom;
+      transform: translate3d(-50%, 74px, 65px) scale(1.26);
+      filter: drop-shadow(0 22px 24px rgba(12, 38, 27, 0.32)) !important;
+      will-change: transform;
+    }
+    .crest-dock-stage .crest-ribbon-lip {
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+      z-index: 4 !important;
+      pointer-events: none;
+    }
+    .fleet-showcase-single {
+      border-radius: 14px;
+      overflow: hidden;
+      border: 2px solid rgba(251, 191, 36, 0.55);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+      background: #fdf8ee;
+    }
+    .fleet-showcase-single img {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 360px;
+      object-fit: cover;
+    }
+    @media (max-width: 680px) {
+      .fixed-brand-stage { padding-top: 74px !important; }
+      .crest-dock-stage {
+        --crest-sz: min(84vw, 44dvh, 340px);
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -678,7 +768,7 @@
   <header class="site-nav" id="stickySiteNav">
     <div class="wrap nav-inner">
       <a href="#" class="brand">
-        <img src="/static/images/logo-crest.png?v=11.0?v=9.9" alt="Weber's Tank Testing RIN B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=11.3" alt="Weber's Tank Testing RIN B386" onerror="this.src='/icon.svg'" />
         <div>
           <span class="brand-title">Weber's Tank Testing</span>
           <span class="brand-sub">U.S. D.O.T. RIN B386 • BADEN, PA</span>
@@ -699,13 +789,15 @@
     </div>
   </header>
 
-  <!-- FIXED CENTERPIECE STAGE: 100% Solid at Top -> Smoothly Recedes Behind Frosted Cards on Scroll -->
+  <!-- FIXED CENTERPIECE STAGE: Dogs Float Above Speech Bubble -> Dock Seamlessly Into Crest on Scroll -->
   <div class="fixed-brand-stage" id="fixedBrandStage" aria-hidden="true">
-    <div class="crest-arch-wrap">
-      <img id="heroHolidayArchImg" class="stage-holiday-arch-img" alt="" hidden />
-      <img src="/static/images/logo-crest.png?v=11.0?v=9.9" alt="Weber's Tank Testing Crest" class="stage-crest-logo" onerror="this.src='/icon.svg'" />
+    <div class="crest-dock-stage" id="pub3dRig">
+      <img id="heroHolidayArchImg" class="arch-layer" alt="" hidden />
+      <img id="heroCrestBackImg" src="/static/images/crest-backplate.png?v=11.3" alt="Weber's Tank Testing Crest" class="crest-circle" onerror="this.onerror=null;this.src='/icon.svg'" />
+      <img id="heroDogsImg" src="/static/images/dogs-thanksgiving.png?v=11.3" alt="Pongo, Zeke & Pierce" class="stage-dogs-cutout" onerror="this.onerror=null;this.src='/static/images/dogs-classic.png?v=11.3';" />
+      <img id="heroRibbonFrontImg" src="/static/images/crest-ribbon-front.png?v=11.3" alt="" class="crest-ribbon-lip" onerror="this.hidden=true" />
+      <div class="crest-gold-sheen"></div>
     </div>
-    <img id="heroDogsImg" src="/static/images/dogs-thanksgiving.png" alt="Pongo, Zeke & Pierce" class="stage-dogs-cutout" onerror="this.onerror=null;this.src='/static/images/shop-dogs.jpg';this.classList.add('photo-fallback');" />
   </div>
 
   <!-- SCROLLING FOREGROUND LAYER -->
@@ -963,11 +1055,11 @@
               </div>
               <div class="form-grid">
                 <div style="grid-column:1/-1;">
-                  <label>Truck Dispatch Service Needed *</label>
+                  <label>How Should Pickup &amp; Return Work? *</label>
                   <select id="trkMode">
-                    <option value="ROAD_ROUNDTRIP">Round-Trip: Truck Pickup &amp; Return Delivery</option>
-                    <option value="ROAD_PICKUP">Truck Pickup Only (Will Pick Up at Baden Shop)</option>
-                    <option value="ROAD_DELIVERY">Return Truck Delivery Only (Cylinders Already at Shop)</option>
+                    <option value="ROAD_ROUNDTRIP">We Pick Up &amp; Deliver Back (Full Round-Trip)</option>
+                    <option value="ROAD_PICKUP">We Pick Up Only — You'll Pick Up at Our Baden Shop</option>
+                    <option value="ROAD_DELIVERY">Deliver Back Only — Your Tanks Are Already at Our Shop</option>
                   </select>
                 </div>
                 <div><label>Fire Dept / Business Name *</label><input id="trkCustName" placeholder="e.g. Baden VFD Station 47" /></div>
@@ -1083,9 +1175,10 @@
               <span>Schedule Department Truck Run</span>
             </a>
           </div>
-          <div class="fleet-imgs">
-            <img src="/static/images/fire-rescue.jpg" alt="Fire Rescue Apparatus" />
-            <img src="/static/images/ems-oxygen.jpg" alt="Emergency Response & Medical Gas Service" />
+          <div class="fleet-showcase-single">
+            <img src="/static/images/shop-yard-color.jpg?v=11.2"
+                 onerror="this.onerror=null;this.src='/static/images/merch/merch-shop-scene.jpg'"
+                 alt="Weber's Tank Testing 3086 Legionville Rd Shop, 1956 American LaFrance Ladder Truck & Shop Dogs" />
           </div>
         </div>
       </div>
@@ -1161,29 +1254,46 @@
     }
 
     function updateHeroScrollEffect() {
-      const y = window.scrollY || window.pageYOffset || 0;
+      const y = Math.max(0, window.scrollY || window.pageYOffset || 0);
       const stage = document.getElementById('fixedBrandStage');
+      const rig = document.getElementById('pub3dRig');
+      const dogs = document.getElementById('heroDogsImg');
+      const lip = document.getElementById('heroRibbonFrontImg');
       const greet = document.getElementById('greetingFadeBox');
       const nav = document.getElementById('stickySiteNav');
 
       if (nav) nav.classList.toggle('scrolled', y > 24);
 
       if (greet) {
-        const gProg = Math.min(1, Math.max(0, y / 190));
+        const gProg = Math.min(1, y / 175);
         greet.style.opacity = (1 - gProg).toFixed(3);
-        greet.style.transform = `translate3d(0, ${(-gProg * 24).toFixed(1)}px, 0)`;
+        greet.style.transform = `translate3d(0, ${(-gProg * 26).toFixed(1)}px, 0)`;
         greet.style.visibility = gProg >= 0.99 ? 'hidden' : 'visible';
       }
 
-      if (stage) {
-        const sProg = Math.min(1, Math.max(0, y / 360));
-        const ribbonsH = document.getElementById('topChrome')?.offsetHeight || 36;
-        const navH = nav?.offsetHeight || 62;
-        stage.style.top = `${Math.max(navH + 6, navH + ribbonsH - y)}px`;
-        const stageOpacity = 1 - (sProg * 0.74); // 1.00 solid at top -> 0.26 visible background behind glass
-        const stageScale = 1 - (sProg * 0.08);
-        stage.style.opacity = stageOpacity.toFixed(3);
-        stage.style.transform = `translate3d(0, 0, 0) scale(${stageScale.toFixed(3)})`;
+      if (stage && rig && dogs) {
+        const isMob = window.innerWidth <= 680;
+        const dockDist = isMob ? 210 : 290;
+        const rawDock = Math.min(1, y / dockDist);
+        // Smooth cubic ease-out: Dogs glide up & back into the open Crest bay behind the gold ribbon!
+        const dock = 1 - Math.pow(1 - rawDock, 3);
+
+        const startDropPx = isMob ? 48 : 74;
+        const dogY = startDropPx * (1 - dock);
+        const dogZ = 65 * (1 - dock);
+        const dogScale = (isMob ? 1.22 : 1.26) - ((isMob ? 0.22 : 0.26) * dock);
+        dogs.style.animation = 'none';
+        dogs.style.transform = `translate3d(-50%, ${dogY.toFixed(1)}px, ${dogZ.toFixed(1)}px) scale(${dogScale.toFixed(3)})`;
+
+        if (lip) lip.style.opacity = (0.15 + 0.85 * dock).toFixed(2);
+
+        const centerShiftY = dock * (isMob ? 26 : 36);
+        rig.style.transform = `translate3d(0, ${centerShiftY.toFixed(1)}px, 0) scale(${(1 - dock * 0.04).toFixed(3)})`;
+
+        // Stay crisp while you watch the dogs lock into the crest, then soften smoothly behind form cards
+        const fadeStart = dockDist * 0.78;
+        const fadeProg = y <= fadeStart ? 0 : Math.min(1, (y - fadeStart) / 260);
+        stage.style.opacity = (1 - fadeProg * 0.78).toFixed(3);
       }
     }
     window.addEventListener('scroll', () => requestAnimationFrame(updateHeroScrollEffect), { passive: true });
@@ -1237,15 +1347,15 @@
                 img.src = jpgUrl;
                 img.classList.toggle('photo-fallback', t.dog_image === 'shop-dogs.jpg');
               };
-              probeJpg.onerror = () => { img.src = '/static/images/shop-dogs.jpg'; img.classList.add('photo-fallback'); };
+              probeJpg.onerror = () => { img.src = '/static/images/dogs-classic.png?v=11.3'; img.classList.remove('photo-fallback'); };
               probeJpg.src = jpgUrl;
             };
             probePng.src = pngUrl;
           }
         } else if (img) {
           if (archImg) archImg.hidden = true;
-          img.src = '/static/images/shop-dogs.jpg';
-          img.classList.add('photo-fallback');
+          img.src = '/static/images/dogs-classic.png?v=11.3';
+          img.classList.remove('photo-fallback');
         }
       } catch (_) {}
     }

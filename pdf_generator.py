@@ -23,6 +23,26 @@ CONDEMN_LABELS = {
 }
 
 
+
+def _stamp_pdf_crest(c: canvas.Canvas, x: float, y: float, size: float, watermark_page: tuple | None = None) -> None:
+    logo_p = Path(__file__).parent / "static" / "images" / "logo-crest.png"
+    if not logo_p.exists():
+        return
+    try:
+        if watermark_page:
+            pw, ph = watermark_page
+            c.saveState()
+            if hasattr(c, "setFillAlpha"):
+                c.setFillAlpha(0.055)
+            wm = 235
+            c.drawImage(str(logo_p), (pw - wm) / 2.0, (ph - wm) / 2.0 - 20, width=wm, height=wm, preserveAspectRatio=True, mask="auto")
+            c.restoreState()
+        if size > 0:
+            c.drawImage(str(logo_p), x, y, width=size, height=size, preserveAspectRatio=True, mask="auto")
+    except Exception:
+        pass
+
+
 def _set_pdf_meta(c: canvas.Canvas, title: str) -> None:
     c.setTitle(title)
     c.setAuthor(PDF_AUTHOR)
@@ -793,6 +813,7 @@ def build_backroom_poster_pdf(
     W, H = letter
     c = canvas.Canvas(buf, pagesize=letter)
     _set_pdf_meta(c, "Weber's Tank Testing - 24/7 Backroom Drop-Off & Pickup QR Sign")
+    _stamp_pdf_crest(c, 0, 0, 0, watermark_page=(W, H))
 
     c.setFillColor(colors.HexColor("#0f291e"))
     c.rect(0, H - 126, W, 126, fill=1, stroke=0)
@@ -801,6 +822,7 @@ def build_backroom_poster_pdf(
 
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 24)
+    _stamp_pdf_crest(c, 34, H - 116, 96)
     c.drawCentredString(W / 2, H - 46, "WEBER'S TANK TESTING")
     c.setFont("Helvetica-Bold", 11.2)
     c.setFillColor(colors.HexColor("#fde68a"))
@@ -887,6 +909,7 @@ def build_invoice_pdf(invoice: dict, items: list[dict], phone: str = "724-266-80
     c = canvas.Canvas(buf, pagesize=letter)
     inv_no = invoice.get("invoice_no") or "INVOICE"
     _set_pdf_meta(c, f"{inv_no} - {invoice.get('customer_name', '')} | Weber's Tank Testing")
+    _stamp_pdf_crest(c, W - 210, H - 96, 56, watermark_page=(W, H))
 
     def draw_table_header(top_y: float) -> float:
         c.setFillColor(colors.Color(0.93, 0.95, 0.94))
@@ -1006,7 +1029,7 @@ def build_shelf_claim_slip_pdf(
     buf = io.BytesIO()
     W, H = letter
     c = canvas.Canvas(buf, pagesize=letter)
-    _set_pdf_meta(c, f"Zone E Pickup Claim Slip - {customer_name}")
+    _set_pdf_meta(c, f"Back Room Pickup Claim Slip - {customer_name}")
 
     total_cnt = len(records)
     pass_cnt = sum(1 for r in records if r.get("hydro_disposition") == "A")
@@ -1015,6 +1038,7 @@ def build_shelf_claim_slip_pdf(
     # Bold Zone E Header Banner (easy to read across the backroom)
     c.setFillColor(colors.HexColor("#0f291e"))
     c.rect(36, H - 108, W - 72, 72, fill=1, stroke=0)
+    _stamp_pdf_crest(c, W - 110, H - 105, 66, watermark_page=(W, H))
     c.setFillColor(colors.HexColor("#fbbf24"))
     c.setFont("Helvetica-Bold", 10)
     c.drawString(50, H - 54, f"24/7 BACK ROOM PICKUP (LOADING DOCK)  |  WEBER'S TANK TESTING (DOT RIN {dot_rin})")
@@ -1151,6 +1175,7 @@ def build_dropoff_receipt_pdf(
 
     c.setFillColorRGB(0.04, 0.13, 0.09)
     c.rect(36, H - 122, W - 72, 86, fill=1, stroke=0)
+    _stamp_pdf_crest(c, W - 122, H - 118, 78, watermark_page=(W, H))
     c.setFillColorRGB(0.98, 0.75, 0.14)
     c.setFont("Helvetica-Bold", 11)
     c.drawString(54, H - 62, f"U.S. D.O.T. CERTIFIED FACILITY  •  RIN {dot_rin}")

@@ -3,732 +3,201 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Weber's Crew Locker &amp; Shop Gear — Baden, PA</title>
-  <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <title>Weber's Crew &amp; Family Gear — Printify Store &amp; Logo Vault</title>
+  <link rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Inter:wght@500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet" />
   <style>
-    :root {
-      --cream: #fdf8ee;
-      --cream-card: rgba(255, 253, 248, 0.94);
-      --forest: #0c261b;
-      --green: #1b4332;
-      --gold: #b45309;
-      --gold-bright: #f59e0b;
-      --slate: #1e293b;
-      --muted: #64748b;
-      --border: #dfd5c0;
-      --font-display: 'Barlow Condensed', sans-serif;
-      --font-sans: 'Inter', system-ui, sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
-    }
     * { box-sizing: border-box; }
-    html, body {
-      margin: 0; padding: 0; max-width: 100%; overflow-x: clip;
-      background: radial-gradient(circle at 50% 18%, #fffdf9 0%, #fdf8ee 62%, #f5ebd6 100%);
-      color: var(--slate); font-family: var(--font-sans);
+    [hidden] { display: none !important; }
+    body {
+      margin: 0; font-family: 'Inter', system-ui, sans-serif; color: #1e293b;
+      background: radial-gradient(circle at 50% 15%, #fffdf9 0%, #fdf8ee 65%, #f3e8d0 100%);
+      min-height: 100dvh;
     }
     a { color: inherit; text-decoration: none; }
-
-    /* Sticky Heritage Header */
-    .merch-nav {
-      position: sticky; top: 0; z-index: 50;
-      background: var(--forest); color: #fff;
-      border-bottom: 2px solid var(--gold-bright);
-      padding: 10px 18px;
-      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    .merch-hdr {
+      background: #0c261b; color: #fff; border-bottom: 2px solid #f59e0b;
+      padding: 10px 18px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
     }
-    .nav-brand { display: flex; align-items: center; gap: 10px; }
-    .nav-brand img { width: 40px; height: 40px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
-    .nav-brand h1 { margin: 0; font-family: var(--font-display); font-size: 1.35rem; letter-spacing: 0.03em; text-transform: uppercase; color: #fef3c7; line-height: 1; }
-    .nav-brand small { display: block; font-size: 0.68rem; color: #a7f3d0; font-family: var(--font-mono); margin-top: 2px; }
-
-    .nav-links { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-    .nav-btn {
-      padding: 6px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 700;
-      border: 1px solid rgba(255,255,255,0.22); background: rgba(255,255,255,0.1); color: #fff;
-      cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand img { width: 40px; height: 40px; object-fit: contain; }
+    .brand h1 { margin: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 1.35rem; color: #fef3c7; text-transform: uppercase; }
+    .brand small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 0.66rem; color: #a7f3d0; }
+    .hdr-btns { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+    .m-btn {
+      padding: 7px 13px; border-radius: 8px; font-size: 0.79rem; font-weight: 700;
+      border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.1); color: #fff; cursor: pointer;
     }
-    .nav-btn:hover { background: rgba(255,255,255,0.2); }
-    .nav-btn.gold { background: #fbbf24; color: #111827; border-color: #f59e0b; font-weight: 800; }
-
-    .wrap { max-width: 1260px; margin: 0 auto; padding: 20px 16px 64px; }
-
-    .hero-banner {
-      background: var(--cream-card); border: 1.5px solid var(--border); border-radius: 14px;
-      padding: 16px 20px; margin-bottom: 18px;
-      display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
-      box-shadow: 0 8px 24px rgba(12, 38, 27, 0.06);
+    .m-btn.gold { background: #fbbf24; color: #111827; border-color: #f59e0b; font-weight: 800; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 16px 60px; }
+    .store-hero {
+      background: #fffdf9; border: 2px solid #0c261b; border-radius: 16px; padding: 26px 24px;
+      display: flex; justify-content: space-between; align-items: center; gap: 18px; flex-wrap: wrap;
+      box-shadow: 0 14px 34px rgba(12, 38, 27, 0.10); margin-bottom: 24px;
     }
-    .hero-banner h2 { margin: 0 0 4px; font-family: var(--font-display); font-size: 1.55rem; color: var(--forest); text-transform: uppercase; }
-    .hero-banner p { margin: 0; font-size: 0.86rem; color: var(--muted); }
-
-    /* Studio Split Grid */
-    .studio-grid {
-      display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; align-items: start;
+    .store-hero h2 { margin: 0 0 6px; font-family: 'Barlow Condensed', sans-serif; font-size: 1.85rem; color: #0c261b; text-transform: uppercase; }
+    .store-hero p { margin: 0; font-size: 0.92rem; color: #475569; max-width: 620px; line-height: 1.48; }
+    .cta-big {
+      padding: 14px 24px; border-radius: 11px; background: #0c261b; color: #fef3c7;
+      font-weight: 800; font-size: 0.98rem; border: 2px solid #f59e0b; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 8px 20px rgba(12,38,27,0.2);
     }
-    @media (max-width: 940px) { .studio-grid { grid-template-columns: 1fr; } }
-
-    .card {
-      background: var(--cream-card); border: 1.5px solid var(--border); border-radius: 14px;
-      padding: 18px; box-shadow: 0 10px 28px rgba(12, 38, 27, 0.06);
+    .art-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(205px, 1fr)); gap: 14px;
     }
-    .sec-lbl {
-      font-family: var(--font-mono); font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
-      letter-spacing: 0.05em; color: var(--gold); margin: 0 0 8px; display: block;
+    .art-card {
+      background: #fffdf9; border: 1.5px solid #dfd5c0; border-radius: 13px; padding: 14px;
+      display: flex; flex-direction: column; justify-content: space-between; gap: 10px;
+      box-shadow: 0 6px 18px rgba(12, 38, 27, 0.05);
     }
-
-    /* Live SVG Mockup Stage */
-    .mockup-stage {
-      position: relative; border-radius: 12px; overflow: hidden;
-      background: radial-gradient(circle at 50% 35%, #ffffff 0%, #f3ece0 100%);
-      border: 1px solid #e2d8c3; min-height: 455px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: 18px;
+    .art-card img {
+      width: 100%; height: 175px; object-fit: contain; background: #ffffff;
+      border: 1px solid #ede5d2; border-radius: 9px; padding: 8px;
     }
-    .stage-top-pills {
-      position: absolute; top: 12px; left: 12px; right: 12px; z-index: 5;
-      display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
+    .art-card h4 { margin: 0; font-size: 0.92rem; color: #0c261b; }
+    .art-card small { color: #64748b; font-size: 0.75rem; line-height: 1.35; display: block; margin-top: 3px; }
+    .dl-btn {
+      padding: 8px 11px; border-radius: 8px; background: #f1f5f9; border: 1px solid #cbd5e1;
+      font-size: 0.76rem; font-weight: 800; color: #0c261b; text-align: center;
     }
-    .stage-badge {
-      background: rgba(12, 38, 27, 0.88); color: #fef3c7; padding: 4px 11px;
-      border-radius: 999px; font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700;
-    }
-    .flip-btn {
-      background: #ffffff; color: var(--forest); border: 1.5px solid var(--forest);
-      border-radius: 999px; padding: 5px 12px; font-size: 0.75rem; font-weight: 800; cursor: pointer;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-    }
-    .flip-btn.active { background: var(--forest); color: #fef3c7; }
-
-    .garment-wrap {
-      position: relative; width: min(390px, 86vw); height: 390px;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .garment-svg {
-      width: 100%; height: 100%; filter: drop-shadow(0 18px 26px rgba(15, 23, 42, 0.18));
-      transition: transform 0.25s ease;
-    }
-    .art-overlay {
-      position: absolute; pointer-events: none; object-fit: contain;
-      transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.18));
-    }
-    /* Laser-engraved brushed steel look for tumblers on dark powder coats */
-    .art-overlay.laser-steel {
-      filter: grayscale(1) contrast(1.35) brightness(1.22) drop-shadow(0 1px 1px rgba(0,0,0,0.45));
-      opacity: 0.92;
-    }
-
-    /* Product & Design Pickers */
-    .prod-grid {
-      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; margin-bottom: 14px;
-    }
-    @media (max-width: 560px) { .prod-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    .pick-btn {
-      background: #fff; border: 1.5px solid #d6cbb5; border-radius: 9px; padding: 8px 7px;
-      font-size: 0.76rem; font-weight: 800; color: var(--slate); cursor: pointer;
-      text-align: center; transition: all 0.14s;
-    }
-    .pick-btn small { display: block; font-size: 0.64rem; font-weight: 600; color: var(--muted); margin-top: 2px; }
-    .pick-btn.active {
-      border-color: var(--forest); background: #ecfdf5; color: var(--forest);
-      box-shadow: 0 0 0 2px rgba(27, 67, 50, 0.15);
-    }
-
-    .design-grid {
-      display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; margin-bottom: 14px;
-    }
-    @media (max-width: 620px) { .design-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-    .design-card {
-      background: #fff; border: 1.5px solid #d6cbb5; border-radius: 9px; padding: 6px;
-      cursor: pointer; text-align: center; transition: all 0.14s;
-    }
-    .design-card img { width: 100%; height: 54px; object-fit: contain; border-radius: 5px; background: #faf6ec; }
-    .design-card span { display: block; font-size: 0.67rem; font-weight: 800; margin-top: 4px; line-height: 1.15; }
-    .design-card.active { border-color: var(--forest); background: #ecfdf5; box-shadow: 0 0 0 2px rgba(27,67,50,0.16); }
-
-    /* Swatches */
-    .swatch-bar { display: flex; gap: 9px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
-    .swatch {
-      width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
-      border: 2.5px solid #fff; box-shadow: 0 0 0 1.5px #94a3b8; transition: transform 0.12s;
-    }
-    .swatch.active { transform: scale(1.16); box-shadow: 0 0 0 2.5px var(--gold-bright); }
-
-    /* Form Controls */
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-    @media (max-width: 560px) { .form-row { grid-template-columns: 1fr; } }
-    label { display: block; font-size: 0.74rem; font-weight: 800; color: #475569; margin-bottom: 4px; }
-    input, select {
-      width: 100%; padding: 9px 11px; border-radius: 8px; border: 1.5px solid #cbd5e1;
-      background: #fff; font-family: inherit; font-size: 16px; font-weight: 600; color: var(--slate);
-    }
-    .primary-cta {
-      width: 100%; padding: 12px 16px; border-radius: 10px; border: none;
-      background: var(--forest); color: #fef3c7; font-size: 0.94rem; font-weight: 800;
-      cursor: pointer; margin-top: 6px; letter-spacing: 0.01em;
-    }
-    .primary-cta:hover { background: var(--green); }
-
-    /* Roster Table */
-    .roster-card { margin-top: 22px; }
-    .tally-strip { display: flex; gap: 7px; flex-wrap: wrap; margin: 10px 0 14px; }
-    .tally-pill {
-      background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 999px;
-      padding: 4px 11px; font-size: 0.74rem; font-weight: 800; font-family: var(--font-mono); color: var(--forest);
-    }
-    .req-row {
-      display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
-      padding: 10px 4px; border-bottom: 1px solid #e5dec9; font-size: 0.84rem;
-    }
-    .status-pill {
-      font-family: var(--font-mono); font-size: 0.68rem; font-weight: 800; padding: 3px 8px; border-radius: 999px;
-    }
-    .st-REQUESTED { background: #fef3c7; color: #92400e; }
-    .st-ORDERED   { background: #dbeafe; color: #1e40af; }
-    .st-DELIVERED { background: #dcfce7; color: #166534; }
-
-    /* Modal */
+    .dl-btn:hover { background: #ecfdf5; border-color: #0c261b; }
     .modal-bg {
-      position: fixed; inset: 0; z-index: 90; background: rgba(15, 23, 42, 0.55);
+      position: fixed; inset: 0; z-index: 90; background: rgba(15,23,42,0.55);
       display: flex; align-items: center; justify-content: center; padding: 14px;
     }
-    .modal-bg[hidden] { display: none !important; }
     .modal-box {
-      background: #fffdf9; border: 2px solid var(--forest); border-radius: 14px;
-      padding: 20px; width: 100%; max-width: 480px; box-shadow: 0 22px 50px rgba(0,0,0,0.3);
+      background: #fffdf9; border: 2px solid #0c261b; border-radius: 14px; padding: 20px; width: 100%; max-width: 480px;
     }
+    label { display: block; font-size: 0.76rem; font-weight: 800; color: #334155; margin-bottom: 5px; }
+    input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 16px; margin-bottom: 12px; }
   </style>
 </head>
 <body>
-  <header class="merch-nav">
-    <div class="nav-brand">
-      <img src="/static/images/logo-crest.png?v=11.1" alt="Weber's Crest" onerror="this.src='/icon.svg'" />
+  <header class="merch-hdr">
+    <div class="brand">
+      <img src="/static/images/logo-crest.png?v=11.3" alt="Weber's Crest" />
       <div>
-        <h1>Weber's Crew Gear Locker</h1>
-        <small>BADEN, PA • PEARCE OUTFITTERS EDITION</small>
+        <h1>Weber's Crew &amp; Family Gear</h1>
+        <small>OFFICIAL PRINTIFY STOREFRONT &amp; ARTWORK VAULT</small>
       </div>
     </div>
-    <div class="nav-links">
-      <a class="nav-btn" href="/ops">← Shop Ops</a>
-      <a class="nav-btn" href="/schedule">Schedule</a>
-      <a class="nav-btn" href="/office">Office</a>
-      <a class="nav-btn gold" href="/api/pdf/merch-qr" target="_blank">🖨️ Print Shop QR Card</a>
-      <a class="nav-btn gold" id="topPrintifyBtn" href="#" target="_blank" rel="noopener" hidden>🛍️ Printify Store ↗</a>
-      <button type="button" class="nav-btn" id="ownerCfgBtn" onclick="openStoreCfgModal()" hidden>⚙ Store Link</button>
-      <button type="button" class="nav-btn" id="authBadgeBtn" onclick="openPinLoginModal()">🔑 Crew PIN Sign-In</button>
+    <div class="hdr-btns">
+      <a class="m-btn" href="/ops">← Back to Shop Ops</a>
+      <a class="m-btn" href="/schedule">Schedule</a>
+      <a class="m-btn" href="/office">Office</a>
+      <a class="m-btn gold" href="/api/pdf/merch-qr" target="_blank">🖨️ Print Shop Counter QR</a>
+      <button type="button" class="m-btn" id="btnCfgUrl" onclick="document.getElementById('cfgModal').hidden=false" hidden>⚙ Set Store Link</button>
     </div>
   </header>
 
   <main class="wrap">
-    <div class="hero-banner">
+    <section class="store-hero">
       <div>
-        <h2>Official Shop Apparel, Hats, Laser Tumblers &amp; Blankets</h2>
-        <p id="allowanceNoteTxt">Preview all 5 custom Baden shop designs below and log your sizes for Ryan's shop gear order.</p>
+        <h2>Order Polos, Hoodies, Hats, Tumblers, Mugs &amp; Blankets Anytime</h2>
+        <p id="storeNoteTxt">Order any official Weber's Tank Testing apparel or drinkware directly through our Printify Pop-Up Store — real product photos, front &amp; back prints, shipped straight to your door.</p>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="heroRightActions">
-        <a class="nav-btn gold" id="heroPrintifyBtn" href="#" target="_blank" rel="noopener" style="padding:9px 15px;font-size:0.84rem;" hidden>🛒 Buy Extra Family Gear (At-Cost) ↗</a>
-      </div>
-    </div>
-
-    <div class="studio-grid">
-      <!-- LEFT: LIVE INTERACTIVE PRODUCT MOCKUP -->
-      <div class="card">
-        <div class="mockup-stage">
-          <div class="stage-top-pills">
-            <span class="stage-badge" id="stageMockupTitle">Shop Polo • Forest Green</span>
-            <button type="button" class="flip-btn" id="flipSideBtn" onclick="toggleFrontBack()" hidden>🔄 View: BACK PRINT</button>
-          </div>
-
-          <div class="garment-wrap">
-            <svg id="garmentSvg" class="garment-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"></svg>
-            <img id="artOverlayImg" class="art-overlay" alt="Selected Design Preview" />
-          </div>
-        </div>
-
-        <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:0.77rem;color:var(--muted);">
-          <span id="printifyBlankHint">Printify Blank: <strong>As Colour Chad Polo / Vansport Mesh Tech</strong></span>
-          <a id="dlArtLink" href="/static/images/merch/merch-crest-color.jpg" download style="color:var(--forest);font-weight:800;">⬇ Download Art File</a>
+      <div id="storeActionWrap">
+        <a id="openStoreBtn" class="cta-big" href="#" target="_blank" rel="noopener" hidden>🛍️ Shop Official Printify Store ↗</a>
+        <div id="noStoreNotice" style="font-size:0.83rem;font-weight:700;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;padding:10px 14px;border-radius:10px;" hidden>
+          Printify Pop-Up URL not linked yet — Owner/Admin can paste it via <strong>⚙ Set Store Link</strong>.
         </div>
       </div>
+    </section>
 
-      <!-- RIGHT: DESIGN, PRODUCT, COLOR & LOCKER REQUEST BUILDER -->
-      <div class="card">
-        <span class="sec-lbl">1. Pick Product Style</span>
-        <div class="prod-grid" id="productGrid"></div>
-
-        <span class="sec-lbl">2. Pick Weber's Artwork</span>
-        <div class="design-grid" id="designGrid"></div>
-
-        <span class="sec-lbl">3. Pick Colorway — <strong id="colorNameLbl" style="color:var(--forest);">Forest Green</strong></span>
-        <div class="swatch-bar" id="swatchBar"></div>
-
-        <span class="sec-lbl">4. Size, Placement &amp; Crew Member</span>
-        <div class="form-row">
-          <div>
-            <label>Size / Variant *</label>
-            <select id="selSize"></select>
-          </div>
-          <div>
-            <label>Print / Etch Placement</label>
-            <select id="selPlacement" onchange="onPlacementChange()"></select>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div>
-            <label>Crew Member Name *</label>
-            <input id="reqCrewName" list="crewNamesList" placeholder="e.g. Ryan, Kenny, Eric..." />
-            <datalist id="crewNamesList"></datalist>
-          </div>
-          <div>
-            <label>Qty &amp; Order Type</label>
-            <div style="display:grid;grid-template-columns:74px 1fr;gap:7px;">
-              <input type="number" id="reqQty" min="1" max="20" value="1" />
-              <select id="reqOrderType">
-                <option value="SHOP_ALLOWANCE">Shop Crew Gear</option>
-                <option value="EXTRA_PERSONAL">Extra (Self-Pay)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div style="margin-bottom:10px;">
-          <label>Notes (Optional — e.g. Tall fit, name on sleeve, gift for family)</label>
-          <input id="reqNotes" placeholder="Optional fit or customization note..." />
-        </div>
-
-        <button type="button" class="primary-cta" onclick="submitMerchRequest()">+ Save Item to Crew Gear Roster</button>
-      </div>
-    </div>
-
-    <!-- BOTTOM: RYAN'S CREW GEAR ROSTER & BULK ORDER SUMMARY -->
-    <div class="card roster-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:1.35rem;color:#0c261b;text-transform:uppercase;margin:0 0 12px;">Official High-Res Weber's Logo Pack (For Custom Printify Items)</h3>
+    <div class="art-grid">
+      <div class="art-card">
         <div>
-          <h3 style="margin:0;font-family:var(--font-display);font-size:1.4rem;color:var(--forest);text-transform:uppercase;">Crew Size &amp; Gear Order Roster</h3>
-          <small style="color:var(--muted);" id="rosterSubTxt">Sign in with your Crew PIN to view &amp; add items to the shop order sheet.</small>
+          <img src="/static/images/merch/merch-crest-color.jpg" alt="Master Heritage Crest" />
+          <h4>1. Master Heritage Crest</h4>
+          <small>Full-color company emblem for hoodies, crewnecks, mugs &amp; blankets.</small>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="rosterAdminBtns" hidden>
-          <a class="nav-btn" style="background:var(--forest);color:#fff;" href="/api/merch/export.csv">📥 Export CSV for Printify</a>
-        </div>
+        <a class="dl-btn" href="/static/images/merch/merch-crest-color.jpg" download>⬇ Download Art</a>
       </div>
-
-      <div class="tally-strip" id="sizeTallyStrip"></div>
-      <div id="rosterListWrap"></div>
+      <div class="art-card">
+        <div>
+          <img src="/static/images/merch/merch-shop-scene.jpg" alt="3086 Baden Shop Yard" />
+          <h4>2. 3086 Baden Shop Yard</h4>
+          <small>Full-back shop, 3086 lamppost, 1956 LaFrance ladder truck &amp; pups.</small>
+        </div>
+        <a class="dl-btn" href="/static/images/merch/merch-shop-scene.jpg" download>⬇ Download Art</a>
+      </div>
+      <div class="art-card">
+        <div>
+          <img src="/static/images/merch/merch-hat-arch.jpg" alt="Workwear Hat & Polo Arch" />
+          <h4>3. Grandpa's Hat &amp; Polo Arch</h4>
+          <small>Built for Richardson 112 trucker caps, beanies, polos &amp; 1/4-zips.</small>
+        </div>
+        <a class="dl-btn" href="/static/images/merch/merch-hat-arch.jpg" download>⬇ Download Art</a>
+      </div>
+      <div class="art-card">
+        <div>
+          <img src="/static/images/merch/merch-round-seal.jpg" alt="Neck-Stamp Circular Seal" />
+          <h4>4. Neck-Stamp Seal</h4>
+          <small>High-contrast round woodcut for laser-engraved tumblers &amp; stickers.</small>
+        </div>
+        <a class="dl-btn" href="/static/images/merch/merch-round-seal.jpg" download>⬇ Download Art</a>
+      </div>
+      <div class="art-card">
+        <div>
+          <img src="/static/images/merch/merch-shield.jpg" alt="First-Responder Shield" />
+          <h4>5. First-Responder Shield</h4>
+          <small>Left-chest badge to pair with the full-back 3086 Shop Yard scene.</small>
+        </div>
+        <a class="dl-btn" href="/static/images/merch/merch-shield.jpg" download>⬇ Download Art</a>
+      </div>
     </div>
   </main>
 
-  <!-- INLINE CREW PIN MODAL -->
-  <div class="modal-bg" id="pinModal" hidden onclick="if(event.target===this)this.hidden=true">
+  <div class="modal-bg" id="cfgModal" hidden onclick="if(event.target===this)this.hidden=true">
     <div class="modal-box">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <h3 style="margin:0;font-family:var(--font-display);font-size:1.35rem;color:var(--forest);">🔑 Crew PIN Sign-In</h3>
-        <button type="button" class="pick-btn" onclick="document.getElementById('pinModal').hidden=true">✖</button>
+      <h3 style="margin:0 0 12px;font-family:'Barlow Condensed',sans-serif;font-size:1.4rem;color:#0c261b;">⚙ Connect Printify Pop-Up Store</h3>
+      <label>Printify Pop-Up Store Link</label>
+      <input id="inpStoreUrl" placeholder="https://pearce-outfitters.printify.me" />
+      <label>Crew Welcome Note</label>
+      <input id="inpStoreNote" placeholder="Order any official Weber's gear directly through Printify..." />
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="cta-big" style="flex:1;justify-content:center;padding:11px;" onclick="saveMerchCfg()">💾 Save Link</button>
+        <button type="button" class="dl-btn" style="padding:11px 16px;cursor:pointer;" onclick="document.getElementById('cfgModal').hidden=true">Cancel</button>
       </div>
-      <p style="margin:0 0 10px;font-size:0.83rem;color:var(--muted);">Enter your shop PIN to save your shirt/hoodie sizes to Ryan's Crew Roster.</p>
-      <input type="password" inputmode="numeric" id="merchPinInput" placeholder="Enter 4-digit PIN" onkeydown="if(event.key==='Enter')loginFromMerch()" style="text-align:center;font-family:var(--font-mono);font-size:1.2rem;letter-spacing:0.2em;margin-bottom:10px;" />
-      <div id="merchPinErr" style="color:#b91c1c;font-size:0.78rem;font-weight:700;margin-bottom:8px;" hidden>Incorrect PIN — try again.</div>
-      <button type="button" class="primary-cta" onclick="loginFromMerch()">Sign In</button>
-    </div>
-  </div>
-
-  <!-- OWNER / ADMIN PRINTIFY POP-UP STORE SETTINGS MODAL -->
-  <div class="modal-bg" id="storeCfgModal" hidden onclick="if(event.target===this)this.hidden=true">
-    <div class="modal-box">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <h3 style="margin:0;font-family:var(--font-display);font-size:1.35rem;color:var(--forest);">⚙ Connect Printify Pop-Up Store</h3>
-        <button type="button" class="pick-btn" onclick="document.getElementById('storeCfgModal').hidden=true">✖</button>
-      </div>
-      <div style="margin-bottom:10px;">
-        <label>Printify Pop-Up Store URL (Optional — enables 1-click self-checkout)</label>
-        <input id="cfgPopupUrl" placeholder="https://pearce-outfitters.printify.me" />
-      </div>
-      <div style="margin-bottom:12px;">
-        <label>Crew Banner Note</label>
-        <input id="cfgAllowanceNote" placeholder="Pick your sizes below for Ryan's shop gear order..." />
-      </div>
-      <button type="button" class="primary-cta" onclick="saveStoreCfg()">💾 Save Merch Settings</button>
     </div>
   </div>
 
   <script>
-    const DESIGNS = [
-      { key: 'CREST_COLOR', title: 'Master Color Crest', img: '/static/images/merch/web-merch-crest-color.png', raw: '/static/images/merch/merch-crest-color.jpg', fallback: '/static/images/logo-crest.png', woodcut: false },
-      { key: 'SHOP_YARD',   title: '3086 Baden Shop Yard', img: '/static/images/merch/web-merch-shop-scene.png', raw: '/static/images/merch/merch-shop-scene.jpg', fallback: '/static/images/logo-crest.png', woodcut: true },
-      { key: 'HAT_ARCH',    title: 'Grandpa Workwear Arch', img: '/static/images/merch/web-merch-hat-arch.png', raw: '/static/images/merch/merch-hat-arch.jpg', fallback: '/static/images/logo-crest.png', woodcut: true },
-      { key: 'ROUND_SEAL',  title: 'Neck-Stamp Seal', img: '/static/images/merch/web-merch-round-seal.png', raw: '/static/images/merch/merch-round-seal.jpg', fallback: '/static/images/logo-crest.png', woodcut: true },
-      { key: 'WRENCH_SHIELD', title: 'First-Responder Shield', img: '/static/images/merch/web-merch-shield.png', raw: '/static/images/merch/merch-shield.jpg', fallback: '/static/images/logo-crest.png', woodcut: true },
-    ];
-
-    const PRODUCTS = [
-      { key: 'POLO',        title: 'Shop Polo',        sub: 'Left Chest',   blank: 'As Colour Chad Polo / Vansport Mesh Tech', sizes: ['S','M','L','XL','2XL','3XL','4XL'], placements: ['Left Chest'], defaultDesign: 'HAT_ARCH' },
-      { key: 'QUARTER_ZIP', title: '1/4-Zip Pullover', sub: 'Left Chest',   blank: 'Lane Seven LS14014 / AllPro Pro-Lock 1/4-Zip', sizes: ['S','M','L','XL','2XL','3XL','4XL'], placements: ['Left Chest', 'Left Chest + Full Back'], defaultDesign: 'CREST_COLOR' },
-      { key: 'SWEATER',     title: 'Crewneck Sweater', sub: 'Fleece',       blank: 'Gildan Midweight Softstyle SF000', sizes: ['S','M','L','XL','2XL','3XL','4XL'], placements: ['Center Chest', 'Left Chest + Full Back'], defaultDesign: 'CREST_COLOR' },
-      { key: 'HOODIE',      title: 'Shop Hoodie',      sub: 'Front + Back', blank: 'Lane Seven Three-Panel Fleece LS14001 / Sport-Tek Drive', sizes: ['S','M','L','XL','2XL','3XL','4XL'], placements: ['Left Chest + Full Back', 'Center Chest'], defaultDesign: 'SHOP_YARD' },
-      { key: 'TEE',         title: 'Heavy Work Tee',   sub: 'Front + Back', blank: 'Gildan Softstyle / AS Colour Heavy Tee', sizes: ['S','M','L','XL','2XL','3XL','4XL'], placements: ['Left Chest + Full Back', 'Center Chest', 'Left Chest Only'], defaultDesign: 'SHOP_YARD' },
-      { key: 'HAT',         title: 'Hat / Beanie',     sub: 'Patch / Knit', blank: 'Structured Trucker Cap / Port Authority Beanie', sizes: ['Structured Trucker Cap', 'Classic Cotton Cap', 'Cuffed Knit Beanie', 'Pom Winter Beanie'], placements: ['Center Front Patch'], defaultDesign: 'HAT_ARCH' },
-      { key: 'TUMBLER',     title: '40oz / 20oz Tumbler', sub: 'Laser Etch', blank: 'Powder-Coated Insulated Stainless Tumbler', sizes: ['40oz Handle Quencher', '20oz Insulated Travel'], placements: ['Laser-Engraved Front', 'Full Color UV Print'], defaultDesign: 'ROUND_SEAL' },
-      { key: 'MUG_BLANKET', title: 'Mug & Blanket',    sub: 'Home & Shop',  blank: '15oz Ceramic Camp Mug / 50x60 Sherpa Fleece Blanket', sizes: ['15oz Coffee Mug', '50"×60" Throw Blanket', '60"×80" XL Blanket'], placements: ['Full Front / Wrap'], defaultDesign: 'SHOP_YARD' },
-    ];
-
-    const COLORS = [
-      { name: 'Forest Green', hex: '#153b2b', stroke: '#0a2117', dark: true },
-      { name: 'Jet Black',    hex: '#1c2026', stroke: '#0f172a', dark: true },
-      { name: 'Charcoal',     hex: '#3b4252', stroke: '#1e293b', dark: true },
-      { name: 'Navy Blue',    hex: '#1e2e4a', stroke: '#0f172a', dark: true },
-      { name: 'Warm Sand',    hex: '#e8dcc6', stroke: '#b8a98e', dark: false },
-      { name: 'Sport Grey',   hex: '#cbd5e1', stroke: '#94a3b8', dark: false },
-      { name: 'Barn Red',     hex: '#841e1e', stroke: '#450a0a', dark: true },
-    ];
-
-    let SEL_PROD = PRODUCTS[3];   // Default: Shop Hoodie showing off the 3086 Baden Shop Yard!
-    let SEL_DESIGN = DESIGNS[1];
-    let SEL_COLOR = COLORS[0];
-    let VIEW_SIDE = 'BACK';       // 'FRONT' or 'BACK'
-    let MERCH_STATE = { authenticated: false, user: null, requests: [], popup_store_url: '' };
-    let PENDING_SUBMIT = false;
-
-    const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
-
-    function buildGarmentSvg(prodKey, hex, stroke, sizeVal) {
-      if (prodKey === 'HAT') {
-        const isBeanie = (sizeVal || '').toLowerCase().includes('beanie');
-        if (isBeanie) {
-          return `
-            <circle cx="200" cy="82" r="24" fill="${hex}" stroke="${stroke}" stroke-width="4"/>
-            <path d="M105,270 C105,145 140,102 200,102 C260,102 295,145 295,270 Z" fill="${hex}" stroke="${stroke}" stroke-width="4"/>
-            <rect x="96" y="245" width="208" height="68" rx="18" fill="${hex}" stroke="${stroke}" stroke-width="4.5"/>`;
-        }
-        return `
-          <path d="M92,235 C92,135 135,98 200,98 C265,98 308,135 308,235 Z" fill="${hex}" stroke="${stroke}" stroke-width="4"/>
-          <path d="M200,98 L200,235" stroke="${stroke}" stroke-width="2" opacity="0.35"/>
-          <path d="M72,235 Q200,278 332,240 Q275,296 185,292 Q95,288 72,235 Z" fill="${hex}" stroke="${stroke}" stroke-width="4"/>`;
-      }
-      if (prodKey === 'TUMBLER') {
-        return `
-          <rect x="150" y="34" width="14" height="46" rx="5" fill="#94a3b8" stroke="#475569" stroke-width="2"/>
-          <rect x="122" y="72" width="136" height="22" rx="6" fill="#cbd5e1" stroke="#475569" stroke-width="3"/>
-          <path d="M256,122 L298,122 C310,122 316,132 316,146 L316,248 C316,262 308,270 294,270 L250,270" fill="none" stroke="${hex}" stroke-width="16" stroke-linecap="round"/>
-          <path d="M126,94 L254,94 L244,262 L232,356 L148,356 L136,262 Z" fill="${hex}" stroke="${stroke}" stroke-width="4"/>
-          <path d="M145,332 L235,332 L232,356 L148,356 Z" fill="#cbd5e1" stroke="#64748b" stroke-width="2"/>`;
-      }
-      if (prodKey === 'MUG_BLANKET') {
-        const isMug = (sizeVal || '').toLowerCase().includes('mug');
-        if (isMug) {
-          return `
-            <path d="M268,152 C316,152 316,268 268,268" fill="none" stroke="${hex}" stroke-width="20"/>
-            <rect x="96" y="116" width="176" height="196" rx="16" fill="${hex}" stroke="${stroke}" stroke-width="4"/>
-            <ellipse cx="184" cy="116" rx="88" ry="14" fill="#f8fafc" stroke="${stroke}" stroke-width="3"/>`;
-        }
-        return `
-          <rect x="68" y="62" width="264" height="284" rx="12" fill="${hex}" stroke="${stroke}" stroke-width="4"/>
-          <rect x="82" y="76" width="236" height="256" rx="8" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2" stroke-dasharray="7 5"/>`;
-      }
-      // Apparel Silhouettes (Polo, 1/4-Zip, Crewneck Sweater, Hoodie, Work Tee)
-      const longSleeve = prodKey !== 'TEE' && prodKey !== 'POLO';
-      const sleevePath = longSleeve
-        ? `M98,84 L38,248 L78,262 L114,152 L114,348 L286,348 L286,152 L322,262 L362,248 L302,84 Z`
-        : `M98,84 L46,166 L88,188 L114,148 L114,348 L286,348 L286,148 L312,188 L354,166 L302,84 Z`;
-      let collar = `<path d="M162,82 Q200,108 238,82" fill="none" stroke="${stroke}" stroke-width="5"/>`;
-      if (prodKey === 'HOODIE') {
-        collar = VIEW_SIDE === 'BACK'
-          ? `<path d="M148,84 C148,38 252,38 252,84 Q200,136 148,84 Z" fill="${hex}" stroke="${stroke}" stroke-width="4"/>`
-          : `<path d="M150,84 C150,44 250,44 250,84" fill="${hex}" stroke="${stroke}" stroke-width="4"/><line x1="184" y1="96" x2="184" y2="152" stroke="#e2e8f0" stroke-width="3"/><line x1="216" y1="96" x2="216" y2="152" stroke="#e2e8f0" stroke-width="3"/><path d="M142,272 L258,272 L270,336 L130,336 Z" fill="rgba(0,0,0,0.08)" stroke="${stroke}" stroke-width="2"/>`;
-      } else if (prodKey === 'POLO') {
-        collar = `<polygon points="158,76 200,108 174,122 148,88" fill="${hex}" stroke="${stroke}" stroke-width="3.5"/><polygon points="242,76 200,108 226,122 252,88" fill="${hex}" stroke="${stroke}" stroke-width="3.5"/><line x1="200" y1="108" x2="200" y2="162" stroke="${stroke}" stroke-width="3"/>`;
-      } else if (prodKey === 'QUARTER_ZIP') {
-        collar = `<rect x="164" y="64" width="72" height="26" rx="5" fill="${hex}" stroke="${stroke}" stroke-width="3.5"/><line x1="200" y1="64" x2="200" y2="166" stroke="#94a3b8" stroke-width="4"/>`;
-      }
-      return `<path d="M98,84 Q152,72 164,80 Q200,96 236,80 Q248,72 302,84 ${sleevePath.slice(7)}" fill="${hex}" stroke="${stroke}" stroke-width="4" stroke-linejoin="round"/>${collar}`;
-    }
-
-    function positionArtOverlay() {
-      const img = document.getElementById('artOverlayImg');
-      const flipBtn = document.getElementById('flipSideBtn');
-      const pl = document.getElementById('selPlacement')?.value || '';
-      const sz = document.getElementById('selSize')?.value || '';
-      const canFlip = pl.includes('Full Back');
-      flipBtn.hidden = !canFlip;
-
-      // Choose front badge vs full back art when Dual-Print is active
-      let shownDesign = SEL_DESIGN;
-      if (canFlip && VIEW_SIDE === 'FRONT' && SEL_DESIGN.key === 'SHOP_YARD') {
-        shownDesign = DESIGNS[4]; // Pair First-Responder Shield on front left chest with Shop Yard on back!
-      }
-      img.onerror = () => {
-        img.onerror = () => { img.src = shownDesign.fallback; };
-        img.src = shownDesign.raw;
-      };
-      img.src = shownDesign.img;
-
-      img.classList.toggle('laser-steel', SEL_PROD.key === 'TUMBLER' && pl.includes('Laser') && SEL_COLOR.dark && shownDesign.woodcut);
-
-      // Coordinates inside 390x390 garment stage
-      if (SEL_PROD.key === 'HAT') {
-        const isBeanie = sz.toLowerCase().includes('beanie');
-        Object.assign(img.style, { width: '96px', height: '64px', left: '50%', top: isBeanie ? '66%' : '45%', transform: 'translate(-50%, -50%)' });
-      } else if (SEL_PROD.key === 'TUMBLER') {
-        Object.assign(img.style, { width: '94px', height: '94px', left: '47.5%', top: '48%', transform: 'translate(-50%, -50%)' });
-      } else if (SEL_PROD.key === 'MUG_BLANKET') {
-        const isMug = sz.toLowerCase().includes('mug');
-        Object.assign(img.style, isMug
-          ? { width: '112px', height: '112px', left: '46%', top: '54%', transform: 'translate(-50%, -50%)' }
-          : { width: '198px', height: '198px', left: '50%', top: '51%', transform: 'translate(-50%, -50%)' });
-      } else if ((canFlip && VIEW_SIDE === 'BACK') || pl === 'Center Chest') {
-        Object.assign(img.style, { width: '144px', height: '144px', left: '50%', top: VIEW_SIDE === 'BACK' ? '47%' : '45%', transform: 'translate(-50%, -50%)' });
-      } else {
-        // Left Chest Pocket Hit
-        Object.assign(img.style, { width: '58px', height: '58px', left: '60%', top: '36%', transform: 'translate(-50%, -50%)' });
-      }
-
-      flipBtn.textContent = VIEW_SIDE === 'BACK' ? '🔄 Showing: BACK (Tap for Front)' : '🔄 Showing: FRONT (Tap for Back)';
-      flipBtn.classList.toggle('active', VIEW_SIDE === 'BACK');
-    }
-
-    function renderStudio() {
-      // Product buttons
-      document.getElementById('productGrid').innerHTML = PRODUCTS.map(p => `
-        <button type="button" class="pick-btn ${p.key === SEL_PROD.key ? 'active' : ''}" onclick="selectProduct('${p.key}')">
-          ${esc(p.title)}<small>${esc(p.sub)}</small>
-        </button>`).join('');
-
-      // Design cards
-      document.getElementById('designGrid').innerHTML = DESIGNS.map(d => `
-        <div class="design-card ${d.key === SEL_DESIGN.key ? 'active' : ''}" onclick="selectDesign('${d.key}')">
-          <img src="${d.img}" onerror="this.onerror=null;this.src='${d.raw}'" alt="${esc(d.title)}" />
-          <span>${esc(d.title)}</span>
-        </div>`).join('');
-
-      // Swatches
-      document.getElementById('swatchBar').innerHTML = COLORS.map(c => `
-        <button type="button" class="swatch ${c.name === SEL_COLOR.name ? 'active' : ''}"
-          style="background:${c.hex};" title="${esc(c.name)}" onclick="selectColor('${c.name}')"></button>`).join('');
-      document.getElementById('colorNameLbl').textContent = SEL_COLOR.name;
-
-      // Update SVG + Overlay + Metadata
-      const sz = document.getElementById('selSize')?.value || SEL_PROD.sizes[0];
-      document.getElementById('garmentSvg').innerHTML = buildGarmentSvg(SEL_PROD.key, SEL_COLOR.hex, SEL_COLOR.stroke, sz);
-      document.getElementById('stageMockupTitle').textContent = `${SEL_PROD.title} • ${SEL_COLOR.name}`;
-      document.getElementById('printifyBlankHint').innerHTML = `Printify Blank: <strong>${esc(SEL_PROD.blank)}</strong>`;
-      document.getElementById('dlArtLink').href = SEL_DESIGN.raw;
-      positionArtOverlay();
-    }
-
-    function populateSizesAndPlacements() {
-      const szSel = document.getElementById('selSize');
-      const prevSz = szSel.value;
-      szSel.innerHTML = SEL_PROD.sizes.map(s => `<option value="${esc(s)}" ${s === prevSz ? 'selected' : ''}>${esc(s)}</option>`).join('');
-      if (!SEL_PROD.sizes.includes(prevSz) && SEL_PROD.sizes.includes('L')) szSel.value = 'L';
-      szSel.onchange = () => renderStudio();
-
-      const plSel = document.getElementById('selPlacement');
-      plSel.innerHTML = SEL_PROD.placements.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
-      VIEW_SIDE = plSel.value.includes('Full Back') ? 'BACK' : 'FRONT';
-    }
-
-    function selectProduct(key) {
-      SEL_PROD = PRODUCTS.find(p => p.key === key) || PRODUCTS[0];
-      SEL_DESIGN = DESIGNS.find(d => d.key === SEL_PROD.defaultDesign) || SEL_DESIGN;
-      populateSizesAndPlacements();
-      renderStudio();
-    }
-
-    function selectDesign(key) {
-      SEL_DESIGN = DESIGNS.find(d => d.key === key) || DESIGNS[0];
-      renderStudio();
-    }
-
-    function selectColor(name) {
-      SEL_COLOR = COLORS.find(c => c.name === name) || COLORS[0];
-      renderStudio();
-    }
-
-    function onPlacementChange() {
-      const pl = document.getElementById('selPlacement').value;
-      VIEW_SIDE = pl.includes('Full Back') ? 'BACK' : 'FRONT';
-      renderStudio();
-    }
-
-    function toggleFrontBack() {
-      VIEW_SIDE = VIEW_SIDE === 'BACK' ? 'FRONT' : 'BACK';
-      renderStudio();
-    }
-
-    async function loadMerchState() {
+    async function bootMerch() {
       const res = await fetch('/api/public/merch');
       if (!res.ok) return;
-      MERCH_STATE = await res.json();
+      const d = await res.json();
+      if (d.allowance_note) document.getElementById('storeNoteTxt').textContent = d.allowance_note;
+      document.getElementById('inpStoreUrl').value = d.popup_store_url || '';
+      document.getElementById('inpStoreNote').value = d.allowance_note || '';
 
-      document.getElementById('allowanceNoteTxt').textContent = MERCH_STATE.allowance_note || '';
-      const hasUrl = Boolean(MERCH_STATE.popup_store_url);
-      ['topPrintifyBtn', 'heroPrintifyBtn'].forEach(id => {
-        const el = document.getElementById(id);
-        el.hidden = !hasUrl;
-        if (hasUrl) el.href = MERCH_STATE.popup_store_url;
-      });
+      const hasUrl = Boolean((d.popup_store_url || '').trim());
+      const openBtn = document.getElementById('openStoreBtn');
+      openBtn.hidden = !hasUrl;
+      if (hasUrl) openBtn.href = d.popup_store_url;
+      document.getElementById('noStoreNotice').hidden = hasUrl;
 
-      const u = MERCH_STATE.user;
-      const isBoss = u && (u.role === 'OWNER' || u.role === 'SYSTEM_ADMIN');
-      document.getElementById('ownerCfgBtn').hidden = !isBoss;
-      document.getElementById('rosterAdminBtns').hidden = !isBoss;
-
-      const authBtn = document.getElementById('authBadgeBtn');
-      if (u) {
-        authBtn.textContent = `${u.role === 'OWNER' ? '👑' : (u.role === 'SYSTEM_ADMIN' ? '🛡️' : '🔧')} ${u.initials} • Signed In`;
-        const nameBox = document.getElementById('reqCrewName');
-        if (!nameBox.value) nameBox.value = u.name;
-      } else {
-        authBtn.textContent = '🔑 Crew PIN Sign-In';
-      }
-
-      document.getElementById('crewNamesList').innerHTML = (MERCH_STATE.crew_list || [])
-        .map(c => `<option value="${esc(c.name)}"></option>`).join('');
-
-      renderRoster();
+      const isBoss = d.user && (d.user.role === 'OWNER' || d.user.role === 'SYSTEM_ADMIN');
+      document.getElementById('btnCfgUrl').hidden = !isBoss;
     }
 
-    function renderRoster() {
-      const wrap = document.getElementById('rosterListWrap');
-      const strip = document.getElementById('sizeTallyStrip');
-      const sub = document.getElementById('rosterSubTxt');
-      if (!MERCH_STATE.authenticated) {
-        strip.innerHTML = '';
-        wrap.innerHTML = `<div style="padding:14px 0;font-size:0.86rem;color:var(--muted);">🔒 Sign in with your Crew PIN to view &amp; add items to Ryan's shop gear roster.</div>`;
-        return;
-      }
-      const reqs = MERCH_STATE.requests || [];
-      const u = MERCH_STATE.user;
-      const isBoss = u && (u.role === 'OWNER' || u.role === 'SYSTEM_ADMIN');
-      sub.textContent = `${reqs.filter(r => r.status === 'REQUESTED').length} Open Request(s) • ${reqs.length} Total Logged`;
-
-      // Group pending quantities by Product + Size + Color for easy Printify cart entry
-      const tallies = {};
-      reqs.filter(r => r.status === 'REQUESTED').forEach(r => {
-        const k = `${r.item_title} (${r.size} • ${r.color_name})`;
-        tallies[k] = (tallies[k] || 0) + (r.qty || 1);
-      });
-      strip.innerHTML = Object.entries(tallies).map(([k, q]) => `<span class="tally-pill">${q}× ${esc(k)}</span>`).join('');
-
-      if (!reqs.length) {
-        wrap.innerHTML = `<div style="padding:12px 0;font-size:0.86rem;color:var(--muted);">No gear requests logged yet — customize the first hoodie, polo, or tumbler above!</div>`;
-        return;
-      }
-
-      wrap.innerHTML = reqs.map(r => {
-        const canDel = isBoss || (r.status === 'REQUESTED' && r.crew_name.toLowerCase() === u.name.toLowerCase());
-        return `
-          <div class="req-row">
-            <div>
-              <strong>${esc(r.crew_name)}</strong> — <strong>${r.qty}× ${esc(r.item_title)}</strong>
-              <span style="color:var(--forest);font-weight:700;">(${esc(r.size)} • ${esc(r.color_name)})</span>
-              <div style="font-size:0.75rem;color:var(--muted);margin-top:2px;">
-                Art: ${esc(r.design_title)} • ${esc(r.placement)} • ${r.order_type === 'SHOP_ALLOWANCE' ? 'Shop Gear' : 'Self-Pay'}
-                ${r.notes ? ` • Note: "${esc(r.notes)}"` : ''}
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-              <span class="status-pill st-${esc(r.status)}">${esc(r.status)}</span>
-              ${isBoss ? `
-                <select onchange="setReqStatus(${r.id}, this.value)" style="width:auto;padding:4px 8px;font-size:0.74rem;">
-                  <option value="REQUESTED" ${r.status==='REQUESTED'?'selected':''}>Requested</option>
-                  <option value="ORDERED" ${r.status==='ORDERED'?'selected':''}>Ordered on Printify</option>
-                  <option value="DELIVERED" ${r.status==='DELIVERED'?'selected':''}>Handed Out</option>
-                </select>` : ''}
-              ${canDel ? `<button type="button" class="pick-btn" style="padding:4px 9px;color:#b91c1c;" onclick="removeReq(${r.id})">✕</button>` : ''}
-            </div>
-          </div>`;
-      }).join('');
-    }
-
-    function openPinLoginModal() {
-      document.getElementById('merchPinErr').hidden = true;
-      document.getElementById('pinModal').hidden = false;
-      setTimeout(() => document.getElementById('merchPinInput').focus(), 40);
-    }
-
-    async function loginFromMerch() {
-      const pin = document.getElementById('merchPinInput').value.trim();
-      if (!pin) return;
-      const res = await fetch('/api/auth/login', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }),
-      });
-      if (!res.ok) { document.getElementById('merchPinErr').hidden = false; return; }
-      document.getElementById('pinModal').hidden = true;
-      document.getElementById('merchPinInput').value = '';
-      await loadMerchState();
-      if (PENDING_SUBMIT) { PENDING_SUBMIT = false; submitMerchRequest(); }
-    }
-
-    async function submitMerchRequest() {
-      if (!MERCH_STATE.authenticated) {
-        PENDING_SUBMIT = true;
-        openPinLoginModal();
-        return;
-      }
-      const crewName = document.getElementById('reqCrewName').value.trim();
-      if (!crewName) { alert('Enter the crew member name first.'); return; }
-      const res = await fetch('/api/merch/requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          crew_name: crewName,
-          item_key: SEL_PROD.key,
-          item_title: SEL_PROD.title,
-          design_key: SEL_DESIGN.key,
-          design_title: SEL_DESIGN.title,
-          placement: document.getElementById('selPlacement').value,
-          color_name: SEL_COLOR.name,
-          size: document.getElementById('selSize').value,
-          qty: parseInt(document.getElementById('reqQty').value || '1', 10),
-          order_type: document.getElementById('reqOrderType').value,
-          notes: document.getElementById('reqNotes').value,
-        }),
-      });
-      if (!res.ok) { alert((await res.json()).detail || 'Could not save request.'); return; }
-      document.getElementById('reqNotes').value = '';
-      await loadMerchState();
-    }
-
-    async function setReqStatus(id, status) {
-      await fetch('/api/merch/requests/' + id, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }),
-      });
-      loadMerchState();
-    }
-
-    async function removeReq(id) {
-      if (!confirm('Remove this gear item from the roster?')) return;
-      await fetch('/api/merch/requests/' + id, { method: 'DELETE' });
-      loadMerchState();
-    }
-
-    function openStoreCfgModal() {
-      document.getElementById('cfgPopupUrl').value = MERCH_STATE.popup_store_url || '';
-      document.getElementById('cfgAllowanceNote').value = MERCH_STATE.allowance_note || '';
-      document.getElementById('storeCfgModal').hidden = false;
-    }
-
-    async function saveStoreCfg() {
+    async function saveMerchCfg() {
       const res = await fetch('/api/merch/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          popup_store_url: document.getElementById('cfgPopupUrl').value,
-          allowance_note: document.getElementById('cfgAllowanceNote').value,
+          popup_store_url: document.getElementById('inpStoreUrl').value,
+          allowance_note: document.getElementById('inpStoreNote').value,
         }),
       });
-      if (!res.ok) { alert('Only Owner or Admin can save store settings.'); return; }
-      document.getElementById('storeCfgModal').hidden = true;
-      loadMerchState();
+      if (!res.ok) return alert('Sign in as Ryan (Owner) or Admin on Shop Ops first.');
+      document.getElementById('cfgModal').hidden = true;
+      bootMerch();
     }
-
-    populateSizesAndPlacements();
-    renderStudio();
-    loadMerchState();
+    bootMerch();
   </script>
 </body>
 </html>

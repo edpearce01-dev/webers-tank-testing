@@ -1609,7 +1609,7 @@ def track_public_ticket(ticket: str = "", phone_last4: str = ""):
         stage_label = "Picked Up / Completed"
         step_num = 5
     elif ready_shelf >= expected and expected > 0:
-        stage_label = "Certified & Ready on Zone E Pickup Shelf"
+        stage_label = "Certified & Ready in 24/7 Back Room (Loading Dock)"
         step_num = 4
     elif tested > 0:
         stage_label = f"Hydro Testing & B386 Marking ({tested}/{expected} Tested)"
@@ -5081,7 +5081,7 @@ def compute_active_theme(conn) -> dict:
             "effect": "none",
             "garland": "none",
             "accent": "#f59e0b",
-            "dog_image": "shop-dogs.jpg",
+            "dog_image": "dogs-classic.png",
             "dog_message": custom_msg or default_dog_msg,
             "enable_public": en_pub,
             "enable_tv": en_tv,
@@ -5314,109 +5314,22 @@ def serve_merch_locker():
 
 @app.get("/api/public/merch")
 async def get_merch_locker_state(request: Request):
-    user = await get_authenticated_user_async(request)
+    user = get_current_session_user(request)
     conn = get_conn()
     s_rows = conn.execute(
         "SELECT key, value FROM settings WHERE key IN ('merch_popup_url', 'merch_allowance_note');"
     ).fetchall()
-    cfg = {r["key"]: r["value"] for r in s_rows}
-    reqs = []
-    crew_list = []
-    if user:
-        reqs = [
-            dict(r)
-            for r in conn.execute(
-                "SELECT * FROM merch_requests ORDER BY CASE status WHEN 'REQUESTED' THEN 0 WHEN 'ORDERED' THEN 1 ELSE 2 END, id DESC;"
-            ).fetchall()
-        ]
-        crew_list = [
-            dict(u)
-            for u in conn.execute("SELECT name, initials, role FROM crew_users WHERE active=1 ORDER BY id;").fetchall()
-        ]
     conn.close()
+    cfg = {r["key"]: r["value"] for r in s_rows}
     return {
         "authenticated": bool(user),
         "user": user,
         "popup_store_url": cfg.get("merch_popup_url", ""),
         "allowance_note": cfg.get(
             "merch_allowance_note",
-            "Pick your sizes below for Ryan's shop gear order, or jump to Printify for extra family hoodies, tumblers & blankets.",
+            "Order any official Weber's Tank Testing apparel, hats, tumblers, mugs, or blankets directly through our Printify Storefront.",
         ),
-        "requests": reqs,
-        "crew_list": crew_list,
     }
-
-
-@app.post("/api/merch/requests")
-async def create_merch_request(payload: MerchRequestInput, request: Request):
-    user = await get_authenticated_user_async(request)
-    if not user:
-        raise HTTPException(401, "Sign in with your Crew PIN first to submit locker items.")
-    qty = max(1, min(25, int(payload.qty or 1)))
-    c_name = (payload.crew_name or user["name"]).strip() or user["name"]
-    c_init = user["initials"] if c_name.lower() == user["name"].lower() else "".join(w[0] for w in c_name.split()[:3]).upper()
-    now_str = now_eastern().strftime("%Y-%m-%d %I:%M %p")
-    conn = get_conn()
-    cur = conn.execute(
-        """
-        INSERT INTO merch_requests
-        (created_at, crew_name, crew_initials, item_key, item_title, design_key, design_title,
-         placement, color_name, size, qty, order_type, notes, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'REQUESTED');
-        """,
-        (
-            now_str,
-            c_name,
-            c_init,
-            payload.item_key.strip(),
-            payload.item_title.strip(),
-            payload.design_key.strip(),
-            payload.design_title.strip(),
-            payload.placement.strip(),
-            payload.color_name.strip(),
-            payload.size.strip(),
-            qty,
-            payload.order_type.strip(),
-            payload.notes.strip(),
-        ),
-    )
-    new_id = cur.lastrowid
-    conn.commit()
-    conn.close()
-    return {"ok": True, "id": new_id}
-
-
-@app.put("/api/merch/requests/{req_id}")
-def update_merch_request_status(req_id: int, payload: MerchStatusUpdate, request: Request):
-    require_owner_or_admin(request)
-    st = payload.status.strip().upper()
-    if st not in ("REQUESTED", "ORDERED", "DELIVERED"):
-        raise HTTPException(400, "Invalid status")
-    conn = get_conn()
-    conn.execute("UPDATE merch_requests SET status=? WHERE id=?;", (st, req_id))
-    conn.commit()
-    conn.close()
-    return {"ok": True}
-
-
-@app.delete("/api/merch/requests/{req_id}")
-async def delete_merch_request(req_id: int, request: Request):
-    user = await get_authenticated_user_async(request)
-    if not user:
-        raise HTTPException(401, "Not signed in")
-    conn = get_conn()
-    row = conn.execute("SELECT * FROM merch_requests WHERE id=?;", (req_id,)).fetchone()
-    if not row:
-        conn.close()
-        raise HTTPException(404, "Item not found")
-    is_boss = user["role"] in ("OWNER", "SYSTEM_ADMIN")
-    if not is_boss and (row["crew_name"].lower() != user["name"].lower() or row["status"] != "REQUESTED"):
-        conn.close()
-        raise HTTPException(403, "Only Ryan or Admin can remove already-processed items.")
-    conn.execute("DELETE FROM merch_requests WHERE id=?;", (req_id,))
-    conn.commit()
-    conn.close()
-    return {"ok": True}
 
 
 @app.post("/api/merch/settings")
@@ -5431,31 +5344,50 @@ def update_merch_store_settings(payload: MerchStoreSettingsInput, request: Reque
         "INSERT OR REPLACE INTO settings (key, value) VALUES ('merch_allowance_note', ?);",
         (payload.allowance_note.strip(),),
     )
+    bump_db_version(conn)
     conn.commit()
     conn.close()
     return {"ok": True, "popup_store_url": url}
 
 
-@app.get("/api/merch/export.csv")
-def export_merch_requests_csv(request: Request):
-    require_owner_or_admin(request)
+
+
+@app.post("/api/schedule/{job_id}/status")
+def quick_update_schedule_job_status(job_id: int, payload: dict):
+    st = str(payload.get("status") or "COMPLETED").strip().upper()
     conn = get_conn()
-    rows = conn.execute("SELECT * FROM merch_requests ORDER BY status, item_title, size, crew_name;").fetchall()
+    conn.execute("UPDATE schedule_jobs SET status=? WHERE id=?;", (st, job_id))
+    bump_db_version(conn)
+    conn.commit()
     conn.close()
-    import csv, io
-    buf = io.StringIO()
-    writer = csv.writer(buf)
-    writer.writerow(["ID", "Created", "Crew Member", "Product", "Color", "Size", "Qty", "Design", "Placement", "Type", "Status", "Notes"])
-    for r in rows:
-        writer.writerow([
-            r["id"], r["created_at"], r["crew_name"], r["item_title"], r["color_name"],
-            r["size"], r["qty"], r["design_title"], r["placement"], r["order_type"], r["status"], r["notes"],
-        ])
-    return Response(
-        content=buf.getvalue(),
-        media_type="text/csv",
-        headers={"Content-Disposition": 'attachment; filename="webers_crew_merch_order.csv"'},
-    )
+    return {"ok": True, "status": st}
+
+@app.get("/api/ops/dispatch-radar")
+def get_ops_dispatch_radar():
+    today = today_eastern()
+    conn = get_conn()
+    jobs = [
+        dict(r)
+        for r in conn.execute(
+            """
+            SELECT * FROM schedule_jobs
+            WHERE COALESCE(status, 'SCHEDULED') NOT IN ('COMPLETED', 'DONE', 'CANCELLED')
+            ORDER BY scheduled_date ASC, id ASC;
+            """
+        ).fetchall()
+    ]
+    truck_reqs = [
+        dict(d)
+        for d in conn.execute(
+            """
+            SELECT * FROM dropoffs
+            WHERE entry_type='TRUCK_REQUEST' AND COALESCE(status, 'PENDING') NOT IN ('IMPORTED', 'PICKED_UP', 'COMPLETED', 'ARCHIVED')
+            ORDER BY id DESC;
+            """
+        ).fetchall()
+    ]
+    conn.close()
+    return {"today": today, "jobs": jobs, "truck_requests": truck_reqs}
 
 
 @app.get("/api/public/theme")
