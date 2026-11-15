@@ -2250,6 +2250,198 @@ def get_tv_leaderboard(work_date: Optional[str] = None):
     }
 
 
+@app.get("/api/ops/live")
+def ops_live_state(work_date: Optional[str] = None):
+    """Lightweight operational delta for /ops (skips month grid, 5-yr recalls, invoices & static catalogs)."""
+    est_today = today_eastern()
+    target_date = work_date or est_today
+    conn = get_conn()
+    s_map = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings;").fetchall()}
+    cal_serial = s_map.get("calibrated_serial", "1SF11904")
+    default_cap = int(s_map.get("daily_hydro_capacity") or 24)
+    has_key = bool(os.getenv("GEMINI_API_KEY") or s_map.get("gemini_api_key"))
+    has_webhook = bool(s_map.get("sheets_webhook_url"))
+
+    binder_state = get_binder_status(conn, s_map)
+    compliance_alerts = get_compliance_alerts(s_map, est_today)
+
+    cal_anchor = parse_iso_date(target_date) or now_eastern().date()
+    p_row = conn.execute("SELECT * FROM shop_day_plans WHERE work_date=?;", (cal_anchor.isoformat(),)).fetchone()
+    plans_map = {p_row["work_date"]: dict(p_row)} if p_row else {}
+
+    schedule_jobs = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT * FROM schedule_jobs
+               WHERE status != 'CANCELLED' AND status != 'COMPLETED'
+               ORDER BY CASE WHEN rush_fee=1 OR priority='RUSH' THEN 0 ELSE 1 END,
+                        scheduled_date ASC, id ASC LIMIT 50;"""
+        ).fetchall()
+    ]
+    for sj in schedule_jobs:
+        sj["dwell_days"] = days_since(sj.get("created_at"), est_today)
+        sj["holding_zone_label"] = HOLDING_ZONES.get(sj.get("holding_zone") or "", sj.get("holding_zone") or "")
+
+    selected_day_plan = resolve_day_plan(cal_anchor, plans_map, default_cap)
+    selected_day_open = [j for j in schedule_jobs if j["scheduled_date"] == selected_day_plan["work_date"]]
+    selected_day_plan["booked_bottles"] = sum(
+        j["bottle_count"] for j in selected_day_open if j["job_type"] in ("SHOP_BATCH", "ROAD_PICKUP", "ROAD_ROUNDTRIP")
+    )
+
+    crew = [dict(r) for r in conn.execute("SELECT * FROM crew_members WHERE active=1 ORDER BY id;").fetchall()]
+    targets = [
+        dict(r)
+        for r in conn.execute(
+            "SELECT * FROM calibration_targets WHERE serial_number=? ORDER BY pressure_psi;",
+            (cal_serial,),
+        ).fetchall()
+    ]
+    verifications = [
+        dict(r)
+        for r in conn.execute("SELECT * FROM daily_verifications WHERE test_date=? ORDER BY id ASC;", (target_date,)).fetchall()
+    ]
+
+    jacket_ceilings = {}
+    for j_name in ("Short Jacket", "Tall Jacket"):
+        row = conn.execute(
+            "SELECT COALESCE(MAX(target_pressure_psi), 0) AS max_cal FROM daily_verifications WHERE test_date=? AND jacket_type=? AND passed=1;",
+            (target_date, j_name),
+        ).fetchone()
+        max_cal = int(row["max_cal"] or 0)
+        jacket_ceilings[j_name] = {
+            "max_calibrated_psi": max_cal,
+            "max_allowed_test_psi": dot_max_allowed_test_psi(max_cal),
+        }
+
+    raw_records = [
+        enrich_record_meta(dict(r), est_today)
+        for r in conn.execute("SELECT * FROM cylinder_records WHERE work_date=? OR status='QUEUED' ORDER BY id ASC;", (target_date,)).fetchall()
+    ]
+    queued_part = sorted([r for r in raw_records if r["status"] == "QUEUED"], key=queue_sort_key)
+    done_part = [r for r in raw_records if r["status"] == "COMPLETED" and r["work_date"] == target_date]
+    records = queued_part + done_part
+
+    in_shop_post_test = [
+        enrich_record_meta(dict(r), est_today)
+        for r in conn.execute(
+            "SELECT * FROM cylinder_records WHERE status='COMPLETED' AND shop_stage != 'PICKED_UP' ORDER BY work_date ASC, id ASC LIMIT 120;"
+        ).fetchall()
+    ]
+    active_valves = [
+        enrich_record_meta(dict(r), est_today)
+        for r in conn.execute("SELECT * FROM cylinder_records WHERE valve_tag != '' AND valve_reinstalled = 0 ORDER BY id DESC;").fetchall()
+    ]
+    dropoffs = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT * FROM dropoffs
+               WHERE status NOT IN ('ARCHIVED', 'DISPATCH_SCHEDULED')
+                 AND (entry_type='PICKUP_NOTICE' OR COALESCE(imported_count, 0) < bottle_count)
+               ORDER BY CASE WHEN status IN ('IN_BACKROOM', 'PICKUP_LOGGED') THEN 0 ELSE 1 END,
+                        rush_requested DESC, id DESC LIMIT 40;"""
+        ).fetchall()
+    ]
+    for d in dropoffs:
+        d["dwell_days"] = days_since(d.get("work_date"), est_today)
+
+    rolo_rows = conn.execute("SELECT customer_name, phone, tax_exempt, payment_terms, account_type FROM customers;").fetchall()
+    rolo_map = {r["customer_name"].upper(): dict(r) for r in rolo_rows}
+
+    customers_summary = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT customer_name,
+                      MAX(customer_phone) AS customer_phone,
+                      COUNT(*) AS total_bottles,
+                      MAX(work_date) AS last_date,
+                      MIN(CASE WHEN shop_stage='READY_BACKROOM' THEN work_date ELSE NULL END) AS oldest_shelf_date,
+                      SUM(CASE WHEN status='COMPLETED' AND invoice_id IS NULL THEN 1 ELSE 0 END) AS unbilled_count,
+                      SUM(CASE WHEN status='COMPLETED' AND hydro_disposition='A' AND COALESCE(rin_marked,0)=0 AND shop_stage!='PICKED_UP' THEN 1 ELSE 0 END) AS needs_stamp_count,
+                      SUM(CASE WHEN shop_stage='READY_BACKROOM' THEN 1 ELSE 0 END) AS ready_backroom_count
+               FROM cylinder_records
+               GROUP BY customer_name
+               ORDER BY CASE WHEN SUM(CASE WHEN status='COMPLETED' AND invoice_id IS NULL THEN 1 ELSE 0 END) > 0 THEN 0 ELSE 1 END,
+                        last_date DESC, customer_name ASC;"""
+        ).fetchall()
+    ]
+    for c in customers_summary:
+        c["shelf_dwell_days"] = days_since(c.get("oldest_shelf_date"), est_today) if c.get("oldest_shelf_date") else 0
+        rm = rolo_map.get(c["customer_name"].upper())
+        if rm:
+            if not c["customer_phone"] and rm["phone"]:
+                c["customer_phone"] = rm["phone"]
+            c["tax_exempt"] = bool(rm["tax_exempt"])
+            c["payment_terms"] = rm["payment_terms"]
+            c["account_type"] = rm["account_type"]
+        else:
+            c["tax_exempt"] = False
+            c["payment_terms"] = "DUE_AT_PICKUP"
+            c["account_type"] = "WALK_IN"
+
+    max_queued_test_psi = max((int(r.get("test_psi") or 0) for r in queued_part), default=0)
+    recommended_cal_psi = 0
+    if max_queued_test_psi > 0:
+        for t in targets:
+            if dot_max_allowed_test_psi(int(t["pressure_psi"])) >= max_queued_test_psi:
+                recommended_cal_psi = int(t["pressure_psi"])
+                break
+        if not recommended_cal_psi and targets:
+            recommended_cal_psi = int(targets[-1]["pressure_psi"])
+
+    low_stock_count = conn.execute("SELECT COUNT(*) FROM shop_supplies WHERE low_stock=1;").fetchone()[0]
+    feedback_items = [dict(r) for r in conn.execute("SELECT * FROM crew_feedback ORDER BY id DESC LIMIT 30;").fetchall()]
+    unsynced = conn.execute(
+        "SELECT (SELECT COUNT(*) FROM daily_verifications WHERE synced=0) + "
+        "(SELECT COUNT(*) FROM cylinder_records WHERE synced=0 AND status='COMPLETED') + "
+        "(SELECT COUNT(*) FROM invoices WHERE synced=0) + "
+        "(SELECT COUNT(*) FROM dropoffs WHERE synced=0) + "
+        "(SELECT COUNT(*) FROM crew_feedback WHERE synced=0);"
+    ).fetchone()[0]
+    conn.close()
+
+    return {
+        "selected_date": target_date,
+        "today": est_today,
+        "db_version": int(s_map.get("db_version", "1")),
+        "testing_mode": s_map.get("testing_mode", "1") == "1",
+        "dot_rin": s_map.get("dot_rin", "B386"),
+        "shop_phone": s_map.get("phone", "724-266-8008"),
+        "starting_sheet_no": int(s_map.get("starting_sheet_no", "8095")),
+        "daily_hydro_capacity": default_cap,
+        "default_tax_rate": float(s_map.get("default_tax_rate", "6.0") or 0),
+        "rin_expires_date": s_map.get("rin_expires_date", ""),
+        "gauge_cert_expires_date": s_map.get("gauge_cert_expires_date", ""),
+        "compliance_alerts": compliance_alerts,
+        "calibrated_serial": cal_serial,
+        "has_gemini_key": has_key,
+        "has_sheets_webhook": has_webhook,
+        "sheets_webhook_url": s_map.get("sheets_webhook_url", ""),
+        "feedback_webhook_url": s_map.get("feedback_webhook_url", ""),
+        "binder_state": binder_state,
+        "huddle": {
+            "selected_day_plan": selected_day_plan,
+            "max_queued_test_psi": max_queued_test_psi,
+            "recommended_cal_psi": recommended_cal_psi,
+            "rush_queued_count": sum(1 for r in queued_part if r.get("rush_fee") or r.get("priority") == "RUSH"),
+            "needs_stamp_count": sum(1 for r in in_shop_post_test if r.get("hydro_disposition") == "A" and not r.get("rin_marked")),
+            "ready_shelf_count": sum(1 for r in in_shop_post_test if r.get("shop_stage") == "READY_BACKROOM"),
+        },
+        "schedule_jobs": schedule_jobs,
+        "crew": crew,
+        "calibration_targets": targets,
+        "verifications": verifications,
+        "jacket_ceilings": jacket_ceilings,
+        "records": records,
+        "in_shop_post_test": in_shop_post_test,
+        "active_valves": active_valves,
+        "dropoffs": dropoffs,
+        "customers_summary": customers_summary,
+        "low_stock_count": low_stock_count,
+        "feedback_items": feedback_items,
+        "unsynced_count": unsynced,
+    }
+
+
 @app.get("/api/bootstrap")
 def bootstrap(work_date: Optional[str] = None, cal_year: Optional[int] = None, cal_month: Optional[int] = None):
     est_today = today_eastern()

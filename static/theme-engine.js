@@ -220,5 +220,5 @@
   };
 
   window.addEventListener('load', () => setTimeout(syncTheme, 250));
-  setInterval(syncTheme, 15000);
+  setInterval(syncTheme, location.pathname === '/tv' ? 20000 : 60000);
 })();

@@ -7,7 +7,7 @@
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/icon.svg" />
-  <link rel="stylesheet" href="/static/ops.css?v=9.5" />
+  <link rel="stylesheet" href="/static/ops.css?v=9.6" />
   <title>Weber's Tank Testing — Shop Floor Ops | DOT B386</title>
 </head>
 <body>
@@ -62,13 +62,14 @@
       </a>
 
       <nav class="ws-switcher">
-        <a href="/ops" class="ws-link active">🔧 Shop Ops</a>
-        <a href="/schedule" class="ws-link">📅 Schedule <span id="wsSchedBadge"></span></a>
-        <a href="/office" class="ws-link">💲 Office &amp; Print <span id="wsBillBadge"></span></a>
-        <a href="/tv" target="_blank" class="ws-link">📺 Live TV</a>
+        <a href="/ops" class="ws-link active"><svg class="ws-svg" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg><span>Shop Ops</span></a>
+        <a href="/schedule" class="ws-link"><svg class="ws-svg" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Schedule</span> <span id="wsSchedBadge"></span></a>
+        <a href="/office" class="ws-link"><svg class="ws-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg><span>Office &amp; Print</span> <span id="wsBillBadge"></span></a>
+        <a href="/tv" target="_blank" class="ws-link"><svg class="ws-svg" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span>Live TV</span></a>
       </nav>
 
       <div class="top-controls">
+        <button type="button" id="topHelpAiBtn" class="menu-pill" onclick="document.querySelector('.help-fab')?.click()" title="Open Shop Help AI">? Help</button>
         <button id="testModeChip" class="test-chip" onclick="toggleGuide(true)" title="Testing Mode Active" hidden>TEST</button>
         <div class="date-stepper">
           <button type="button" class="step-btn" onclick="stepWorkingDate(-1)" title="Previous Day">◀</button>
@@ -102,15 +103,9 @@
         </div>
 
         <div class="rail-footer">
-          <a class="secondary" href="/office?tab=quick" style="width:100%;background:#ecfdf5;color:#065f46;border-color:#6ee7b7;">📞 Call: Shop Drop-Off</a>
-          <a class="secondary" href="/office?tab=dispatch" style="width:100%;background:#fef3c7;color:#92400e;border-color:#f59e0b;">🚚 Dispatch: Truck Run</a>
-          <a class="secondary" href="/schedule" style="width:100%;">📅 Month Calendar &amp; Runs</a>
-          <a class="secondary" href="/office" style="width:100%;">💲 Billing &amp; DOT Printouts</a>
-          <a class="secondary" href="/office?tab=rolodex" style="width:100%;">📇 Customer Rolodex</a>
-          <a class="secondary" href="/office?tab=supplies" id="railSupplyLink" style="width:100%;">📦 Reorder Shop Supplies</a>
-          <button class="secondary" id="railSyncChip" onclick="triggerManualSync()" style="width:100%;">☁ Checking Sync...</button>
-          <button class="secondary" onclick="toggleFeedbackModal(true)" style="width:100%;">💬 Crew Feedback</button>
-          <button class="secondary" onclick="toggleGuide(true)" style="width:100%;">⚙ Facility Settings</button>
+          <button class="secondary" id="railSyncChip" onclick="triggerManualSync()" style="width:100%;">Syncing...</button>
+          <button class="secondary" onclick="toggleMenuDrawer(true)" style="width:100%;">More Tools &amp; Admin ☰</button>
+          <a id="railSupplyLink" href="/office?tab=supplies" hidden>Supplies</a>
         </div>
       </aside>
 
@@ -122,7 +117,7 @@
         <section id="tab-cal">
           <div class="card">
             <div class="card-hdr">
-              <h3>☀️ Start-of-Day Huddle &amp; DOT Test Book Setup</h3>
+              <h3>Start-of-Day Huddle &amp; DOT Test Book Setup</h3>
               <div style="display:flex;gap:6px;align-items:center;">
                 <span class="sub-badge" id="huddleShiftBadge">🟢 Full Hydro &amp; Prep Window</span>
                 <a class="secondary" href="/schedule">📅 Month Calendar →</a>
@@ -206,7 +201,7 @@
         <section id="tab-intake" hidden>
           <div class="card" id="backroomInboxCard" style="border-left:4px solid #f59e0b;" hidden>
             <div class="card-hdr">
-              <h3>🚪 24/7 Backroom Door Check-Ins &amp; Pickup Notices</h3>
+              <h3>24/7 Back Room Check-Ins &amp; Pickup Notices</h3>
               <span class="sub-badge" id="backroomCountBadge">0 Waiting</span>
             </div>
             <div id="backroomInboxList"></div>
@@ -357,9 +352,9 @@
                   <div>
                     <label>Holding Zone</label>
                     <select id="fHoldingZone">
-                      <option value="ZONE_C_READY_RACK">Zone C • Ready Rack</option>
-                      <option value="ZONE_B_DEVALVE">Zone B • Devalve Bench</option>
-                      <option value="ZONE_A_BACKROOM">Zone A • Backroom</option>
+                      <option value="ZONE_C_READY_RACK">Test Jackets &amp; Pump Desk</option>
+                      <option value="ZONE_B_DEVALVE">Vice &amp; Stamp/Valve Bench</option>
+                      <option value="ZONE_A_BACKROOM">24/7 Back Room (Loading Dock)</option>
                     </select>
                   </div>
                 </div>
@@ -398,7 +393,7 @@
           <div class="split-2">
             <div class="card">
               <div class="card-hdr">
-                <h3>💧 Hydro Test Stand — Tap Cylinder Pill to Load</h3>
+                <h3>Hydro Test Stand — Select Queued Cylinder</h3>
                 <span class="sub-badge" id="standBinderBadge">Next Row: #1</span>
               </div>
               <div id="benchPillBar" class="pill-selector-bar"></div>
@@ -408,7 +403,7 @@
 
             <div class="card">
               <div class="card-hdr">
-                <h3>Completed Today → Zone D Dry, Mark &amp; Parts</h3>
+                <h3>Completed Today → Drying Rack &amp; Stamp Bench</h3>
                 <span class="sub-badge" id="doneCountBadge">0 Done</span>
               </div>
               <div id="doneBatchActions" style="margin-bottom:10px;"></div>
@@ -421,7 +416,7 @@
         <section id="tab-logs" hidden>
           <div class="card" style="border-left:4px solid #7c3aed;">
             <div class="card-hdr">
-              <h3>🔨 Post-Test Finish: Dry → Stamp/Sticker → Revalve (+ Parts) → Shelf</h3>
+              <h3>Post-Test Finish: Drying Rack → Stamp/Sticker → Revalve → Back Room</h3>
               <div style="display:flex;gap:6px;align-items:center;">
                 <span class="sub-badge" id="finishCountBadge">0 In Post-Test</span>
                 <a class="secondary" href="/office?tab=print">🖨️ Print Stickers →</a>
@@ -434,14 +429,14 @@
           <div class="split-2">
             <div class="card" style="border-left:4px solid var(--amber);">
               <div class="card-hdr">
-                <h3>🏷️ Active Valve &amp; Regulator Tags</h3>
+                <h3>Active Valve &amp; Regulator Tags</h3>
                 <span class="sub-badge" id="valveCountBadge">0 Out</span>
               </div>
               <div id="valveTrackerList"></div>
             </div>
 
             <div class="card">
-              <div class="card-hdr"><h3>📦 Zone E Pickup Shelf, Claim Slips &amp; Ready SMS</h3></div>
+              <div class="card-hdr"><h3>Back Room Pickup, Claim Slips &amp; Ready SMS</h3></div>
               <div id="customersListArea"></div>
             </div>
           </div>
@@ -494,7 +489,9 @@
       <a class="secondary" href="/tv" target="_blank" style="padding:11px;justify-content:flex-start;">📺 Launch Testing Room TV Board</a>
       <button class="secondary" id="drawerSyncBtn" onclick="triggerManualSync()" style="padding:11px;justify-content:flex-start;">☁ Sync Google Sheets Now</button>
       <button class="secondary" onclick="toggleMenuDrawer(false);toggleFeedbackModal(true)" style="padding:11px;justify-content:flex-start;">💬 Crew Feedback &amp; Ideas</button>
-      <button class="secondary" onclick="toggleMenuDrawer(false);toggleGuide(true)" style="padding:11px;justify-content:flex-start;">⚙ Facility Settings &amp; Cert Dates</button>
+      <button class="secondary" onclick="toggleMenuDrawer(false);window.openPinManagerModal&&window.openPinManagerModal()" style="padding:11px;justify-content:flex-start;">Individual Crew PINs</button>
+      <button class="secondary" onclick="toggleMenuDrawer(false);window.openHolidayThemeModal&&window.openHolidayThemeModal()" style="padding:11px;justify-content:flex-start;">Holiday Themes &amp; Shop Pups</button>
+      <button class="secondary" onclick="toggleMenuDrawer(false);toggleGuide(true)" style="padding:11px;justify-content:flex-start;">Facility Settings &amp; Cert Dates</button>
       <hr style="border:none;border-top:1px solid var(--border-soft);width:100%;" />
       <button class="danger-btn" id="drawerWipeBtn" onclick="eraseAllTestData()" hidden>🗑 Erase All Practice / Test Data</button>
       <button class="secondary" onclick="logoutCrew()">🔒 Sign Out This Device</button>
@@ -524,11 +521,11 @@
         <div><label>Promised Date</label><input type="date" id="erPromisedDate" /></div>
         <div><label>Holding Zone</label>
           <select id="erZone">
-            <option value="ZONE_A_BACKROOM">Zone A • Backroom</option>
-            <option value="ZONE_B_DEVALVE">Zone B • Devalve Bench</option>
-            <option value="ZONE_C_READY_RACK">Zone C • Ready Rack</option>
-            <option value="ZONE_D_DRY_STAMP">Zone D • Dryer &amp; Stamp</option>
-            <option value="ZONE_E_PICKUP_SHELF">Zone E • Pickup Shelf</option>
+            <option value="ZONE_A_BACKROOM">24/7 Back Room (Loading Dock)</option>
+            <option value="ZONE_B_DEVALVE">Vice &amp; Stamp/Valve Bench</option>
+            <option value="ZONE_C_READY_RACK">Test Jackets &amp; Pump Desk</option>
+            <option value="ZONE_D_DRY_STAMP">Main Bay Drying Rack</option>
+            <option value="ZONE_E_PICKUP_SHELF">Back Room Pickup (Loading Dock)</option>
             <option value="OUTBOUND_TRUCK">🚚 Road Delivery</option>
             <option value="PICKED_UP">✓ Picked Up</option>
           </select>
@@ -671,10 +668,10 @@
     </div>
   </div>
 
-  <script src="/static/ops-camera.js?v=9.5"></script>
-  <script src="/static/ops-app.js?v=9.5"></script>
-  <script src="/static/day-flow.js?v=9.5"></script>
-  <script src="/static/theme-engine.js?v=9.5"></script>
-  <script src="/static/help-bot.js?v=9.5"></script>
+  <script src="/static/ops-camera.js?v=9.6"></script>
+  <script src="/static/ops-app.js?v=9.6"></script>
+  <script src="/static/day-flow.js?v=9.6"></script>
+  <script src="/static/theme-engine.js?v=9.6"></script>
+  <script src="/static/help-bot.js?v=9.6"></script>
 </body>
 </html>

@@ -65,8 +65,8 @@ function fmtPctTenth(val) {
 }
 
 function priorityBadgeHtml(r) {
-  if (r.rush_fee || r.priority === 'RUSH') return '<span class="rush-badge">🔥 RUSH</span>';
-  if (r.priority === 'HIGH') return '<span class="high-badge">⚡ HIGH</span>';
+  if (r.rush_fee || r.priority === 'RUSH') return '<span class="rush-badge">RUSH</span>';
+  if (r.priority === 'HIGH') return '<span class="high-badge">HIGH</span>';
   return '';
 }
 
@@ -76,17 +76,17 @@ function dwellBadgeHtml(days, prefix = '⏳') {
 }
 
 function stageBadgeHtml(r) {
-  if (r.status === 'QUEUED') return '<span class="stage-chip">🔧 Queued</span>';
+  if (r.status === 'QUEUED') return '<span class="stage-chip">Queued</span>';
   const st = r.shop_stage || 'IN_SHOP';
-  if (st === 'READY_BACKROOM') return '<span class="stage-chip ready">📦 Zone E Shelf</span>';
+  if (st === 'READY_BACKROOM') return '<span class="stage-chip ready">Back Room Ready</span>';
   if (st === 'PICKED_UP') return `<span class="stage-chip">✓ Picked Up${r.picked_up_by ? ' (' + escHtml(r.picked_up_by) + ')' : ''}</span>`;
   if (st === 'CONDEMNED_HOLD' || r.hydro_disposition === 'D') return '<span class="stage-chip" style="background:#fee2e2;color:#991b1b;">⛔ Condemned</span>';
   if (st === 'STAMPED_STICKERED' || r.rin_marked) {
-    const lbl = r.rin_mark_type === 'STICKERED' ? '🏷️ B386 Stickered' : '🔨 Stamped B386';
+    const lbl = r.rin_mark_type === 'STICKERED' ? 'B386 Stickered' : 'Stamped B386';
     return `<span class="stage-chip stamped">${lbl}</span>`;
   }
-  if (st === 'DRYING') return '<span class="stage-chip drying">💨 Drying / Needs Mark</span>';
-  return '<span class="stage-chip">🔧 In Shop</span>';
+  if (st === 'DRYING') return '<span class="stage-chip drying">Drying • Needs B386</span>';
+  return '<span class="stage-chip">In Shop</span>';
 }
 
 function getActiveCrew() {
@@ -266,9 +266,12 @@ async function eraseAllTestData() {
 // --- BOOTSTRAP & LIVE POLLING ---
 async function loadState(rebuildLadder = false) {
   const wDate = document.getElementById('globalDate').value || '';
-  const res = await fetch('/api/bootstrap' + (wDate ? `?work_date=${encodeURIComponent(wDate)}` : ''));
+  const useFastLive = !rebuildLadder && Array.isArray(STATE.cga_specs) && STATE.cga_specs.length > 0;
+  const ep = useFastLive ? '/api/ops/live' : '/api/bootstrap';
+  const res = await fetch(ep + (wDate ? `?work_date=${encodeURIComponent(wDate)}` : ''));
   if (res.status === 401) { checkAuthAndBoot(); return; }
-  STATE = await res.json();
+  const incoming = await res.json();
+  STATE = useFastLive ? { ...STATE, ...incoming } : incoming;
 
   document.getElementById('globalDate').value = STATE.selected_date;
 
@@ -434,7 +437,7 @@ function renderStartOfDayHuddle(queued, openSched, waitingDrops) {
     <div class="huddle-kpi"><small>Queued Ready</small><strong>${queued.length} Cyl${hud.rush_queued_count ? ` (${hud.rush_queued_count} 🔥)` : ''}</strong></div>
     <div class="huddle-kpi"><small>Backroom Door</small><strong>${waitingDrops.length} Waiting</strong></div>
     <div class="huddle-kpi"><small>Needs B386 Mark</small><strong>${hud.needs_stamp_count || 0} Dried</strong></div>
-    <div class="huddle-kpi"><small>Zone E Shelf</small><strong>${hud.ready_shelf_count || 0} Ready</strong></div>`;
+    <div class="huddle-kpi"><small>Back Room Ready</small><strong>${hud.ready_shelf_count || 0} Ready</strong></div>`;
 
   const todayRuns = openSched.filter(j => j.scheduled_date <= STATE.selected_date);
   document.getElementById('huddleLineupList').innerHTML = todayRuns.length
@@ -963,11 +966,16 @@ async function submitIntake(allowDup = false) {
 
 async function cycleRecordPriority(id, curPri, curRush) {
   const nextPri = (curRush || curPri === 'RUSH') ? 'STANDARD' : (curPri === 'HIGH' ? 'RUSH' : 'HIGH');
-  await fetch(`/api/records/${id}/priority`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ priority: nextPri, rush_fee: nextPri === 'RUSH' }),
+  const nextRush = nextPri === 'RUSH' ? 1 : 0;
+  [STATE.records, STATE.in_shop_post_test].forEach(arr => {
+    const item = (arr || []).find(x => x.id === id);
+    if (item) { item.priority = nextPri; item.rush_fee = nextRush; }
   });
-  loadState(false);
+  renderIntakeAndQueue(STATE.records.filter(r => r.status === 'QUEUED'));
+  fetch(`/api/records/${id}/priority`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ priority: nextPri, rush_fee: Boolean(nextRush) }),
+  }).then(() => loadState(false));
 }
 
 async function assignTagBySerial(serialInputId, tagInputId) {
@@ -995,11 +1003,16 @@ async function saveInlineValveTag(recordId, inputEl) {
 }
 
 async function releaseValveTag(recordId) {
-  await fetch('/api/valve-tag', {
+  STATE.active_valves = (STATE.active_valves || []).filter(v => v.id !== recordId);
+  [STATE.records, STATE.in_shop_post_test].forEach(arr => {
+    const item = (arr || []).find(x => x.id === recordId);
+    if (item) item.valve_reinstalled = 1;
+  });
+  renderFinishValvesAndCustomers();
+  fetch('/api/valve-tag', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ record_id: recordId, valve_reinstalled: true }),
-  });
-  loadState(false);
+  }).then(() => loadState(false));
 }
 
 async function removeRecord(id) {
@@ -1292,11 +1305,19 @@ function recordFinishRowHtml(r) {
 }
 
 async function toggleRecordAddon(recordId, field, nextVal) {
-  await fetch(`/api/records/${recordId}/addons`, {
+  [STATE.records, STATE.in_shop_post_test].forEach(arr => {
+    const item = (arr || []).find(x => x.id === recordId);
+    if (item) {
+      item[field] = nextVal ? 1 : 0;
+      if (field === 'addon_burst_disc') item.relief_valve_changed = nextVal ? 'Yes' : 'No';
+    }
+  });
+  renderCompletedSection(STATE.records.filter(r => r.status === 'COMPLETED'));
+  renderFinishValvesAndCustomers();
+  fetch(`/api/records/${recordId}/addons`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ [field]: nextVal }),
-  });
-  loadState(false);
+  }).then(() => loadState(false));
 }
 
 function openClaimSlipPdf(custName) {
@@ -1371,18 +1392,75 @@ function sendPickupSms(custName, phone, count, invExtra) {
     if (!ph.trim()) return;
   }
   const cleanDigits = ph.replace(/\D/g, '');
-  const msg = `Weber's Tank Testing (RIN B386): Hi ${custName}, your ${count} cylinder(s) are tested, stamped/labeled, and ready on our Zone E backroom pickup shelf at 3086 Legionville Rd${invExtra ? ' (' + invExtra + ')' : ''}. Questions? Call/text ${STATE.shop_phone || '724-266-8008'}.`;
+  const msg = `Weber's Tank Testing (RIN B386): Hi ${custName}, your ${count} cylinder(s) are tested, stamped/labeled, and ready in our 24/7 Back Room pickup area (Loading Dock door) at 3086 Legionville Rd${invExtra ? ' (' + invExtra + ')' : ''}. Questions? Call/text ${STATE.shop_phone || '724-266-8008'}.`;
   const sep = /iPad|iPhone|iPod/i.test(navigator.userAgent) ? '&' : '?';
   window.location.href = `sms:${cleanDigits}${sep}body=${encodeURIComponent(msg)}`;
+}
+
+window.FINISH_BATCH_OPEN = window.FINISH_BATCH_OPEN || {};
+
+function toggleFinishBatchGroup(custKey) {
+  window.FINISH_BATCH_OPEN[custKey] = !window.FINISH_BATCH_OPEN[custKey];
+  renderFinishValvesAndCustomers();
 }
 
 function renderFinishValvesAndCustomers() {
   const postRows = (STATE.in_shop_post_test || []).filter(r => r.shop_stage !== 'PICKED_UP');
   const needsWork = postRows.filter(r => r.shop_stage !== 'READY_BACKROOM');
-  document.getElementById('finishCountBadge').textContent = `${needsWork.length} Need Finish • ${postRows.length - needsWork.length} On Shelf`;
-  document.getElementById('finishBenchList').innerHTML = postRows.length
-    ? postRows.map(r => recordFinishRowHtml(r)).join('')
-    : '<div style="color:var(--muted);font-size:0.86rem;">All tested cylinders have been stamped/stickered, revalved, and picked up!</div>';
+  document.getElementById('finishCountBadge').textContent = `${needsWork.length} Need Finish • ${postRows.length - needsWork.length} Back Room Ready`;
+
+  if (!postRows.length) {
+    document.getElementById('finishBenchList').innerHTML =
+      '<div style="color:var(--muted);font-size:0.86rem;">All tested cylinders have been stamped/stickered, revalved, and picked up.</div>';
+  } else {
+    const groupsMap = new Map();
+    postRows.forEach(r => {
+      const k = r.customer_name || 'Walk-In';
+      if (!groupsMap.has(k)) groupsMap.set(k, []);
+      groupsMap.get(k).push(r);
+    });
+
+    const sortedGroups = [...groupsMap.entries()].sort((a, b) => {
+      const aNeed = a[1].some(r => r.shop_stage !== 'READY_BACKROOM') ? 0 : 1;
+      const bNeed = b[1].some(r => r.shop_stage !== 'READY_BACKROOM') ? 0 : 1;
+      return aNeed - bNeed || a[0].localeCompare(b[0]);
+    });
+
+    document.getElementById('finishBenchList').innerHTML = sortedGroups.map(([cust, rows]) => {
+      if (!(cust in window.FINISH_BATCH_OPEN)) {
+        window.FINISH_BATCH_OPEN[cust] = rows.length <= 3;
+      }
+      const isOpen = Boolean(window.FINISH_BATCH_OPEN[cust]);
+      const safeC = cust.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      const unmarked = rows.filter(r => r.hydro_disposition === 'A' && !r.rin_marked).length;
+      const notReady = rows.filter(r => r.shop_stage !== 'READY_BACKROOM').length;
+      const onShelf = rows.filter(r => r.shop_stage === 'READY_BACKROOM').length;
+      const hasRush = rows.some(r => r.rush_fee || r.priority === 'RUSH');
+      const ph = (rows.find(r => r.customer_phone) || {}).customer_phone || '';
+
+      return `
+        <div class="batch-finish-card">
+          <div class="batch-finish-hdr" onclick="toggleFinishBatchGroup('${safeC}')">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <span class="mono" style="font-size:0.82rem;color:var(--muted);width:14px;">${isOpen ? '▾' : '▸'}</span>
+              <strong style="font-size:0.95rem;color:var(--forest);">${escHtml(cust)}</strong>
+              <span class="sub-badge">${rows.length} Cyl</span>
+              ${hasRush ? '<span class="rush-badge">RUSH</span>' : ''}
+              ${unmarked ? `<span class="stage-chip drying">${unmarked} Need B386 Mark</span>` : ''}
+              ${onShelf ? `<span class="stage-chip ready">${onShelf} Back Room Ready</span>` : ''}
+            </div>
+            <div class="rec-actions" onclick="event.stopPropagation()">
+              ${unmarked ? `<button class="secondary" style="background:#ede9fe;color:#5b21b6;border-color:#c4b5fd;" onclick="stageCustomerBatch('${safeC}', 'STAMPED_STICKERED', 'MARKED', true)">Mark Batch B386</button>` : ''}
+              ${notReady ? `<button class="secondary" style="background:#dcfce7;color:#166534;border-color:#86efac;" onclick="stageCustomerBatch('${safeC}', 'READY_BACKROOM', '', true)">Revalve &amp; Move Batch</button>` : ''}
+              <button class="secondary" onclick="openClaimSlipPdf('${safeC}')">Claim Slip</button>
+              <button class="secondary" onclick="sendPickupSms('${safeC}', '${escHtml(ph)}', ${rows.length}, '')">Text</button>
+              ${onShelf === rows.length ? `<button class="secondary" onclick="stageCustomerBatch('${safeC}', 'PICKED_UP', '', true)">✓ Picked Up</button>` : ''}
+            </div>
+          </div>
+          ${isOpen ? `<div class="batch-finish-body">${rows.map(r => recordFinishRowHtml(r)).join('')}</div>` : ''}
+        </div>`;
+    }).join('');
+  }
 
   document.getElementById('valveCountBadge').textContent = `${STATE.active_valves.length} Out`;
   document.getElementById('valveTrackerList').innerHTML = STATE.active_valves.length
@@ -1410,8 +1488,8 @@ function renderFinishValvesAndCustomers() {
               <div class="rec-title">
                 <span>${escHtml(c.customer_name)}</span>
                 ${c.tax_exempt ? '<span class="tax-exempt-pill">Tax-Exempt</span>' : ''}
-                ${c.needs_stamp_count ? `<span class="stage-chip drying">🔨 ${c.needs_stamp_count} Need Mark</span>` : ''}
-                ${c.ready_backroom_count ? `<span class="stage-chip ready">📦 ${c.ready_backroom_count} Zone E</span>` : ''}
+                ${c.needs_stamp_count ? `<span class="stage-chip drying">${c.needs_stamp_count} Need B386</span>` : ''}
+                ${c.ready_backroom_count ? `<span class="stage-chip ready">${c.ready_backroom_count} Back Room Ready</span>` : ''}
                 ${c.shelf_dwell_days >= 2 ? dwellBadgeHtml(c.shelf_dwell_days, '📦') : ''}
               </div>
               <div class="rec-sub">${c.total_bottles} total • ${c.unbilled_count} unbilled • Last: ${escHtml(c.last_date)}</div>

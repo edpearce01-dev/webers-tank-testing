@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b2219" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/static/ops.css?v=9.5" />
+  <link rel="stylesheet" href="/static/ops.css?v=9.6" />
   <title>Weber's Tank Testing — Office, Rolodex, Printouts &amp; Supplies | RIN B386</title>
 </head>
 <body>
@@ -39,13 +39,14 @@
       </a>
 
       <nav class="ws-switcher">
-        <a href="/ops" class="ws-link">🔧 Shop Ops <span id="wsOpsBadge"></span></a>
-        <a href="/schedule" class="ws-link">📅 Schedule <span id="wsSchedBadge"></span></a>
-        <a href="/office" class="ws-link active">💲 Office &amp; Print <span id="wsBillBadge"></span></a>
-        <a href="/tv" target="_blank" class="ws-link">📺 Live TV</a>
+        <a href="/ops" class="ws-link"><svg class="ws-svg" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg><span>Shop Ops</span> <span id="wsOpsBadge"></span></a>
+        <a href="/schedule" class="ws-link"><svg class="ws-svg" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Schedule</span> <span id="wsSchedBadge"></span></a>
+        <a href="/office" class="ws-link active"><svg class="ws-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg><span>Office &amp; Print</span> <span id="wsBillBadge"></span></a>
+        <a href="/tv" target="_blank" class="ws-link"><svg class="ws-svg" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span>Live TV</span></a>
       </nav>
 
       <div class="top-controls">
+        <button type="button" id="topHelpAiBtn" class="menu-pill" onclick="document.querySelector('.help-fab')?.click()" title="Open Shop Help AI">? Help</button>
         <div class="date-stepper">
           <button type="button" class="step-btn" onclick="stepOfficeDate(-1)" title="Previous Day">◀</button>
           <button type="button" class="today-btn" onclick="jumpOfficeToday()" title="Jump Back to Today">Today</button>
@@ -1888,8 +1889,8 @@
 
     bootOffice();
   </script>
-  <script src="/static/day-flow.js?v=9.5"></script>
-  <script src="/static/theme-engine.js?v=9.5"></script>
-  <script src="/static/help-bot.js?v=9.5"></script>
+  <script src="/static/day-flow.js?v=9.6"></script>
+  <script src="/static/theme-engine.js?v=9.6"></script>
+  <script src="/static/help-bot.js?v=9.6"></script>
 </body>
 </html>

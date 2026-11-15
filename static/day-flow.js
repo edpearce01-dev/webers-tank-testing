@@ -46,7 +46,7 @@
           <div style="font-size:0.76rem;color:#047857;">Re-open Start Your Day or view/edit Crew &amp; Admin PIN numbers</div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button type="button" class="secondary" onclick="toggleGuide(false);window.openStartYourDayModal(true)">☀️ Start Your Day</button>
+          <button type="button" class="secondary" onclick="toggleGuide(false);window.openStartYourDayModal(true)">Start Your Day</button>
           <button type="button" class="primary" id="btnOpenPinMgrInSettings" style="width:auto;margin:0;padding:8px 12px;" onclick="toggleGuide(false);window.openPinManagerModal()">🔐 Crew &amp; Admin PINs</button>
         </div>`;
       const h3 = settingsModal.querySelector('.card-hdr');
@@ -102,7 +102,7 @@
           admPill.id = 'adminNoSigBadge';
           admPill.className = 'admin-nosig-pill';
           admPill.title = 'Logged in with Eric Admin PIN — Full system access without placing Ryan legal signature on DOT sheets';
-          admPill.textContent = '🛡️ ADMIN (No Legal Sign-Off)';
+          admPill.textContent = 'ADMIN';
           topCtrls.prepend(admPill);
         }
       } else if (admPill) {
@@ -161,21 +161,15 @@
       const openTasks = (d.tasks || []).filter(t => t.status === 'OPEN').length;
       if (isOwnerOrAdmin()) {
         railCtrl.innerHTML = `
-          <div class="rail-section-lbl">${u.role === 'SYSTEM_ADMIN' ? '🛡️ Admin &amp; Day Flow' : '👑 Owner Day Flow'}</div>
+          <div class="rail-section-lbl">${u.role === 'SYSTEM_ADMIN' ? 'Daily Shift Flow' : '👑 Owner Day Flow'}</div>
           <button type="button" class="rail-btn" onclick="window.openStartYourDayModal(true)">
-            <span>☀️ Start Your Day</span><span class="nav-badge ${d.day_plan?.lineup_locked ? 'green' : 'amber'}">${d.day_plan?.lineup_locked ? '🔒' : 'Set'}</span>
+            <span>Start Your Day</span><span class="nav-badge ${d.day_plan?.lineup_locked ? 'green' : 'amber'}">${d.day_plan?.lineup_locked ? '🔒' : 'Set'}</span>
           </button>
           <button type="button" class="rail-btn" onclick="window.openStartYourDayModal(true, 'tasks')">
-            <span>📋 Crew Tasks</span><span class="nav-badge">${openTasks}</span>
-          </button>
-          <button type="button" class="rail-btn" onclick="window.openPinManagerModal()">
-            <span>🔐 Individual PINs</span><span class="nav-badge">PIN</span>
-          </button>
-          <button type="button" class="rail-btn" onclick="window.openHolidayThemeModal && window.openHolidayThemeModal()">
-            <span>🎨 Holiday Themes</span><span class="nav-badge green">🎄</span>
+            <span>Crew Tasks</span><span class="nav-badge">${openTasks}</span>
           </button>
           <button type="button" class="rail-btn" onclick="window.openEndYourDayModal()">
-            <span>🌙 End Your Day</span><span class="nav-badge">Out</span>
+            <span>End Your Day</span><span class="nav-badge">Out</span>
           </button>`;
       } else {
         railCtrl.innerHTML = `
@@ -328,7 +322,7 @@
     inner.innerHTML = `
       <div class="card-hdr">
         <div>
-          <h3 style="font-size:1.15rem;">☀️ Start Your Day — ${esc(d.today)}</h3>
+          <h3 style="font-size:1.15rem;">Start Your Day — ${esc(d.today)}</h3>
           <small style="color:var(--muted);">Lock today's cylinder lineup, assign Kenny/Twins tasks &amp; choose calibration</small>
         </div>
         <button type="button" class="secondary" onclick="window.dismissOwnerStartModal()">✖ Later</button>
@@ -691,7 +685,7 @@
     } else {
       BOOTED_ONCE = false;
     }
-  }, 12000);
+  }, 30000);
 
   // Also trigger immediately right after page load / login unlock
   window.addEventListener('load', () => setTimeout(() => window.refreshDayFlowState(true), 350));

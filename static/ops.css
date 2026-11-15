@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@500;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+
 :root {
   --forest: #0b2219; --green: #1b4332; --green-mid: #2d6a4f; --green-soft: #ecfdf5;
   --bg: #f1f5f9; --card: #ffffff; --slate: #0f172a; --muted: #475569;
@@ -521,3 +523,123 @@ td { text-align: left; padding: 8px 7px; border-bottom: 1px solid var(--border-s
 }
 .map-spot:hover { transform: translateY(-1px); }
 .map-cnt { padding: 2px 8px; border-radius: 999px; font-size: 0.74rem; font-weight: 900; background: #fff; }
+
+/* =========================================================================
+   v9.6 PRO INDUSTRIAL DESIGN SYSTEM OVERRIDES (OPS / SCHEDULE / OFFICE)
+   ========================================================================= */
+:root {
+  --bg: #eef2f6;
+  --forest: #0c261b;
+  --green: #163a2a;
+  --green-mid: #1f513b;
+  --border: #cbd5e1;
+  --border-soft: #dce3ec;
+  --font-display: 'Barlow Condensed', system-ui, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+body, button, input, select, textarea {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Calm Sentence-Case Form Labels (Kills Screaming ALL-CAPS Prototype Look) */
+label {
+  font-family: var(--font-sans);
+  font-size: 0.77rem;
+  font-weight: 700;
+  color: #334155;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+
+/* Industrial Display Headers & Score KPIs */
+.top-brand-txt h1 {
+  font-family: var(--font-display);
+  font-size: 1.18rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.card-hdr h3 {
+  font-family: var(--font-display);
+  font-size: 1.16rem;
+  font-weight: 800;
+  letter-spacing: 0.015em;
+  color: var(--forest);
+}
+.huddle-kpi strong {
+  font-family: var(--font-display);
+  font-size: 1.32rem;
+  font-weight: 800;
+  color: var(--forest);
+}
+
+/* Precision Monospace Instrumentation (Serials, PSI, Burette cc, Tags, Sheets) */
+.mono, .j-dot, .nav-badge, .sub-badge, .tag-chip, .rush-badge, .high-badge,
+.dwell-badge, .zone-badge, .top-date, .inline-vtag, .sheet-slot,
+#fSerial, #fValveTag, #fSpec, #fSvcPsi, #fTestPsi, #fMfgDate, #fDia, #fLen, #fRee,
+#bTotal, #bPerm, #bValveTag, #calFinalPerm, #quickTagSerial, #quickTagNum,
+input[id^="stepIn_"] {
+  font-family: var(--font-mono) !important;
+  letter-spacing: -0.02em;
+}
+
+/* Single-Row Sleek Topbar on Desktop */
+@media (min-width: 980px) {
+  .app-topbar {
+    flex-wrap: nowrap !important;
+    height: 54px;
+    padding: 0 14px;
+  }
+}
+.ws-svg {
+  width: 14px; height: 14px; stroke: currentColor; stroke-width: 2;
+  fill: none; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0;
+}
+.admin-nosig-pill {
+  font-family: var(--font-mono);
+  font-size: 0.67rem !important;
+  padding: 3px 7px !important;
+  letter-spacing: 0.02em;
+}
+
+/* Clean Architectural Cards (Removes Random Rainbow Left Stripes) */
+.card {
+  background: #ffffff;
+  border: 1px solid #d5dde7 !important;
+  border-radius: 11px;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 16px -8px rgba(15, 23, 42, 0.06);
+}
+#calCollapsedBanner { border: 1.5px solid #86efac !important; background: #f0fdf4 !important; }
+#backroomInboxCard { border-top: 3px solid #d97706 !important; }
+
+/* Dock Help AI into Top Header — ZERO Floating Button Blocking Bottom-Right Cards! */
+.help-fab { display: none !important; }
+.help-panel {
+  top: 58px !important;
+  bottom: auto !important;
+  right: 14px !important;
+  height: min(540px, calc(100vh - 74px)) !important;
+  border: 1.5px solid var(--forest) !important;
+  border-radius: 12px !important;
+}
+
+/* Collapsible Customer Batch Cards on Station 4 (Finish & Shelf) */
+.batch-finish-card {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.batch-finish-hdr {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; flex-wrap: wrap; padding: 10px 13px;
+  background: #ffffff; border-bottom: 1px solid #e2e8f0; cursor: pointer;
+}
+.batch-finish-hdr:hover { background: #f8fafc; }
+.batch-finish-body { padding: 4px 12px 8px; background: #ffffff; }
