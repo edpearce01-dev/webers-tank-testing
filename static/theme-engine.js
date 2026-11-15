@@ -51,9 +51,10 @@
 
       .tv-morale-strip {
         display: flex; align-items: center; justify-content: space-between; gap: 12px;
-        background: linear-gradient(90deg, rgba(19,51,38,0.95), rgba(120,53,15,0.88));
-        border: 1px solid rgba(251,191,36,0.55); border-radius: 10px;
-        padding: 5px 12px; color: #fff; flex-shrink: 0;
+        background: linear-gradient(90deg, rgba(12,38,27,0.92), rgba(22,58,42,0.90) 65%, rgba(146,64,14,0.88));
+        backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(251,191,36,0.65); border-radius: 9px;
+        padding: 4px 12px; color: #fff; flex-shrink: 0; box-shadow: 0 6px 18px -6px rgba(12,38,27,0.22);
       }
       .tv-morale-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
       .tv-morale-left img { height: 32px; width: auto; border-radius: 6px; background: #fdf8ee; padding: 1px 4px; border: 1.5px solid #fde68a; flex-shrink: 0; }

@@ -4,124 +4,323 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@500;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
   <title>Weber's Tank Testing — Live Shop Dispatch &amp; Wall Calendar | RIN B386</title>
   <style>
     :root {
-      --bg: #050d0a; --panel: #0c1b15; --panel-2: #11261d; --border: rgba(52,211,153,0.22);
-      --green: #10b981; --gold: #fbbf24; --red: #ef4444; --blue: #38bdf8; --purple: #a78bfa;
-      --txt: #f8fafc; --muted: #94a3b8;
+      --cream: #fdf8ee;
+      --cream-deep: #f3e6ca;
+      --forest: #0c261b;
+      --green: #163a2a;
+      --emerald: #059669;
+      --gold: #d97706;
+      --gold-bright: #fbbf24;
+      --red: #dc2626;
+      --blue: #0284c7;
+      --slate: #0f172a;
+      --ink-soft: #334155;
+      --muted: #526071;
+      --glass: rgba(255, 253, 249, 0.66);
+      --glass-strong: rgba(255, 253, 249, 0.76);
+      --border: rgba(15, 46, 32, 0.15);
+      --border-strong: rgba(15, 46, 32, 0.24);
+      --shadow: 0 1px 2px rgba(15, 46, 32, 0.04), 0 10px 26px -8px rgba(15, 46, 32, 0.10);
+      --font-display: 'Barlow Condensed', system-ui, sans-serif;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, monospace;
     }
-    * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.16) transparent; }
+    * { box-sizing: border-box; scrollbar-width: thin; scrollbar-color: rgba(15,46,32,0.22) transparent; }
     *::-webkit-scrollbar { width: 5px; height: 5px; }
-    *::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.16); border-radius: 999px; }
-    *::-webkit-scrollbar-track { background: transparent; }
+    *::-webkit-scrollbar-thumb { background: rgba(15,46,32,0.22); border-radius: 999px; }
     [hidden] { display: none !important; }
-    body { margin: 0; height: 100vh; overflow: hidden; background: radial-gradient(circle at top, #0f291e 0%, var(--bg) 70%); color: var(--txt); display: grid; grid-template-rows: 56px 1fr 38px; }
 
-    /* Single-Row 1080p Broadcast Header */
-    .tv-hdr {
-      display: flex; align-items: center; justify-content: space-between; gap: 10px;
-      padding: 0 16px; background: rgba(5,13,10,0.92); border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden;
+    body {
+      margin: 0; height: 100vh; overflow: hidden;
+      font-family: var(--font-sans);
+      background: radial-gradient(circle at 50% 24%, #fffefb 0%, var(--cream) 58%, var(--cream-deep) 100%);
+      color: var(--slate);
+      display: grid; grid-template-rows: 58px 1fr 38px;
+      -webkit-font-smoothing: antialiased;
     }
-    .hdr-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
-    .hdr-brand img { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--gold); object-fit: cover; background: #000; }
-    .hdr-title { font-weight: 900; font-size: 1.02rem; letter-spacing: 0.5px; }
-    .hdr-sub { color: var(--gold); font-size: 0.75rem; font-weight: 800; margin-left: 8px; }
+    .mono { font-family: var(--font-mono); letter-spacing: -0.02em; }
+    .ico { width: 15px; height: 15px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+    /* =====================================================================
+       LOCKED BACKGROUND STAGE (CREST + WREATH ARCH + SHOP DOGS BEHIND TILES)
+       ===================================================================== */
+    .tv-brand-bg {
+      position: fixed;
+      left: 0; right: 0; top: 58px; bottom: 38px;
+      z-index: 0; pointer-events: none;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      opacity: 0.28;
+    }
+    .tv-crest-wrap {
+      position: relative;
+      width: clamp(290px, 44vh, 440px);
+      height: clamp(290px, 44vh, 440px);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .tv-arch-img {
+      position: absolute; inset: -19%; width: 138%; height: 138%;
+      object-fit: contain; z-index: 0;
+    }
+    .tv-crest-img {
+      width: 100%; height: 100%; border-radius: 50%;
+      border: 5px solid var(--gold-bright); object-fit: cover; background: #0b2219;
+      box-shadow: 0 18px 44px rgba(12, 38, 27, 0.22); position: relative; z-index: 1;
+    }
+    .tv-dogs-img {
+      width: min(680px, 76vw); max-height: clamp(190px, 32vh, 315px);
+      object-fit: contain; margin-top: clamp(-86px, -9.5vh, -62px);
+      position: relative; z-index: 2;
+      filter: drop-shadow(0 12px 22px rgba(15, 23, 42, 0.16));
+    }
+    .tv-dogs-img.photo-fallback {
+      width: min(500px, 68vw); max-height: 240px; object-fit: cover;
+      border-radius: 14px; border: 3px solid var(--gold-bright); margin-top: -48px;
+    }
+
+    /* =====================================================================
+       FROSTED 1080P BROADCAST HEADER
+       ===================================================================== */
+    .tv-hdr {
+      position: relative; z-index: 10;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 0 18px;
+      background: rgba(253, 248, 238, 0.88);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1.5px solid var(--border-strong);
+      white-space: nowrap; overflow: hidden;
+    }
+    .hdr-brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+    .hdr-brand img { width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--gold-bright); object-fit: cover; background: #0b2219; }
+    .hdr-title { font-family: var(--font-display); font-weight: 800; font-size: 1.38rem; letter-spacing: 0.03em; color: var(--forest); text-transform: uppercase; line-height: 1; }
+    .hdr-sub { font-family: var(--font-mono); color: var(--gold); font-size: 0.72rem; font-weight: 700; margin-left: 8px; }
 
     .hdr-mid { display: flex; align-items: center; gap: 8px; }
-    .pill { padding: 5px 10px; border-radius: 7px; font-size: 0.76rem; font-weight: 900; border: 1px solid rgba(255,255,255,0.16); background: var(--panel-2); }
-    .pill.ok { background: rgba(16,185,129,0.2); border-color: #10b981; color: #6ee7b7; }
-    .pill.wait { background: rgba(245,158,11,0.2); border-color: #f59e0b; color: #fde68a; }
-    .pill.binder { background: rgba(56,189,248,0.15); border-color: rgba(56,189,248,0.45); color: #bae6fd; }
+    .pill {
+      font-family: var(--font-mono); padding: 5px 10px; border-radius: 6px;
+      font-size: 0.74rem; font-weight: 700; border: 1px solid var(--border-strong);
+      background: rgba(255, 255, 255, 0.82); color: var(--slate);
+    }
+    .pill.ok { background: rgba(236, 253, 245, 0.92); border-color: rgba(16, 185, 129, 0.5); color: #065f46; }
+    .pill.wait { background: rgba(255, 251, 235, 0.94); border-color: rgba(245, 158, 11, 0.55); color: #92400e; }
+    .pill.binder { background: rgba(12, 38, 27, 0.9); border-color: var(--forest); color: #fde68a; }
 
     .hdr-right { display: flex; align-items: center; gap: 7px; }
     .tv-sel, .tv-btn {
-      background: #11261d; color: #e2e8f0; border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 7px; padding: 5px 9px; font-size: 0.74rem; font-weight: 800; cursor: pointer;
+      background: rgba(255, 255, 255, 0.85); color: var(--forest); border: 1px solid var(--border-strong);
+      border-radius: 7px; padding: 5px 10px; font-family: var(--font-sans); font-size: 0.74rem;
+      font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
     }
-    .tv-btn:hover { background: #1b4332; }
-    .tv-btn.on { border-color: var(--gold); color: var(--gold); }
-    .clock { font-size: 1.05rem; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; margin-left: 4px; }
+    .tv-btn:hover, .tv-sel:hover { background: #ffffff; border-color: var(--forest); }
+    .tv-btn.on { background: var(--forest); border-color: var(--forest); color: #fde68a; }
+    .clock { font-family: var(--font-mono); font-size: 1.08rem; font-weight: 800; color: var(--forest); margin-left: 4px; }
 
-    /* Main Viewport Container */
-    .tv-stage { padding: 10px 14px; overflow: hidden; height: 100%; display: flex; flex-direction: column; gap: 10px; }
+    /* =====================================================================
+       MAIN STAGE & TRANSLUCENT FROSTED TILES
+       ===================================================================== */
+    .tv-stage {
+      position: relative; z-index: 5;
+      padding: 10px 16px; overflow: hidden; height: 100%;
+      display: flex; flex-direction: column; gap: 9px;
+    }
 
-    /* Scoreboard Strip */
     .score-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 9px; flex-shrink: 0; }
-    .s-tile { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; }
-    .s-tile small { display: block; font-size: 0.68rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
-    .s-tile strong { font-size: 1.55rem; font-weight: 900; line-height: 1; }
-    .s-tile.alert-door { border-color: var(--gold); background: rgba(245,158,11,0.16); animation: pulseGlow 1.8s infinite; }
-    .s-tile.alert-rush { border-color: var(--red); background: rgba(239,68,68,0.14); }
-    @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 0 rgba(251,191,36,0); } 50% { box-shadow: 0 0 18px rgba(251,191,36,0.35); } }
+    .s-tile {
+      background: var(--glass-strong);
+      backdrop-filter: blur(10px) saturate(135%); -webkit-backdrop-filter: blur(10px) saturate(135%);
+      border: 1px solid var(--border); border-top: 2.5px solid var(--green);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.88), var(--shadow);
+      border-radius: 10px; padding: 7px 12px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .s-tile small {
+      display: block; font-family: var(--font-mono); font-size: 0.65rem; font-weight: 700;
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .s-tile strong {
+      font-family: var(--font-display); font-size: 1.95rem; font-weight: 800;
+      line-height: 1; color: var(--forest);
+    }
+    .s-tile .s-ico {
+      width: 30px; height: 30px; border-radius: 7px; background: rgba(15, 46, 32, 0.06);
+      color: var(--green); display: flex; align-items: center; justify-content: center;
+    }
+    .s-tile.alert-door {
+      border-color: var(--gold); border-top-width: 3px;
+      background: rgba(255, 251, 235, 0.88); animation: pulseDoor 1.8s infinite;
+    }
+    @keyframes pulseDoor { 0%, 100% { box-shadow: 0 0 0 rgba(217,119,6,0); } 50% { box-shadow: 0 0 16px rgba(217,119,6,0.32); } }
 
     /* VIEW 1: 3-Column Live Shop Dispatch Arena */
     .dash-grid { display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 10px; flex: 1; min-height: 0; }
     .col-stack { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
-    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 11px 13px; display: flex; flex-direction: column; min-height: 0; flex: 1; }
-    .panel-hdr { display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: #a7f3d0; padding-bottom: 7px; margin-bottom: 7px; border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0; }
+    .panel {
+      background: var(--glass);
+      backdrop-filter: blur(9px) saturate(135%); -webkit-backdrop-filter: blur(9px) saturate(135%);
+      border: 1px solid var(--border);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), var(--shadow);
+      border-radius: 12px; padding: 11px 13px;
+      display: flex; flex-direction: column; min-height: 0; flex: 1;
+    }
+    .panel-hdr {
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: var(--font-display); font-size: 1.02rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.03em; color: var(--forest);
+      padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .panel-hdr span:last-child {
+      font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700;
+      color: var(--muted); background: rgba(255,255,255,0.75); padding: 2px 7px;
+      border-radius: 5px; border: 1px solid var(--border);
+    }
     .panel-body { overflow-y: auto; flex: 1; min-height: 0; padding-right: 3px; }
 
-    .stand-hero { background: linear-gradient(135deg, #133326 0%, #0b1d15 100%); border: 2px solid #10b981; border-radius: 12px; padding: 13px 15px; flex-shrink: 0; }
-    .stand-hero.rush { border-color: var(--red); background: linear-gradient(135deg, #3b1219 0%, #17090c 100%); }
-    .stand-sn { font-size: 1.75rem; font-weight: 900; letter-spacing: 0.5px; margin: 4px 0; }
+    /* Active Cylinder Stand Hero Card */
+    .stand-hero {
+      background: rgba(255, 253, 249, 0.80);
+      backdrop-filter: blur(11px); -webkit-backdrop-filter: blur(11px);
+      border: 1.5px solid rgba(5, 150, 105, 0.45); border-left: 5px solid var(--emerald);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.92), var(--shadow);
+      border-radius: 12px; padding: 13px 15px; flex-shrink: 0;
+    }
+    .stand-hero.rush {
+      border-color: rgba(220, 38, 38, 0.5); border-left: 5px solid var(--red);
+      background: rgba(254, 242, 242, 0.82);
+    }
+    .stand-sn {
+      font-family: var(--font-mono); font-size: 1.72rem; font-weight: 800;
+      color: var(--forest); margin: 3px 0 2px; line-height: 1.1;
+    }
     .stand-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 9px; }
-    .meta-box { background: rgba(0,0,0,0.34); border-radius: 8px; padding: 6px 9px; border: 1px solid rgba(255,255,255,0.08); }
-    .meta-box small { display: block; font-size: 0.64rem; color: var(--muted); text-transform: uppercase; font-weight: 800; }
-    .meta-box strong { font-size: 1.02rem; color: #fff; }
+    .meta-box {
+      background: rgba(255, 255, 255, 0.84); border-radius: 8px; padding: 6px 9px;
+      border: 1px solid var(--border);
+    }
+    .meta-box small {
+      display: block; font-family: var(--font-mono); font-size: 0.62rem;
+      color: var(--muted); text-transform: uppercase; font-weight: 700;
+    }
+    .meta-box strong { font-family: var(--font-mono); font-size: 0.96rem; color: var(--slate); font-weight: 800; }
 
-    .row-it { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 4px; border-bottom: 1px solid rgba(255,255,255,0.07); font-size: 0.84rem; }
+    .row-it {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      padding: 7px 4px; border-bottom: 1px solid rgba(15, 46, 32, 0.08); font-size: 0.84rem;
+    }
     .row-it:last-child { border-bottom: none; }
-    .b-rush { background: var(--red); color: #fff; font-size: 0.66rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; }
-    .b-tag { background: rgba(251,191,36,0.2); color: var(--gold); border: 1px solid rgba(251,191,36,0.5); font-size: 0.74rem; font-weight: 900; padding: 2px 7px; border-radius: 5px; }
-    .prog-track { height: 6px; background: rgba(255,255,255,0.1); border-radius: 999px; overflow: hidden; margin-top: 4px; }
-    .prog-fill { height: 100%; background: var(--green); border-radius: 999px; }
+    .b-rush {
+      font-family: var(--font-mono); background: var(--red); color: #fff;
+      font-size: 0.64rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.03em;
+    }
+    .b-tag {
+      font-family: var(--font-mono); background: #fef3c7; color: #92400e;
+      border: 1px solid #f59e0b; font-size: 0.72rem; font-weight: 800; padding: 1px 7px; border-radius: 5px;
+    }
+    .prog-track { height: 6px; background: rgba(15, 46, 32, 0.10); border-radius: 999px; overflow: hidden; margin-top: 4px; }
+    .prog-fill { height: 100%; background: var(--emerald); border-radius: 999px; }
 
     .tags-wrap { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
-    .tag-tile { background: rgba(251,191,36,0.09); border: 1px solid rgba(251,191,36,0.35); border-radius: 8px; padding: 6px 8px; font-size: 0.78rem; }
+    .tag-tile {
+      background: rgba(255, 255, 255, 0.76); border: 1px solid rgba(217, 119, 6, 0.35);
+      border-left: 3px solid var(--gold); border-radius: 7px; padding: 5px 8px; font-size: 0.77rem;
+    }
 
-    /* VIEW 2: Full-Screen 14-Day Shop Wall Calendar (7x2 Broadcast Grid) */
+    /* VIEW 2: 14-Day Shop Wall Calendar (7x2 Frosted Grid Over Crest & Dogs) */
     .cal-wall-wrap { display: flex; flex-direction: column; gap: 9px; flex: 1; min-height: 0; }
-    .cal-wall-hdr { display: flex; justify-content: space-between; align-items: center; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; flex-shrink: 0; }
+    .cal-wall-hdr {
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--glass-strong); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; flex-shrink: 0;
+    }
     .cal-wall-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(2, 1fr); gap: 9px; flex: 1; min-height: 0; }
-    .cal-cell { background: var(--panel); border: 1px solid rgba(255,255,255,0.12); border-radius: 11px; padding: 9px 10px; display: flex; flex-direction: column; justify-content: space-between; min-height: 0; overflow: hidden; }
-    .cal-cell.today { border: 2px solid var(--gold); background: linear-gradient(160deg, #163628 0%, #0c1b15 100%); }
-    .cal-cell.mode-FULL_HYDRO { border-top: 4px solid #10b981; }
-    .cal-cell.mode-PREP_ONLY { border-top: 4px solid #38bdf8; }
-    .cal-cell.mode-ROAD_RUN { border-top: 4px solid #f59e0b; }
-    .cal-cell.mode-BACKROOM_ONLY { border-top: 4px solid #475569; opacity: 0.82; }
-    .cal-jobs { overflow-y: auto; flex: 1; margin: 6px 0; display: flex; flex-direction: column; gap: 4px; }
-    .cal-job-chip { background: rgba(255,255,255,0.07); border-left: 3px solid var(--green); border-radius: 5px; padding: 4px 6px; font-size: 0.73rem; font-weight: 700; }
-    .cal-job-chip.rush { background: rgba(239,68,68,0.2); border-left-color: var(--red); }
+    .cal-cell {
+      background: var(--glass); backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px);
+      border: 1px solid var(--border); border-radius: 11px; padding: 8px 10px;
+      display: flex; flex-direction: column; justify-content: space-between; min-height: 0; overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), var(--shadow);
+    }
+    .cal-cell.today {
+      border: 2px solid var(--gold); background: rgba(255, 253, 244, 0.84);
+      box-shadow: 0 8px 20px -6px rgba(217, 119, 6, 0.22);
+    }
+    .cal-cell.mode-FULL_HYDRO { border-top: 4px solid var(--emerald); }
+    .cal-cell.mode-PREP_ONLY { border-top: 4px solid var(--blue); }
+    .cal-cell.mode-ROAD_RUN { border-top: 4px solid var(--gold); }
+    .cal-cell.mode-BACKROOM_ONLY { border-top: 4px solid #94a3b8; opacity: 0.86; }
+    .cal-jobs { overflow-y: auto; flex: 1; margin: 5px 0; display: flex; flex-direction: column; gap: 4px; }
+    .cal-job-chip {
+      background: rgba(255, 255, 255, 0.85); border: 1px solid var(--border);
+      border-left: 3px solid var(--green); border-radius: 5px; padding: 3px 6px;
+      font-size: 0.72rem; font-weight: 700; color: var(--slate);
+    }
+    .cal-job-chip.rush { background: #fef2f2; border-left-color: var(--red); color: #991b1b; }
 
-    /* Bottom Ticker */
-    .tv-ticker { background: #030806; border-top: 1px solid var(--border); display: flex; align-items: center; overflow: hidden; white-space: nowrap; }
-    .ticker-lbl { background: var(--gold); color: #111827; font-weight: 900; font-size: 0.75rem; padding: 0 12px; height: 100%; display: flex; align-items: center; flex-shrink: 0; z-index: 2; }
-    .ticker-track { display: inline-block; padding-left: 30px; animation: scrollWire 42s linear infinite; font-size: 0.84rem; font-weight: 700; color: #e2e8f0; }
+    /* Forest & Gold Bottom Dispatch Wire (Matches Main Site Utility/Footer Bar) */
+    .tv-ticker {
+      position: relative; z-index: 10;
+      background: var(--forest); border-top: 2px solid var(--gold-bright);
+      display: flex; align-items: center; overflow: hidden; white-space: nowrap; color: #f1f5f9;
+    }
+    .ticker-lbl {
+      font-family: var(--font-mono); background: var(--gold-bright); color: #0f172a;
+      font-weight: 800; font-size: 0.73rem; padding: 0 13px; height: 100%;
+      display: flex; align-items: center; flex-shrink: 0; z-index: 2; letter-spacing: 0.04em;
+    }
+    .ticker-track {
+      display: inline-block; padding-left: 30px; animation: scrollWire 44s linear infinite;
+      font-size: 0.82rem; font-weight: 600; color: #f1f5f9;
+    }
     @keyframes scrollWire { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
-    .pin-gate { position: fixed; inset: 0; background: rgba(5,13,10,0.96); display: flex; align-items: center; justify-content: center; z-index: 90; }
-    .pin-box { background: var(--panel-2); border: 1px solid var(--border); border-radius: 16px; padding: 26px; width: 340px; text-align: center; }
-    .pin-box input { width: 100%; padding: 11px; font-size: 1.4rem; text-align: center; letter-spacing: 6px; border-radius: 8px; border: 1px solid var(--border); background: #050d0a; color: #fff; margin: 12px 0; }
+    /* Bright Frosted TV PIN Pairing Gate */
+    .pin-gate {
+      position: fixed; inset: 0; background: rgba(253, 248, 238, 0.90);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      display: flex; align-items: center; justify-content: center; z-index: 95;
+    }
+    .pin-box {
+      background: #ffffff; border: 1.5px solid var(--border-strong); border-top: 4px solid var(--green);
+      border-radius: 14px; padding: 28px; width: 350px; text-align: center; box-shadow: var(--shadow);
+    }
+    .pin-box input {
+      width: 100%; padding: 11px; font-family: var(--font-mono); font-size: 1.45rem; font-weight: 800;
+      text-align: center; letter-spacing: 6px; border-radius: 8px; border: 1.5px solid #cbd5e1;
+      background: #f8fafc; color: var(--forest); margin: 14px 0;
+    }
   </style>
 </head>
 <body>
-  <!-- BUILT-IN TV PIN UNLOCK (IF OPENED ON SMART TV BROWSER) -->
+  <!-- LOCKED CENTERPIECE BACKGROUND (WEBER'S CREST + WREATH ARCH + SHOP PUPS) -->
+  <div class="tv-brand-bg" aria-hidden="true">
+    <div class="tv-crest-wrap">
+      <img id="tvBgArchImg" class="tv-arch-img" alt="" hidden />
+      <img src="/static/images/logo-crest.jpg" alt="" class="tv-crest-img" onerror="this.src='/icon.svg'" />
+    </div>
+    <img id="tvBgDogsImg" src="/static/images/dogs-thanksgiving.png" alt="" class="tv-dogs-img" onerror="this.onerror=null;this.src='/static/images/shop-dogs.jpg';this.classList.add('photo-fallback');" />
+  </div>
+
+  <!-- TV PAIRING PIN GATE -->
   <div id="tvPinGate" class="pin-gate" hidden>
     <div class="pin-box">
-      <h3 style="margin:0;color:var(--gold);">📺 Testing Room TV Display</h3>
-      <p style="font-size:0.82rem;color:var(--muted);margin:6px 0 0;">Enter Shop PIN once to pair this TV</p>
+      <img src="/static/images/logo-crest.jpg" alt="B386" style="width:62px;height:62px;border-radius:50%;border:2px solid var(--gold-bright);margin-bottom:8px;" />
+      <h3 style="margin:0;font-family:var(--font-display);font-size:1.5rem;color:var(--forest);">Testing Room TV Display</h3>
+      <p style="font-size:0.83rem;color:var(--muted);margin:5px 0 0;">Enter any valid Shop PIN once to pair this TV</p>
       <input type="password" inputmode="numeric" id="tvPinInput" placeholder="••••" onkeydown="if(event.key==='Enter')unlockTv()" />
-      <button class="tv-btn on" style="width:100%;padding:10px;font-size:0.9rem;" onclick="unlockTv()">Unlock Live Broadcast</button>
+      <button class="tv-btn on" style="width:100%;justify-content:center;padding:11px;font-size:0.88rem;" onclick="unlockTv()">Unlock Live Broadcast</button>
     </div>
   </div>
 
-  <!-- SINGLE-LINE 1080P BROADCAST HEADER -->
+  <!-- FROSTED 1080P BROADCAST HEADER -->
   <header class="tv-hdr">
     <div class="hdr-brand">
       <img src="/static/images/logo-crest.jpg" alt="B386" onerror="this.src='/icon.svg'" />
       <div>
-        <span class="hdr-title">WEBER'S TANK TESTING</span>
+        <span class="hdr-title">Weber's Tank Testing</span>
         <span class="hdr-sub" id="hdrShiftTxt">DOT RIN B386</span>
       </div>
     </div>
@@ -134,30 +333,52 @@
 
     <div class="hdr-right">
       <select class="tv-sel" id="rotPresetSel" onchange="changeRotationPreset()">
-        <option value="300_15">🔄 5m Dash / 15s Calendar</option>
-        <option value="180_25" selected>🔄 3m Dash / 25s Calendar</option>
-        <option value="dash_only">📌 Pin Live Dashboard</option>
-        <option value="cal_only">📅 Pin 14-Day Calendar</option>
+        <option value="300_15">5m Dash / 15s Calendar</option>
+        <option value="180_25" selected>3m Dash / 25s Calendar</option>
+        <option value="dash_only">Pin Live Dashboard</option>
+        <option value="cal_only">Pin 14-Day Calendar</option>
       </select>
-      <button class="tv-btn on" id="btnFlipView" onclick="manualFlipView()">⇄ Calendar (3:00)</button>
-      <button class="tv-btn on" id="btnChime" onclick="toggleChime()" title="Door Drop-Off Chime">🔔</button>
-      <button class="tv-btn" onclick="toggleFs()" title="Fullscreen">⛶</button>
+      <button class="tv-btn on" id="btnFlipView" onclick="manualFlipView()">⇄ Cal (3:00)</button>
+      <button class="tv-btn on" id="btnChime" onclick="toggleChime()" title="Back Room Door Chime">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      </button>
+      <button class="tv-btn" onclick="toggleFs()" title="Fullscreen">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
+      </button>
       <span class="clock" id="liveClock">--:--</span>
     </div>
   </header>
 
-  <!-- AUTO-ROTATING MAIN STAGE -->
+  <!-- TRANSLUCENT MAIN TELEMETRY STAGE -->
   <main class="tv-stage">
     <div class="score-row">
-      <div class="s-tile" id="tileDoor"><div><small>Zone A • Door</small><strong id="scDoor">0</strong></div><span>🚪</span></div>
-      <div class="s-tile" id="tileQueue"><div><small>Zone B/C • Queue</small><strong id="scQueue">0</strong></div><span>🔥</span></div>
-      <div class="s-tile"><div><small>Passed Today</small><strong id="scPassed" style="color:#34d399;">0</strong></div><span>✅</span></div>
-      <div class="s-tile"><div><small>Zone D • Needs Mark</small><strong id="scStamp" style="color:#c4b5fd;">0</strong></div><span>🔨</span></div>
-      <div class="s-tile"><div><small>Active Valve Tags</small><strong id="scTags" style="color:var(--gold);">0</strong></div><span>🏷️</span></div>
-      <div class="s-tile"><div><small>Zone E • Ready Shelf</small><strong id="scShelf" style="color:#38bdf8;">0</strong></div><span>📦</span></div>
+      <div class="s-tile" id="tileDoor">
+        <div><small>Back Room • Door</small><strong id="scDoor">0</strong></div>
+        <div class="s-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg></div>
+      </div>
+      <div class="s-tile" id="tileQueue">
+        <div><small>Vice / Stand Queue</small><strong id="scQueue">0</strong></div>
+        <div class="s-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+      </div>
+      <div class="s-tile">
+        <div><small>Certified Today</small><strong id="scPassed" style="color:var(--emerald);">0</strong></div>
+        <div class="s-ico" style="color:var(--emerald);"><svg class="ico" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
+      </div>
+      <div class="s-tile">
+        <div><small>Drying • Needs B386</small><strong id="scStamp" style="color:#7c3aed;">0</strong></div>
+        <div class="s-ico" style="color:#7c3aed;"><svg class="ico" viewBox="0 0 24 24"><path d="M14 4l6 6-8 8H6v-6l8-8z"/></svg></div>
+      </div>
+      <div class="s-tile">
+        <div><small>Active Valve Tags</small><strong id="scTags" style="color:var(--gold);">0</strong></div>
+        <div class="s-ico" style="color:var(--gold);"><svg class="ico" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><circle cx="7" cy="7" r="1.5"/></svg></div>
+      </div>
+      <div class="s-tile">
+        <div><small>Back Room Pickup</small><strong id="scShelf" style="color:var(--blue);">0</strong></div>
+        <div class="s-ico" style="color:var(--blue);"><svg class="ico" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div>
+      </div>
     </div>
 
-    <!-- VIEW 1: LIVE BENCH & DISPATCH DASHBOARD -->
+    <!-- VIEW 1: 3-COLUMN LIVE DISPATCH -->
     <section id="viewDashboard" class="dash-grid">
       <div class="col-stack">
         <div id="standCard" class="stand-hero"></div>
@@ -169,7 +390,7 @@
 
       <div class="col-stack">
         <div class="panel" style="flex:1.15;">
-          <div class="panel-hdr"><span>Active Shop Batches (Scanned / Expected)</span><span id="batchCnt">0</span></div>
+          <div class="panel-hdr"><span>Active Shop Batches (Certified / Total)</span><span id="batchCnt">0</span></div>
           <div class="panel-body" id="batchList"></div>
         </div>
         <div class="panel" style="flex:0.85;">
@@ -179,12 +400,12 @@
       </div>
 
       <div class="col-stack">
-        <div class="panel" id="doorPanel" style="flex:0.8;" hidden>
-          <div class="panel-hdr" style="color:var(--gold);"><span>🚪 24/7 Backroom Check-Ins Waiting</span><span id="doorCnt">0</span></div>
+        <div class="panel" id="doorPanel" style="flex:0.8;border-color:rgba(217,119,6,0.45);" hidden>
+          <div class="panel-hdr" style="color:#92400e;"><span>24/7 Back Room Check-Ins Waiting</span><span id="doorCnt">0</span></div>
           <div class="panel-body" id="doorList"></div>
         </div>
         <div class="panel" style="flex:1;">
-          <div class="panel-hdr"><span>🏷️ Active Valve &amp; Regulator Tags</span><span id="tagCnt">0 Out</span></div>
+          <div class="panel-hdr"><span>Active Valve &amp; Regulator Tags</span><span id="tagCnt">0 Out</span></div>
           <div class="panel-body"><div class="tags-wrap" id="tagsGrid"></div></div>
         </div>
         <div class="panel" style="flex:0.9;">
@@ -194,12 +415,12 @@
       </div>
     </section>
 
-    <!-- VIEW 2: FULL-SCREEN 14-DAY SHOP WALL CALENDAR -->
+    <!-- VIEW 2: 14-DAY WALL CALENDAR -->
     <section id="viewCalendar" class="cal-wall-wrap" hidden>
       <div class="cal-wall-hdr">
         <div>
-          <strong style="font-size:1.02rem;color:var(--gold);">📅 14-DAY SHOP OPERATING SCHEDULE, CAPACITY &amp; ROAD DISPATCH</strong>
-          <span style="font-size:0.82rem;color:var(--muted);margin-left:10px;">Auto-returns to Live Stand Dashboard when timer finishes or any bottle completes</span>
+          <strong style="font-family:var(--font-display);font-size:1.25rem;color:var(--forest);letter-spacing:0.02em;">14-DAY SHOP OPERATING SCHEDULE, CAPACITY &amp; TRUCK DISPATCH</strong>
+          <span style="font-size:0.8rem;color:var(--muted);margin-left:10px;">Auto-returns to Live Stand Dashboard when timer finishes or a cylinder completes</span>
         </div>
         <span class="pill ok" id="calBacklogNote">Live Sync</span>
       </div>
@@ -207,7 +428,7 @@
     </section>
   </main>
 
-  <!-- SCROLLING DISPATCH WIRE -->
+  <!-- BOTTOM DISPATCH WIRE -->
   <footer class="tv-ticker">
     <div class="ticker-lbl">B386 DISPATCH WIRE</div>
     <div class="ticker-track" id="tickerText">Loading Weber's Tank Testing live telemetry...</div>
@@ -221,6 +442,45 @@
 
     function esc(s) {
       return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    function stripLeadEmoji(s) {
+      return String(s || '').replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\s]+/u, '').trim();
+    }
+
+    // Syncs the TV's centered background Wreath Arch & Shop Dogs with /api/public/theme
+    async function syncTvBackgroundArtwork() {
+      try {
+        const res = await fetch('/api/public/theme');
+        if (!res.ok) return;
+        const t = await res.json();
+        const archImg = document.getElementById('tvBgArchImg');
+        const dogsImg = document.getElementById('tvBgDogsImg');
+
+        if (t.active && t.enable_tv) {
+          if (archImg) {
+            const archMap = { THANKSGIVING: 'arch-thanksgiving', HALLOWEEN: 'arch-thanksgiving', CHRISTMAS: 'arch-christmas' };
+            const stem = archMap[t.key] || 'arch-thanksgiving';
+            const pA = new Image();
+            pA.onload = () => { archImg.src = `/static/images/${stem}.png`; archImg.hidden = false; };
+            pA.onerror = () => { archImg.hidden = true; };
+            pA.src = `/static/images/${stem}.png`;
+          }
+          if (dogsImg && t.dog_image) {
+            const dStem = t.dog_image.replace(/\.(jpg|jpeg|png)$/i, '');
+            const pD = new Image();
+            pD.onload = () => { dogsImg.classList.remove('photo-fallback'); dogsImg.src = `/static/images/${dStem}.png`; };
+            pD.onerror = () => {
+              dogsImg.src = `/static/images/${t.dog_image}`;
+              dogsImg.classList.toggle('photo-fallback', t.dog_image === 'shop-dogs.jpg');
+            };
+            pD.src = `/static/images/${dStem}.png`;
+          }
+        } else {
+          if (archImg) archImg.hidden = true;
+          if (dogsImg) { dogsImg.src = '/static/images/shop-dogs.jpg'; dogsImg.classList.add('photo-fallback'); }
+        }
+      } catch (_) {}
     }
 
     function playChime() {
@@ -241,9 +501,7 @@
     function toggleChime() {
       CHIME_ON = !CHIME_ON;
       localStorage.setItem('webers_tv_chime', CHIME_ON ? '1' : '0');
-      const b = document.getElementById('btnChime');
-      b.textContent = CHIME_ON ? '🔔' : '🔕';
-      b.classList.toggle('on', CHIME_ON);
+      document.getElementById('btnChime').classList.toggle('on', CHIME_ON);
       if (CHIME_ON) playChime();
     }
 
@@ -283,7 +541,7 @@
       const mode = document.getElementById('rotPresetSel').value;
       const btn = document.getElementById('btnFlipView');
       if (mode === 'dash_only' || mode === 'cal_only') {
-        btn.textContent = mode === 'dash_only' ? '📌 Dash Pinned' : '📅 Cal Pinned';
+        btn.textContent = mode === 'dash_only' ? 'Dash Pinned' : 'Cal Pinned';
         return;
       }
       const m = Math.floor(SECS_LEFT / 60), s = String(SECS_LEFT % 60).padStart(2, '0');
@@ -339,7 +597,7 @@
         PREV_DOOR_CNT = sb.backroom_waiting_count;
         PREV_COMPLETED = sb.completed_today;
 
-        document.getElementById('hdrShiftTxt').textContent = d.today_plan?.shift_label || 'DOT RIN B386';
+        document.getElementById('hdrShiftTxt').textContent = stripLeadEmoji(d.today_plan?.shift_label) || 'DOT RIN B386';
         const sJ = d.jacket_ceilings['Short Jacket'] || {}, tJ = d.jacket_ceilings['Tall Jacket'] || {};
         const pS = document.getElementById('tvShortPill'), pT = document.getElementById('tvTallPill');
         pS.className = 'pill ' + (sJ.max_allowed_test_psi ? 'ok' : 'wait');
@@ -348,7 +606,7 @@
         pT.textContent = tJ.max_allowed_test_psi ? `TALL ≤ ${tJ.max_allowed_test_psi}# ✓` : 'TALL: UNCAL';
 
         const b = d.binder_state || {};
-        document.getElementById('tvBinderPill').textContent = `SHEET #${b.active_sheet_no || 8095} • NEXT ROW #${b.next_row_number || 1}/12`;
+        document.getElementById('tvBinderPill').textContent = `SHEET #${b.active_sheet_no || 8095} • ROW #${b.next_row_number || 1}/12`;
 
         document.getElementById('scDoor').textContent = sb.backroom_waiting_count || 0;
         document.getElementById('tileDoor').classList.toggle('alert-door', (sb.backroom_waiting_count || 0) > 0);
@@ -358,7 +616,6 @@
         document.getElementById('scTags').textContent = sb.active_tags_count || 0;
         document.getElementById('scShelf').textContent = sb.ready_pickup_count || 0;
 
-        // Stand Hero
         const st = d.on_stand;
         const hero = document.getElementById('standCard');
         if (st) {
@@ -366,41 +623,40 @@
           hero.className = 'stand-hero' + (isRush ? ' rush' : '');
           hero.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;">
-              <span style="font-size:0.74rem;font-weight:900;color:#6ee7b7;letter-spacing:0.6px;">💧 NEXT PRIORITY CYLINDER → ${recommendJacketLabel(st, d.jacket_ceilings)}</span>
-              ${isRush ? '<span class="b-rush">🔥 PAID RUSH</span>' : ''}
+              <span class="mono" style="font-size:0.72rem;font-weight:800;color:var(--emerald);letter-spacing:0.04em;">NEXT ON STAND → ${recommendJacketLabel(st, d.jacket_ceilings)}</span>
+              ${isRush ? '<span class="b-rush">PAID RUSH</span>' : ''}
             </div>
             <div class="stand-sn">SN ${esc(st.serial_number)}</div>
-            <div style="font-size:0.9rem;color:#cbd5e1;font-weight:700;">${esc(st.customer_name)}${st.promised_date ? ' • Due ' + esc(st.promised_date) : ''}</div>
+            <div style="font-size:0.9rem;color:var(--ink-soft);font-weight:700;">${esc(st.customer_name)}${st.promised_date ? ' • Due ' + esc(st.promised_date) : ''}</div>
             <div class="stand-meta">
               <div class="meta-box"><small>Spec &amp; Service</small><strong>${esc(st.dot_spec)}-${st.service_psi}</strong></div>
               <div class="meta-box"><small>Target Test PSI</small><strong style="color:var(--gold);">${st.test_psi} PSI</strong></div>
-              <div class="meta-box"><small>Valve Tag / REE</small><strong>${st.valve_tag && !st.valve_reinstalled ? '🏷️ #' + esc(st.valve_tag) : (st.ree_limit ? 'REE ' + st.ree_limit : 'Ready')}</strong></div>
+              <div class="meta-box"><small>Valve Tag / REE</small><strong>${st.valve_tag && !st.valve_reinstalled ? 'TAG #' + esc(st.valve_tag) : (st.ree_limit ? 'REE ' + st.ree_limit : 'Ready')}</strong></div>
             </div>`;
         } else {
           hero.className = 'stand-hero';
-          hero.innerHTML = `<div style="font-size:0.8rem;color:#6ee7b7;font-weight:900;">💧 HYDRO TEST STAND</div><div class="stand-sn" style="font-size:1.3rem;margin-top:8px;">Stand Queue Clear — Ready for Next Batch</div>`;
+          hero.innerHTML = `<div class="mono" style="font-size:0.74rem;color:var(--emerald);font-weight:800;">HYDRO TEST STAND</div><div style="font-family:var(--font-display);font-size:1.55rem;font-weight:800;color:var(--forest);margin-top:6px;">Stand Queue Clear — Ready for Next Batch</div>`;
         }
 
         document.getElementById('upNextCnt').textContent = `${(d.up_next || []).length} Waiting`;
         document.getElementById('upNextList').innerHTML = (d.up_next || []).length
           ? d.up_next.map((r, i) => `
             <div class="row-it">
-              <div><strong>#${i + 2} ${esc(r.serial_number)}</strong> ${(r.rush_fee || r.priority === 'RUSH') ? '<span class="b-rush">RUSH</span>' : ''}<div style="font-size:0.74rem;color:var(--muted);">${esc(r.customer_name)} • ${esc(r.dot_spec)}-${r.service_psi}</div></div>
-              <div style="text-align:right;"><strong style="color:var(--gold);">${r.test_psi}#</strong>${r.valve_tag && !r.valve_reinstalled ? `<div><span class="b-tag">#${esc(r.valve_tag)}</span></div>` : ''}</div>
+              <div><strong class="mono" style="color:var(--forest);">#${i + 2} ${esc(r.serial_number)}</strong> ${(r.rush_fee || r.priority === 'RUSH') ? '<span class="b-rush">RUSH</span>' : ''}<div style="font-size:0.75rem;color:var(--muted);font-weight:600;">${esc(r.customer_name)} • <span class="mono">${esc(r.dot_spec)}-${r.service_psi}</span></div></div>
+              <div style="text-align:right;"><strong class="mono" style="color:var(--gold);">${r.test_psi}#</strong>${r.valve_tag && !r.valve_reinstalled ? `<div><span class="b-tag">#${esc(r.valve_tag)}</span></div>` : ''}</div>
             </div>`).join('')
           : '<div style="color:var(--muted);font-size:0.82rem;padding:8px 0;">No additional cylinders waiting behind stand.</div>';
 
-        // Batches with Unified Expected Total
         const batches = d.batch_leaderboard || [];
         document.getElementById('batchCnt').textContent = `${batches.length} Active`;
         document.getElementById('batchList').innerHTML = batches.length
           ? batches.map(bItem => {
               const pct = bItem.total > 0 ? Math.min(100, Math.round((bItem.completed / bItem.total) * 100)) : 0;
               return `
-                <div style="padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.07);">
-                  <div style="display:flex;justify-content:space-between;font-size:0.84rem;font-weight:800;">
-                    <span>${esc(bItem.customer_name)} ${bItem.is_rush ? '<span class="b-rush">🔥</span>' : ''}</span>
-                    <span style="color:#6ee7b7;">${bItem.completed}/${bItem.total} Certified${bItem.ready_backroom ? ` • 📦${bItem.ready_backroom}` : ''}</span>
+                <div style="padding:7px 2px;border-bottom:1px solid rgba(15,46,32,0.08);">
+                  <div style="display:flex;justify-content:space-between;font-size:0.84rem;font-weight:800;color:var(--forest);">
+                    <span>${esc(bItem.customer_name)} ${bItem.is_rush ? '<span class="b-rush">RUSH</span>' : ''}</span>
+                    <span class="mono" style="font-size:0.76rem;color:var(--emerald);">${bItem.completed}/${bItem.total} Done${bItem.ready_backroom ? ` • ${bItem.ready_backroom} Ready` : ''}</span>
                   </div>
                   <div class="prog-track"><div class="prog-fill" style="width:${pct}%"></div></div>
                 </div>`;
@@ -410,11 +666,14 @@
         const sched = d.upcoming_schedule || [];
         document.getElementById('schedCnt').textContent = `${sched.length} Open`;
         document.getElementById('schedList').innerHTML = sched.length
-          ? sched.map(j => `
-            <div class="row-it">
-              <div><strong>${j.job_type === 'ROAD_PICKUP' ? '🚚 Pickup:' : (j.job_type === 'ROAD_DELIVERY' ? '🚚 Delivery:' : '📌')} ${esc(j.customer_name)} (${j.bottle_count})</strong> ${j.rush_fee ? '<span class="b-rush">RUSH</span>' : ''}<div style="font-size:0.73rem;color:var(--muted);">${esc(j.scheduled_date)}${j.tank_summary ? ' • ' + esc(j.tank_summary) : ''}</div></div>
-              <span class="pill" style="font-size:0.68rem;">${j.prep_status === 'DEVALVED_TAGGED' ? '✓ Prepped' : 'Scheduled'}</span>
-            </div>`).join('')
+          ? sched.map(j => {
+              const kind = j.job_type === 'ROAD_PICKUP' ? 'Truck Pickup:' : (j.job_type === 'ROAD_DELIVERY' ? 'Truck Delivery:' : (j.job_type === 'ROAD_ROUNDTRIP' ? 'Round-Trip:' : 'Batch:'));
+              return `
+                <div class="row-it">
+                  <div><strong style="color:var(--forest);">${kind} ${esc(j.customer_name)} (${j.bottle_count})</strong> ${j.rush_fee ? '<span class="b-rush">RUSH</span>' : ''}<div style="font-size:0.74rem;color:var(--muted);"><span class="mono">${esc(j.scheduled_date)}</span>${j.tank_summary ? ' • ' + esc(j.tank_summary) : ''}</div></div>
+                  <span class="pill ${j.prep_status === 'DEVALVED_TAGGED' ? 'ok' : ''}" style="font-size:0.66rem;padding:3px 7px;">${j.prep_status === 'DEVALVED_TAGGED' ? 'Prepped' : 'Scheduled'}</span>
+                </div>`;
+            }).join('')
           : '<div style="color:var(--muted);font-size:0.82rem;">No scheduled runs queued.</div>';
 
         const drops = d.backroom_dropoffs || [];
@@ -422,43 +681,42 @@
         document.getElementById('doorCnt').textContent = drops.length;
         document.getElementById('doorList').innerHTML = drops.map(dr => `
           <div class="row-it">
-            <div><strong style="color:var(--gold);">${esc(dr.customer_name)}</strong> (${dr.bottle_count - (dr.imported_count || 0)} waiting) ${dr.rush_requested ? '<span class="b-rush">RUSH</span>' : ''}<div style="font-size:0.73rem;color:var(--muted);">${esc(dr.service_requested)}</div></div>
+            <div><strong style="color:#92400e;">${esc(dr.customer_name)}</strong> <span class="mono" style="font-size:0.78rem;">(${dr.bottle_count - (dr.imported_count || 0)} waiting)</span> ${dr.rush_requested ? '<span class="b-rush">RUSH</span>' : ''}<div style="font-size:0.73rem;color:var(--muted);">${esc(dr.service_requested)}</div></div>
           </div>`).join('');
 
         const valves = d.active_valves || [];
         document.getElementById('tagCnt').textContent = `${valves.length} Out`;
         document.getElementById('tagsGrid').innerHTML = valves.length
-          ? valves.slice(0, 14).map(v => `<div class="tag-tile"><strong style="color:var(--gold);">#${esc(v.valve_tag)}</strong> → ${esc(v.serial_number)}<div style="font-size:0.68rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;">${esc(v.customer_name)}</div></div>`).join('')
-          : '<div style="color:var(--muted);font-size:0.8rem;grid-column:1/-1;">All reusable tags clear.</div>';
+          ? valves.slice(0, 14).map(v => `<div class="tag-tile"><strong class="mono" style="color:#92400e;">#${esc(v.valve_tag)}</strong> → <span class="mono" style="font-weight:700;">${esc(v.serial_number)}</span><div style="font-size:0.69rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;">${esc(v.customer_name)}</div></div>`).join('')
+          : '<div style="color:var(--muted);font-size:0.8rem;grid-column:1/-1;">All reusable valve tags clear.</div>';
 
         const done = d.recent_completed || [];
         document.getElementById('doneCnt').textContent = `${sb.completed_today || 0} Today`;
         document.getElementById('doneList').innerHTML = done.length
-          ? done.map(r => `<div class="row-it"><span><strong>${esc(r.serial_number)}</strong> • <small style="color:var(--muted);">${esc(r.customer_name)}</small></span><span style="color:${r.hydro_disposition === 'A' ? '#34d399' : '#f87171'};font-weight:900;">#${r.sheet_no} [${esc(r.hydro_disposition)}]</span></div>`).join('')
+          ? done.map(r => `<div class="row-it"><span><strong class="mono" style="color:var(--forest);">${esc(r.serial_number)}</strong> • <small style="color:var(--muted);font-weight:600;">${esc(r.customer_name)}</small></span><span class="mono" style="color:${r.hydro_disposition === 'A' ? 'var(--emerald)' : 'var(--red)'};font-weight:800;">#${r.sheet_no} [${esc(r.hydro_disposition)}]</span></div>`).join('')
           : '<div style="color:var(--muted);font-size:0.8rem;">No tests completed today yet.</div>';
 
-        // Render 14-Day Wall Calendar View
         document.getElementById('tvCalGrid').innerHTML = (d.calendar_days || []).map(day => {
           const isToday = day.work_date === d.work_date;
-          const shortMode = day.shift_mode === 'FULL_HYDRO' ? `🟢 Hydro (${day.bottle_capacity})`
-            : (day.shift_mode === 'PREP_ONLY' ? '🔧 Prep & Drop-Off'
-            : (day.shift_mode === 'ROAD_RUN' ? `🚚 Road (${day.bottle_capacity})` : '🚪 24/7 Backroom'));
+          const shortMode = day.shift_mode === 'FULL_HYDRO' ? `Hydro (${day.bottle_capacity})`
+            : (day.shift_mode === 'PREP_ONLY' ? 'Prep & Drop-Off'
+            : (day.shift_mode === 'ROAD_RUN' ? `Truck Run (${day.bottle_capacity})` : '24/7 Back Room'));
           const pct = day.bottle_capacity > 0 ? Math.min(100, Math.round(((day.booked_bottles || 0) / day.bottle_capacity) * 100)) : 0;
           return `
             <div class="cal-cell mode-${day.shift_mode} ${isToday ? 'today' : ''}">
               <div>
-                <div style="display:flex;justify-content:space-between;align-items:center;font-weight:900;font-size:0.86rem;">
-                  <span>${esc(day.weekday)} ${esc(day.month_day)}</span>
-                  ${isToday ? '<span style="background:var(--gold);color:#111;font-size:0.62rem;padding:1px 5px;border-radius:4px;">TODAY</span>' : ''}
+                <div style="display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:0.86rem;color:var(--forest);">
+                  <span>${esc(day.weekday)} <span class="mono">${esc(day.month_day)}</span></span>
+                  ${isToday ? '<span class="mono" style="background:var(--gold-bright);color:#0f172a;font-size:0.6rem;padding:2px 5px;border-radius:4px;font-weight:800;">TODAY</span>' : ''}
                 </div>
-                <div style="font-size:0.73rem;color:#6ee7b7;font-weight:800;margin-top:2px;">${shortMode}</div>
-                ${day.bottle_capacity > 0 ? `<div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:${pct >= 90 ? '#ef4444' : '#10b981'};"></div></div>` : ''}
+                <div class="mono" style="font-size:0.7rem;color:var(--emerald);font-weight:700;margin-top:2px;">${shortMode}</div>
+                ${day.bottle_capacity > 0 ? `<div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:${pct >= 90 ? 'var(--red)' : 'var(--emerald)'};"></div></div>` : ''}
               </div>
               <div class="cal-jobs">
-                ${(day.jobs || []).map(j => `<div class="cal-job-chip ${(j.rush_fee || j.priority === 'RUSH') ? 'rush' : ''}">${j.job_type === 'ROAD_PICKUP' ? '🚚' : (j.job_type === 'ROAD_DELIVERY' ? '📦' : '📌')} ${esc(j.customer_name)} (${j.bottle_count})</div>`).join('')}
-                ${day.day_notes ? `<div style="font-size:0.7rem;color:#fde68a;">📝 ${esc(day.day_notes)}</div>` : ''}
+                ${(day.jobs || []).map(j => `<div class="cal-job-chip ${(j.rush_fee || j.priority === 'RUSH') ? 'rush' : ''}">${esc(j.customer_name)} <span class="mono">(${j.bottle_count})</span></div>`).join('')}
+                ${day.day_notes ? `<div style="font-size:0.7rem;color:#92400e;font-weight:700;">Note: ${esc(day.day_notes)}</div>` : ''}
               </div>
-              <div style="font-size:0.67rem;color:var(--muted);">${day.bottle_capacity > 0 ? `${day.booked_bottles || 0}/${day.bottle_capacity} slots booked` : 'Self-Drop Active'}</div>
+              <div class="mono" style="font-size:0.66rem;color:var(--muted);">${day.bottle_capacity > 0 ? `${day.booked_bottles || 0}/${day.bottle_capacity} booked` : 'Self-Drop Active'}</div>
             </div>`;
         }).join('');
 
@@ -471,12 +729,13 @@
     if (savedRot && document.querySelector(`#rotPresetSel option[value="${savedRot}"]`)) {
       document.getElementById('rotPresetSel').value = savedRot;
     }
-    document.getElementById('btnChime').textContent = CHIME_ON ? '🔔' : '🔕';
     document.getElementById('btnChime').classList.toggle('on', CHIME_ON);
     changeRotationPreset();
+    syncTvBackgroundArtwork();
     pollTv();
     setInterval(pollTv, 3500);
+    setInterval(syncTvBackgroundArtwork, 15000);
   </script>
-  <script src="/static/theme-engine.js?v=9.4"></script>
+  <script src="/static/theme-engine.js?v=9.5"></script>
 </body>
 </html>
