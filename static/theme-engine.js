@@ -190,6 +190,8 @@
       const sig = `${d.key}|${d.enable_ops}|${d.enable_tv}|${d.dog_message}`;
       if (sig !== LAST_SIG) { LAST_SIG = sig; clearDom(); }
       THEME = d;
+      const fav = document.getElementById('dynamicFavicon');
+      if (fav) fav.href = `/pwa-icon.png?size=64&mode=any&theme=${encodeURIComponent(d.key || 'CLASSIC')}`;
       if (location.pathname === '/tv') renderTv();
       else if (document.getElementById('appShell') && !document.getElementById('appShell').hidden) renderOps();
     } catch (_) {}

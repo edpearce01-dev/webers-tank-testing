@@ -995,7 +995,7 @@ async def auth_gate_middleware(request: Request, call_next):
         return FileResponse(STATIC_DIR / "landing.html")
 
     public_paths = {
-        "/", "/ops", "/schedule", "/office", "/tv", "/manifest.json", "/sw.js", "/icon.svg",
+        "/", "/ops", "/schedule", "/office", "/tv", "/manifest.json", "/sw.js", "/icon.svg", "/pwa-icon.png", "/apple-touch-icon.png",
         "/api/auth/login", "/api/auth/status", "/api/auth/logout",
         "/api/public/dropoff", "/api/public/track", "/api/public/turnaround", "/api/public/theme",
     }
@@ -1450,15 +1450,29 @@ def serve_icon():
 
 @app.get("/manifest.json")
 def serve_manifest():
-    return {
-        "name": "Weber's Tank Testing — Ops (DOT B386)",
-        "short_name": "Weber's Ops",
-        "start_url": "/ops",
-        "display": "standalone",
-        "background_color": "#0b2219",
-        "theme_color": "#1b4332",
-        "icons": [{"src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}],
-    }
+    conn = get_conn()
+    t = compute_active_theme(conn)
+    conn.close()
+    t_tag = t["key"] if (t.get("active") and (t.get("enable_public") or t.get("enable_ops"))) else "CLASSIC"
+    return JSONResponse(
+        content={
+            "id": "/ops",
+            "name": "Weber's Tank Testing — Ops (DOT B386)",
+            "short_name": "Weber's Ops",
+            "start_url": "/ops",
+            "scope": "/",
+            "display": "standalone",
+            "background_color": "#fdf8ee",
+            "theme_color": "#0c261b",
+            "icons": [
+                {"src": f"/pwa-icon.png?size=192&mode=any&theme={t_tag}", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+                {"src": f"/pwa-icon.png?size=512&mode=any&theme={t_tag}", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+                {"src": f"/pwa-icon.png?size=192&mode=maskable&theme={t_tag}", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+                {"src": f"/pwa-icon.png?size=512&mode=maskable&theme={t_tag}", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+            ],
+        },
+        headers=NO_CACHE_HEADERS,
+    )
 
 
 @app.get("/sw.js")
@@ -5093,6 +5107,131 @@ def compute_active_theme(conn) -> dict:
         "custom_dog_message": custom_msg,
         "available_holidays": [{"key": k, "name": v["name"], "icon": v["icon"]} for k, v in HOLIDAY_CATALOG.items()],
     }
+
+
+
+_PWA_ICON_CACHE: dict[tuple, bytes] = {}
+
+
+def _build_dynamic_pwa_icon_png(theme: dict, size: int = 512, maskable: bool = False) -> bytes:
+    """Composites Warm Cream + Active Holiday Wreath + Weber's Crest + Shop Dogs into a crisp PNG icon."""
+    t_key = theme.get("key", "NONE") if (theme.get("active") and (theme.get("enable_public") or theme.get("enable_ops"))) else "NONE"
+    dog_file = theme.get("dog_image", "shop-dogs.jpg") if t_key != "NONE" else "shop-dogs.jpg"
+    cache_key = (t_key, dog_file, size, maskable)
+    if cache_key in _PWA_ICON_CACHE:
+        return _PWA_ICON_CACHE[cache_key]
+
+    try:
+        from PIL import Image, ImageDraw, ImageOps
+    except ImportError:
+        return b""
+
+    S = 512
+    canvas_im = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(canvas_im)
+
+    if maskable:
+        # Full-bleed cream square with safe-zone framing for Android adaptive circle/squircle masks & iOS
+        draw.rectangle((0, 0, S, S), fill=(245, 233, 206, 255))
+        draw.ellipse((24, 18, S - 24, S - 18), fill=(253, 248, 238, 255))
+        crest_d = 248
+        crest_cy = 214
+        dogs_max_w, dogs_max_h = 368, 196
+        dogs_bottom_y = 446
+    else:
+        # Rounded-square cream & gold-trimmed app tile for Windows/Mac/Desktop & Android 'any'
+        draw.rounded_rectangle((6, 6, S - 7, S - 7), radius=104, fill=(12, 38, 27, 255))
+        draw.rounded_rectangle((16, 16, S - 17, S - 17), radius=94, fill=(251, 191, 36, 255))
+        draw.rounded_rectangle((24, 24, S - 25, S - 25), radius=86, fill=(253, 248, 238, 255))
+        crest_d = 292
+        crest_cy = 208
+        dogs_max_w, dogs_max_h = 444, 236
+        dogs_bottom_y = 486
+
+    img_dir = STATIC_DIR / "images"
+
+    # Layer 1: Active Holiday Wreath Arch (if active)
+    if t_key != "NONE":
+        arch_map = {"THANKSGIVING": "arch-thanksgiving.png", "HALLOWEEN": "arch-thanksgiving.png", "CHRISTMAS": "arch-christmas.png"}
+        arch_name = arch_map.get(t_key, "arch-thanksgiving.png")
+        arch_p = img_dir / arch_name
+        if arch_p.exists():
+            with Image.open(arch_p) as a_im:
+                a_rgba = a_im.convert("RGBA")
+                arch_d = int(crest_d * 1.36)
+                a_rgba = a_rgba.resize((arch_d, arch_d), Image.Resampling.LANCZOS)
+                ax = (S - arch_d) // 2
+                ay = crest_cy - (arch_d // 2)
+                canvas_im.alpha_composite(a_rgba, (ax, ay))
+
+    # Layer 2: Circular Weber's Tank Testing Crest
+    crest_p = img_dir / "logo-crest.jpg"
+    cx0 = (S - crest_d) // 2
+    cy0 = crest_cy - (crest_d // 2)
+    draw.ellipse((cx0 - 6, cy0 - 6, cx0 + crest_d + 6, cy0 + crest_d + 6), fill=(251, 191, 36, 255))
+    if crest_p.exists():
+        with Image.open(crest_p) as c_im:
+            c_fit = ImageOps.fit(c_im.convert("RGBA"), (crest_d, crest_d), Image.Resampling.LANCZOS)
+            mask = Image.new("L", (crest_d, crest_d), 0)
+            ImageDraw.Draw(mask).ellipse((0, 0, crest_d - 1, crest_d - 1), fill=255)
+            canvas_im.paste(c_fit, (cx0, cy0), mask)
+    else:
+        draw.ellipse((cx0, cy0, cx0 + crest_d, cy0 + crest_d), fill=(12, 38, 27, 255))
+
+    # Layer 3: Pongo, Zeke & Pierce Foreground Cutout
+    stem = dog_file.rsplit(".", 1)[0]
+    dog_candidates = [img_dir / f"{stem}.png", img_dir / dog_file, img_dir / "dogs-thanksgiving.png", img_dir / "shop-dogs.jpg"]
+    chosen_dog = next((p for p in dog_candidates if p.exists()), None)
+    if chosen_dog:
+        with Image.open(chosen_dog) as d_im:
+            d_rgba = d_im.convert("RGBA")
+            if chosen_dog.suffix.lower() in (".jpg", ".jpeg"):
+                # Rounded badge crop for non-cutout fallback photo
+                d_rgba.thumbnail((int(dogs_max_w * 0.86), int(dogs_max_h * 0.82)), Image.Resampling.LANCZOS)
+                dw, dh = d_rgba.size
+                rmask = Image.new("L", (dw, dh), 0)
+                ImageDraw.Draw(rmask).rounded_rectangle((0, 0, dw - 1, dh - 1), radius=28, fill=255)
+                framed = Image.new("RGBA", (dw + 8, dh + 8), (0, 0, 0, 0))
+                ImageDraw.Draw(framed).rounded_rectangle((0, 0, dw + 7, dh + 7), radius=31, fill=(251, 191, 36, 255))
+                framed.paste(d_rgba, (4, 4), rmask)
+                d_rgba = framed
+            else:
+                d_rgba.thumbnail((dogs_max_w, dogs_max_h), Image.Resampling.LANCZOS)
+            dx = (S - d_rgba.width) // 2
+            dy = dogs_bottom_y - d_rgba.height
+            canvas_im.alpha_composite(d_rgba, (dx, dy))
+
+    if size != S:
+        canvas_im = canvas_im.resize((size, size), Image.Resampling.LANCZOS)
+
+    out = io.BytesIO()
+    canvas_im.save(out, format="PNG", optimize=True)
+    png_bytes = out.getvalue()
+    if len(_PWA_ICON_CACHE) > 32:
+        _PWA_ICON_CACHE.clear()
+    _PWA_ICON_CACHE[cache_key] = png_bytes
+    return png_bytes
+
+
+@app.get("/pwa-icon.png")
+def serve_dynamic_pwa_icon(size: int = 512, mode: str = "any", theme: str = ""):
+    sz = max(32, min(1024, int(size or 512)))
+    conn = get_conn()
+    active_theme = compute_active_theme(conn)
+    conn.close()
+    png = _build_dynamic_pwa_icon_png(active_theme, size=sz, maskable=(mode == "maskable"))
+    if not png:
+        raise HTTPException(404, "Icon generator unavailable")
+    return Response(content=png, media_type="image/png", headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.get("/apple-touch-icon.png")
+def serve_apple_touch_icon():
+    conn = get_conn()
+    active_theme = compute_active_theme(conn)
+    conn.close()
+    png = _build_dynamic_pwa_icon_png(active_theme, size=180, maskable=True)
+    return Response(content=png, media_type="image/png", headers=NO_CACHE_HEADERS)
 
 
 @app.get("/api/public/theme")
