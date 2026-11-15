@@ -993,7 +993,7 @@ def is_tv_authorized(request: Request) -> bool:
 
 @app.middleware("http")
 async def auth_gate_middleware(request: Request, call_next):
-    if request.url.path in ("/merch", "/api/public/merch"):
+    if request.url.path in ("/merch", "/api/public/merch", "/api/pdf/merch-qr"):
         return await call_next(request)
     host = (request.headers.get("host") or "").split(":")[0].lower()
     path = request.url.path
@@ -5255,6 +5255,56 @@ class MerchStatusUpdate(BaseModel):
 class MerchStoreSettingsInput(BaseModel):
     popup_store_url: str = ""
     allowance_note: str = ""
+
+
+
+@app.get("/api/pdf/merch-qr")
+def print_merch_counter_qr_pdf():
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas as rl_canvas
+    from reportlab.graphics.barcode import qr
+    from reportlab.graphics.shapes import Drawing
+    from reportlab.graphics import renderPDF
+
+    conn = get_conn()
+    row = conn.execute("SELECT value FROM settings WHERE key='merch_popup_url';").fetchone()
+    conn.close()
+    target_url = (row["value"].strip() if row and row["value"] else "") or "https://ops.weberstanktesting.com/merch"
+
+    buf = io.BytesIO()
+    c = rl_canvas.Canvas(buf, pagesize=letter)
+    W, H = letter
+    cx, cy, cw, ch = (W - 360) / 2, (H - 470) / 2, 360, 470
+
+    c.setStrokeColorRGB(0.05, 0.15, 0.11)
+    c.setLineWidth(2.5)
+    c.roundRect(cx, cy, cw, ch, 14, stroke=1, fill=0)
+
+    logo_p = STATIC_DIR / "images" / "logo-crest.png"
+    if logo_p.exists():
+        c.drawImage(str(logo_p), (W - 110) / 2, cy + ch - 128, width=110, height=110, preserveAspectRatio=True, mask="auto")
+
+    c.setFillColorRGB(0.05, 0.15, 0.11)
+    c.setFont("Helvetica-Bold", 17)
+    c.drawCentredString(W / 2, cy + ch - 152, "WEBER'S CREW & FAMILY GEAR")
+    c.setFont("Helvetica", 10)
+    c.drawCentredString(W / 2, cy + ch - 168, "Hoodies  •  Polos  •  Work Tees  •  Hats  •  Tumblers")
+
+    qr_code = qr.QrCodeWidget(target_url)
+    b = qr_code.getBounds()
+    q_size = 185
+    d = Drawing(q_size, q_size, transform=[q_size / (b[2] - b[0]), 0, 0, q_size / (b[3] - b[1]), 0, 0])
+    d.add(qr_code)
+    renderPDF.draw(d, c, (W - q_size) / 2, cy + 88)
+
+    c.setFont("Helvetica-Bold", 11)
+    c.drawCentredString(W / 2, cy + 62, "SCAN WITH YOUR PHONE CAMERA")
+    c.setFont("Helvetica", 8.5)
+    c.setFillColorRGB(0.35, 0.4, 0.45)
+    c.drawCentredString(W / 2, cy + 44, "Baden, PA  •  724-266-8008")
+    c.showPage()
+    c.save()
+    return Response(content=buf.getvalue(), media_type="application/pdf")
 
 
 @app.get("/merch")
