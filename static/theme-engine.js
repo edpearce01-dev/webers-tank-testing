@@ -63,12 +63,11 @@
       .tv-mute-pill { background: rgba(5,13,10,0.65); border: 1px solid rgba(255,255,255,0.24); color: #cbd5e1; border-radius: 999px; padding: 2px 8px; font-size: 0.68rem; font-weight: 800; cursor: pointer; }
 
       .tv-particles-wrap {
-        position: fixed; inset: 0; pointer-events: none; z-index: 2; overflow: hidden;
-        opacity: 0.72; transition: opacity 1.6s ease;
+        position: fixed; inset: 0; pointer-events: none; z-index: 20; overflow: hidden;
+        opacity: 0; visibility: hidden; transition: opacity 1.4s ease, visibility 1.4s ease;
       }
-      body.tv-screensaver .tv-particles-wrap,
-      body.tv-bg-reveal .tv-particles-wrap {
-        opacity: 1; z-index: 20;
+      body.tv-screensaver .tv-particles-wrap {
+        opacity: 1; visibility: visible;
       }
       body.tv-screensaver .tv-bulb {
         width: 9px; height: 11px; box-shadow: 0 0 12px currentColor, 0 0 22px currentColor;
@@ -77,7 +76,11 @@
         position: absolute; top: -48px;
         filter: drop-shadow(0 3px 5px rgba(15, 23, 42, 0.14));
         animation: tvFallSway linear infinite;
+        animation-play-state: paused;
         will-change: transform, opacity;
+      }
+      body.tv-screensaver .tv-particle {
+        animation-play-state: running;
       }
       @keyframes tvFallSway {
         0%   { transform: translate3d(0px, -45px, 0) rotate(0deg); opacity: 0; }

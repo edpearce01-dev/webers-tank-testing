@@ -58,10 +58,10 @@
       inset: 0;
       z-index: 1; pointer-events: none;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding-top: 28px;
-      opacity: 0.30;
+      padding-top: 56px;
+      opacity: 0.28;
       transform: scale(0.985);
-      transition: opacity 2.35s cubic-bezier(0.4, 0, 0.2, 1), transform 2.35s cubic-bezier(0.4, 0, 0.2, 1), padding 2.35s ease;
+      transition: opacity 3.4s cubic-bezier(0.37, 0, 0.63, 1), transform 3.4s cubic-bezier(0.37, 0, 0.63, 1), padding 1.6s ease;
       will-change: opacity, transform;
     }
     body.tv-bg-reveal .tv-brand-bg {
@@ -206,7 +206,7 @@
       padding: 10px 16px 14px; overflow: hidden; height: 100%;
       display: flex; flex-direction: column; gap: 9px;
       opacity: 1; transform: scale(1);
-      transition: opacity 2.35s cubic-bezier(0.4, 0, 0.2, 1), transform 2.35s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: opacity 3.4s cubic-bezier(0.37, 0, 0.63, 1), transform 3.4s cubic-bezier(0.37, 0, 0.63, 1);
       will-change: opacity, transform;
     }
     body.tv-bg-reveal .tv-stage,
@@ -364,7 +364,7 @@
   <div class="tv-brand-bg" id="tvBrandBg" aria-hidden="true">
     <div class="tv-crest-wrap">
       <img id="tvBgArchImg" class="tv-arch-img" alt="" hidden />
-      <img src="/static/images/logo-crest.jpg?v=9.9" alt="" class="tv-crest-img" onerror="this.src='/icon.svg'" />
+      <img src="/static/images/logo-crest.jpg?v=9.10" alt="" class="tv-crest-img" onerror="this.src='/icon.svg'" />
     </div>
     <img id="tvBgDogsImg" src="/static/images/dogs-thanksgiving.png" alt="" class="tv-dogs-img" onerror="this.onerror=null;this.src='/static/images/shop-dogs.jpg';this.classList.add('photo-fallback');" />
   </div>
@@ -384,7 +384,7 @@
   <!-- TV PAIRING PIN GATE -->
   <div id="tvPinGate" class="pin-gate" hidden>
     <div class="pin-box">
-      <img src="/static/images/logo-crest.jpg?v=9.9" alt="B386" style="width:62px;height:62px;border-radius:50%;border:2px solid var(--gold-bright);margin-bottom:8px;" />
+      <img src="/static/images/logo-crest.jpg?v=9.10" alt="B386" style="width:62px;height:62px;border-radius:50%;border:2px solid var(--gold-bright);margin-bottom:8px;" />
       <h3 style="margin:0;font-family:var(--font-display);font-size:1.5rem;color:var(--forest);">Testing Room TV Display</h3>
       <p style="font-size:0.83rem;color:var(--muted);margin:5px 0 0;">Enter any valid Shop PIN once to pair this TV</p>
       <input type="password" inputmode="numeric" id="tvPinInput" placeholder="••••" onkeydown="if(event.key==='Enter')unlockTv()" />
@@ -395,7 +395,7 @@
   <!-- FROSTED 1080P BROADCAST HEADER -->
   <header class="tv-hdr">
     <div class="hdr-brand">
-      <img src="/static/images/logo-crest.jpg?v=9.9" alt="B386" onerror="this.src='/icon.svg'" />
+      <img src="/static/images/logo-crest.jpg?v=9.10" alt="B386" onerror="this.src='/icon.svg'" />
       <div>
         <span class="hdr-title">Weber's Tank Testing</span>
         <span class="hdr-sub" id="hdrShiftTxt">DOT RIN B386</span>
@@ -587,15 +587,17 @@
         return;
       }
       IS_TRANSITIONING = true;
-      // Slow 2.35s fade-out -> brief 0.35s kiss on full background -> slow 2.35s fade-in!
+      // Slow 3.4s sinusoidal melt out -> immediate 0ms crossover -> slow 3.4s sinusoidal melt in
       document.body.classList.add('tv-bg-reveal');
       setTimeout(() => {
         swapViewDomInstant(nextView);
-        setTimeout(() => {
-          document.body.classList.remove('tv-bg-reveal');
-          setTimeout(() => { IS_TRANSITIONING = false; }, 2400);
-        }, 350);
-      }, 2350);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            document.body.classList.remove('tv-bg-reveal');
+            setTimeout(() => { IS_TRANSITIONING = false; }, 3450);
+          });
+        });
+      }, 3400);
     }
 
     function changeRotationPreset() {
@@ -633,7 +635,7 @@
     function updateClocks() {
       const now = new Date();
       document.getElementById('liveClock').textContent = now.toLocaleTimeString('en-US', {
-        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour: 'numeric', minute: '2-digit',
       });
       document.getElementById('ssTime').textContent = now.toLocaleTimeString('en-US', {
         hour: 'numeric', minute: '2-digit',
@@ -914,6 +916,6 @@
     setInterval(pollTv, 3500);
     setInterval(syncTvBackgroundArtwork, 20000);
   </script>
-  <script src="/static/theme-engine.js?v=9.9"></script>
+  <script src="/static/theme-engine.js?v=9.10"></script>
 </body>
 </html>

@@ -1725,80 +1725,75 @@ async function saveAllSettings() {
 
 checkAuthAndBoot();
 
+function toggleShopMapCollapse() {
+  const cur = localStorage.getItem('webers_hide_floor_map') === '1';
+  localStorage.setItem('webers_hide_floor_map', cur ? '0' : '1');
+  renderLiveFloorPlanMap();
+}
+
 function renderLiveFloorPlanMap() {
   const host = document.getElementById('liveShopFloorMap');
   if (!host || !window.STATE) return;
+
+  const isHidden = localStorage.getItem('webers_hide_floor_map') === '1';
   const recs = STATE.records || [];
-  const drops = (STATE.dropoffs || []).filter(d => ((d.status === 'IN_BACKROOM' || d.status === 'CHECKED_IN') && (d.imported_count || 0) < d.bottle_count));
+  const postRecs = (STATE.in_shop_post_test || []).filter(r => r.shop_stage !== 'PICKED_UP');
+  const drops = (STATE.dropoffs || []).filter(d => (d.status === 'IN_BACKROOM' || d.status === 'CHECKED_IN') && (d.imported_count || 0) < d.bottle_count);
+
   const dropBottles = drops.reduce((s, d) => s + Math.max(0, d.bottle_count - (d.imported_count || 0)), 0);
-  const viceTags = (STATE.active_valves || []).length;
+  const atPickup = postRecs.filter(r => r.shop_stage === 'READY_BACKROOM').length;
   const atJackets = recs.filter(r => r.status === 'QUEUED').length;
-  const atDryStamp = recs.filter(r => r.status === 'COMPLETED' && r.shop_stage !== 'PICKED_UP' && r.shop_stage !== 'READY_BACKROOM').length;
-  const atPickup = recs.filter(r => r.status === 'COMPLETED' && r.shop_stage === 'READY_BACKROOM').length;
+  const viceTags = (STATE.active_valves || []).length;
+  const dryingUnmarked = postRecs.filter(r => r.hydro_disposition === 'A' && !r.rin_marked).length;
+  const markedNeedRevalve = postRecs.filter(r => r.shop_stage !== 'READY_BACKROOM' && (r.rin_marked || r.hydro_disposition !== 'A')).length;
 
+  host.style.padding = isHidden ? '10px 14px' : '13px 15px';
   host.innerHTML = `
-    <div class="card-hdr" style="margin-bottom:8px;">
-      <h3>🗺️ Live Baden Shop Floor Map (Click Any Station)</h3>
-      <span class="sub-badge">3086 Legionville Rd Layout</span>
+    <div class="card-hdr" style="margin-bottom:${isHidden ? '0' : '9px'};padding-bottom:${isHidden ? '0' : '7px'};border-bottom:${isHidden ? 'none' : '1px solid var(--border-soft)'};">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <h3>Baden Shop Floor Status</h3>
+        <span class="sub-badge">${dropBottles + atJackets + dryingUnmarked + markedNeedRevalve} In Progress • ${atPickup} Ready</span>
+      </div>
+      <button type="button" class="secondary" style="padding:3px 9px;font-size:0.73rem;" onclick="toggleShopMapCollapse()">
+        ${isHidden ? 'Show Stations ▾' : 'Collapse ▴'}
+      </button>
     </div>
-    <div class="shop-map-grid">
-      <div class="map-room">
-        <div style="display:flex;justify-content:space-between;gap:6px;">
-          <span style="font-size:0.7rem;font-weight:900;color:var(--muted);">🚒 MAIN BAY (FIRE TRUCK)</span>
-          <span style="font-size:0.68rem;background:#f1f5f9;padding:2px 7px;border-radius:5px;border:1px solid #cbd5e1;font-weight:800;">🚪 Entrance</span>
+    ${isHidden ? '' : `
+    <div class="shop-flow-grid">
+      <div class="flow-zone">
+        <div class="flow-zone-hdr"><span>01 • 24/7 Back Room</span><span>Dock Door</span></div>
+        <div class="flow-spot ${dropBottles ? 'warn-load' : ''}" onclick="jumpToTab('intake')">
+          <span>Incoming Drop-Offs</span>
+          <span class="flow-cnt">${dropBottles} Waiting</span>
         </div>
-        <div style="background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:8px;padding:14px 10px;text-align:center;color:#64748b;font-size:0.78rem;font-weight:800;">
-          🚒 Fire Truck Bay &amp; Shelving
-        </div>
-        <div class="map-spot" style="background:#fef3c7;border-color:#d97706;color:#78350f;" onclick="jumpToTab('logs')">
-          <span>💨 Drying Rack (Main Bay)</span>
-          <span class="map-cnt">${atDryStamp} Cyl</span>
-        </div>
-      </div>
-
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        <div class="map-room" style="border-color:#1b4332;">
-          <div style="font-size:0.7rem;font-weight:900;color:var(--green);">🔬 HYDRO TEST ROOM</div>
-          <div class="map-spot" style="background:#dcfce7;border-color:#16a34a;color:#065f46;" onclick="jumpToTab('logs')">
-            <span>🔨 Stamp &amp; Valve Bench</span>
-            <span class="map-cnt">${viceTags} Tags</span>
-          </div>
-          <div class="map-spot" style="background:#fce7f3;border-color:#ec4899;color:#831843;" onclick="jumpToTab('intake')">
-            <span>🔧 Vice (Devalve &amp; Revalve)</span>
-            <span class="map-cnt">Prep</span>
-          </div>
-          <div class="map-spot" style="background:#dbeafe;border-color:#2563eb;color:#1e3a8a;" onclick="jumpToTab('bench')">
-            <span>🔵🔵 Short &amp; Tall Test Jackets</span>
-            <span class="map-cnt">${atJackets} Queued</span>
-          </div>
-          <div class="map-spot" style="background:#fef9c3;border-color:#eab308;color:#713f12;" onclick="jumpToTab('bench')">
-            <span>📋 Pump / Test Desk</span>
-            <span class="map-cnt">Sheet #${STATE.binder_state?.active_sheet_no || 8095}</span>
-          </div>
-        </div>
-
-        <div class="map-room" style="border-color:#b45309;">
-          <div style="font-size:0.7rem;font-weight:900;color:#92400e;">🚪 24/7 BACK ROOM</div>
-          <div class="map-spot" style="background:#ffedd5;border-color:#f97316;color:#7c2d12;" onclick="jumpToTab('intake')">
-            <span>📥 Incoming Drop-Offs</span>
-            <span class="map-cnt">${dropBottles} Waiting</span>
-          </div>
-          <div class="map-spot" style="background:#ecfdf5;border-color:#10b981;color:#065f46;" onclick="jumpToTab('logs')">
-            <span>✅ Back Room Pickup Ready</span>
-            <span class="map-cnt">${atPickup} Ready</span>
-          </div>
+        <div class="flow-spot ${atPickup ? 'active-load' : ''}" onclick="jumpToTab('logs')">
+          <span>Pickup Shelf Ready</span>
+          <span class="flow-cnt">${atPickup} Ready</span>
         </div>
       </div>
 
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        <div class="map-room" style="flex:1;border-color:#2563eb;background:#eff6ff;justify-content:center;text-align:center;">
-          <div style="font-size:0.74rem;font-weight:900;color:#1d4ed8;">📐 Loading Dock Ramp</div>
+      <div class="flow-zone">
+        <div class="flow-zone-hdr"><span>02 • Hydro Test Room</span><span>Stand &amp; Bench</span></div>
+        <div class="flow-spot ${atJackets ? 'active-load' : ''}" onclick="jumpToTab('bench')">
+          <span>Short &amp; Tall Jackets</span>
+          <span class="flow-cnt">${atJackets} Queued</span>
         </div>
-        <div class="map-room" style="flex:1;border-color:#dc2626;background:#fef2f2;justify-content:center;text-align:center;">
-          <div style="font-size:0.74rem;font-weight:900;color:#b91c1c;">🚚 Loading Dock</div>
-          <small style="font-size:0.66rem;color:#991b1b;font-weight:700;">24/7 Customer Door</small>
+        <div class="flow-spot ${viceTags ? 'warn-load' : ''}" onclick="jumpToTab('logs')">
+          <span>Valve &amp; Reg Tags Out</span>
+          <span class="flow-cnt">${viceTags} Active</span>
         </div>
       </div>
-    </div>`;
+
+      <div class="flow-zone">
+        <div class="flow-zone-hdr"><span>03 • Main Bay Finish</span><span>Dry &amp; Mark</span></div>
+        <div class="flow-spot ${dryingUnmarked ? 'warn-load' : ''}" onclick="jumpToTab('logs')">
+          <span>Drying • Needs B386</span>
+          <span class="flow-cnt">${dryingUnmarked} Cyl</span>
+        </div>
+        <div class="flow-spot ${markedNeedRevalve ? 'active-load' : ''}" onclick="jumpToTab('logs')">
+          <span>Marked • Needs Revalve</span>
+          <span class="flow-cnt">${markedNeedRevalve} Cyl</span>
+        </div>
+      </div>
+    </div>`}`;
 }
-
