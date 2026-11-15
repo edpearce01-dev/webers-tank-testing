@@ -2710,7 +2710,8 @@ def bootstrap(work_date: Optional[str] = None, cal_year: Optional[int] = None, c
 
 
 @app.post("/api/admin/wipe-test-data")
-async def admin_wipe_test_data():
+async def admin_wipe_test_data(request: Request):
+    require_owner_or_admin(request)
     conn = get_conn()
     webhook_row = conn.execute("SELECT value FROM settings WHERE key='sheets_webhook_url';").fetchone()
     webhook_url = (webhook_row["value"] if webhook_row else "").strip()
@@ -2729,6 +2730,7 @@ async def admin_wipe_test_data():
 
 @app.post("/api/settings")
 def update_settings(payload: SettingsInput, request: Request):
+    require_owner_or_admin(request)
     global CACHED_VISION_MODEL
     conn = get_conn()
     if payload.calibrated_serial:
@@ -4012,7 +4014,8 @@ def delete_shop_supply(supply_id: int):
 
 # --- PRICING & BILLING ---
 @app.post("/api/pricing")
-def upsert_pricing_rates(rates: list[PricingRateUpsert]):
+def upsert_pricing_rates(rates: list[PricingRateUpsert], request: Request):
+    require_owner_or_admin(request)
     conn = get_conn()
     for idx, r in enumerate(rates):
         clean_code = re.sub(r"[^A-Z0-9_]", "_", r.code.strip().upper())[:28]
@@ -4039,7 +4042,8 @@ def upsert_pricing_rates(rates: list[PricingRateUpsert]):
 
 
 @app.delete("/api/pricing/{code}")
-def delete_pricing_rate(code: str):
+def delete_pricing_rate(code: str, request: Request):
+    require_owner_or_admin(request)
     conn = get_conn()
     conn.execute("DELETE FROM pricing_rates WHERE UPPER(code)=UPPER(?);", (code.strip(),))
     bump_db_version(conn)
@@ -4146,7 +4150,8 @@ def set_invoice_status(inv_id: int, payload: InvoiceStatusInput):
 
 
 @app.delete("/api/invoices/{inv_id}")
-def void_and_delete_invoice(inv_id: int):
+def void_and_delete_invoice(inv_id: int, request: Request):
+    require_owner_or_admin(request)
     conn = get_conn()
     inv = conn.execute("SELECT id, invoice_no, status FROM invoices WHERE id=?;", (inv_id,)).fetchone()
     if not inv:

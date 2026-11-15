@@ -184,6 +184,7 @@
     clearDom(); renderTv();
   };
 
+  window.refreshWebersTheme = syncTheme;
   async function syncTheme() {
     injectCss();
     try {

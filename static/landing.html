@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#fdf8ee" />
   <meta name="description" content="Weber's Tank Testing (U.S. D.O.T. RIN B386) — Certified hydrostatic cylinder testing & visual requalification in Baden, PA. 24/7 Back Room drop-off via our Loading Dock for SCBA, EMS Oxygen, Industrial Gas, Scuba & Paintball HPA." />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
@@ -111,7 +111,8 @@
       font-weight: 700; color: var(--muted); letter-spacing: 0.04em; margin-top: 2px;
     }
 
-    .nav-links { display: flex; align-items: center; gap: 22px; }
+    .nav-links { display: flex; align-items: center; gap: 18px; white-space: nowrap; flex-shrink: 0; }
+    .nav-links a { white-space: nowrap; }
     .nav-links a {
       color: var(--ink-soft); text-decoration: none; font-size: 0.85rem; font-weight: 700;
       padding: 4px 0; position: relative; transition: color 0.15s;
@@ -122,7 +123,7 @@
     }
     .nav-links a:hover { color: var(--forest); }
     .nav-links a:hover::after { transform: scaleX(1); }
-    @media (max-width: 980px) { .nav-links { display: none; } }
+    @media (max-width: 1120px) { .nav-links { display: none; } }
 
     /* Tactile Industrial Buttons */
     .btn {
@@ -455,6 +456,131 @@
     }
     footer a { color: #fde68a; text-decoration: none; font-weight: 700; }
     footer a:hover { text-decoration: underline; }
+  
+    /* =====================================================================
+       v10.0 UNIVERSAL RESPONSIVE SYSTEM (PHONES, IPADS, LAPTOPS & DESKTOPS)
+       ===================================================================== */
+    html, body {
+      max-width: 100%;
+      overflow-x: clip;
+    }
+    .cta-short { display: none; }
+    .sla-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .track-inputs-grid { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 10px; margin-bottom: 10px; }
+    .city-state-zip-grid { grid-column: 1 / -1; display: grid; grid-template-columns: 1.5fr 80px 1fr; gap: 10px; }
+    .top-action-grid > *, .portal-grid > *, .form-grid > *, .cap-grid > *, .fleet-banner > * { min-width: 0; }
+
+    /* Constrain Fixed Crest + Wreath + Dogs so Wreath NEVER Overflows Any Viewport */
+    .fixed-brand-stage {
+      overflow: hidden;
+      max-width: 100vw;
+    }
+    .crest-arch-wrap {
+      width: min(62vw, 39dvh, 415px) !important;
+      height: min(62vw, 39dvh, 415px) !important;
+    }
+    .stage-dogs-cutout {
+      width: min(92vw, 680px) !important;
+      max-height: min(30dvh, 320px) !important;
+      margin-top: clamp(-82px, -8.5dvh, -48px) !important;
+    }
+    .hero-opening-spacer {
+      min-height: calc(100dvh - 96px) !important;
+    }
+
+    /* Tablets & Compact Laptops (<= 1024px) */
+    @media (max-width: 1024px) {
+      .wrap { padding: 0 16px; }
+      .glass-card { padding: 20px; }
+      .sec { padding: 32px 0; }
+    }
+
+    /* Phones & Phablets — iPhone SE/14/16, Pixel, Samsung Galaxy (<= 680px) */
+    @media (max-width: 680px) {
+      /* Prevent iOS Safari violent zoom on input tap */
+      input:not([type="checkbox"]), select, textarea {
+        font-size: 16px !important;
+      }
+
+      /* Crisp 1-Row Top Compliance Bar on Mobile (Kills 5-Line Wrapped Wall) */
+      .util-bar { padding: 5px 0; font-size: 0.72rem; }
+      .util-inner { justify-content: space-between; flex-wrap: nowrap; gap: 6px; }
+      .util-left span:not(.util-rin),
+      .util-right span:not(#pubHolidayBanner) { display: none; }
+      #pubHolidayBanner {
+        font-size: 0.65rem; padding: 1px 7px; max-width: 44vw;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }
+
+      /* Non-Overflowing Sticky Glass Header on Narrow Phones */
+      .site-nav { padding: 8px 0; }
+      .nav-inner { gap: 8px; }
+      .brand { gap: 8px; min-width: 0; }
+      .brand img { width: 34px; height: 34px; }
+      .brand-title { font-size: 1.08rem; }
+      .brand-sub { font-size: 0.58rem; }
+      .cta-full { display: none; }
+      .cta-short { display: inline; }
+      .site-nav .btn-gold { padding: 8px 11px; font-size: 0.76rem; }
+
+      /* Unblocked Mobile Opening Stage: Crest + Wreath + Dogs Above, Speech & Buttons Cleanly Below */
+      .fixed-brand-stage {
+        padding-top: 4px !important;
+      }
+      .crest-arch-wrap {
+        width: min(56vw, 31dvh, 255px) !important;
+        height: min(56vw, 31dvh, 255px) !important;
+        margin-top: 14px !important;
+      }
+      .stage-dogs-cutout {
+        width: min(90vw, 400px) !important;
+        max-height: min(23dvh, 195px) !important;
+        margin-top: -42px !important;
+      }
+      .hero-opening-spacer {
+        min-height: calc(100dvh - 82px) !important;
+        padding: 0 12px 14px !important;
+      }
+      .dog-speech-bubble {
+        padding: 10px 13px 11px;
+        font-size: 0.81rem;
+        line-height: 1.4;
+        margin-bottom: 8px;
+      }
+      .hero-quick-bar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+        gap: 6px;
+        padding: 6px;
+        border-radius: 12px;
+      }
+      .hero-quick-bar a:first-child {
+        grid-column: 1 / -1;
+      }
+      .hero-quick-bar .btn {
+        width: 100%;
+        padding: 9px 10px;
+        font-size: 0.79rem;
+      }
+      .scroll-hint { margin-top: 5px; font-size: 0.62rem; }
+
+      /* Mobile Cards, Forms & Grids */
+      .glass-card { padding: 16px 15px; border-radius: 12px; }
+      .sla-grid { grid-template-columns: 1fr; gap: 8px; }
+      .city-state-zip-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .city-state-zip-grid > div:first-child { grid-column: 1 / -1; }
+      .fleet-imgs { grid-template-columns: 1fr; }
+      .fleet-imgs img { height: 165px; }
+      .kpi-item strong { font-size: 1.45rem; }
+      footer .wrap { flex-direction: column; text-align: center; }
+    }
+
+    @media (max-width: 390px) {
+      .brand-sub { display: none; }
+      .track-inputs-grid { grid-template-columns: 1fr; }
+    }
+
   </style>
 </head>
 <body>
@@ -500,7 +626,7 @@
       </nav>
       <a href="#dropoff" class="btn btn-gold">
         <svg class="ico" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-        <span>24/7 Drop-Off &amp; Pick-Up</span>
+        <span class="cta-full">24/7 Drop-Off &amp; Pick-Up</span><span class="cta-short">24/7 Check-In</span>
       </a>
     </div>
   </header>
@@ -558,7 +684,7 @@
             </p>
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="sla-grid">
             <div class="sla-tile std">
               <small>Standard Turnaround</small>
               <strong id="slaStdTxt">Checking...</strong>
@@ -587,7 +713,7 @@
             <p style="margin:0 0 14px;font-size:0.86rem;color:var(--ink-soft);">
               Enter the <strong class="mono">BR-XXXX</strong> ticket number from your Back Room check-in receipt:
             </p>
-            <div style="display:grid;grid-template-columns:1.25fr 0.75fr;gap:10px;margin-bottom:10px;">
+            <div class="track-inputs-grid">
               <input id="trkTicket" class="mono" placeholder="BR-0001" onkeydown="if(event.key==='Enter')lookupTicket()" style="font-weight:700;text-transform:uppercase;" />
               <input id="trkLast4" class="mono" maxlength="4" inputmode="numeric" placeholder="Last 4 Ph" onkeydown="if(event.key==='Enter')lookupTicket()" style="font-weight:700;" />
             </div>
@@ -701,7 +827,7 @@
                   <label>Billing / Mailing Street Address * <span class="opt">(For invoices &amp; 5-yr recall notice)</span></label>
                   <input id="dropStreet" placeholder="e.g. 123 State St" autocomplete="street-address" />
                 </div>
-                <div style="grid-column:1/-1;display:grid;grid-template-columns:1.5fr 78px 1fr;gap:10px;">
+                <div class="city-state-zip-grid">
                   <div><label>City *</label><input id="dropCity" placeholder="Baden" autocomplete="address-level2" /></div>
                   <div><label>State</label><input id="dropState" class="mono" value="PA" maxlength="2" autocomplete="address-level1" /></div>
                   <div><label>ZIP Code *</label><input id="dropZip" class="mono" inputmode="numeric" maxlength="10" placeholder="15005" autocomplete="postal-code" /></div>
@@ -774,7 +900,7 @@
                 <div><label>10-Digit Contact Phone *</label><input id="trkPhone" class="mono" type="tel" placeholder="724-555-0199" oninput="formatPubPhone(this)" /></div>
                 <div><label>Confirmation Email <span class="opt">(Optional)</span></label><input id="trkEmail" type="email" placeholder="chief@dept.org" /></div>
                 <div style="grid-column:1/-1;"><label>Station / Facility Street Address *</label><input id="trkAddress" placeholder="e.g. 123 State St (include bay door notes)" autocomplete="street-address" /></div>
-                <div style="grid-column:1/-1;display:grid;grid-template-columns:1.5fr 78px 1fr;gap:10px;">
+                <div class="city-state-zip-grid">
                   <div><label>City / Town *</label><input id="trkCity" placeholder="Baden" autocomplete="address-level2" /></div>
                   <div><label>State</label><input id="trkState" class="mono" value="PA" maxlength="2" autocomplete="address-level1" /></div>
                   <div><label>ZIP Code *</label><input id="trkZip" class="mono" inputmode="numeric" maxlength="10" placeholder="15005" autocomplete="postal-code" /></div>

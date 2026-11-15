@@ -8,18 +8,18 @@
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   
-  <link rel="stylesheet" href="/static/ops.css?v=9.11" />
+  <link rel="stylesheet" href="/static/ops.css?v=10.3" />
   <title>Weber's Tank Testing — Shop Floor Ops | DOT B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.jpg?v=9.11" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
+      <img src="/static/images/logo-crest.jpg?v=10.3" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Tank Testing</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">
         Shop Floor Operations Workspace<br />
-        <strong>DOT RIN: B386</strong> • Official Sign-Off: <strong>Ryan Pearce (RP)</strong>
+        <strong>DOT RIN: B386</strong> • Enter your Individual PIN (Resets daily at Midnight)
       </p>
       <div style="text-align:left;">
         <label>Crew Access PIN</label>
@@ -55,7 +55,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.jpg?v=9.11" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.jpg?v=10.3" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>WEBER'S OPS</h1>
           <small>RIN B386 • Sign-Off: RP</small>
@@ -99,7 +99,10 @@
             <span>3. Hydro Stand</span><span class="nav-badge" id="navBadgeBench">0</span>
           </button>
           <button class="rail-btn" data-tab="logs" onclick="jumpToTab('logs')">
-            <span>4. Finish &amp; Shelf</span><span class="nav-badge amber" id="navBadgeValves">0</span>
+            <span>4. Finish &amp; Pickup</span><span class="nav-badge amber" id="navBadgeValves">0</span>
+          </button>
+          <button class="rail-btn" data-tab="search" onclick="jumpToTab('search')">
+            <span>5. Lookup</span><span class="nav-badge" id="navBadgeSearch">🔍</span>
           </button>
         </div>
 
@@ -132,9 +135,9 @@
                   <div style="font-size:0.8rem;color:#cbd5e1;margin-top:2px;" id="binderLastNote">Sheet numbers assign automatically in exact test completion order.</div>
                 </div>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-                  <button class="secondary" style="background:#fde68a;color:#111827;border:none;" onclick="advanceToFreshSheet()">📄 Start Fresh Next Sheet</button>
-                  <input type="number" id="customBinderInput" placeholder="Sheet #" style="width:90px;padding:6px 8px;font-size:0.82rem;font-weight:800;" />
-                  <button class="secondary" onclick="setCustomBinderSheet()">Set #</button>
+                  <button class="secondary" data-owner-only="1" style="background:#fde68a;color:#111827;border:none;" onclick="advanceToFreshSheet()">📄 Start Fresh Next Sheet</button>
+                  <input type="number" data-owner-only="1" id="customBinderInput" placeholder="Sheet #" style="width:90px;padding:6px 8px;font-size:0.82rem;font-weight:800;" />
+                  <button class="secondary" data-owner-only="1" onclick="setCustomBinderSheet()">Set #</button>
                 </div>
               </div>
               <div class="sheet-slots" id="binderSlotsGrid"></div>
@@ -209,7 +212,7 @@
           </div>
 
           <div class="split-2">
-            <div>
+                        <div>
               <div id="activeBatchBanner" class="active-batch-banner" hidden>
                 <span id="activeBatchText">Importing Batch</span>
                 <button class="secondary" style="padding:4px 9px;font-size:0.75rem;" onclick="clearActiveDropoffBatch()">Clear Active Batch</button>
@@ -218,57 +221,61 @@
               <div class="batch-lock-box" id="batchLockBox">
                 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
                   <div>
-                    <strong style="font-size:0.9rem;" id="batchLockStatusTxt">🔓 Single-Bottle Mode (Unlocks All Fields After Queue)</strong>
-                    <div style="font-size:0.77rem;color:var(--muted);">Lock for identical batches — specs stay locked while <strong>Serial #</strong> &amp; random <strong>Valve Tag #</strong> clear each bottle.</div>
+                    <strong style="font-size:0.88rem;" id="batchLockStatusTxt">🔓 Single-Bottle Mode</strong>
+                    <div style="font-size:0.75rem;color:var(--muted);">Lock for multi-bottle batches — keeps Customer &amp; Specs locked while Serial # &amp; Tag # clear each bottle.</div>
                   </div>
                   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                    <label class="inline-check" style="font-size:0.8rem;">
+                    <label class="inline-check" style="font-size:0.78rem;margin:0;">
                       <input type="checkbox" id="chkAutoIncTag" />
-                      <span>Seq +1 Tag (Off = Random)</span>
+                      <span>Seq +1 Tag</span>
                     </label>
                     <button type="button" class="secondary" id="btnBatchLock" onclick="toggleBatchLock()">🔒 Lock Batch Specs</button>
                   </div>
                 </div>
               </div>
 
-              <div class="card">
+              <!-- UNIFIED FAST BOTTLE PREP, CAMERA & QUEUE CARD -->
+              <div class="card" id="verifyFormCard">
                 <div class="card-hdr">
-                  <h3>Step A — 360° Guided Bottle &amp; HPA Scanner</h3>
-                  <span class="sub-badge">Rolodex Auto-Fill</span>
+                  <h3>Bottle Prep, AI Stamp Scan &amp; Queue</h3>
+                  <span class="sub-badge" id="sizeSourceBadge">Ready</span>
                 </div>
-                <div class="grid" style="margin-bottom:10px;">
+
+                <!-- Hidden mirror inputs keep 360° camera module 100% compatible without duplicate visible boxes -->
+                <input type="hidden" id="inCustomer" />
+                <input type="hidden" id="inPhone" />
+                <datalist id="customerSuggest"></datalist>
+
+                <!-- 1. Customer & Preset Quick-Fill -->
+                <div class="grid" style="margin-bottom:11px;">
                   <div>
-                    <label>Customer / Dept / Player</label>
-                    <input id="inCustomer" list="customerSuggest" placeholder="Customer or Fire Dept" oninput="prefillPhoneFromRolodex('inCustomer','inPhone','fCustomer','fPhone')" />
-                    <datalist id="customerSuggest"></datalist>
+                    <label>Customer / Fire Dept *</label>
+                    <input id="fCustomer" list="customerSuggest" placeholder="Start typing name or Fire Dept..."
+                      oninput="document.getElementById('inCustomer').value=this.value;prefillPhoneFromRolodex('fCustomer','fPhone','inCustomer','inPhone')" />
                   </div>
-                  <div><label>Customer Cell #</label><input id="inPhone" type="tel" placeholder="724-555-0199" /></div>
                   <div>
-                    <label>Service Mode</label>
-                    <select id="inMode">
-                      <option value="HYDRO_AND_VISUAL">Hydrostatic + Visual</option>
-                      <option value="VISUAL_ONLY">Visual Inspection Only</option>
-                    </select>
+                    <label>Contact Cell #</label>
+                    <input id="fPhone" type="tel" placeholder="724-555-0199" oninput="document.getElementById('inPhone').value=this.value" />
                   </div>
-                  <div>
-                    <label>Cylinder / Paintball HPA Preset</label>
+                  <div style="grid-column:1/-1;">
+                    <label>Cylinder / Paintball HPA Preset (1-Tap Spec Auto-Fill)</label>
                     <select id="cgaPreset" onchange="applyPreset()">
-                      <option value="">-- Auto-Detect or Pick Size --</option>
+                      <option value="">-- Pick Common Tank Preset or Scan Below --</option>
                     </select>
                   </div>
                 </div>
 
-                <label class="inline-check" style="margin-bottom:11px;">
-                  <input type="checkbox" id="chkAutoQueue" />
-                  <span>⚡ <strong>Fast Batch Mode:</strong> Auto-queue when stamps scan cleanly &amp; in-date</span>
-                </label>
-
+                <!-- 2. Compact 360° Camera & Photo Upload Strip -->
                 <canvas id="camCanvas" hidden></canvas>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                  <button class="scan-trigger" id="btnOpenCam" style="flex:2;" onclick="openLiveCamera()">📷 Open 360° Guided Camera</button>
-                  <label class="secondary upload-tile" style="flex:1;padding:12px;">
-                    🖼 Upload 1–6 Photos
+                <div class="scan-bar-compact">
+                  <button type="button" class="scan-trigger" id="btnOpenCam" style="width:auto;flex:1.4;padding:9px 14px;font-size:0.86rem;" onclick="openLiveCamera()">📷 Scan Stamps (360° Cam)</button>
+                  <label class="secondary upload-tile" style="flex:1;padding:8px 11px;margin:0;background:#fff;justify-content:center;">
+                    🖼 Upload Photo(s)
                     <input type="file" accept="image/*" multiple hidden onchange="uploadSavedAngles(this)" />
+                  </label>
+                  <label class="inline-check" style="font-size:0.78rem;margin:0;">
+                    <input type="checkbox" id="chkAutoQueue" />
+                    <span><strong>Auto-Queue</strong> Clean Scans</span>
                   </label>
                 </div>
 
@@ -307,19 +314,12 @@
                     <button class="secondary" onclick="closeLiveCamera()">✖ Close</button>
                   </div>
                 </div>
-                <div id="scanFeedback" class="notice" style="margin-top:10px;" hidden></div>
-              </div>
 
-              <!-- STEP B: VERIFY FORM -->
-              <div class="card" id="verifyFormCard">
-                <div class="card-hdr">
-                  <h3>Step B — Verify Stamps, Priority &amp; Zone</h3>
-                  <span class="sub-badge" id="sizeSourceBadge">Ready</span>
-                </div>
+                <div id="scanFeedback" class="notice" style="margin-top:10px;" hidden></div>
 
                 <div id="lastScanGalleryWrap" hidden>
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                    <small style="font-weight:800;color:var(--muted);">🔍 TAP PHOTO TO ZOOM STAMPS:</small>
+                    <small style="font-weight:800;color:var(--muted);">Tap Photo to Zoom Stamps:</small>
                     <button class="secondary" style="padding:2px 8px;font-size:0.72rem;" onclick="clearReferenceGallery()">Hide</button>
                   </div>
                   <div id="lastScanGallery" class="ref-photo-strip"></div>
@@ -327,39 +327,58 @@
 
                 <div id="compositeAlertBox" class="notice bad" hidden></div>
 
+                <!-- 3. Everyday Per-Bottle Stamps (Clean & Fast) -->
                 <div class="grid" id="intakeFieldsGrid">
                   <div><label>Serial # *</label><input id="fSerial" placeholder="e.g. GTS-0291277" onkeydown="if(event.key==='Enter')document.getElementById('fValveTag').focus()" /></div>
-                  <div><label>🏷️ Valve / Reg Tag #</label><input id="fValveTag" placeholder="Any tag # (e.g. 47)" onkeydown="if(event.key==='Enter')submitIntake(false)" /></div>
-                  <div><label>Customer / Owner *</label><input id="fCustomer" list="customerSuggest" placeholder="Dept or Name" oninput="prefillPhoneFromRolodex('fCustomer','fPhone')" /></div>
-                  <div><label>Cell Phone</label><input id="fPhone" type="tel" placeholder="724-555-0199" /></div>
-                  <div><label>DOT / Permit Spec *</label><input id="fSpec" placeholder="3AA / 3AL / SP14387" oninput="autoMatchSpecDimensions()" /></div>
-                  <div><label>Service PSI *</label><input type="number" id="fSvcPsi" oninput="autoMatchSpecDimensions()" /></div>
-                  <div><label>Actual Test PSI</label><input type="number" id="fTestPsi" /></div>
+                  <div><label>Valve / Reg Tag #</label><input id="fValveTag" placeholder="Tag # (e.g. 47)" onkeydown="if(event.key==='Enter')submitIntake(false)" /></div>
                   <div><label>MFG Date (MM-YY)</label><input id="fMfgDate" placeholder="MM-YY" oninput="checkIntakeLifespanLive()" /></div>
-                  <div><label>MFG / Brand</label><input id="fMfg" placeholder="LUXFER / NINJA / WK" /></div>
-                  <div><label>Gas Service</label><input id="fGas" value="AIR" /></div>
-                  <div><label>Outside Dia (in)</label><input id="fDia" placeholder="e.g. 4.5 or 7" oninput="checkIntakeLifespanLive()" /></div>
-                  <div><label>Length (in)</label><input id="fLen" placeholder="e.g. 9.3 or 32 1/2" oninput="checkIntakeLifespanLive()" /></div>
-                  <div><label>REE Limit (Composite)</label><input type="number" step="0.1" id="fRee" placeholder="Blank for Steel/Alum" /></div>
+                  <div><label>DOT / Permit Spec *</label><input id="fSpec" placeholder="3AA / 3AL / SP10915" oninput="autoMatchSpecDimensions();updateAdvSpecsSummary()" /></div>
+                  <div><label>Service PSI *</label><input type="number" id="fSvcPsi" placeholder="2015 / 3000 / 4500" oninput="autoMatchSpecDimensions();updateAdvSpecsSummary()" /></div>
+                  <div><label>Target Test PSI</label><input type="number" id="fTestPsi" placeholder="Auto 5/3×" /></div>
                   <div>
-                    <label>Priority / Rush</label>
+                    <label>Turnaround Priority</label>
                     <select id="fPriority">
                       <option value="STANDARD">Standard</option>
-                      <option value="RUSH">🔥 Paid Rush (Fee)</option>
-                      <option value="HIGH">⚡ High Priority</option>
-                    </select>
-                  </div>
-                  <div><label>Promised Due Date</label><input type="date" id="fPromisedDate" /></div>
-                  <div>
-                    <label>Holding Zone</label>
-                    <select id="fHoldingZone">
-                      <option value="ZONE_C_READY_RACK">Test Jackets &amp; Pump Desk</option>
-                      <option value="ZONE_B_DEVALVE">Vice &amp; Stamp/Valve Bench</option>
-                      <option value="ZONE_A_BACKROOM">24/7 Back Room (Loading Dock)</option>
+                      <option value="RUSH">Paid Rush (Fee)</option>
+                      <option value="HIGH">High Priority</option>
                     </select>
                   </div>
                 </div>
-                <div style="display:flex;gap:8px;margin-top:12px;">
+
+                <!-- 4. Collapsible Secondary Specs & Overrides -->
+                <details class="adv-specs-drawer" id="advSpecsDrawer">
+                  <summary>
+                    <span>More Specs &amp; Overrides (Brand, OD × Length, Gas, REE, Mode)</span>
+                    <span class="sub-badge" id="advSpecsSummary">AIR • Hydro + Visual</span>
+                  </summary>
+                  <div class="adv-specs-body">
+                    <div class="grid">
+                      <div><label>MFG / Brand</label><input id="fMfg" placeholder="LUXFER / NINJA / WK" oninput="updateAdvSpecsSummary()" /></div>
+                      <div><label>Gas Service</label><input id="fGas" value="AIR" oninput="updateAdvSpecsSummary()" /></div>
+                      <div><label>Outside Dia (in)</label><input id="fDia" placeholder="e.g. 6.8" oninput="checkIntakeLifespanLive();updateAdvSpecsSummary()" /></div>
+                      <div><label>Length (in)</label><input id="fLen" placeholder="e.g. 21.5" oninput="checkIntakeLifespanLive();updateAdvSpecsSummary()" /></div>
+                      <div><label>REE Limit (Composite)</label><input type="number" step="0.1" id="fRee" placeholder="Blank for Steel/Alum" /></div>
+                      <div>
+                        <label>Service Mode</label>
+                        <select id="inMode" onchange="updateAdvSpecsSummary()">
+                          <option value="HYDRO_AND_VISUAL">Hydrostatic + Visual</option>
+                          <option value="VISUAL_ONLY">Visual Inspection Only</option>
+                        </select>
+                      </div>
+                      <div><label>Promised Due Date</label><input type="date" id="fPromisedDate" /></div>
+                      <div>
+                        <label>Shop Holding Area</label>
+                        <select id="fHoldingZone">
+                          <option value="ZONE_C_READY_RACK">Test Jackets &amp; Pump Desk</option>
+                          <option value="ZONE_B_DEVALVE">Vice &amp; Stamp/Valve Bench</option>
+                          <option value="ZONE_A_BACKROOM">24/7 Back Room (Loading Dock)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </details>
+
+                <div style="display:flex;gap:8px;margin-top:13px;">
                   <button class="primary" id="btnVerifyQueue" style="flex:3;margin-top:0;" onclick="submitIntake(false)">✓ Queue Bottle &amp; Next</button>
                   <button class="secondary" style="flex:1;" onclick="clearIntakeForm(true)">Reset All</button>
                 </div>
@@ -442,11 +461,25 @@
             </div>
           </div>
 
+                  </section>
+
+        <!-- STATION 5: MASTER CYLINDER LOOKUP & HISTORY -->
+        <section id="tab-search" hidden>
           <div class="card">
-            <div class="card-hdr"><h3>Master Cylinder Lookup</h3></div>
+            <div class="card-hdr">
+              <h3>Master Cylinder Lookup &amp; Serial History</h3>
+              <span class="sub-badge" id="lookupResultBadge">Search</span>
+            </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-              <input id="searchBox" style="flex:3;" placeholder="Customer, serial #, YYYY-MM-DD, or active tag #..." oninput="runSearch(false)" />
-              <button class="secondary" style="flex:1;" onclick="runSearch(true)">🏷️ Active Tag #</button>
+              <input id="searchBox" style="flex:3;" placeholder="Search customer, serial #, DOT spec, YYYY-MM-DD, or tag #..." oninput="runSearch(false)" />
+              <button class="secondary" onclick="document.getElementById('searchBox').value='';runSearch(false)">Clear</button>
+            </div>
+            <div class="pill-selector-bar" id="lookupQuickBar">
+              <button type="button" class="tap-pill active" data-qmode="ALL" onclick="setLookupFilter('ALL')">All Recent</button>
+              <button type="button" class="tap-pill" data-qmode="QUEUED" onclick="setLookupFilter('QUEUED')">Queued</button>
+              <button type="button" class="tap-pill" data-qmode="POST" onclick="setLookupFilter('POST')">In Post-Test</button>
+              <button type="button" class="tap-pill" data-qmode="TAGS" onclick="setLookupFilter('TAGS')">Active Valve Tags</button>
+              <button type="button" class="tap-pill" data-qmode="CONDEMN" onclick="setLookupFilter('CONDEMN')">Condemned (Code D)</button>
             </div>
             <div id="searchResultsList"></div>
           </div>
@@ -465,6 +498,9 @@
       </button>
       <button class="bnav-btn" data-tab="logs" onclick="jumpToTab('logs')">
         <span class="ico">🔨</span><span>4. Finish</span><span class="bnav-dot" id="mobBadgeValves" hidden>0</span>
+      </button>
+      <button class="bnav-btn" data-tab="search" onclick="jumpToTab('search')">
+        <span class="ico">🔍</span><span>5. Lookup</span>
       </button>
     </nav>
   </div>
@@ -669,10 +705,10 @@
     </div>
   </div>
 
-  <script src="/static/ops-camera.js?v=9.11"></script>
-  <script src="/static/ops-app.js?v=9.11"></script>
-  <script src="/static/day-flow.js?v=9.11"></script>
-  <script src="/static/theme-engine.js?v=9.11"></script>
-  <script src="/static/help-bot.js?v=9.11"></script>
+  <script src="/static/ops-camera.js?v=10.3"></script>
+  <script src="/static/ops-app.js?v=10.3"></script>
+  <script src="/static/day-flow.js?v=10.3"></script>
+  <script src="/static/theme-engine.js?v=10.3"></script>
+  <script src="/static/help-bot.js?v=10.3"></script>
 </body>
 </html>

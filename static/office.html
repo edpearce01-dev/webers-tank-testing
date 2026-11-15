@@ -7,14 +7,14 @@
   <link rel="manifest" href="/manifest.json" />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/ops.css?v=9.11" />
+  <link rel="stylesheet" href="/static/ops.css?v=10.3" />
   <title>Weber's Tank Testing — Office, Rolodex, Printouts &amp; Supplies | RIN B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.jpg?v=9.11" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
+      <img src="/static/images/logo-crest.jpg?v=10.3" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Office &amp; Print Center</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter your Individual PIN (Access resets daily at Midnight)</p>
       <div style="text-align:left;">
@@ -32,7 +32,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.jpg?v=9.11" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.jpg?v=10.3" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>OFFICE &amp; PRINT</h1>
           <small>RIN B386 • Billing, Rolodex &amp; Supply</small>
@@ -70,6 +70,7 @@
           <button class="rail-btn" data-tab="dispatch" onclick="switchOfficeTab('dispatch')">
             <span>🚚 Dispatch: Truck Run</span><span class="nav-badge amber" id="navBadgeDispatch">Truck</span>
           </button>
+          <div class="rail-section-lbl" style="margin-top:6px;">Billing &amp; Accounts</div>
           <button class="rail-btn" data-tab="invoice" onclick="switchOfficeTab('invoice')">
             <span>💲 Create Invoice</span><span class="nav-badge amber" id="navBadgeUnbilled">0</span>
           </button>
@@ -79,21 +80,21 @@
           <button class="rail-btn" data-tab="rolodex" onclick="switchOfficeTab('rolodex')">
             <span>📇 Customer Rolodex</span><span class="nav-badge" id="navBadgeRolo">0</span>
           </button>
+          <div class="rail-section-lbl" style="margin-top:6px;">Print &amp; Shop Stock</div>
           <button class="rail-btn" data-tab="print" onclick="switchOfficeTab('print')">
             <span>🖨️ DOT &amp; Claim PDFs</span><span class="nav-badge green">PDF</span>
           </button>
           <button class="rail-btn" data-tab="supplies" onclick="switchOfficeTab('supplies')">
             <span>📦 Reorder Supplies</span><span class="nav-badge" id="navBadgeSupplies">✓</span>
           </button>
-          <button class="rail-btn" data-tab="rates" onclick="switchOfficeTab('rates')">
+          <button class="rail-btn" data-owner-only="1" data-tab="rates" onclick="switchOfficeTab('rates')">
             <span>⚙️ Service Rates</span><span class="nav-badge">$</span>
           </button>
         </div>
 
         <div class="rail-footer">
-          <a class="secondary" href="/ops" style="width:100%;">🔧 Back to Shop Ops</a>
-          <a class="secondary" href="/schedule" style="width:100%;">📅 Month Calendar</a>
           <a class="secondary" href="/api/customers/export.csv" style="width:100%;">📥 Export Mailing CSV</a>
+          <button class="secondary" onclick="window.openAccountSwitchDrawer&&window.openAccountSwitchDrawer()" style="width:100%;">Account &amp; Switch PIN ☰</button>
         </div>
       </aside>
 
@@ -163,7 +164,7 @@
                     <label>Total Bottle Count *</label>
                     <input type="number" id="qsCount" min="1" max="250" value="1" oninput="fetchQsQuote()" />
                   </div>
-                  <div style="grid-column:span 2;">
+                  <div class="span-2-desktop">
                     <label>Tank Mix / Summary</label>
                     <input id="qsSummary" placeholder="e.g. 6x 4500# SCBA" oninput="updateQsScript()" />
                   </div>
@@ -299,7 +300,7 @@
                     <label>Total Cylinder Count *</label>
                     <input type="number" id="tdCount" min="1" max="250" value="6" oninput="fetchTdQuote()" />
                   </div>
-                  <div style="grid-column:span 2;">
+                  <div class="span-2-desktop">
                     <label>Tank Mix / Bay Door / Gate Notes</label>
                     <input id="tdSummary" placeholder="e.g. 12x 4500# SCBA • Rear Engine Bay" oninput="updateTdScript()" />
                   </div>
@@ -400,19 +401,54 @@
               <span>Include all unbilled completed cylinders across any test date</span>
             </label>
 
+            <div class="inv-table-hdr">
+              <div>Service / Cylinder Description</div>
+              <div>Qty</div>
+              <div>Unit Price ($)</div>
+              <div>Line Total</div>
+              <div></div>
+            </div>
             <div id="draftInvoiceList"></div>
 
-            <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;">
-              <button class="secondary" onclick="addCustomInvoiceLine('INTERNAL_CLEAN', 'Internal Cylinder Tumble / Cleaning')">+ Add Tumble / Clean</button>
-              <button class="secondary" onclick="addCustomInvoiceLine('NECK_ORING', 'Neck / Valve O-Ring Replacement')">+ Add O-Ring</button>
-              <button class="secondary" onclick="addCustomInvoiceLine('VALVE_RELIEF', 'Burst Disc / Relief Assembly')">+ Add Burst Disc</button>
-              <button class="secondary" onclick="openSelectedClaimSlip()">🏷️ Print Back Room Claim Slip</button>
-              <button class="secondary" onclick="sendCustomerPickupSmsFromBilling()">📲 Text Ready + Total</button>
+            <!-- SMART SERVICE, PART & CUSTOM FEE PICKER -->
+            <div class="inv-add-box">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+                <label style="margin:0;">➕ Tap to Add Service or Part to Invoice</label>
+                <button type="button" class="secondary" data-owner-only="1" style="padding:3px 9px;font-size:0.73rem;" onclick="openQuickRatesModal()">⚙ Quick-Edit Default Prices</button>
+              </div>
+              <div class="inv-rate-chips" id="invoiceRateChipsBar"></div>
+
+              <div class="inv-custom-row">
+                <div>
+                  <label>Custom Item / Truck Fee / Discount</label>
+                  <input id="customLineDesc" placeholder="e.g. Station Truck Pickup & Delivery, New CGA-540 Valve..." onkeydown="if(event.key==='Enter')appendManualInvoiceItem()" />
+                </div>
+                <div>
+                  <label>Qty</label>
+                  <input type="number" id="customLineQty" value="1" step="1" />
+                </div>
+                <div>
+                  <label>Unit Price ($)</label>
+                  <input type="number" id="customLinePrice" step="0.01" placeholder="0.00" onkeydown="if(event.key==='Enter')appendManualInvoiceItem()" />
+                </div>
+                <button type="button" class="secondary" style="background:var(--green);color:#fff;border-color:var(--forest);padding:10px 14px;font-weight:800;" onclick="appendManualInvoiceItem()">+ Add Line</button>
+              </div>
+            </div>
+
+            <div class="inv-totals-bar" id="invTotalsBar">
+              <span>Subtotal: <strong id="invSubTxt">$0.00</strong></span>
+              <span>PA Tax: <strong id="invTaxTxt">$0.00</strong></span>
+              <span style="font-size:0.98rem;">Total Due: <strong id="invGrandTxt">$0.00</strong></span>
             </div>
 
             <label>Invoice Footer Notes / PO # (Optional)</label>
             <input id="billNotes" placeholder="PO #, check #, burst disc note, thank you..." />
-            <button class="primary" onclick="submitInvoice()">💾 Save &amp; Open Printable Invoice PDF</button>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center;">
+              <button class="primary" style="flex:2;min-width:230px;margin:0;" onclick="submitInvoice()">💾 Save &amp; Open Printable Invoice PDF</button>
+              <button type="button" class="secondary" style="padding:11px 14px;" onclick="openSelectedClaimSlip()">🏷️ Print Pickup Slip</button>
+              <button type="button" class="secondary" style="padding:11px 14px;" onclick="sendCustomerPickupSmsFromBilling()">📲 Text Ready + Total</button>
+            </div>
           </div>
         </section>
 
@@ -725,13 +761,15 @@
     }
 
     function jumpOfficeToday() {
+      sessionStorage.removeItem('webers_working_date');
       document.getElementById('globalDate').value = STATE.today || '';
       changeOfficeDate();
     }
 
     async function bootOffice() {
       const params = new URLSearchParams(location.search);
-      if (params.get('date')) document.getElementById('globalDate').value = params.get('date');
+      const initD = params.get('date') || sessionStorage.getItem('webers_working_date') || '';
+      if (initD) document.getElementById('globalDate').value = initD;
       const tabParam = params.get('tab') || params.get('sec');
       if (tabParam) {
         const mapLegacy = { billing: 'invoice', print: 'print', rates: 'rates' };
@@ -751,6 +789,7 @@
       }
       document.getElementById('loginScreen').hidden = true;
       document.getElementById('appShell').hidden = false;
+      if (window.syncAuthAndRoleUI) await window.syncAuthAndRoleUI(auth.user, false);
       await loadOfficeState();
       await fetchQsQuote();
       await fetchTdQuote();
@@ -764,7 +803,9 @@
       });
       if (!res.ok) { document.getElementById('loginError').hidden = false; return; }
       document.getElementById('loginError').hidden = true;
-      bootOffice();
+      const d = await res.json();
+      await bootOffice();
+      if (window.syncAuthAndRoleUI) window.syncAuthAndRoleUI(d.user, true);
     }
 
     async function logoutCrew() {
@@ -774,6 +815,7 @@
 
     function changeOfficeDate() {
       const d = document.getElementById('globalDate').value;
+      if (d) sessionStorage.setItem('webers_working_date', d);
       document.getElementById('billDate').value = d;
       loadOfficeState();
     }
@@ -866,6 +908,7 @@
       }
       const allZero = (STATE.pricing_rates || []).length > 0 && STATE.pricing_rates.every(r => !(Number(r.unit_price) > 0));
       document.getElementById('zeroRatesHint').hidden = !allZero;
+      renderInvoiceRateChips();
       renderInvoicesList();
       renderRolodexDirectory();
       renderRecallsList();
@@ -1361,6 +1404,90 @@
     }
 
     // --- TAB 1: BILLING + AUTO REVALVE ADD-ONS + TAX-EXEMPT ---
+
+    const SHORT_RATE_LABELS = {
+      HYDRO_STD: 'Std Steel/Alum Hydro',
+      HYDRO_SCBA: 'Carbon SCBA Hydro',
+      HYDRO_PAINTBALL: 'Paintball HPA Hydro',
+      VISUAL_ONLY: 'Visual Insp Only',
+      RUSH_FEE: 'Rush Service Fee',
+      NECK_ORING: 'Neck O-Ring',
+      VALVE_RELIEF: 'Burst Disc / Relief',
+      INTERNAL_CLEAN: 'Internal Tumble/Clean',
+    };
+
+    function renderInvoiceRateChips() {
+      const bar = document.getElementById('invoiceRateChipsBar');
+      if (!bar) return;
+      const rates = STATE.pricing_rates || [];
+      bar.innerHTML = rates.map(r => {
+        const shortLbl = SHORT_RATE_LABELS[r.code] || r.description || r.code;
+        const safeDesc = (r.description || shortLbl).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const priceStr = `$${Number(r.unit_price || 0).toFixed(2)}`;
+        return `<button type="button" class="inv-rate-chip" onclick="addCustomInvoiceLine('${escHtml(r.code)}', '${safeDesc}')">
+          <span>+ ${escHtml(shortLbl)}</span><strong>${priceStr}</strong>
+        </button>`;
+      }).join('');
+    }
+
+    function appendManualInvoiceItem() {
+      const descEl = document.getElementById('customLineDesc');
+      const qtyEl = document.getElementById('customLineQty');
+      const prEl = document.getElementById('customLinePrice');
+      const desc = (descEl?.value || '').trim();
+      if (!desc) { alert('Enter a description for the custom line item first.'); descEl?.focus(); return; }
+      const qty = parseFloat(qtyEl?.value || '1') || 1;
+      const price = parseFloat(prEl?.value || '0') || 0;
+      DRAFT_ITEMS.push({ record_id: null, description: desc, qty, unit_price: price });
+      descEl.value = '';
+      qtyEl.value = '1';
+      prEl.value = '';
+      renderDraftInvoice();
+      descEl.focus();
+    }
+
+    function openQuickRatesModal() {
+      let m = document.getElementById('quickRatesModal');
+      if (!m) {
+        m = document.createElement('div'); m.id = 'quickRatesModal'; m.className = 'modal-bg';
+        m.onclick = e => { if (e.target === m) m.hidden = true; };
+        document.body.appendChild(m);
+      }
+      m.hidden = false;
+      const rates = STATE.pricing_rates || [];
+      m.innerHTML = `
+        <div class="modal" style="max-width:580px;">
+          <div class="card-hdr">
+            <div><h3>⚙ Quick-Set Default Service Prices</h3><small style="color:var(--muted);">Saves to Master Rates &amp; refreshes current draft invoice automatically</small></div>
+            <button type="button" class="secondary" onclick="document.getElementById('quickRatesModal').hidden=true">✖ Close</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+            ${rates.map((r, idx) => `
+              <div style="display:grid;grid-template-columns:1fr 120px;gap:10px;align-items:center;">
+                <div style="font-size:0.84rem;font-weight:700;">${escHtml(r.description || r.code)}</div>
+                <input type="number" step="0.01" id="qrPrice_${idx}" class="mono" value="${Number(r.unit_price || 0)}" />
+              </div>`).join('')}
+          </div>
+          <button type="button" class="primary" onclick="saveQuickRatesAndRefreshDraft()">💾 Save Prices &amp; Refresh Current Invoice</button>
+        </div>`;
+    }
+
+    async function saveQuickRatesAndRefreshDraft() {
+      const payload = (STATE.pricing_rates || []).map((r, idx) => ({
+        code: r.code,
+        description: r.description,
+        unit_price: parseFloat(document.getElementById('qrPrice_' + idx)?.value || '0') || 0,
+        sort_order: r.sort_order || (idx + 1) * 10,
+      }));
+      const res = await fetch('/api/pricing', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+      });
+      if (!res.ok) { alert((await res.json()).detail || 'Could not save rates.'); return; }
+      document.getElementById('quickRatesModal').hidden = true;
+      await loadOfficeState();
+      await loadUnbilledItems();
+    }
+
     function selectBillingCustomer(cust) {
       document.getElementById('billCustomer').value = cust;
       loadUnbilledItems();
@@ -1461,8 +1588,14 @@
         if (cell) cell.innerHTML = `<strong>$${lt.toFixed(2)}</strong>`;
       });
       const taxPct = parseFloat(document.getElementById('billTax').value || '0');
-      const tot = sub + sub * (taxPct / 100);
+      const taxAmt = sub * (taxPct / 100);
+      const tot = sub + taxAmt;
       document.getElementById('draftTotalLabel').textContent = `Draft Total: $${tot.toFixed(2)}`;
+      if (document.getElementById('invSubTxt')) {
+        document.getElementById('invSubTxt').textContent = `$${sub.toFixed(2)}`;
+        document.getElementById('invTaxTxt').textContent = `$${taxAmt.toFixed(2)}`;
+        document.getElementById('invGrandTxt').textContent = `$${tot.toFixed(2)}`;
+      }
       return tot;
     }
 
@@ -1481,7 +1614,7 @@
           tax_rate: parseFloat(document.getElementById('billTax').value || '0'),
           status: document.getElementById('billStatus').value,
           payment_method: document.getElementById('billPayMethod').value,
-          created_by: localStorage.getItem('webers_active_crew') || 'RP',
+          created_by: (window.CURRENT_USER && window.CURRENT_USER.initials) || localStorage.getItem('webers_active_crew') || 'RP',
           notes: document.getElementById('billNotes').value,
           items: DRAFT_ITEMS,
         }),
@@ -1535,7 +1668,7 @@
             <div class="rec-actions">
               <a class="secondary" href="/api/pdf/invoice/${inv.id}" target="_blank">📄 PDF</a>
               <button class="secondary" onclick="sendPickupSms('${inv.customer_name.replace(/'/g, "\\'")}', '${escHtml(inv.customer_phone || '')}', 1, '${inv.invoice_no}: $${Number(inv.total_amount).toFixed(2)}')">📲 Text</button>
-              ${inv.status !== 'PAID' ? `<button class="secondary" style="background:#dcfce7;color:#166534;" onclick="markInvoicePaid(${inv.id})">✓ Mark Paid</button><button class="secondary" style="color:#b91c1c;" onclick="voidInvoice(${inv.id}, '${inv.invoice_no}')">🗑 Void &amp; Re-Bill</button>` : ''}
+              ${inv.status !== 'PAID' ? `<button class="secondary" style="background:#dcfce7;color:#166534;" onclick="markInvoicePaid(${inv.id})">✓ Mark Paid</button><button class="secondary" data-owner-only="1" style="color:#b91c1c;" onclick="voidInvoice(${inv.id}, '${inv.invoice_no}')">🗑 Void &amp; Re-Bill</button>` : ''}
             </div>
           </div>`).join('')
         : '<div style="color:var(--muted);font-size:0.86rem;">No matching invoices found.</div>';
@@ -1890,8 +2023,8 @@
 
     bootOffice();
   </script>
-  <script src="/static/day-flow.js?v=9.11"></script>
-  <script src="/static/theme-engine.js?v=9.11"></script>
-  <script src="/static/help-bot.js?v=9.11"></script>
+  <script src="/static/day-flow.js?v=10.3"></script>
+  <script src="/static/theme-engine.js?v=10.3"></script>
+  <script src="/static/help-bot.js?v=10.3"></script>
 </body>
 </html>

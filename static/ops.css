@@ -721,3 +721,367 @@ input[id^="stepIn_"] {
   background: #fef3c7;
   color: #92400e;
 }
+
+/* =========================================================================
+   v10.0 PART 1: ROLE LOCKOUTS, IDENTITY PILL & HEADER COLLISION FIX
+   ========================================================================= */
+body[data-role="CREW"] [data-owner-only="1"] {
+  display: none !important;
+}
+body[data-role="OWNER"] [data-admin-only="1"],
+body[data-role="CREW"] [data-admin-only="1"] {
+  display: none !important;
+}
+
+/* Fix Brand Title Colliding Into Workspace Switcher */
+.app-topbar {
+  gap: 10px !important;
+}
+.top-brand {
+  flex: 0 0 auto !important;
+  margin-right: 4px;
+}
+.ws-switcher {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* Unified Identity & Role Pill in Top-Right */
+.role-user-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border-radius: 8px; font-weight: 800; font-size: 0.76rem;
+  cursor: pointer; white-space: nowrap; border: 1.5px solid rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.14); color: #ffffff;
+  font-family: var(--font-mono) !important;
+}
+.role-user-pill.role-OWNER {
+  background: rgba(251, 191, 36, 0.22); border-color: #fbbf24; color: #fef3c7;
+}
+.role-user-pill.role-SYSTEM_ADMIN {
+  background: rgba(56, 189, 248, 0.22); border-color: #38bdf8; color: #e0f2fe;
+}
+.role-user-pill.role-CREW {
+  background: rgba(16, 185, 129, 0.20); border-color: #34d399; color: #d1fae5;
+}
+
+/* Auth / Switch-PIN Confirmation Toast */
+.auth-toast {
+  position: fixed; top: 64px; right: 16px; z-index: 98;
+  background: #0c261b; color: #ffffff; border: 1.5px solid #fbbf24;
+  border-radius: 10px; padding: 10px 15px; font-size: 0.83rem; font-weight: 700;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.28);
+  opacity: 0; transform: translateY(-10px); pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.auth-toast.show { opacity: 1; transform: translateY(0); }
+
+.crew-cal-lock-box {
+  background: #fffbeb; border: 1.5px solid #f59e0b; border-radius: 11px;
+  padding: 15px 16px; margin-bottom: 14px;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+
+/* =========================================================================
+   v10.0 PART 2: ALL-DEVICE RESPONSIVE ENGINE (PHONES, IPADS, LAPTOPS, DESKTOPS)
+   ========================================================================= */
+html, body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+.ops-workspace, .ops-layout, .split-2 > *, .split-cal > *, .grid > *, .card {
+  min-width: 0;
+}
+.span-2-desktop {
+  grid-column: span 2;
+}
+@media (max-width: 640px) {
+  .span-2-desktop { grid-column: 1 / -1 !important; }
+}
+
+/* 1. Fix Laptop Header Overlap (WALL SCHEDULE / OFFICE & PRINT colliding into Shop Ops) */
+.app-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px !important;
+}
+.top-brand {
+  flex: 0 0 auto !important;
+  max-width: 220px;
+  overflow: hidden;
+}
+.top-brand-txt {
+  min-width: 0;
+  overflow: hidden;
+}
+.top-brand-txt h1, .top-brand-txt small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Medium Laptops & Landscape Tablets (880px – 1380px): Keep 1 Sleek Row With Zero Overlap */
+@media (min-width: 1025px) and (max-width: 1380px) {
+  .top-brand-txt small { display: none !important; }
+  .top-brand { max-width: 165px; }
+  .ws-link { padding: 5px 8px; font-size: 0.74rem; }
+  .j-dot span.full-lbl { display: none; }
+  .role-user-pill { padding: 5px 8px; font-size: 0.72rem; }
+}
+
+/* Stack Calendar Inspector Below Month Grid Until 1180px so 7-Col Month Grid Never Crushes */
+@media (min-width: 880px) and (max-width: 1180px) {
+  .ops-layout { grid-template-columns: 202px minmax(0, 1fr); }
+  .split-cal { display: block !important; }
+}
+
+/* Tablets & Phones (<= 1024px): Clean Multi-Row Structured Header (Never Clips or Scrolls Sideways) */
+@media (max-width: 1024px) {
+  .app-topbar {
+    height: auto !important;
+    flex-wrap: wrap !important;
+    padding: 8px 10px !important;
+    gap: 6px !important;
+  }
+  .top-brand {
+    order: 1;
+    max-width: 48vw;
+  }
+  .top-controls {
+    order: 2;
+    margin-left: auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 4px;
+  }
+  .ws-switcher {
+    order: 3;
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 3px;
+    margin-top: 2px;
+  }
+  .ws-link {
+    justify-content: center;
+    padding: 6px 4px;
+    font-size: 0.73rem;
+  }
+}
+
+/* Touch Devices & Phones (<= 768px): 16px iOS Zoom-Proof Inputs + Safe Areas + Thumb Layouts */
+@media (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]):not(.top-date),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  .ops-workspace {
+    padding: 10px 10px calc(82px + env(safe-area-inset-bottom, 12px)) !important;
+  }
+  .card {
+    padding: 13px 12px;
+    border-radius: 10px;
+    margin-bottom: 11px;
+  }
+  .modal-bg {
+    padding: 8px;
+    align-items: flex-end;
+  }
+  .modal {
+    max-height: 90dvh;
+    padding: 16px 14px calc(18px + env(safe-area-inset-bottom, 8px));
+    border-radius: 14px 14px 10px 10px;
+  }
+  .drawer-panel {
+    width: min(330px, 92vw);
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 12px));
+  }
+  .help-panel {
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    top: auto !important;
+    bottom: calc(64px + env(safe-area-inset-bottom, 6px)) !important;
+    height: min(460px, 72dvh) !important;
+  }
+}
+
+/* Smartphones — iPhone / Pixel / Samsung (<= 640px) */
+@media (max-width: 640px) {
+  /* Clean 3-Tier Compact Phone Header */
+  .top-brand img { width: 28px; height: 28px; }
+  .top-brand-txt h1 { font-size: 0.96rem; }
+  .top-brand-txt small { display: none !important; }
+  #opsThemeToggleBtn { display: none !important; }
+
+  .top-controls {
+    width: 100%;
+    order: 3;
+    justify-content: space-between;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .ws-switcher { order: 2; }
+  .ws-link .ws-svg { display: none; }
+  .ws-link { font-size: 0.71rem; padding: 6px 2px; }
+
+  .date-stepper { flex: 1 1 auto; justify-content: space-between; max-width: 215px; }
+  .top-date { font-size: 0.73rem !important; padding: 4px 3px !important; max-width: 106px; }
+  .role-user-pill { padding: 5px 8px; font-size: 0.71rem; }
+
+  /* Stack Row Actions & Binder Controls Cleanly for Thumbs */
+  .grid { grid-template-columns: 1fr; gap: 9px; }
+  .rec-item { flex-direction: column; align-items: stretch; gap: 7px; padding: 10px 2px; }
+  .rec-actions { width: 100%; justify-content: flex-start; }
+  .rec-actions .secondary, .rec-actions button { flex: 1 1 auto; min-height: 34px; }
+
+  .batch-finish-hdr { flex-direction: column; align-items: stretch; gap: 8px; }
+  .sheet-slots { grid-template-columns: repeat(6, 1fr); }
+  .ladder-row { grid-template-columns: 1fr; gap: 6px; padding: 10px; }
+  .huddle-kpis { grid-template-columns: repeat(2, 1fr); }
+
+  /* Fit All 7 Days (Sun-Sat) of Month Calendar Cleanly on Phone Screen Without Sideways Scroll! */
+  .month-dow-grid,
+  .month-days-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+    gap: 3px !important;
+  }
+  .month-dow-cell { font-size: 0.62rem; padding: 3px 0; }
+  .mday-cell {
+    min-height: 66px;
+    padding: 4px 3px;
+    border-radius: 7px;
+  }
+  .mday-top { font-size: 0.72rem; flex-direction: column; align-items: flex-start; gap: 1px; }
+  .mday-job-pill { font-size: 0.56rem; padding: 1px 3px; }
+}
+
+/* =========================================================================
+   v10.0 PART 3: STREAMLINED INTAKE DRAWER & PRO INVOICE ITEM BUILDER
+   ========================================================================= */
+.adv-specs-drawer {
+  margin-top: 11px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #f8fafc;
+  overflow: hidden;
+}
+.adv-specs-drawer summary {
+  padding: 9px 12px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--forest);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  user-select: none;
+}
+.adv-specs-drawer summary::-webkit-details-marker { display: none; }
+.adv-specs-drawer[open] summary {
+  border-bottom: 1px solid var(--border-soft);
+  background: #f1f5f9;
+}
+.adv-specs-body {
+  padding: 11px 12px;
+  background: #ffffff;
+}
+
+.scan-bar-compact {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 9px;
+  margin-bottom: 12px;
+}
+
+/* Invoice Line Table Header, Catalog Picker & Totals Strip */
+.inv-table-hdr {
+  display: grid;
+  grid-template-columns: 1fr 80px 112px 96px 40px;
+  gap: 8px;
+  padding: 7px 4px;
+  border-bottom: 2px solid var(--border);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+@media (max-width: 680px) {
+  .inv-table-hdr { display: none; }
+}
+
+.inv-add-box {
+  margin: 12px 0;
+  padding: 12px 13px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.inv-rate-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 6px 0 10px;
+}
+.inv-rate-chip {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 5px 10px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--slate);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.12s;
+}
+.inv-rate-chip:hover {
+  border-color: var(--green-mid);
+  background: #ecfdf5;
+  color: #065f46;
+}
+.inv-rate-chip strong {
+  font-family: var(--font-mono);
+  font-size: 0.73rem;
+  color: var(--green);
+}
+.inv-custom-row {
+  display: grid;
+  grid-template-columns: 1fr 78px 110px auto;
+  gap: 8px;
+  align-items: end;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+@media (max-width: 680px) {
+  .inv-custom-row { grid-template-columns: 1fr 1fr; }
+  .inv-custom-row > div:first-child { grid-column: 1 / -1; }
+  .inv-custom-row > button { grid-column: 1 / -1; }
+}
+.inv-totals-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  margin-bottom: 12px;
+  font-size: 0.86rem;
+}
+.inv-totals-bar strong {
+  font-family: var(--font-mono);
+  color: var(--forest);
+}

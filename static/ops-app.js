@@ -90,8 +90,8 @@ function stageBadgeHtml(r) {
 }
 
 function getActiveCrew() {
-  const sel = document.getElementById('activeCrewSelect');
-  return (sel && sel.value) || localStorage.getItem('webers_active_crew') || 'RP';
+  if (window.CURRENT_USER && window.CURRENT_USER.initials) return window.CURRENT_USER.initials;
+  return localStorage.getItem('webers_active_crew') || 'RP';
 }
 
 function saveActiveCrew() {
@@ -126,6 +126,7 @@ function stepWorkingDate(deltaDays) {
 }
 
 function jumpWorkingDateToday() {
+  sessionStorage.removeItem('webers_working_date');
   const el = document.getElementById('globalDate');
   if (STATE.today) {
     el.value = STATE.today;
@@ -152,9 +153,9 @@ function prefillPhoneFromRolodex(custInputId, phoneInputId, mirrorCustId = null,
 }
 
 // --- AUTH, DEEP LINKS & STATION NAVIGATION ---
-async function checkAuthAndBoot() {
+async function checkAuthAndBoot(showLoginToast = false) {
   const params = new URLSearchParams(location.search);
-  const urlDate = params.get('date');
+  const urlDate = params.get('date') || sessionStorage.getItem('webers_working_date') || '';
   if (urlDate) document.getElementById('globalDate').value = urlDate;
 
   const res = await fetch('/api/auth/status');
@@ -166,8 +167,10 @@ async function checkAuthAndBoot() {
   } else {
     document.getElementById('loginScreen').hidden = true;
     document.getElementById('appShell').hidden = false;
+    if (typeof window.syncAuthAndRoleUI === 'function') await window.syncAuthAndRoleUI(data.user, showLoginToast);
     if (typeof syncAutoShutterBtn === 'function') syncAutoShutterBtn();
     await loadState(true);
+    if (typeof window.syncAuthAndRoleUI === 'function') window.syncAuthAndRoleUI(data.user, false);
     applyUrlDeepLink();
   }
 }
@@ -181,11 +184,14 @@ function applyUrlDeepLink() {
   const tab = params.get('tab');
   if (jobId) {
     importScheduleJobToIntake(jobId);
+    history.replaceState(null, '', '/ops');
   } else if (dropId) {
     importDropoffToIntake(dropId);
     jumpToTab('intake');
-  } else if (tab && ['cal', 'intake', 'bench', 'logs'].includes(tab)) {
+    history.replaceState(null, '', '/ops');
+  } else if (tab && ['cal', 'intake', 'bench', 'logs', 'search'].includes(tab)) {
     jumpToTab(tab);
+    history.replaceState(null, '', '/ops');
   }
 }
 
@@ -198,7 +204,7 @@ async function submitLoginPin() {
   if (!res.ok) { err.hidden = false; return; }
   err.hidden = true;
   document.getElementById('loginPinInput').value = '';
-  checkAuthAndBoot();
+  checkAuthAndBoot(true);
 }
 
 async function logoutCrew() {
@@ -213,7 +219,7 @@ function acknowledgeDisclaimer() {
   document.getElementById('disclaimerModal').hidden = true;
 }
 
-function toggleMenuDrawer(show) { document.getElementById('menuDrawerModal').hidden = !show; }
+function toggleMenuDrawer(show) { if (show && window.openAccountSwitchDrawer) return window.openAccountSwitchDrawer(); document.getElementById('menuDrawerModal').hidden = !show; }
 function toggleGuide(show) { document.getElementById('guideModal').hidden = !show; }
 function toggleFeedbackModal(show) { document.getElementById('feedbackModal').hidden = !show; }
 
@@ -226,12 +232,15 @@ function jumpToTab(name) {
   document.querySelectorAll('.rail-btn, .bnav-btn').forEach(b => {
     b.classList.toggle('active', b.getAttribute('data-tab') === name);
   });
-  if (name === 'logs') runSearch(false);
+  if (name === 'search') runSearch(false);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function changeWorkingDate() {
   CAL_FORCE_EXPANDED = false;
+  const v = document.getElementById('globalDate').value;
+  if (v) sessionStorage.setItem('webers_working_date', v);
+  else sessionStorage.removeItem('webers_working_date');
   loadState(true);
 }
 
@@ -828,6 +837,35 @@ function checkIntakeLifespanLive(serverLife = null) {
   box.hidden = true;
 }
 
+
+let LOOKUP_FILTER = 'ALL';
+
+function updateAdvSpecsSummary() {
+  const el = document.getElementById('advSpecsSummary');
+  if (!el) return;
+  const gas = (document.getElementById('fGas')?.value || 'AIR').trim();
+  const dia = (document.getElementById('fDia')?.value || '').trim();
+  const len = (document.getElementById('fLen')?.value || '').trim();
+  const mode = document.getElementById('inMode')?.value === 'VISUAL_ONLY' ? 'Visual Only' : 'Hydro + Visual';
+  const dim = (dia || len) ? `${dia || '?'}"×${len || '?'}"` : '';
+  el.textContent = [gas, dim, mode].filter(Boolean).join(' • ');
+}
+
+async function setLookupFilter(mode) {
+  LOOKUP_FILTER = mode;
+  document.querySelectorAll('#lookupQuickBar .tap-pill').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-qmode') === mode);
+  });
+  if (mode === 'TAGS') { renderSearchRows(STATE.active_valves || []); return; }
+  if (mode === 'QUEUED') { renderSearchRows((STATE.records || []).filter(r => r.status === 'QUEUED')); return; }
+  if (mode === 'POST') { renderSearchRows(STATE.in_shop_post_test || []); return; }
+  const q = document.getElementById('searchBox')?.value || '';
+  const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+  let rows = await res.json();
+  if (mode === 'CONDEMN') rows = rows.filter(r => r.hydro_disposition && r.hydro_disposition !== 'A');
+  renderSearchRows(rows);
+}
+
 function applyPreset() {
   const idx = document.getElementById('cgaPreset').value;
   if (idx === '') return;
@@ -845,6 +883,7 @@ function applyPreset() {
   document.getElementById('fLen').value = s.length_in;
   document.getElementById('fRee').value = s.ree_limit ?? '';
   if (BATCH_LOCKED) captureBatchSnapshot();
+  updateAdvSpecsSummary();
   checkIntakeLifespanLive();
 }
 
@@ -864,6 +903,7 @@ function autoMatchSpecDimensions() {
       document.getElementById('fTestPsi').value = Math.round((svc * 5) / 3);
     }
   }
+  updateAdvSpecsSummary();
   checkIntakeLifespanLive();
 }
 
@@ -1507,6 +1547,9 @@ function renderFinishValvesAndCustomers() {
 }
 
 async function filterCustomerHistory(cust) {
+  jumpToTab('search');
+  const sb = document.getElementById('searchBox');
+  if (sb) sb.value = cust;
   const res = await fetch('/api/search?customer=' + encodeURIComponent(cust));
   renderSearchRows(await res.json());
 }
@@ -1520,6 +1563,8 @@ async function runSearch(activeTagOnly = false) {
 
 function renderSearchRows(rows) {
   LAST_SEARCH_ROWS = rows;
+  const lb = document.getElementById('lookupResultBadge');
+  if (lb) lb.textContent = `${rows.length} Found`;
   document.getElementById('searchResultsList').innerHTML = rows.length
     ? rows.map(r => {
         const isQueued = r.status === 'QUEUED';
@@ -1639,14 +1684,14 @@ async function saveEditedRecord() {
   if (!res.ok) { alert((await res.json()).detail || 'Save failed.'); return; }
   closeEditModal();
   await loadState(false);
-  if (CURRENT_TAB === 'logs') runSearch(false);
+  if (CURRENT_TAB === 'search') runSearch(false);
 }
 
 async function deleteRecordFromModal() {
   const id = document.getElementById('erId').value;
   closeEditModal();
   await removeRecord(id);
-  if (CURRENT_TAB === 'logs') runSearch(false);
+  if (CURRENT_TAB === 'search') runSearch(false);
 }
 
 async function triggerManualSync() {

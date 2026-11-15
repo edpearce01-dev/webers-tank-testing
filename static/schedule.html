@@ -7,14 +7,14 @@
   <link rel="manifest" href="/manifest.json" />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/ops.css?v=9.11" />
+  <link rel="stylesheet" href="/static/ops.css?v=10.3" />
   <title>Weber's Tank Testing — Month Schedule &amp; Dispatch | DOT B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.jpg?v=9.11" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
+      <img src="/static/images/logo-crest.jpg?v=10.3" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Schedule &amp; Dispatch</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter your Individual PIN (Access resets daily at Midnight)</p>
       <div style="text-align:left;">
@@ -32,7 +32,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.jpg?v=9.11" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.jpg?v=10.3" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>WALL SCHEDULE</h1>
           <small>RIN B386 • Calendar &amp; Dispatch</small>
@@ -80,12 +80,8 @@
         </div>
 
         <div class="rail-footer">
-          <a class="secondary" href="/office?tab=quick" style="width:100%;background:#ecfdf5;color:#065f46;border-color:#6ee7b7;">📞 Call: Shop Drop-Off</a>
-          <a class="secondary" href="/office?tab=dispatch" style="width:100%;background:#fef3c7;color:#92400e;border-color:#f59e0b;">🚚 Dispatch: Truck Run</a>
-          <a class="secondary" href="/ops" style="width:100%;">🔧 Back to Shop Ops</a>
-          <a class="secondary" href="/office?tab=rolodex" style="width:100%;">📇 Customer Rolodex</a>
-          <a class="secondary" href="/office?tab=supplies" id="railSupplyBtn" style="width:100%;">📦 Reorder Supplies</a>
-          <a class="secondary" href="/tv" target="_blank" style="width:100%;">📺 Open Live TV</a>
+          <button class="secondary" onclick="window.openAccountSwitchDrawer&&window.openAccountSwitchDrawer()" style="width:100%;">Account &amp; Switch PIN ☰</button>
+          <a id="railSupplyBtn" href="/office?tab=supplies" hidden>Supplies</a>
         </div>
       </aside>
 
@@ -348,7 +344,8 @@
 
     async function bootSchedule() {
       const params = new URLSearchParams(location.search);
-      if (params.get('date')) document.getElementById('globalDate').value = params.get('date');
+      const initD = params.get('date') || sessionStorage.getItem('webers_working_date') || '';
+      if (initD) document.getElementById('globalDate').value = initD;
       if (params.get('tab') && ['cal', 'book', 'runs', 'door'].includes(params.get('tab'))) {
         switchSchedTab(params.get('tab'));
       }
@@ -362,6 +359,7 @@
       }
       document.getElementById('loginScreen').hidden = true;
       document.getElementById('appShell').hidden = false;
+      if (window.syncAuthAndRoleUI) await window.syncAuthAndRoleUI(auth.user, false);
       await loadScheduleState();
       fetchLiveTurnaroundQuote();
     }
@@ -373,7 +371,9 @@
       });
       if (!res.ok) { document.getElementById('loginError').hidden = false; return; }
       document.getElementById('loginError').hidden = true;
-      bootSchedule();
+      const d = await res.json();
+      await bootSchedule();
+      if (window.syncAuthAndRoleUI) window.syncAuthAndRoleUI(d.user, true);
     }
 
     async function logoutCrew() {
@@ -392,6 +392,7 @@
     }
 
     function jumpToToday() {
+      sessionStorage.removeItem('webers_working_date');
       const t = STATE.today || new Date().toISOString().slice(0, 10);
       const [y, m] = t.split('-').map(Number);
       VIEW_YEAR = y;
@@ -412,6 +413,7 @@
     }
 
     function selectCalendarDay(isoDate, syncMonthIfDifferent = false) {
+      if (isoDate) sessionStorage.setItem('webers_working_date', isoDate);
       document.getElementById('globalDate').value = isoDate;
       document.getElementById('sjDate').value = isoDate;
       if (syncMonthIfDifferent) {
@@ -803,8 +805,8 @@
 
     bootSchedule();
   </script>
-  <script src="/static/day-flow.js?v=9.11"></script>
-  <script src="/static/theme-engine.js?v=9.11"></script>
-  <script src="/static/help-bot.js?v=9.11"></script>
+  <script src="/static/day-flow.js?v=10.3"></script>
+  <script src="/static/theme-engine.js?v=10.3"></script>
+  <script src="/static/help-bot.js?v=10.3"></script>
 </body>
 </html>

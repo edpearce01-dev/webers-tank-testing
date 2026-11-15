@@ -460,6 +460,21 @@
       50%      { box-shadow: inset 0 0 95px rgba(220, 38, 38, 0.28); opacity: 1; }
     }
 
+  
+    /* 720p, 1080p & 4K Smart TV Fluid Scaling */
+    @media (min-width: 2200px) {
+      html { font-size: 22px; }
+      body { grid-template-rows: 78px minmax(0, 1fr); }
+    }
+    @media (max-height: 760px) {
+      html { font-size: 13.5px; }
+      .tv-stage { padding: 6px 12px 8px; gap: 6px; }
+      .s-tile { padding: 5px 9px; }
+      .s-tile strong { font-size: 1.55rem; }
+      .stand-hero { padding: 9px 12px; }
+      .stand-sn { font-size: 1.38rem; }
+    }
+
   </style>
 </head>
 <body>
@@ -467,20 +482,11 @@
   <div class="tv-brand-bg" id="tvBrandBg" aria-hidden="true">
     <div class="tv-crest-wrap">
       <img id="tvBgArchImg" class="tv-arch-img" alt="" hidden />
-      <img src="/static/images/logo-crest.jpg?v=9.11" alt="" class="tv-crest-img" onerror="this.src='/icon.svg'" />
+      <img src="/static/images/logo-crest.jpg?v=10.3" alt="" class="tv-crest-img" onerror="this.src='/icon.svg'" />
     </div>
     <img id="tvBgDogsImg" src="/static/images/dogs-thanksgiving.png" alt="" class="tv-dogs-img" onerror="this.onerror=null;this.src='/static/images/shop-dogs.jpg';this.classList.add('photo-fallback');" />
   </div>
-
-  <!-- SCREENSAVER EASTER-EGG LAYER (DAD JOKES, TRICKS & ECONOMY VFD CHASE) -->
-  <div id="tvSirenGlow" class="tv-siren-glow" aria-hidden="true"></div>
-  <div id="tvFiretruckStage" class="tv-firetruck-stage" aria-hidden="true">
-    <img id="tvFiretruckImg" src="/static/images/easter-egg-firetruck.png" onerror="this.onerror=null;this.src='/static/images/easter-egg-firetruck.jpg'" class="tv-firetruck-runner" alt="" />
-  </div>
-  <div id="tvPupBubbleA" class="tv-pup-bubble pos-left" aria-hidden="true"></div>
-  <div id="tvPupBubbleB" class="tv-pup-bubble pos-center" aria-hidden="true"></div>
-
-  <!-- SCREENSAVER CLOCK & DATE OVERLAY (SHOWS WHEN SHOP IS IDLE OR SAVER CLICKED) -->
+<!-- SCREENSAVER CLOCK & DATE OVERLAY (SHOWS WHEN SHOP IS IDLE OR SAVER CLICKED) -->
   <div class="tv-screensaver-hud" id="tvScreensaverHud" aria-hidden="true">
     <div class="saver-clock-card">
       <div class="saver-time" id="ssTime">--:--</div>
@@ -495,7 +501,7 @@
   <!-- TV PAIRING PIN GATE -->
   <div id="tvPinGate" class="pin-gate" hidden>
     <div class="pin-box">
-      <img src="/static/images/logo-crest.jpg?v=9.11" alt="B386" style="width:62px;height:62px;border-radius:50%;border:2px solid var(--gold-bright);margin-bottom:8px;" />
+      <img src="/static/images/logo-crest.jpg?v=10.3" alt="B386" style="width:62px;height:62px;border-radius:50%;border:2px solid var(--gold-bright);margin-bottom:8px;" />
       <h3 style="margin:0;font-family:var(--font-display);font-size:1.5rem;color:var(--forest);">Testing Room TV Display</h3>
       <p style="font-size:0.83rem;color:var(--muted);margin:5px 0 0;">Enter any valid Shop PIN once to pair this TV</p>
       <input type="password" inputmode="numeric" id="tvPinInput" placeholder="••••" onkeydown="if(event.key==='Enter')unlockTv()" />
@@ -506,7 +512,7 @@
   <!-- FROSTED 1080P BROADCAST HEADER -->
   <header class="tv-hdr">
     <div class="hdr-brand">
-      <img src="/static/images/logo-crest.jpg?v=9.11" alt="B386" onerror="this.src='/icon.svg'" />
+      <img src="/static/images/logo-crest.jpg?v=10.3" alt="B386" onerror="this.src='/icon.svg'" />
       <div>
         <span class="hdr-title">Weber's Tank Testing</span>
         <span class="hdr-sub" id="hdrShiftTxt">DOT RIN B386</span>
@@ -536,7 +542,7 @@
       </select>
       <button class="tv-btn on" id="btnFlipView" onclick="manualFlipView()">⇄ Cal (0:45)</button>
       <button class="tv-btn" onclick="enterScreensaver(true)" title="Start Screensaver Now">Saver</button>
-      <button class="tv-btn" onclick="triggerScreensaverEasterEgg(true)" title="Preview a Random Screensaver Easter Egg Now!">✨ Egg</button>
+      <button class="tv-btn" onclick="window.triggerNextTvScene&&window.triggerNextTvScene(true)" title="Cycle Through All 5 Animated Screensaver Scenes!">🎬 Scene</button>
       <button class="tv-btn on" id="btnChime" onclick="toggleChime()" title="Back Room Door Chime">
         <svg class="ico" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
       </button>
@@ -646,7 +652,7 @@
     }
 
     // --- SCREENSAVER & ACTIVITY WAKE ENGINE ---
-    function enterScreensaver(manual = false) {
+    window.enterScreensaver = function enterScreensaver(manual = false) {
       if (SCREENSAVER_ON) return;
       SCREENSAVER_ON = true;
       document.body.classList.remove('tv-bg-reveal');
@@ -662,7 +668,7 @@
       LAST_ACTIVITY_MS = Date.now();
       if (!SCREENSAVER_ON) return;
       SCREENSAVER_ON = false;
-      clearEasterEggOverlays();
+      if (window.stopAllTvScenes) window.stopAllTvScenes();
       document.body.classList.remove('tv-screensaver');
       SECS_LEFT = ACTIVE_VIEW === 'dash' ? DASH_SECS : CAL_SECS;
       updateFlipBtnLabel();
@@ -788,7 +794,7 @@
         const dogsImg = document.getElementById('tvBgDogsImg');
         const ssBadge = document.getElementById('ssHolidayBadge');
 
-        ACTIVE_HOLIDAY_KEY = (t && t.active && t.key) ? t.key : 'ANY';
+        window.ACTIVE_HOLIDAY_KEY = (t && t.active && t.key) ? t.key : 'ANY';
         if (t.active && t.enable_tv) {
           if (ssBadge && t.countdown_label) { ssBadge.hidden = false; ssBadge.textContent = t.countdown_label; }
           if (archImg) {
@@ -816,156 +822,8 @@
         }
       } catch (_) {}
     }
-
-
-    // =========================================================================
-    // v9.11 SCREENSAVER EASTER-EGG DIRECTOR (TRUCK CHASE, DAD JOKES & TRICKS)
-    // =========================================================================
-    let ACTIVE_HOLIDAY_KEY = 'THANKSGIVING';
-    let EGG_BUSY = false;
-    let EGG_INDEX = 0;
-
-    const HYDRO_AND_HOLIDAY_JOKES = {
-      ANY: [
-        { askWho: 'Pongo', posA: 'pos-left', q: 'Hey Zeke — why did the scuba tank pass its DOT test with flying colors?', ansWho: 'Zeke', a: 'Because it really knew how to handle the pressure! 🐾' },
-        { askWho: 'Pierce', posA: 'pos-right', q: 'Why do Dalmatians make the best hydrostatic testers in Beaver County?', ansWho: 'Zeke', a: 'Because we never miss a single spot on the 7-point visual! 🔍' },
-        { askWho: 'Pongo', posA: 'pos-left', q: 'What did the 4500 PSI carbon SCBA bottle say at the Loading Dock?', ansWho: 'Pierce', posB: 'pos-right', a: '"Whew, I am totally exhausted — please do NOT refill me!" 💨' },
-        { askWho: 'Pierce', posA: 'pos-right', q: 'Zeke, did you hear about the valve that got separated from its cylinder?', ansWho: 'Zeke', a: 'Relax kid, Ryan put a brass tag on it — they are still attached! 🏷️' },
-      ],
-      THANKSGIVING: [
-        { askWho: 'Pongo', posA: 'pos-left', q: 'What side dish do firefighters bring to Thanksgiving dinner?', ansWho: 'Zeke', a: 'Five-alarm sweet potatoes... and extra turkey for the shop dogs! 🦃' },
-        { askWho: 'Pierce', posA: 'pos-right', q: 'Why did the turkey get condemned under 49 CFR?', ansWho: 'Zeke', a: 'Way over 10% permanent expansion after eating all that stuffing! 🥧' },
-      ],
-      CHRISTMAS: [
-        { askWho: 'Pongo', posA: 'pos-left', q: 'How does Santa check his sleigh oxygen bottles before Christmas Eve?', ansWho: 'Zeke', a: 'He drops them at Weber\'s Loading Dock for a B386 stamp! 🎄' },
-        { askWho: 'Pierce', posA: 'pos-right', q: 'Guys... how do I untangle 50 feet of Christmas lights with paws?!', ansWho: 'Zeke', a: 'Hold still Pierce, you\'re officially our Zone E warning beacon now! ✨' },
-      ],
-      NEW_YEAR: [
-        { askWho: 'Pongo', posA: 'pos-left', q: 'What is our #1 New Year\'s resolution at Weber\'s Tank Testing?', ansWho: 'Zeke', a: 'Zero leaks, ±1.0% burette accuracy, and double the dog treats in 2027! 🥂' },
-      ],
-    };
-
-    function clearEasterEggOverlays() {
-      EGG_BUSY = false;
-      ['tvPupBubbleA', 'tvPupBubbleB'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.remove('show');
-      });
-      document.getElementById('tvFiretruckStage')?.classList.remove('active');
-      document.getElementById('tvSirenGlow')?.classList.remove('active');
-      document.getElementById('tvBgDogsImg')?.classList.remove('chasing-hide', 'trick-tilt', 'trick-hop', 'trick-laugh');
-    }
-
-    function runFiretruckChaseEgg() {
-      const stage = document.getElementById('tvFiretruckStage');
-      const runner = document.getElementById('tvFiretruckImg');
-      const siren = document.getElementById('tvSirenGlow');
-      const dogs = document.getElementById('tvBgDogsImg');
-      const bA = document.getElementById('tvPupBubbleA');
-      if (!stage || !runner || !dogs) { EGG_BUSY = false; return; }
-
-      bA.className = 'tv-pup-bubble pos-center show';
-      bA.innerHTML = `<span class="pup-speaker">🚨 SIREN SPOTTED ON LEGIONVILLE RD!</span>ECONOMY VFD ENGINE PASSING BY — LET'S GET IT BOYS!! 🚒🐾`;
-
-      setTimeout(() => {
-        bA.classList.remove('show');
-        dogs.classList.add('chasing-hide');
-        // Restart CSS animation cleanly
-        runner.style.animation = 'none';
-        void runner.offsetWidth;
-        runner.style.animation = '';
-        stage.classList.add('active');
-        siren?.classList.add('active');
-      }, 1900);
-
-      setTimeout(() => {
-        stage.classList.remove('active');
-        siren?.classList.remove('active');
-        dogs.classList.remove('chasing-hide');
-        dogs.classList.add('trick-hop');
-        setTimeout(() => { dogs.classList.remove('trick-hop'); EGG_BUSY = false; }, 2600);
-      }, 10600);
-    }
-
-    function runDadJokeEgg() {
-      const pool = [
-        ...(HYDRO_AND_HOLIDAY_JOKES[ACTIVE_HOLIDAY_KEY] || []),
-        ...HYDRO_AND_HOLIDAY_JOKES.ANY,
-      ];
-      const joke = pool[Math.floor(Math.random() * pool.length)];
-      const bA = document.getElementById('tvPupBubbleA');
-      const bB = document.getElementById('tvPupBubbleB');
-      const dogs = document.getElementById('tvBgDogsImg');
-
-      bA.className = `tv-pup-bubble ${joke.posA || 'pos-left'} show`;
-      bA.innerHTML = `<span class="pup-speaker">🐾 ${esc(joke.askWho)} asks:</span>${esc(joke.q)}`;
-
-      setTimeout(() => {
-        if (!SCREENSAVER_ON) return clearEasterEggOverlays();
-        bB.className = `tv-pup-bubble ${joke.posB || 'pos-center'} show`;
-        bB.innerHTML = `<span class="pup-speaker">🐾 ${esc(joke.ansWho)} replies:</span>${esc(joke.a)}`;
-        dogs?.classList.add('trick-laugh');
-      }, 3800);
-
-      setTimeout(() => {
-        bA.classList.remove('show');
-        bB.classList.remove('show');
-        dogs?.classList.remove('trick-laugh');
-        EGG_BUSY = false;
-      }, 9400);
-    }
-
-    function runDogTrickEgg() {
-      const dogs = document.getElementById('tvBgDogsImg');
-      const bB = document.getElementById('tvPupBubbleB');
-      const hr = new Date().getHours();
-      if (!dogs || !bB) { EGG_BUSY = false; return; }
-
-      if (hr >= 18 || hr < 6) {
-        bB.className = 'tv-pup-bubble pos-center show';
-        bB.innerHTML = `<span class="pup-speaker">🌙 After-Hours Guard Shift</span>Zzz... dreaming of bacon &amp; hydro-certified SCBA bottles... 💤`;
-        setTimeout(() => { bB.classList.remove('show'); EGG_BUSY = false; }, 6500);
-        return;
-      }
-
-      const doHop = Math.random() > 0.45;
-      if (doHop) {
-        dogs.classList.add('trick-hop');
-        bB.className = 'tv-pup-bubble pos-center show';
-        bB.innerHTML = `<span class="pup-speaker">🐾 Shop Morale Check</span>Did somebody just crinkle a treat bag in the Test Room?! 🦴`;
-      } else {
-        dogs.classList.add('trick-tilt');
-        bB.className = 'tv-pup-bubble pos-right show';
-        bB.innerHTML = `<span class="pup-speaker">🐾 Pierce (Ears Perked)</span>Wait... was that the Loading Dock door or just the air dryer? 👀`;
-      }
-      setTimeout(() => {
-        bB.classList.remove('show');
-        dogs.classList.remove('trick-hop', 'trick-tilt');
-        EGG_BUSY = false;
-      }, 5500);
-    }
-
-    window.triggerScreensaverEasterEgg = function (manualPreview = false) {
-      if (manualPreview && !SCREENSAVER_ON) {
-        enterScreensaver(true);
-      }
-      if (!SCREENSAVER_ON || EGG_BUSY) return;
-      EGG_BUSY = true;
-      const roll = EGG_INDEX % 3;
-      EGG_INDEX++;
-      if (roll === 0) runFiretruckChaseEgg();
-      else if (roll === 1) runDadJokeEgg();
-      else runDogTrickEgg();
-    };
-
-    // Fire a surprise Easter egg automatically every ~85 seconds while Screensaver is active
-    setInterval(() => {
-      if (SCREENSAVER_ON && !EGG_BUSY) {
-        window.triggerScreensaverEasterEgg(false);
-      }
-    }, 85000);
-
-    function playChime() {
+    window.window.ACTIVE_HOLIDAY_KEY = 'THANKSGIVING';
+function playChime() {
       if (!CHIME_ON) return;
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1178,6 +1036,7 @@
     setInterval(pollTv, 3500);
     setInterval(syncTvBackgroundArtwork, 20000);
   </script>
-  <script src="/static/theme-engine.js?v=9.11"></script>
+  <script src="/static/theme-engine.js?v=10.3"></script>
+  <script src="/static/tv-animations.js?v=10.3"></script>
 </body>
 </html>
