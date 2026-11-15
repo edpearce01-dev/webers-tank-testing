@@ -1368,6 +1368,143 @@ def serve_sw():
 
 
 @app.get("/api/auth/status")
+def auth_status(request: Request, tv: int = 0):
+    user = get_current_session_user(request)
+    if tv and not user and is_tv_authorized(request):
+        return {"authenticated": True, "today": today_eastern(), "user": {"name": "Live TV Display", "initials": "TV", "role": "TV", "can_sign_dot": False}}
+    return {
+        "authenticated": bool(user),
+        "today": today_eastern(),
+        "user": user,
+    }
+
+
+@app.post("/api/auth/login")
+def auth_login(payload: LoginInput, response: Response):
+    entered = payload.pin.strip()
+    if not entered:
+        raise HTTPException(401, "Enter your individual PIN.")
+
+    conn = get_conn()
+    u = conn.execute("SELECT * FROM crew_users WHERE pin=? AND active=1;", (entered,)).fetchone()
+    s_row = conn.execute("SELECT value FROM settings WHERE key='crew_pin';").fetchone()
+    tv_seed = s_row["value"] if s_row else "0386"
+    conn.close()
+
+    if not u:
+        raise HTTPException(401, "Incorrect PIN.")
+
+    today_iso = today_eastern()
+    token = make_user_auth_token(u["id"], u["initials"], u["role"], u["pin"], today_iso)
+    ttl = seconds_until_midnight_eastern()
+    response.set_cookie(
+        key=AUTH_COOKIE,
+        value=token,
+        max_age=ttl,
+        httponly=True,
+        samesite="lax",
+    )
+    # Also set TV display cookie so /tv stays running smoothly on the wall TV
+    response.set_cookie(
+        key="webers_tv_auth",
+        value=make_tv_kiosk_token(tv_seed),
+        max_age=60 * 60 * 24 * 90,
+        httponly=True,
+        samesite="lax",
+    )
+    return {
+        "authenticated": True,
+        "today": today_iso,
+        "seconds_until_midnight": ttl,
+        "user": {
+            "id": u["id"],
+            "name": u["name"],
+            "initials": u["initials"],
+            "role": u["role"],
+            "can_sign_dot": bool(u["can_sign_dot"] and u["role"] == "OWNER"),
+        },
+    }
+
+
+@app.post("/api/auth/logout")
+def auth_logout(response: Response):
+    response.delete_cookie(AUTH_COOKIE)
+    return {"authenticated": False}
+
+
+@app.get("/")
+def serve_root(request: Request):
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    landing_file = STATIC_DIR / "landing.html"
+    if (host in ("weberstanktesting.com", "www.weberstanktesting.com") or request.query_params.get("view") == "public") and landing_file.exists():
+        return FileResponse(landing_file, headers=NO_CACHE_HEADERS)
+    return FileResponse(STATIC_DIR / "index.html", headers=NO_CACHE_HEADERS)
+
+
+@app.get("/checkin")
+def serve_public_checkin():
+    landing_file = STATIC_DIR / "landing.html"
+    return FileResponse(landing_file if landing_file.exists() else STATIC_DIR / "index.html", headers=NO_CACHE_HEADERS)
+
+
+@app.get("/ops")
+def serve_ops():
+    return FileResponse(STATIC_DIR / "index.html", headers=NO_CACHE_HEADERS)
+
+
+@app.get("/schedule")
+def serve_schedule_page():
+    f = STATIC_DIR / "schedule.html"
+    return FileResponse(f if f.exists() else STATIC_DIR / "index.html", headers=NO_CACHE_HEADERS)
+
+
+@app.get("/office")
+def serve_office_page():
+    f = STATIC_DIR / "office.html"
+    return FileResponse(f if f.exists() else STATIC_DIR / "index.html", headers=NO_CACHE_HEADERS)
+
+
+@app.get("/tv")
+def serve_tv_board():
+    tv_file = STATIC_DIR / "tv.html"
+    if not tv_file.exists():
+        raise HTTPException(404, "tv.html not found in static/ folder.")
+    return FileResponse(tv_file, headers=NO_CACHE_HEADERS)
+
+
+@app.get("/icon.svg")
+def serve_icon():
+    svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+      <rect width="192" height="192" rx="36" fill="#1b4332"/>
+      <rect x="74" y="24" width="44" height="18" rx="6" fill="#fbbf24"/>
+      <rect x="84" y="42" width="24" height="14" fill="#d1d5db"/>
+      <rect x="54" y="54" width="84" height="114" rx="28" fill="#ffffff"/>
+      <text x="96" y="108" font-family="Arial,sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#1b4332">B386</text>
+      <text x="96" y="136" font-family="Arial,sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#2d6a4f">WEBER'S</text>
+    </svg>"""
+    return Response(content=svg, media_type="image/svg+xml")
+
+
+@app.get("/manifest.json")
+def serve_manifest():
+    return {
+        "name": "Weber's Tank Testing — Ops (DOT B386)",
+        "short_name": "Weber's Ops",
+        "start_url": "/ops",
+        "display": "standalone",
+        "background_color": "#0b2219",
+        "theme_color": "#1b4332",
+        "icons": [{"src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}],
+    }
+
+
+@app.get("/sw.js")
+def serve_sw():
+    js = "self.addEventListener('install', e => self.skipWaiting()); self.addEventListener('activate', e => self.clients.claim()); self.addEventListener('fetch', () => {});"
+    return Response(content=js, media_type="application/javascript", headers=NO_CACHE_HEADERS)
+
+
+@app.get("/api/auth/status")
 def auth_status(request: Request):
     return {"authenticated": is_authenticated(request)}
 
@@ -3991,6 +4128,525 @@ async def chat_with_shop_assistant(payload: HelpAssistantInput):
         "ticket_id": logged_ticket_id,
         "ticket_summary": result.get("ticket_summary") or "",
     }
+
+
+
+class PinUserInput(BaseModel):
+    id: Optional[int] = None
+    name: str
+    initials: str
+    pin: str
+    role: str = "CREW"
+
+
+class LockDayLineupInput(BaseModel):
+    shift_mode: str = "FULL_HYDRO"
+    bottle_capacity: int = 24
+    allow_extra_autopace: bool = True
+    day_notes: str = ""
+
+
+class DayJobMoveInput(BaseModel):
+    job_id: int
+    action: str  # PULL_TODAY | BUMP_TOMORROW | TOGGLE_LOCK | SET_COUNT
+    bottle_count: Optional[int] = None
+
+
+class CrewTaskInput(BaseModel):
+    assigned_to: str = "ALL"
+    category: str = "SHOP"
+    title: str
+    priority: str = "NORMAL"
+    work_date: str = ""
+
+
+class CrewTaskUpdateInput(BaseModel):
+    status: Optional[str] = None
+    crew_note: Optional[str] = None
+
+
+class EndOfDayInput(BaseModel):
+    shift_note: str = ""
+    roll_unfinished: bool = True
+
+
+def require_owner_or_admin(request: Request) -> dict:
+    u = getattr(request.state, "user", None) or get_current_session_user(request)
+    if not u or u["role"] not in ("OWNER", "SYSTEM_ADMIN"):
+        raise HTTPException(403, "Only Ryan (Owner) or Admin can perform this action.")
+    return u
+
+
+def run_smart_autopace(conn) -> dict:
+    """
+    Respects Ryan's locked lineup ('locked_for_day=1' and 'ROAD_*' truck stops never move off today).
+    1) Rolls unlocked past-date (< today) open SHOP_BATCH jobs forward to the next open hydro window.
+    2) If today's plan has allow_extra_autopace=1 and open capacity left, pulls unpinned future SHOP_BATCH
+       work into today as bonus catch-up work so the crew stays ahead of schedule!
+    """
+    today_iso = today_eastern()
+    today_d = date.fromisoformat(today_iso)
+    s_map = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings;").fetchall()}
+    default_cap = int(s_map.get("daily_hydro_capacity", "24") or 24)
+
+    # Ensure day plans exist for next 14 days
+    plans: dict[str, dict] = {}
+    for offset in range(14):
+        d = today_d + timedelta(days=offset)
+        iso = d.isoformat()
+        row = conn.execute("SELECT * FROM daily_schedule_plans WHERE work_date=?;", (iso,)).fetchone()
+        if row:
+            plans[iso] = dict(row)
+        else:
+            mode, cap = default_day_plan_for_date(d, default_cap)
+            plans[iso] = {"work_date": iso, "shift_mode": mode, "bottle_capacity": cap, "lineup_locked": 0, "allow_extra_autopace": 1}
+
+    rolled_forward = 0
+    pulled_ahead = 0
+
+    # Find first day >= today with hydro capacity > 0 (prefer tomorrow if today is locked with allow_extra=0)
+    def next_open_hydro_date(start_offset: int = 0) -> str:
+        for off in range(start_offset, 14):
+            iso = (today_d + timedelta(days=off)).isoformat()
+            p = plans.get(iso, {})
+            if off == 0 and p.get("lineup_locked") and not p.get("allow_extra_autopace", 1):
+                continue
+            if int(p.get("bottle_capacity") or 0) > 0:
+                return iso
+        return (today_d + timedelta(days=1)).isoformat()
+
+    # 1) Roll unlocked past-date SHOP_BATCH carryovers forward
+    past_open = conn.execute(
+        """SELECT id, bottle_count FROM schedule_jobs
+           WHERE status != 'COMPLETED' AND scheduled_date < ?
+             AND job_type='SHOP_BATCH' AND COALESCE(locked_for_day,0)=0;""",
+        (today_iso,),
+    ).fetchall()
+    if past_open:
+        target_iso = next_open_hydro_date(0)
+        for j in past_open:
+            conn.execute("UPDATE schedule_jobs SET scheduled_date=?, synced=0 WHERE id=?;", (target_iso, j["id"]))
+            rolled_forward += 1
+
+    # 2) Pull-ahead into Today if allowed & capacity remains
+    tp = plans[today_iso]
+    today_cap = int(tp.get("bottle_capacity") or 0)
+    if today_cap > 0 and int(tp.get("allow_extra_autopace", 1)):
+        done_today = conn.execute("SELECT COUNT(*) FROM cylinder_records WHERE work_date=? AND status='COMPLETED';", (today_iso,)).fetchone()[0]
+        booked_today = conn.execute(
+            "SELECT COALESCE(SUM(bottle_count),0) FROM schedule_jobs WHERE scheduled_date=? AND status!='COMPLETED' AND job_type IN ('SHOP_BATCH','ROAD_PICKUP','ROAD_ROUNDTRIP');",
+            (today_iso,),
+        ).fetchone()[0]
+        open_slots = max(0, today_cap - max(done_today, booked_today))
+        if open_slots > 0:
+            future_batches = conn.execute(
+                """SELECT id, bottle_count FROM schedule_jobs
+                   WHERE status != 'COMPLETED' AND scheduled_date > ?
+                     AND job_type='SHOP_BATCH' AND COALESCE(locked_for_day,0)=0
+                   ORDER BY CASE WHEN rush_fee=1 OR priority='RUSH' THEN 0 ELSE 1 END,
+                            CASE WHEN due_date!='' THEN due_date ELSE scheduled_date END ASC, id ASC;""",
+                (today_iso,),
+            ).fetchall()
+            for fb in future_batches:
+                bc = int(fb["bottle_count"] or 1)
+                if bc <= open_slots:
+                    conn.execute(
+                        "UPDATE schedule_jobs SET scheduled_date=?, auto_paced=1, synced=0 WHERE id=?;",
+                        (today_iso, fb["id"]),
+                    )
+                    open_slots -= bc
+                    pulled_ahead += 1
+                    if open_slots <= 0:
+                        break
+
+    return {"rolled_forward": rolled_forward, "pulled_ahead": pulled_ahead}
+
+
+@app.get("/api/crew/pins")
+def list_crew_pins(request: Request):
+    u = require_owner_or_admin(request)
+    conn = get_conn()
+    if u["role"] == "SYSTEM_ADMIN":
+        rows = [dict(r) for r in conn.execute("SELECT * FROM crew_users WHERE active=1 ORDER BY CASE role WHEN 'SYSTEM_ADMIN' THEN 0 WHEN 'OWNER' THEN 1 ELSE 2 END, id;").fetchall()]
+    else:
+        # Ryan sees Owner + all Crew PINs visibly (System Admin account stays separate)
+        rows = [dict(r) for r in conn.execute("SELECT * FROM crew_users WHERE active=1 AND role != 'SYSTEM_ADMIN' ORDER BY CASE role WHEN 'OWNER' THEN 0 ELSE 1 END, id;").fetchall()]
+    conn.close()
+    return {"users": rows, "viewer_role": u["role"]}
+
+
+@app.post("/api/crew/pins")
+def save_crew_pin_user(payload: PinUserInput, request: Request):
+    u = require_owner_or_admin(request)
+    name = payload.name.strip()[:50]
+    initials = re.sub(r"[^A-Z0-9]", "", payload.initials.strip().upper())[:4]
+    pin = re.sub(r"\s+", "", payload.pin.strip())[:10]
+    role = payload.role.strip().upper()
+    if role not in ("SYSTEM_ADMIN", "OWNER", "CREW"):
+        role = "CREW"
+    if u["role"] != "SYSTEM_ADMIN" and role == "SYSTEM_ADMIN":
+        raise HTTPException(403, "Only System Admin can create or edit System Admin accounts.")
+    if len(name) < 2 or len(initials) < 2 or len(pin) < 4:
+        raise HTTPException(400, "Enter Name, 2–4 character Initials, and at least a 4-digit PIN.")
+
+    conn = get_conn()
+    dup_pin = conn.execute(
+        "SELECT name FROM crew_users WHERE pin=? AND active=1 AND id != COALESCE(?, -1);",
+        (pin, payload.id),
+    ).fetchone()
+    if dup_pin:
+        conn.close()
+        raise HTTPException(400, f"PIN '{pin}' is already assigned to {dup_pin['name']}. Every person needs a unique PIN.")
+    dup_init = conn.execute(
+        "SELECT name FROM crew_users WHERE initials=? AND active=1 AND id != COALESCE(?, -1);",
+        (initials, payload.id),
+    ).fetchone()
+    if dup_init:
+        conn.close()
+        raise HTTPException(400, f"Initials '{initials}' are already used by {dup_init['name']}.")
+
+    can_sign = 1 if role == "OWNER" else 0
+    if payload.id:
+        target = conn.execute("SELECT * FROM crew_users WHERE id=?;", (payload.id,)).fetchone()
+        if not target:
+            conn.close()
+            raise HTTPException(404, "User not found.")
+        if target["role"] == "SYSTEM_ADMIN" and u["role"] != "SYSTEM_ADMIN":
+            conn.close()
+            raise HTTPException(403, "Cannot modify System Admin account.")
+        conn.execute(
+            "UPDATE crew_users SET name=?, initials=?, pin=?, role=?, can_sign_dot=? WHERE id=?;",
+            (name, initials, pin, role, can_sign, payload.id),
+        )
+    else:
+        conn.execute(
+            "INSERT INTO crew_users (name, initials, pin, role, can_sign_dot, active, created_at) VALUES (?, ?, ?, ?, ?, 1, ?);",
+            (name, initials, pin, role, can_sign, now_eastern().strftime("%Y-%m-%d %I:%M %p")),
+        )
+
+    if role == "OWNER":
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('crew_pin', ?);", (pin,))
+
+    # Sync crew_roster setting string so top dropdowns stay current
+    roster_inits = [r["initials"] for r in conn.execute("SELECT initials FROM crew_users WHERE active=1 AND role!='SYSTEM_ADMIN' ORDER BY CASE role WHEN 'OWNER' THEN 0 ELSE 1 END, id;").fetchall()]
+    if roster_inits:
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('crew_roster', ?);", (",".join(roster_inits),))
+
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"saved": True}
+
+
+@app.delete("/api/crew/pins/{uid}")
+def delete_crew_pin_user(uid: int, request: Request):
+    u = require_owner_or_admin(request)
+    conn = get_conn()
+    target = conn.execute("SELECT * FROM crew_users WHERE id=?;", (uid,)).fetchone()
+    if not target:
+        conn.close()
+        raise HTTPException(404, "User not found.")
+    if target["role"] in ("SYSTEM_ADMIN", "OWNER"):
+        conn.close()
+        raise HTTPException(400, "Owner and System Admin accounts cannot be deleted (edit their PIN instead).")
+    conn.execute("DELETE FROM crew_users WHERE id=?;", (uid,))
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"deleted": uid}
+
+
+@app.get("/api/day/overview")
+def get_day_overview(request: Request):
+    u = getattr(request.state, "user", None) or get_current_session_user(request)
+    if not u:
+        raise HTTPException(401, "Not authenticated.")
+    today_iso = today_eastern()
+    today_d = date.fromisoformat(today_iso)
+    tomorrow_iso = (today_d + timedelta(days=1)).isoformat()
+
+    conn = get_conn()
+    s_map = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings;").fetchall()}
+    default_cap = int(s_map.get("daily_hydro_capacity", "24") or 24)
+
+    p_row = conn.execute("SELECT * FROM daily_schedule_plans WHERE work_date=?;", (today_iso,)).fetchone()
+    if p_row:
+        day_plan = dict(p_row)
+    else:
+        mode, cap = default_day_plan_for_date(today_d, default_cap)
+        day_plan = {
+            "work_date": today_iso, "shift_mode": mode, "bottle_capacity": cap,
+            "day_notes": "", "lineup_locked": 0, "allow_extra_autopace": 1,
+        }
+
+    ceilings = get_date_jacket_ceilings(conn, today_iso)
+    s_psi = ceilings["Short Jacket"]["max_calibrated_psi"]
+    t_psi = ceilings["Tall Jacket"]["max_calibrated_psi"]
+
+    todays_jobs = [
+        dict(r) for r in conn.execute(
+            "SELECT * FROM schedule_jobs WHERE status!='COMPLETED' AND scheduled_date=? ORDER BY locked_for_day DESC, rush_fee DESC, id ASC;",
+            (today_iso,),
+        ).fetchall()
+    ]
+    carryover_jobs = [
+        dict(r) for r in conn.execute(
+            "SELECT * FROM schedule_jobs WHERE status!='COMPLETED' AND scheduled_date < ? ORDER BY scheduled_date ASC, id ASC;",
+            (today_iso,),
+        ).fetchall()
+    ]
+    upcoming_jobs = [
+        dict(r) for r in conn.execute(
+            "SELECT * FROM schedule_jobs WHERE status!='COMPLETED' AND scheduled_date > ? ORDER BY scheduled_date ASC, rush_fee DESC LIMIT 12;",
+            (today_iso,),
+        ).fetchall()
+    ]
+    waiting_drops = [
+        dict(r) for r in conn.execute(
+            "SELECT * FROM dropoffs WHERE status IN ('IN_BACKROOM','CHECKED_IN') AND entry_type='DROPOFF' AND COALESCE(imported_count,0) < bottle_count ORDER BY rush_requested DESC, id DESC;",
+        ).fetchall()
+    ]
+
+    if u["role"] in ("OWNER", "SYSTEM_ADMIN"):
+        tasks = [
+            dict(r) for r in conn.execute(
+                "SELECT * FROM crew_tasks WHERE work_date=? OR status='OPEN' ORDER BY CASE status WHEN 'OPEN' THEN 0 ELSE 1 END, id DESC;",
+                (today_iso,),
+            ).fetchall()
+        ]
+        crew_list = [
+            {"initials": r["initials"], "name": r["name"]}
+            for r in conn.execute("SELECT initials, name FROM crew_users WHERE active=1 AND role!='SYSTEM_ADMIN' ORDER BY CASE role WHEN 'OWNER' THEN 0 ELSE 1 END, id;").fetchall()
+        ]
+    else:
+        tasks = [
+            dict(r) for r in conn.execute(
+                "SELECT * FROM crew_tasks WHERE (work_date=? OR status='OPEN') AND (assigned_to='ALL' OR assigned_to=?) ORDER BY CASE status WHEN 'OPEN' THEN 0 ELSE 1 END, id DESC;",
+                (today_iso, u["initials"]),
+            ).fetchall()
+        ]
+        crew_list = []
+
+    # End-of-Day Stats
+    tested_today = conn.execute("SELECT COUNT(*) FROM cylinder_records WHERE work_date=? AND status='COMPLETED';", (today_iso,)).fetchone()[0]
+    passed_today = conn.execute("SELECT COUNT(*) FROM cylinder_records WHERE work_date=? AND status='COMPLETED' AND hydro_disposition='A';", (today_iso,)).fetchone()[0]
+    condemned_today = conn.execute("SELECT COUNT(*) FROM cylinder_records WHERE work_date=? AND status='COMPLETED' AND hydro_disposition!='A';", (today_iso,)).fetchone()[0]
+    queued_now = conn.execute("SELECT COUNT(*) FROM cylinder_records WHERE status='QUEUED';", ()).fetchone()[0]
+    unmarked_pass = conn.execute("SELECT COUNT(*) FROM cylinder_records WHERE status='COMPLETED' AND hydro_disposition='A' AND COALESCE(rin_marked,0)=0 AND shop_stage!='PICKED_UP';").fetchone()[0]
+    unbilled_shelf = conn.execute("SELECT COUNT(DISTINCT customer_name) FROM cylinder_records WHERE status='COMPLETED' AND invoice_id IS NULL AND shop_stage='READY_BACKROOM';").fetchone()[0]
+    conn.close()
+
+    return {
+        "today": today_iso,
+        "tomorrow": tomorrow_iso,
+        "user": u,
+        "cal_status": {
+            "short_calibrated": bool(s_psi),
+            "tall_calibrated": bool(t_psi),
+            "any_calibrated": bool(s_psi or t_psi),
+            "both_calibrated": bool(s_psi and t_psi),
+            "short_allowed_psi": ceilings["Short Jacket"]["max_allowed_test_psi"],
+            "tall_allowed_psi": ceilings["Tall Jacket"]["max_allowed_test_psi"],
+        },
+        "day_plan": day_plan,
+        "todays_jobs": todays_jobs,
+        "carryover_jobs": carryover_jobs,
+        "upcoming_jobs": upcoming_jobs,
+        "waiting_dropoffs": waiting_drops,
+        "tasks": tasks,
+        "crew_list": crew_list,
+        "eod_summary": {
+            "tested_today": tested_today,
+            "passed_today": passed_today,
+            "condemned_today": condemned_today,
+            "queued_remaining": queued_now,
+            "unmarked_pass": unmarked_pass,
+            "unbilled_shelf_customers": unbilled_shelf,
+        },
+    }
+
+
+@app.post("/api/day/lock-lineup")
+def lock_todays_lineup(payload: LockDayLineupInput, request: Request):
+    u = require_owner_or_admin(request)
+    today_iso = today_eastern()
+    cap = max(0, min(200, int(payload.bottle_capacity)))
+    allow_extra = 1 if payload.allow_extra_autopace else 0
+    ts = now_eastern().strftime("%Y-%m-%d %I:%M %p")
+
+    conn = get_conn()
+    conn.execute(
+        """INSERT INTO daily_schedule_plans
+           (work_date, shift_mode, bottle_capacity, day_notes, lineup_locked, allow_extra_autopace, started_by, started_at, updated_at)
+           VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)
+           ON CONFLICT(work_date) DO UPDATE SET
+             shift_mode=excluded.shift_mode,
+             bottle_capacity=excluded.bottle_capacity,
+             day_notes=excluded.day_notes,
+             lineup_locked=1,
+             allow_extra_autopace=excluded.allow_extra_autopace,
+             started_by=excluded.started_by,
+             started_at=excluded.started_at,
+             updated_at=excluded.updated_at;""",
+        (today_iso, payload.shift_mode, cap, payload.day_notes.strip()[:160], allow_extra, u["initials"], ts, ts),
+    )
+    # Freeze all jobs currently sitting on today's lineup so auto-pace cannot bump them
+    conn.execute(
+        "UPDATE schedule_jobs SET locked_for_day=1 WHERE scheduled_date=? AND status!='COMPLETED';",
+        (today_iso,),
+    )
+    pace_res = run_smart_autopace(conn)
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"locked": True, "autopace": pace_res}
+
+
+@app.post("/api/day/job-move")
+def move_or_edit_day_job(payload: DayJobMoveInput, request: Request):
+    require_owner_or_admin(request)
+    today_iso = today_eastern()
+    tomorrow_iso = (date.fromisoformat(today_iso) + timedelta(days=1)).isoformat()
+    act = payload.action.strip().upper()
+
+    conn = get_conn()
+    if act == "PULL_TODAY":
+        conn.execute(
+            "UPDATE schedule_jobs SET scheduled_date=?, locked_for_day=1, auto_paced=0, synced=0 WHERE id=?;",
+            (today_iso, payload.job_id),
+        )
+    elif act == "BUMP_TOMORROW":
+        conn.execute(
+            "UPDATE schedule_jobs SET scheduled_date=?, locked_for_day=0, auto_paced=0, synced=0 WHERE id=?;",
+            (tomorrow_iso, payload.job_id),
+        )
+    elif act == "SET_COUNT" and payload.bottle_count is not None:
+        conn.execute(
+            "UPDATE schedule_jobs SET bottle_count=?, synced=0 WHERE id=?;",
+            (max(1, min(250, int(payload.bottle_count))), payload.job_id),
+        )
+    elif act == "TOGGLE_LOCK":
+        conn.execute(
+            "UPDATE schedule_jobs SET locked_for_day = CASE WHEN COALESCE(locked_for_day,0)=1 THEN 0 ELSE 1 END WHERE id=?;",
+            (payload.job_id,),
+        )
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"updated": True}
+
+
+@app.post("/api/day/autopace")
+def trigger_manual_autopace(request: Request):
+    require_owner_or_admin(request)
+    conn = get_conn()
+    res = run_smart_autopace(conn)
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return res
+
+
+@app.post("/api/day/tasks")
+def create_crew_task(payload: CrewTaskInput, request: Request):
+    u = require_owner_or_admin(request)
+    title = payload.title.strip()[:200]
+    if not title:
+        raise HTTPException(400, "Enter a task description first.")
+    w_date = payload.work_date.strip() or today_eastern()
+    assigned = payload.assigned_to.strip().upper()[:8] or "ALL"
+    cat = "PROPERTY" if payload.category.strip().upper() == "PROPERTY" else "SHOP"
+
+    conn = get_conn()
+    a_name = "All Crew"
+    if assigned != "ALL":
+        urow = conn.execute("SELECT name FROM crew_users WHERE initials=?;", (assigned,)).fetchone()
+        if urow:
+            a_name = urow["name"]
+    conn.execute(
+        """INSERT INTO crew_tasks
+           (work_date, assigned_to, assigned_name, category, title, priority, status, created_by, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, 'OPEN', ?, ?);""",
+        (w_date, assigned, a_name, cat, title, payload.priority.strip().upper() or "NORMAL", u["initials"], now_eastern().strftime("%I:%M %p")),
+    )
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"created": True}
+
+
+@app.put("/api/day/tasks/{task_id}")
+def update_crew_task(task_id: int, payload: CrewTaskUpdateInput, request: Request):
+    u = getattr(request.state, "user", None) or get_current_session_user(request)
+    if not u:
+        raise HTTPException(401, "Not authenticated.")
+    conn = get_conn()
+    t = conn.execute("SELECT * FROM crew_tasks WHERE id=?;", (task_id,)).fetchone()
+    if not t:
+        conn.close()
+        raise HTTPException(404, "Task not found.")
+    new_status = payload.status if payload.status in ("OPEN", "DONE") else t["status"]
+    comp_by = u["initials"] if new_status == "DONE" else ""
+    comp_at = now_eastern().strftime("%I:%M %p") if new_status == "DONE" else ""
+    note = payload.crew_note.strip()[:200] if payload.crew_note is not None else t["crew_note"]
+    conn.execute(
+        "UPDATE crew_tasks SET status=?, completed_by=?, completed_at=?, crew_note=? WHERE id=?;",
+        (new_status, comp_by, comp_at, note, task_id),
+    )
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"updated": True}
+
+
+@app.delete("/api/day/tasks/{task_id}")
+def delete_crew_task(task_id: int, request: Request):
+    require_owner_or_admin(request)
+    conn = get_conn()
+    conn.execute("DELETE FROM crew_tasks WHERE id=?;", (task_id,))
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"deleted": task_id}
+
+
+@app.post("/api/day/end-day")
+def complete_end_of_day(payload: EndOfDayInput, request: Request):
+    u = getattr(request.state, "user", None) or get_current_session_user(request)
+    if not u:
+        raise HTTPException(401, "Not authenticated.")
+    today_iso = today_eastern()
+    tomorrow_iso = (date.fromisoformat(today_iso) + timedelta(days=1)).isoformat()
+    ts = now_eastern().strftime("%Y-%m-%d %I:%M %p")
+    note_txt = payload.shift_note.strip()[:240]
+
+    conn = get_conn()
+    if note_txt:
+        # Log crew/owner shift wrap-up note onto today's day plan
+        existing = conn.execute("SELECT shift_notes FROM daily_schedule_plans WHERE work_date=?;", (today_iso,)).fetchone()
+        prev_n = (existing["shift_notes"] if existing and existing["shift_notes"] else "").strip()
+        merged = (f"{prev_n} | {u['initials']}: {note_txt}" if prev_n else f"{u['initials']}: {note_txt}")[:400]
+        conn.execute(
+            """INSERT INTO daily_schedule_plans (work_date, shift_mode, bottle_capacity, shift_notes, updated_at)
+               VALUES (?, 'FULL_HYDRO', 24, ?, ?)
+               ON CONFLICT(work_date) DO UPDATE SET shift_notes=excluded.shift_notes, updated_at=excluded.updated_at;""",
+            (today_iso, merged, ts),
+        )
+
+    rolled = 0
+    if u["role"] in ("OWNER", "SYSTEM_ADMIN") and payload.roll_unfinished:
+        res = conn.execute(
+            "UPDATE schedule_jobs SET scheduled_date=?, locked_for_day=0, auto_paced=0, synced=0 WHERE scheduled_date<=? AND status!='COMPLETED' AND job_type='SHOP_BATCH';",
+            (tomorrow_iso, today_iso),
+        )
+        rolled = res.rowcount
+        conn.execute("UPDATE daily_schedule_plans SET closed_out_at=? WHERE work_date=?;", (ts, today_iso))
+
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    trigger_sheets_sync_bg()
+    return {"closed": True, "rolled_jobs": rolled}
 
 
 # --- CREW FEEDBACK & PDF ENDPOINTS ---

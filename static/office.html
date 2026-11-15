@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b2219" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/static/ops.css?v=8.5" />
+  <link rel="stylesheet" href="/static/ops.css?v=9.0" />
   <title>Weber's Tank Testing — Office, Rolodex, Printouts &amp; Supplies | RIN B386</title>
 </head>
 <body>
@@ -15,7 +15,7 @@
     <div class="login-card">
       <img src="/static/images/logo-crest.jpg" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Office &amp; Print Center</h2>
-      <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter Crew PIN for Billing, Rolodex, DOT Forms &amp; Supplies</p>
+      <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter your Individual PIN (Access resets daily at Midnight)</p>
       <div style="text-align:left;">
         <label>Crew Access PIN</label>
         <input type="password" inputmode="numeric" id="loginPinInput" placeholder="••••"
@@ -1878,6 +1878,7 @@
       if (document.getElementById('appShell').hidden) return;
       try {
         const res = await fetch('/api/ping');
+        if (res.status === 401) { bootOffice(); return; }
         if (res.ok) {
           const p = await res.json();
           if (p.db_version !== STATE.db_version) loadOfficeState();
@@ -1887,6 +1888,7 @@
 
     bootOffice();
   </script>
-  <script src="/static/help-bot.js?v=8.5"></script>
+  <script src="/static/day-flow.js?v=9.0"></script>
+  <script src="/static/help-bot.js?v=9.0"></script>
 </body>
 </html>

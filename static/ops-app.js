@@ -392,6 +392,7 @@ setInterval(async () => {
   if (document.getElementById('appShell').hidden || BENCH_SUBMITTING) return;
   try {
     const res = await fetch('/api/ping');
+    if (res.status === 401) { bootApp(); return; }
     if (res.ok) {
       const p = await res.json();
       if (p.db_version !== STATE.db_version) loadState(false);

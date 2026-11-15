@@ -501,6 +501,50 @@ def init_db() -> None:
             (cname, acct, ec["ph"] or "", terms, 1 if is_dept else 0),
         )
 
+
+    # Migrations for Morning Lineup Lock & Auto-Pace
+    for col, ctype in [
+        ("lineup_locked", "INTEGER DEFAULT 0"),
+        ("allow_extra_autopace", "INTEGER DEFAULT 1"),
+        ("started_by", "TEXT DEFAULT ''"),
+        ("started_at", "TEXT DEFAULT ''"),
+        ("closed_out_at", "TEXT DEFAULT ''"),
+        ("shift_notes", "TEXT DEFAULT ''"),
+    ]:
+        try:
+            cur.execute(f"ALTER TABLE daily_schedule_plans ADD COLUMN {col} {ctype};")
+        except sqlite3.OperationalError:
+            pass
+
+    for col, ctype in [
+        ("locked_for_day", "INTEGER DEFAULT 0"),
+        ("auto_paced", "INTEGER DEFAULT 0"),
+    ]:
+        try:
+            cur.execute(f"ALTER TABLE schedule_jobs ADD COLUMN {col} {ctype};")
+        except sqlite3.OperationalError:
+            pass
+
+    # Seed Individual PIN Accounts if empty
+    user_cnt = cur.execute("SELECT COUNT(*) FROM crew_users;").fetchone()[0]
+    if user_cnt == 0:
+        legacy_row = cur.execute("SELECT value FROM settings WHERE key='crew_pin';").fetchone()
+        ryan_pin = (legacy_row["value"].strip() if legacy_row and legacy_row["value"].strip() else "0386")
+        admin_pin = "1997" if ryan_pin != "1997" else "9997"
+        seed_users = [
+            ("Eric Pearce (Admin)", "EP", admin_pin, "SYSTEM_ADMIN", 0),
+            ("Ryan Pearce", "RP", ryan_pin, "OWNER", 1),
+            ("Kenny", "KN", "1111" if ryan_pin != "1111" else "1112", "CREW", 0),
+            ("Twin 1 (Edit Name)", "T1", "2222" if ryan_pin != "2222" else "2223", "CREW", 0),
+            ("Twin 2 (Edit Name)", "T2", "3333" if ryan_pin != "3333" else "3334", "CREW", 0),
+        ]
+        for uname, uinit, upin, urole, usign in seed_users:
+            cur.execute(
+                """INSERT OR IGNORE INTO crew_users (name, initials, pin, role, can_sign_dot, active)
+                   VALUES (?, ?, ?, ?, ?, 1);""",
+                (uname, uinit, upin, urole, usign),
+            )
+
     conn.commit()
     conn.close()
 
