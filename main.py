@@ -993,6 +993,8 @@ def is_tv_authorized(request: Request) -> bool:
 
 @app.middleware("http")
 async def auth_gate_middleware(request: Request, call_next):
+    if request.url.path in ("/merch", "/api/public/merch"):
+        return await call_next(request)
     host = (request.headers.get("host") or "").split(":")[0].lower()
     path = request.url.path
 
@@ -1000,7 +1002,7 @@ async def auth_gate_middleware(request: Request, call_next):
         return FileResponse(STATIC_DIR / "landing.html")
 
     public_paths = {
-        "/", "/ops", "/schedule", "/office", "/tv", "/manifest.json", "/sw.js", "/icon.svg", "/pwa-icon.png", "/apple-touch-icon.png",
+        "/", "/ops", "/schedule", "/office", "/tv", "/manifest.json", "/merch", "/sw.js", "/icon.svg", "/pwa-icon.png", "/apple-touch-icon.png",
         "/api/auth/login", "/api/auth/status", "/api/auth/logout",
         "/api/public/dropoff", "/api/public/track", "/api/public/turnaround", "/api/public/theme",
     }
@@ -1470,10 +1472,10 @@ def serve_manifest():
             "background_color": "#fdf8ee",
             "theme_color": "#0c261b",
             "icons": [
-                {"src": f"/pwa-icon.png?size=192&mode=any&theme={t_tag}", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-                {"src": f"/pwa-icon.png?size=512&mode=any&theme={t_tag}", "sizes": "512x512", "type": "image/png", "purpose": "any"},
-                {"src": f"/pwa-icon.png?size=192&mode=maskable&theme={t_tag}", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
-                {"src": f"/pwa-icon.png?size=512&mode=maskable&theme={t_tag}", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+                {"src": f"/pwa-icon.png?size=192&mode=any&v=11&theme={t_tag}", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+                {"src": f"/pwa-icon.png?size=512&mode=any&v=11&theme={t_tag}", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+                {"src": f"/pwa-icon.png?size=192&mode=maskable&v=11&theme={t_tag}", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+                {"src": f"/pwa-icon.png?size=512&mode=maskable&v=11&theme={t_tag}", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
             ],
         },
         headers=NO_CACHE_HEADERS,
@@ -3917,6 +3919,7 @@ def export_customers_csv():
     conn = get_conn()
     rows = conn.execute("SELECT * FROM customers ORDER BY customer_name COLLATE NOCASE ASC;").fetchall()
     conn.close()
+    import csv, io
     buf = io.StringIO()
     writer = csv.writer(buf)
     writer.writerow([
@@ -5124,15 +5127,15 @@ _PWA_ICON_CACHE: dict[tuple, bytes] = {}
 
 
 def _build_dynamic_pwa_icon_png(theme: dict, size: int = 512, maskable: bool = False) -> bytes:
-    """Composites Warm Cream + Active Holiday Wreath + Weber's Crest + Shop Dogs into a crisp PNG icon."""
+    """Composites Warm Cream + Active Holiday Wreath + Dogs-Free Crest Backplate + Shop Dogs into PNG icon."""
     t_key = theme.get("key", "NONE") if (theme.get("active") and (theme.get("enable_public") or theme.get("enable_ops"))) else "NONE"
-    dog_file = theme.get("dog_image", "shop-dogs.jpg") if t_key != "NONE" else "shop-dogs.jpg"
-    cache_key = (t_key, dog_file, size, maskable)
+    dog_file = theme.get("dog_image", "dogs-classic.png") if t_key != "NONE" else "dogs-classic.png"
+    cache_key = ("v11", t_key, dog_file, size, maskable)
     if cache_key in _PWA_ICON_CACHE:
         return _PWA_ICON_CACHE[cache_key]
 
     try:
-        from PIL import Image, ImageDraw, ImageOps
+        from PIL import Image, ImageDraw
     except ImportError:
         return b""
 
@@ -5141,79 +5144,50 @@ def _build_dynamic_pwa_icon_png(theme: dict, size: int = 512, maskable: bool = F
     draw = ImageDraw.Draw(canvas_im)
 
     if maskable:
-        # Full-bleed cream square with safe-zone framing for Android adaptive circle/squircle masks & iOS
         draw.rectangle((0, 0, S, S), fill=(245, 233, 206, 255))
-        draw.ellipse((24, 18, S - 24, S - 18), fill=(253, 248, 238, 255))
-        crest_d = 248
-        crest_cy = 214
-        dogs_max_w, dogs_max_h = 368, 196
-        dogs_bottom_y = 446
+        draw.ellipse((20, 16, S - 20, S - 16), fill=(253, 248, 238, 255))
+        crest_d, crest_cy = 276, 212
+        dogs_max_w, dogs_max_h, dogs_bottom_y = 374, 202, 452
     else:
-        # Rounded-square cream & gold-trimmed app tile for Windows/Mac/Desktop & Android 'any'
         draw.rounded_rectangle((6, 6, S - 7, S - 7), radius=104, fill=(12, 38, 27, 255))
-        draw.rounded_rectangle((16, 16, S - 17, S - 17), radius=94, fill=(251, 191, 36, 255))
+        draw.rounded_rectangle((16, 16, S - 17, S - 17), radius=94, fill=(217, 155, 38, 255))
         draw.rounded_rectangle((24, 24, S - 25, S - 25), radius=86, fill=(253, 248, 238, 255))
-        crest_d = 292
-        crest_cy = 208
-        dogs_max_w, dogs_max_h = 444, 236
-        dogs_bottom_y = 486
+        crest_d, crest_cy = 324, 210
+        dogs_max_w, dogs_max_h, dogs_bottom_y = 446, 240, 488
 
     img_dir = STATIC_DIR / "images"
 
-    # Layer 1: Active Holiday Wreath Arch (if active)
+    # Plane 1: Holiday Botanical Wreath Arch
     if t_key != "NONE":
         arch_map = {"THANKSGIVING": "arch-thanksgiving.png", "HALLOWEEN": "arch-thanksgiving.png", "CHRISTMAS": "arch-christmas.png", "NEW_YEAR": "arch-newyear.png"}
-        arch_name = arch_map.get(t_key, "arch-thanksgiving.png")
-        arch_p = img_dir / arch_name
+        arch_p = img_dir / arch_map.get(t_key, "arch-thanksgiving.png")
         if arch_p.exists():
             with Image.open(arch_p) as a_im:
-                a_rgba = a_im.convert("RGBA")
-                arch_d = int(crest_d * 1.36)
-                a_rgba = a_rgba.resize((arch_d, arch_d), Image.Resampling.LANCZOS)
-                ax = (S - arch_d) // 2
-                ay = crest_cy - (arch_d // 2)
-                canvas_im.alpha_composite(a_rgba, (ax, ay))
+                arch_d = int(crest_d * 1.34)
+                a_rgba = a_im.convert("RGBA").resize((arch_d, arch_d), Image.Resampling.LANCZOS)
+                canvas_im.alpha_composite(a_rgba, ((S - arch_d) // 2, crest_cy - arch_d // 2))
 
-    # Layer 2: Circular Weber's Tank Testing Crest
-    crest_p = img_dir / "logo-crest.jpg"
-    cx0 = (S - crest_d) // 2
-    cy0 = crest_cy - (crest_d // 2)
-    draw.ellipse((cx0 - 6, cy0 - 6, cx0 + crest_d + 6, cy0 + crest_d + 6), fill=(251, 191, 36, 255))
-    if crest_p.exists():
-        with Image.open(crest_p) as c_im:
-            c_fit = ImageOps.fit(c_im.convert("RGBA"), (crest_d, crest_d), Image.Resampling.LANCZOS)
-            mask = Image.new("L", (crest_d, crest_d), 0)
-            ImageDraw.Draw(mask).ellipse((0, 0, crest_d - 1, crest_d - 1), fill=255)
-            canvas_im.paste(c_fit, (cx0, cy0), mask)
-    else:
-        draw.ellipse((cx0, cy0, cx0 + crest_d, cy0 + crest_d), fill=(12, 38, 27, 255))
+    # Plane 2: Sculpted Dogs-Free Heritage Crest Backplate (Never Double-Renders Dogs!)
+    backplate_p = img_dir / "crest-backplate.png"
+    fallback_p = img_dir / "logo-crest.png"
+    chosen_crest = backplate_p if backplate_p.exists() else fallback_p
+    if chosen_crest.exists():
+        with Image.open(chosen_crest) as c_im:
+            c_rgba = c_im.convert("RGBA").resize((crest_d, crest_d), Image.Resampling.LANCZOS)
+            canvas_im.alpha_composite(c_rgba, ((S - crest_d) // 2, crest_cy - crest_d // 2))
 
-    # Layer 3: Pongo, Zeke & Pierce Foreground Cutout
+    # Plane 3: Foreground Shop Dogs (Holiday Outfit OR Year-Round Leather Collars)
     stem = dog_file.rsplit(".", 1)[0]
-    dog_candidates = [img_dir / f"{stem}.png", img_dir / dog_file, img_dir / "dogs-thanksgiving.png", img_dir / "shop-dogs.jpg"]
+    dog_candidates = [img_dir / f"{stem}.png", img_dir / dog_file, img_dir / "dogs-classic.png", img_dir / "dogs-thanksgiving.png"]
     chosen_dog = next((p for p in dog_candidates if p.exists()), None)
-    if chosen_dog:
+    if chosen_dog and chosen_crest == backplate_p:
         with Image.open(chosen_dog) as d_im:
             d_rgba = d_im.convert("RGBA")
-            if chosen_dog.suffix.lower() in (".jpg", ".jpeg"):
-                # Rounded badge crop for non-cutout fallback photo
-                d_rgba.thumbnail((int(dogs_max_w * 0.86), int(dogs_max_h * 0.82)), Image.Resampling.LANCZOS)
-                dw, dh = d_rgba.size
-                rmask = Image.new("L", (dw, dh), 0)
-                ImageDraw.Draw(rmask).rounded_rectangle((0, 0, dw - 1, dh - 1), radius=28, fill=255)
-                framed = Image.new("RGBA", (dw + 8, dh + 8), (0, 0, 0, 0))
-                ImageDraw.Draw(framed).rounded_rectangle((0, 0, dw + 7, dh + 7), radius=31, fill=(251, 191, 36, 255))
-                framed.paste(d_rgba, (4, 4), rmask)
-                d_rgba = framed
-            else:
-                d_rgba.thumbnail((dogs_max_w, dogs_max_h), Image.Resampling.LANCZOS)
-            dx = (S - d_rgba.width) // 2
-            dy = dogs_bottom_y - d_rgba.height
-            canvas_im.alpha_composite(d_rgba, (dx, dy))
+            d_rgba.thumbnail((dogs_max_w, dogs_max_h), Image.Resampling.LANCZOS)
+            canvas_im.alpha_composite(d_rgba, ((S - d_rgba.width) // 2, dogs_bottom_y - d_rgba.height))
 
     if size != S:
         canvas_im = canvas_im.resize((size, size), Image.Resampling.LANCZOS)
-
     out = io.BytesIO()
     canvas_im.save(out, format="PNG", optimize=True)
     png_bytes = out.getvalue()
@@ -5242,6 +5216,196 @@ def serve_apple_touch_icon():
     conn.close()
     png = _build_dynamic_pwa_icon_png(active_theme, size=180, maskable=True)
     return Response(content=png, media_type="image/png", headers=NO_CACHE_HEADERS)
+
+
+
+async def get_authenticated_user_async(request: Request):
+    import inspect, json
+    try:
+        _st = auth_status(request)
+        if inspect.isawaitable(_st):
+            _st = await _st
+        if hasattr(_st, "body"):
+            _st = json.loads(_st.body)
+        if isinstance(_st, dict) and _st.get("authenticated"):
+            return _st.get("user")
+    except Exception:
+        pass
+    return None
+
+
+class MerchRequestInput(BaseModel):
+    crew_name: str = ""
+    item_key: str
+    item_title: str
+    design_key: str
+    design_title: str
+    placement: str = "Left Chest"
+    color_name: str
+    size: str
+    qty: int = 1
+    order_type: str = "SHOP_ALLOWANCE"
+    notes: str = ""
+
+
+class MerchStatusUpdate(BaseModel):
+    status: str
+
+
+class MerchStoreSettingsInput(BaseModel):
+    popup_store_url: str = ""
+    allowance_note: str = ""
+
+
+@app.get("/merch")
+def serve_merch_locker():
+    return FileResponse(STATIC_DIR / "merch.html", headers=NO_CACHE_HEADERS)
+
+
+@app.get("/api/public/merch")
+async def get_merch_locker_state(request: Request):
+    user = await get_authenticated_user_async(request)
+    conn = get_conn()
+    s_rows = conn.execute(
+        "SELECT key, value FROM settings WHERE key IN ('merch_popup_url', 'merch_allowance_note');"
+    ).fetchall()
+    cfg = {r["key"]: r["value"] for r in s_rows}
+    reqs = []
+    crew_list = []
+    if user:
+        reqs = [
+            dict(r)
+            for r in conn.execute(
+                "SELECT * FROM merch_requests ORDER BY CASE status WHEN 'REQUESTED' THEN 0 WHEN 'ORDERED' THEN 1 ELSE 2 END, id DESC;"
+            ).fetchall()
+        ]
+        crew_list = [
+            dict(u)
+            for u in conn.execute("SELECT name, initials, role FROM crew_users WHERE active=1 ORDER BY id;").fetchall()
+        ]
+    conn.close()
+    return {
+        "authenticated": bool(user),
+        "user": user,
+        "popup_store_url": cfg.get("merch_popup_url", ""),
+        "allowance_note": cfg.get(
+            "merch_allowance_note",
+            "Pick your sizes below for Ryan's shop gear order, or jump to Printify for extra family hoodies, tumblers & blankets.",
+        ),
+        "requests": reqs,
+        "crew_list": crew_list,
+    }
+
+
+@app.post("/api/merch/requests")
+async def create_merch_request(payload: MerchRequestInput, request: Request):
+    user = await get_authenticated_user_async(request)
+    if not user:
+        raise HTTPException(401, "Sign in with your Crew PIN first to submit locker items.")
+    qty = max(1, min(25, int(payload.qty or 1)))
+    c_name = (payload.crew_name or user["name"]).strip() or user["name"]
+    c_init = user["initials"] if c_name.lower() == user["name"].lower() else "".join(w[0] for w in c_name.split()[:3]).upper()
+    now_str = now_eastern().strftime("%Y-%m-%d %I:%M %p")
+    conn = get_conn()
+    cur = conn.execute(
+        """
+        INSERT INTO merch_requests
+        (created_at, crew_name, crew_initials, item_key, item_title, design_key, design_title,
+         placement, color_name, size, qty, order_type, notes, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'REQUESTED');
+        """,
+        (
+            now_str,
+            c_name,
+            c_init,
+            payload.item_key.strip(),
+            payload.item_title.strip(),
+            payload.design_key.strip(),
+            payload.design_title.strip(),
+            payload.placement.strip(),
+            payload.color_name.strip(),
+            payload.size.strip(),
+            qty,
+            payload.order_type.strip(),
+            payload.notes.strip(),
+        ),
+    )
+    new_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return {"ok": True, "id": new_id}
+
+
+@app.put("/api/merch/requests/{req_id}")
+def update_merch_request_status(req_id: int, payload: MerchStatusUpdate, request: Request):
+    require_owner_or_admin(request)
+    st = payload.status.strip().upper()
+    if st not in ("REQUESTED", "ORDERED", "DELIVERED"):
+        raise HTTPException(400, "Invalid status")
+    conn = get_conn()
+    conn.execute("UPDATE merch_requests SET status=? WHERE id=?;", (st, req_id))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+@app.delete("/api/merch/requests/{req_id}")
+async def delete_merch_request(req_id: int, request: Request):
+    user = await get_authenticated_user_async(request)
+    if not user:
+        raise HTTPException(401, "Not signed in")
+    conn = get_conn()
+    row = conn.execute("SELECT * FROM merch_requests WHERE id=?;", (req_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "Item not found")
+    is_boss = user["role"] in ("OWNER", "SYSTEM_ADMIN")
+    if not is_boss and (row["crew_name"].lower() != user["name"].lower() or row["status"] != "REQUESTED"):
+        conn.close()
+        raise HTTPException(403, "Only Ryan or Admin can remove already-processed items.")
+    conn.execute("DELETE FROM merch_requests WHERE id=?;", (req_id,))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+@app.post("/api/merch/settings")
+def update_merch_store_settings(payload: MerchStoreSettingsInput, request: Request):
+    require_owner_or_admin(request)
+    url = payload.popup_store_url.strip()
+    if url and not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    conn = get_conn()
+    conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('merch_popup_url', ?);", (url,))
+    conn.execute(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('merch_allowance_note', ?);",
+        (payload.allowance_note.strip(),),
+    )
+    conn.commit()
+    conn.close()
+    return {"ok": True, "popup_store_url": url}
+
+
+@app.get("/api/merch/export.csv")
+def export_merch_requests_csv(request: Request):
+    require_owner_or_admin(request)
+    conn = get_conn()
+    rows = conn.execute("SELECT * FROM merch_requests ORDER BY status, item_title, size, crew_name;").fetchall()
+    conn.close()
+    import csv, io
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["ID", "Created", "Crew Member", "Product", "Color", "Size", "Qty", "Design", "Placement", "Type", "Status", "Notes"])
+    for r in rows:
+        writer.writerow([
+            r["id"], r["created_at"], r["crew_name"], r["item_title"], r["color_name"],
+            r["size"], r["qty"], r["design_title"], r["placement"], r["order_type"], r["status"], r["notes"],
+        ])
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="webers_crew_merch_order.csv"'},
+    )
 
 
 @app.get("/api/public/theme")

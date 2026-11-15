@@ -375,6 +375,39 @@
       .stand-sn { font-size: 1.38rem; }
     }
 
+  
+    /* v11.0 3D Multi-Plane Depth & Orbital Screensaver Parallax on /tv */
+    .tv-brand-bg { perspective: 1200px; }
+    .tv-3d-rig {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transform-style: preserve-3d;
+    }
+    body.tv-screensaver .tv-3d-rig,
+    body.tv-bg-reveal .tv-3d-rig {
+      animation: tvOrbital3D 16s ease-in-out infinite alternate;
+    }
+    @keyframes tvOrbital3D {
+      0%   { transform: rotateY(-6deg) rotateX(3deg); }
+      50%  { transform: rotateY(0deg) rotateX(-2.5deg); }
+      100% { transform: rotateY(6deg) rotateX(3deg); }
+    }
+    .tv-crest-wrap { transform-style: preserve-3d; }
+    .tv-arch-img { transform: translate3d(0, 0, -55px) scale(1.04); }
+    .tv-crest-img {
+      border-radius: 0 !important; border: none !important; background: transparent !important;
+      object-fit: contain !important; box-shadow: none !important;
+      filter: drop-shadow(0 22px 42px rgba(12, 38, 27, 0.28));
+      transform: translate3d(0, 0, 0px);
+    }
+    .tv-dogs-img {
+      transform: translate3d(0, 0, 62px);
+      filter: drop-shadow(0 20px 26px rgba(12, 38, 27, 0.28)) !important;
+    }
+    .hdr-brand img {
+      border-radius: 0 !important; border: none !important; background: transparent !important;
+      object-fit: contain !important; width: 40px !important; height: 40px !important;
+    }
+
   </style>
 </head>
 <body>
@@ -382,7 +415,7 @@
   <div class="tv-brand-bg" id="tvBrandBg" aria-hidden="true">
     <div class="tv-crest-wrap">
       <img id="tvBgArchImg" class="tv-arch-img" alt="" hidden />
-      <img src="/static/images/logo-crest.jpg?v=10.4" alt="" class="tv-crest-img" onerror="this.src='/icon.svg'" />
+      <img src="/static/images/logo-crest.png?v=11.1" alt="" class="tv-crest-img" onerror="this.src='/icon.svg'" />
     </div>
     <img id="tvBgDogsImg" src="/static/images/dogs-thanksgiving.png" alt="" class="tv-dogs-img" onerror="this.onerror=null;this.src='/static/images/shop-dogs.jpg';this.classList.add('photo-fallback');" />
   </div>
@@ -401,7 +434,7 @@
   <!-- TV PAIRING PIN GATE -->
   <div id="tvPinGate" class="pin-gate" hidden>
     <div class="pin-box">
-      <img src="/static/images/logo-crest.jpg?v=10.4" alt="B386" style="width:62px;height:62px;border-radius:50%;border:2px solid var(--gold-bright);margin-bottom:8px;" />
+      <img src="/static/images/logo-crest.png?v=11.1" alt="B386" style="width:62px;height:62px;border-radius:50%;border:2px solid var(--gold-bright);margin-bottom:8px;" />
       <h3 style="margin:0;font-family:var(--font-display);font-size:1.5rem;color:var(--forest);">Testing Room TV Display</h3>
       <p style="font-size:0.83rem;color:var(--muted);margin:5px 0 0;">Enter any valid Shop PIN once to pair this TV</p>
       <input type="password" inputmode="numeric" id="tvPinInput" placeholder="••••" onkeydown="if(event.key==='Enter')unlockTv()" />
@@ -412,7 +445,7 @@
   <!-- FROSTED 1080P BROADCAST HEADER -->
   <header class="tv-hdr">
     <div class="hdr-brand">
-      <img src="/static/images/logo-crest.jpg?v=10.4" alt="B386" onerror="this.src='/icon.svg'" />
+      <img src="/static/images/logo-crest.png?v=11.1" alt="B386" onerror="this.src='/icon.svg'" />
       <div>
         <span class="hdr-title">Weber's Tank Testing</span>
         <span class="hdr-sub" id="hdrShiftTxt">DOT RIN B386</span>
@@ -717,7 +750,7 @@
         } else {
           if (ssBadge) ssBadge.hidden = true;
           if (archImg) archImg.hidden = true;
-          if (dogsImg) { dogsImg.src = '/static/images/shop-dogs.jpg'; dogsImg.classList.add('photo-fallback'); }
+          if (dogsImg) { dogsImg.src = '/static/images/dogs-classic.png?v=11.1'; dogsImg.classList.remove('photo-fallback'); }
         }
       } catch (_) {}
     }
@@ -935,6 +968,6 @@ function playChime() {
     setInterval(pollTv, 3500);
     setInterval(syncTvBackgroundArtwork, 20000);
   </script>
-  <script src="/static/theme-engine.js?v=10.4"></script>
+  <script src="/static/theme-engine.js?v=11.1"></script>
 </body>
 </html>

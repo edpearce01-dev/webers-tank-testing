@@ -74,6 +74,25 @@ def init_db() -> None:
             created_at TEXT DEFAULT ''
         );
 
+        
+        CREATE TABLE IF NOT EXISTS merch_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at TEXT NOT NULL,
+            crew_name TEXT NOT NULL,
+            crew_initials TEXT DEFAULT '',
+            item_key TEXT NOT NULL,
+            item_title TEXT NOT NULL,
+            design_key TEXT NOT NULL,
+            design_title TEXT NOT NULL,
+            placement TEXT DEFAULT '',
+            color_name TEXT NOT NULL,
+            size TEXT NOT NULL,
+            qty INTEGER DEFAULT 1,
+            order_type TEXT DEFAULT 'SHOP_ALLOWANCE',
+            notes TEXT DEFAULT '',
+            status TEXT DEFAULT 'REQUESTED'
+        );
+
         CREATE TABLE IF NOT EXISTS crew_tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             work_date TEXT NOT NULL,

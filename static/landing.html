@@ -581,6 +581,74 @@
       .track-inputs-grid { grid-template-columns: 1fr; }
     }
 
+  
+    /* =====================================================================
+       v11.0 TRUE 3-PLANE 3D SHADOWBOX ENTRANCE & INTERACTIVE PARALLAX
+       ===================================================================== */
+    .brand img {
+      border-radius: 0 !important; border: none !important; background: transparent !important;
+      object-fit: contain !important; width: 44px !important; height: 44px !important;
+      filter: drop-shadow(0 2px 5px rgba(12, 38, 27, 0.22));
+    }
+    .fixed-brand-stage {
+      perspective: 1150px;
+      perspective-origin: 50% 44%;
+    }
+    .stage-3d-rig {
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+      transform-style: preserve-3d;
+      will-change: transform;
+    }
+    .crest-arch-wrap {
+      transform-style: preserve-3d;
+    }
+    .arch-layer {
+      transform: translate3d(0, 0, -58px) scale(1.05);
+      animation: arch3dEnter 1.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .crest-circle {
+      border-radius: 0 !important;
+      border: none !important;
+      background: transparent !important;
+      object-fit: contain !important;
+      box-shadow: none !important;
+      filter: drop-shadow(0 22px 34px rgba(12, 38, 27, 0.28));
+      transform: translate3d(0, 0, 0px);
+      animation: crest3dEnter 1.25s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
+    }
+    .crest-gold-sheen {
+      position: absolute; inset: 4%; border-radius: 50%; z-index: 2; pointer-events: none;
+      background: linear-gradient(115deg, transparent 32%, rgba(255, 250, 220, 0.62) 50%, transparent 68%);
+      background-size: 240% 240%;
+      mix-blend-mode: overlay;
+      animation: crestSheenSweep 1.6s ease-out 0.45s both;
+    }
+    .stage-dogs-cutout {
+      transform: translate3d(0, 0, 64px);
+      filter: drop-shadow(0 22px 24px rgba(12, 38, 27, 0.32)) !important;
+      animation: dogs3dEnter 1.38s cubic-bezier(0.22, 1, 0.36, 1) 0.18s both;
+    }
+    @keyframes arch3dEnter {
+      0%   { opacity: 0; transform: translate3d(0, 20px, -175px) scale(0.76) rotateZ(-5deg); }
+      100% { opacity: 1; transform: translate3d(0, 0, -58px) scale(1.05) rotateZ(0deg); }
+    }
+    @keyframes crest3dEnter {
+      0%   { opacity: 0; transform: translate3d(0, -28px, -130px) rotateX(24deg) rotateY(-14deg) scale(0.84); }
+      100% { opacity: 1; transform: translate3d(0, 0, 0px) rotateX(0deg) rotateY(0deg) scale(1); }
+    }
+    @keyframes dogs3dEnter {
+      0%   { opacity: 0; transform: translate3d(0, 48px, -24px) rotateX(14deg) scale(0.86); }
+      100% { opacity: 1; transform: translate3d(0, 0, 64px) rotateX(0deg) scale(1); }
+    }
+    @keyframes crestSheenSweep {
+      0%   { background-position: 180% 0%; opacity: 0; }
+      25%  { opacity: 0.95; }
+      100% { background-position: -60% 100%; opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .arch-layer, .crest-circle, .stage-dogs-cutout, .crest-gold-sheen { animation: none !important; }
+    }
+
   </style>
 </head>
 <body>
@@ -610,7 +678,7 @@
   <header class="site-nav" id="stickySiteNav">
     <div class="wrap nav-inner">
       <a href="#" class="brand">
-        <img src="/static/images/logo-crest.jpg?v=9.9" alt="Weber's Tank Testing RIN B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=11.0?v=9.9" alt="Weber's Tank Testing RIN B386" onerror="this.src='/icon.svg'" />
         <div>
           <span class="brand-title">Weber's Tank Testing</span>
           <span class="brand-sub">U.S. D.O.T. RIN B386 • BADEN, PA</span>
@@ -635,7 +703,7 @@
   <div class="fixed-brand-stage" id="fixedBrandStage" aria-hidden="true">
     <div class="crest-arch-wrap">
       <img id="heroHolidayArchImg" class="stage-holiday-arch-img" alt="" hidden />
-      <img src="/static/images/logo-crest.jpg?v=9.9" alt="Weber's Tank Testing Crest" class="stage-crest-logo" onerror="this.src='/icon.svg'" />
+      <img src="/static/images/logo-crest.png?v=11.0?v=9.9" alt="Weber's Tank Testing Crest" class="stage-crest-logo" onerror="this.src='/icon.svg'" />
     </div>
     <img id="heroDogsImg" src="/static/images/dogs-thanksgiving.png" alt="Pongo, Zeke & Pierce" class="stage-dogs-cutout" onerror="this.onerror=null;this.src='/static/images/shop-dogs.jpg';this.classList.add('photo-fallback');" />
   </div>

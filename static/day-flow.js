@@ -229,6 +229,7 @@
           <button type="button" class="secondary" style="padding:10px;justify-content:flex-start;" onclick="document.getElementById('unifiedAccountDrawer').hidden=true;window.openTasksModal()">📋 ${isBoss ? 'Assign &amp; View Crew Tasks' : 'My Assigned Tasks'}</button>
           <button type="button" class="secondary" style="padding:10px;justify-content:flex-start;" onclick="document.getElementById('unifiedAccountDrawer').hidden=true;window.openEndDayModal()">🌙 ${isBoss ? 'End Your Day Closeout' : 'Wrap Up My Shift'}</button>
           <button type="button" class="secondary" style="padding:10px;justify-content:flex-start;" onclick="document.getElementById('unifiedAccountDrawer').hidden=true;typeof toggleFeedbackModal==='function'?toggleFeedbackModal(true):(location.href='/ops')">💬 Crew Feedback &amp; Notes</button>
+          <button type="button" class="secondary" style="padding:10px;justify-content:flex-start;background:#fffbeb;border-color:#f59e0b;color:#92400e;font-weight:800;" onclick="location.href='/merch'">👕 Crew Gear &amp; Merch Locker</button>
         </div>
 
         ${isBoss ? `
