@@ -63,6 +63,33 @@ def init_db() -> None:
             active INTEGER DEFAULT 1
         );
 
+        CREATE TABLE IF NOT EXISTS crew_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            initials TEXT NOT NULL UNIQUE,
+            pin TEXT NOT NULL UNIQUE,
+            role TEXT NOT NULL DEFAULT 'CREW',
+            can_sign_dot INTEGER DEFAULT 0,
+            active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT ''
+        );
+
+        CREATE TABLE IF NOT EXISTS crew_tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            work_date TEXT NOT NULL,
+            assigned_to TEXT NOT NULL DEFAULT 'ALL',
+            assigned_name TEXT DEFAULT 'All Crew',
+            category TEXT DEFAULT 'SHOP',
+            title TEXT NOT NULL,
+            priority TEXT DEFAULT 'NORMAL',
+            status TEXT DEFAULT 'OPEN',
+            completed_by TEXT DEFAULT '',
+            completed_at TEXT DEFAULT '',
+            crew_note TEXT DEFAULT '',
+            created_by TEXT DEFAULT 'RP',
+            created_at TEXT DEFAULT ''
+        );
+
         CREATE TABLE IF NOT EXISTS calibration_targets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             serial_number TEXT NOT NULL,
@@ -177,8 +204,12 @@ def init_db() -> None:
             entry_type TEXT DEFAULT 'DROPOFF',
             account_type TEXT DEFAULT 'WALK_IN',
             po_station TEXT DEFAULT '',
+            contact_person TEXT DEFAULT '',
             customer_name TEXT NOT NULL,
             customer_phone TEXT DEFAULT '',
+            customer_email TEXT DEFAULT '',
+            pickup_address TEXT DEFAULT '',
+            preferred_date TEXT DEFAULT '',
             bottle_count INTEGER DEFAULT 1,
             imported_count INTEGER DEFAULT 0,
             tank_summary TEXT DEFAULT '',
@@ -203,6 +234,7 @@ def init_db() -> None:
             job_type TEXT DEFAULT 'SHOP_BATCH',
             account_type TEXT DEFAULT 'WALK_IN',
             po_station TEXT DEFAULT '',
+            contact_person TEXT DEFAULT '',
             customer_name TEXT NOT NULL,
             customer_phone TEXT DEFAULT '',
             location_notes TEXT DEFAULT '',
@@ -214,6 +246,8 @@ def init_db() -> None:
             rush_fee INTEGER DEFAULT 0,
             holding_zone TEXT DEFAULT 'ZONE_A_BACKROOM',
             prep_status TEXT DEFAULT 'WAITING',
+            locked_for_day INTEGER DEFAULT 0,
+            auto_paced INTEGER DEFAULT 0,
             status TEXT DEFAULT 'OPEN',
             notes TEXT DEFAULT '',
             synced INTEGER DEFAULT 0
@@ -223,7 +257,14 @@ def init_db() -> None:
             work_date TEXT PRIMARY KEY,
             shift_mode TEXT DEFAULT 'FULL_HYDRO',
             bottle_capacity INTEGER DEFAULT 24,
-            day_notes TEXT DEFAULT ''
+            day_notes TEXT DEFAULT '',
+            lineup_locked INTEGER DEFAULT 0,
+            allow_extra_autopace INTEGER DEFAULT 1,
+            started_by TEXT DEFAULT '',
+            started_at TEXT DEFAULT '',
+            closed_out_at TEXT DEFAULT '',
+            shift_notes TEXT DEFAULT '',
+            updated_at TEXT DEFAULT ''
         );
 
         CREATE TABLE IF NOT EXISTS pricing_rates (
@@ -306,7 +347,25 @@ def init_db() -> None:
         """
     )
 
-    # Safe non-destructive column migrations for existing databases
+    # 1. Run ALL column migrations on existing tables BEFORE any seed INSERTs execute!
+    for col, cdef in [
+        ("notes", "TEXT DEFAULT ''"),
+        ("sort_order", "INTEGER DEFAULT 100"),
+    ]:
+        _ensure_column(conn, "pricing_rates", col, cdef)
+
+    for col, cdef in [
+        ("day_notes", "TEXT DEFAULT ''"),
+        ("lineup_locked", "INTEGER DEFAULT 0"),
+        ("allow_extra_autopace", "INTEGER DEFAULT 1"),
+        ("started_by", "TEXT DEFAULT ''"),
+        ("started_at", "TEXT DEFAULT ''"),
+        ("closed_out_at", "TEXT DEFAULT ''"),
+        ("shift_notes", "TEXT DEFAULT ''"),
+        ("updated_at", "TEXT DEFAULT ''"),
+    ]:
+        _ensure_column(conn, "shop_day_plans", col, cdef)
+
     for col, cdef in [
         ("intake_at", "TEXT DEFAULT ''"),
         ("customer_phone", "TEXT DEFAULT ''"),
@@ -335,9 +394,15 @@ def init_db() -> None:
         _ensure_column(conn, "cylinder_records", col, cdef)
 
     for col, cdef in [
+        ("entry_type", "TEXT DEFAULT 'DROPOFF'"),
         ("account_type", "TEXT DEFAULT 'WALK_IN'"),
         ("po_station", "TEXT DEFAULT ''"),
+        ("contact_person", "TEXT DEFAULT ''"),
+        ("customer_email", "TEXT DEFAULT ''"),
+        ("pickup_address", "TEXT DEFAULT ''"),
+        ("preferred_date", "TEXT DEFAULT ''"),
         ("imported_count", "INTEGER DEFAULT 0"),
+        ("tank_summary", "TEXT DEFAULT ''"),
         ("valves_attached", "INTEGER DEFAULT 1"),
         ("needs_air_fill", "INTEGER DEFAULT 0"),
         ("rush_requested", "INTEGER DEFAULT 0"),
@@ -345,23 +410,22 @@ def init_db() -> None:
         ("holding_zone", "TEXT DEFAULT 'ZONE_A_BACKROOM'"),
         ("picked_up_by", "TEXT DEFAULT ''"),
         ("pickup_ticket_ref", "TEXT DEFAULT ''"),
-        ("contact_person", "TEXT DEFAULT ''"),
-        ("preferred_date", "TEXT DEFAULT ''"),
-        ("pickup_address", "TEXT DEFAULT ''"),
-        ("customer_email", "TEXT DEFAULT ''"),
     ]:
         _ensure_column(conn, "dropoffs", col, cdef)
 
     for col, cdef in [
         ("account_type", "TEXT DEFAULT 'WALK_IN'"),
         ("po_station", "TEXT DEFAULT ''"),
+        ("contact_person", "TEXT DEFAULT ''"),
+        ("tank_summary", "TEXT DEFAULT ''"),
         ("valves_attached", "INTEGER DEFAULT 1"),
         ("needs_air_fill", "INTEGER DEFAULT 0"),
         ("priority", "TEXT DEFAULT 'STANDARD'"),
         ("rush_fee", "INTEGER DEFAULT 0"),
         ("holding_zone", "TEXT DEFAULT 'ZONE_A_BACKROOM'"),
         ("prep_status", "TEXT DEFAULT 'WAITING'"),
-        ("contact_person", "TEXT DEFAULT ''"),
+        ("locked_for_day", "INTEGER DEFAULT 0"),
+        ("auto_paced", "INTEGER DEFAULT 0"),
     ]:
         _ensure_column(conn, "schedule_jobs", col, cdef)
 
@@ -373,7 +437,7 @@ def init_db() -> None:
     ]:
         _ensure_column(conn, "invoices", col, cdef)
 
-    # Seed Core Settings (INSERT OR IGNORE never overwrites your saved settings)
+    # 2. Seed Core Settings
     default_settings = [
         ("dot_rin", "B386"),
         ("tc_reg", ""),
@@ -387,6 +451,7 @@ def init_db() -> None:
         ("sheets_webhook_url", ""),
         ("feedback_webhook_url", ""),
         ("shop_pin", "0386"),
+        ("crew_pin", "0386"),
         ("session_secret", secrets.token_hex(24)),
         ("testing_mode", "1"),
         ("rin_expires_date", ""),
@@ -403,7 +468,6 @@ def init_db() -> None:
         ],
     )
 
-    # Seed Master Cylinder 1SF11904 Calibration Chart only if none exist yet
     if cur.execute("SELECT COUNT(*) FROM calibration_targets;").fetchone()[0] == 0:
         cur.executemany(
             "INSERT OR IGNORE INTO calibration_targets (serial_number, pressure_psi, expected_cc) VALUES (?, ?, ?);",
@@ -416,7 +480,6 @@ def init_db() -> None:
             ],
         )
 
-    # Seed CGA & Paintball Presets only if empty
     if cur.execute("SELECT COUNT(*) FROM cga_specs;").fetchone()[0] == 0:
         cur.executemany(
             """INSERT INTO cga_specs (category, label, dot_spec, service_psi, test_psi, outside_dia, length_in, ree_limit)
@@ -439,7 +502,6 @@ def init_db() -> None:
             ],
         )
 
-    # Seed Master Pricing Rates (INSERT OR IGNORE keeps Ryan's custom prices untouched)
     cur.executemany(
         "INSERT OR IGNORE INTO pricing_rates (code, description, unit_price, notes, sort_order) VALUES (?, ?, ?, ?, ?);",
         [
@@ -453,10 +515,8 @@ def init_db() -> None:
             ("INTERNAL_CLEAN", "Internal Cylinder Tumble / Cleaning", 0.0, "", 80),
         ],
     )
-
     cur.execute("DELETE FROM pricing_rates WHERE code='AIR_FILL';")
 
-    # Seed 1-Click Shop Supply Reorder Hub if empty
     if cur.execute("SELECT COUNT(*) FROM shop_supplies;").fetchone()[0] == 0:
         cur.executemany(
             """INSERT INTO shop_supplies (category, item_name, spec_note, vendor_name, reorder_url, low_stock, sort_order)
@@ -477,7 +537,6 @@ def init_db() -> None:
             ],
         )
 
-    # Auto-backfill Rolodex from any existing customer records
     existing_custs = cur.execute(
         """SELECT customer_name, MAX(customer_phone) AS ph FROM (
                SELECT customer_name, customer_phone FROM cylinder_records
@@ -501,35 +560,12 @@ def init_db() -> None:
             (cname, acct, ec["ph"] or "", terms, 1 if is_dept else 0),
         )
 
-
-    # Migrations for Morning Lineup Lock & Auto-Pace
-    for col, ctype in [
-        ("lineup_locked", "INTEGER DEFAULT 0"),
-        ("allow_extra_autopace", "INTEGER DEFAULT 1"),
-        ("started_by", "TEXT DEFAULT ''"),
-        ("started_at", "TEXT DEFAULT ''"),
-        ("closed_out_at", "TEXT DEFAULT ''"),
-        ("shift_notes", "TEXT DEFAULT ''"),
-    ]:
-        try:
-            cur.execute(f"ALTER TABLE daily_schedule_plans ADD COLUMN {col} {ctype};")
-        except sqlite3.OperationalError:
-            pass
-
-    for col, ctype in [
-        ("locked_for_day", "INTEGER DEFAULT 0"),
-        ("auto_paced", "INTEGER DEFAULT 0"),
-    ]:
-        try:
-            cur.execute(f"ALTER TABLE schedule_jobs ADD COLUMN {col} {ctype};")
-        except sqlite3.OperationalError:
-            pass
-
-    # Seed Individual PIN Accounts if empty
-    user_cnt = cur.execute("SELECT COUNT(*) FROM crew_users;").fetchone()[0]
-    if user_cnt == 0:
-        legacy_row = cur.execute("SELECT value FROM settings WHERE key='crew_pin';").fetchone()
-        ryan_pin = (legacy_row["value"].strip() if legacy_row and legacy_row["value"].strip() else "0386")
+    # 3. Seed Individual Role-Based PIN Accounts if empty
+    if cur.execute("SELECT COUNT(*) FROM crew_users;").fetchone()[0] == 0:
+        legacy_row = cur.execute(
+            "SELECT value FROM settings WHERE key IN ('crew_pin', 'shop_pin') AND TRIM(value) != '' ORDER BY CASE key WHEN 'shop_pin' THEN 0 ELSE 1 END LIMIT 1;"
+        ).fetchone()
+        ryan_pin = str(legacy_row[0]).strip() if legacy_row and legacy_row[0] else "0386"
         admin_pin = "1997" if ryan_pin != "1997" else "9997"
         seed_users = [
             ("Eric Pearce (Admin)", "EP", admin_pin, "SYSTEM_ADMIN", 0),
@@ -556,6 +592,7 @@ def wipe_all_operational_data(conn: sqlite3.Connection) -> None:
         "dropoffs",
         "schedule_jobs",
         "shop_day_plans",
+        "crew_tasks",
         "invoice_items",
         "invoices",
     ):

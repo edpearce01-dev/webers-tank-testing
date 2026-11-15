@@ -980,7 +980,7 @@ def is_tv_authorized(request: Request) -> bool:
     if not tv_tok:
         return False
     conn = get_conn()
-    s_row = conn.execute("SELECT value FROM settings WHERE key='crew_pin';").fetchone()
+    s_row = conn.execute("SELECT value FROM settings WHERE key IN ('shop_pin', 'crew_pin') LIMIT 1;").fetchone()
     conn.close()
     seed = s_row["value"] if s_row else "0386"
     return hmac.compare_digest(tv_tok, make_tv_kiosk_token(seed))
@@ -1479,7 +1479,7 @@ def auth_login(payload: LoginInput, response: Response):
 
     conn = get_conn()
     u = conn.execute("SELECT * FROM crew_users WHERE pin=? AND active=1;", (entered,)).fetchone()
-    s_row = conn.execute("SELECT value FROM settings WHERE key='crew_pin';").fetchone()
+    s_row = conn.execute("SELECT value FROM settings WHERE key IN ('shop_pin', 'crew_pin') LIMIT 1;").fetchone()
     tv_seed = s_row["value"] if s_row else "0386"
     conn.close()
 
@@ -4287,7 +4287,7 @@ def run_smart_autopace(conn) -> dict:
     for offset in range(14):
         d = today_d + timedelta(days=offset)
         iso = d.isoformat()
-        row = conn.execute("SELECT * FROM daily_schedule_plans WHERE work_date=?;", (iso,)).fetchone()
+        row = conn.execute("SELECT * FROM shop_day_plans WHERE work_date=?;", (iso,)).fetchone()
         if row:
             plans[iso] = dict(row)
         else:
@@ -4462,7 +4462,7 @@ def get_day_overview(request: Request):
     s_map = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings;").fetchall()}
     default_cap = int(s_map.get("daily_hydro_capacity", "24") or 24)
 
-    p_row = conn.execute("SELECT * FROM daily_schedule_plans WHERE work_date=?;", (today_iso,)).fetchone()
+    p_row = conn.execute("SELECT * FROM shop_day_plans WHERE work_date=?;", (today_iso,)).fetchone()
     if p_row:
         day_plan = dict(p_row)
     else:
@@ -4569,7 +4569,7 @@ def lock_todays_lineup(payload: LockDayLineupInput, request: Request):
 
     conn = get_conn()
     conn.execute(
-        """INSERT INTO daily_schedule_plans
+        """INSERT INTO shop_day_plans
            (work_date, shift_mode, bottle_capacity, day_notes, lineup_locked, allow_extra_autopace, started_by, started_at, updated_at)
            VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)
            ON CONFLICT(work_date) DO UPDATE SET
@@ -4716,11 +4716,11 @@ def complete_end_of_day(payload: EndOfDayInput, request: Request):
     conn = get_conn()
     if note_txt:
         # Log crew/owner shift wrap-up note onto today's day plan
-        existing = conn.execute("SELECT shift_notes FROM daily_schedule_plans WHERE work_date=?;", (today_iso,)).fetchone()
+        existing = conn.execute("SELECT shift_notes FROM shop_day_plans WHERE work_date=?;", (today_iso,)).fetchone()
         prev_n = (existing["shift_notes"] if existing and existing["shift_notes"] else "").strip()
         merged = (f"{prev_n} | {u['initials']}: {note_txt}" if prev_n else f"{u['initials']}: {note_txt}")[:400]
         conn.execute(
-            """INSERT INTO daily_schedule_plans (work_date, shift_mode, bottle_capacity, shift_notes, updated_at)
+            """INSERT INTO shop_day_plans (work_date, shift_mode, bottle_capacity, shift_notes, updated_at)
                VALUES (?, 'FULL_HYDRO', 24, ?, ?)
                ON CONFLICT(work_date) DO UPDATE SET shift_notes=excluded.shift_notes, updated_at=excluded.updated_at;""",
             (today_iso, merged, ts),
@@ -4733,7 +4733,7 @@ def complete_end_of_day(payload: EndOfDayInput, request: Request):
             (tomorrow_iso, today_iso),
         )
         rolled = res.rowcount
-        conn.execute("UPDATE daily_schedule_plans SET closed_out_at=? WHERE work_date=?;", (ts, today_iso))
+        conn.execute("UPDATE shop_day_plans SET closed_out_at=? WHERE work_date=?;", (ts, today_iso))
 
     bump_db_version(conn)
     conn.commit()
