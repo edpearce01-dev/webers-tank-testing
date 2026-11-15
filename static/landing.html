@@ -9,245 +9,381 @@
   <title>Weber's Tank Testing | U.S. D.O.T. RIN B386 — Baden, PA</title>
   <style>
     :root {
-      --cream: #fdf8ee; --cream-deep: #f5ebd6; --forest: #0f2e20; --green: #1b4332;
-      --emerald: #059669; --gold: #d97706; --gold-lt: #fbbf24; --slate: #0f172a;
-      --muted: #475569; --glass: rgba(255, 255, 255, 0.76);
-      --glass-strong: rgba(255, 255, 255, 0.88); --border: rgba(27, 67, 50, 0.16);
+      --cream: #fdf8ee;
+      --cream-deep: #f4e8ce;
+      --forest: #0f2e20;
+      --green: #1b4332;
+      --emerald: #059669;
+      --gold: #d97706;
+      --gold-lt: #fbbf24;
+      --slate: #0f172a;
+      --muted: #334155;
+      --glass: rgba(255, 255, 255, 0.56);
+      --glass-strong: rgba(255, 255, 255, 0.66);
+      --border: rgba(27, 67, 50, 0.18);
     }
     * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; scroll-behavior: smooth; }
     [hidden] { display: none !important; }
     body {
       margin: 0;
-      background: radial-gradient(circle at 50% 18%, #fffdf9 0%, var(--cream) 60%, var(--cream-deep) 100%);
-      color: var(--slate); line-height: 1.5; overflow-x: hidden;
+      background: radial-gradient(circle at 50% 22%, #fffefa 0%, var(--cream) 62%, var(--cream-deep) 100%);
+      background-attachment: fixed;
+      color: var(--slate);
+      line-height: 1.5;
+      overflow-x: hidden;
     }
 
-    /* LOCKED WATERMARK CREST IN BACKGROUND WHILE FROSTED GLASS CARDS SCROLL OVER IT */
-    .locked-crest-bg {
-      position: fixed; top: 53%; left: 50%; transform: translate(-50%, -50%);
-      width: min(620px, 84vw); height: min(620px, 84vw); z-index: 0;
-      pointer-events: none; opacity: 0.13; display: flex; align-items: center; justify-content: center;
-    }
-    .locked-crest-bg img {
-      width: 100%; height: 100%; object-fit: contain; border-radius: 50%;
-      filter: drop-shadow(0 12px 28px rgba(27, 67, 50, 0.18));
-    }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
 
-    .page-layer { position: relative; z-index: 2; }
-    .wrap { max-width: 1220px; margin: 0 auto; padding: 0 20px; }
-
-    .util-bar { background: var(--forest); color: #f1f5f9; font-size: 0.78rem; font-weight: 600; padding: 7px 0; border-bottom: 2px solid var(--gold-lt); }
+    /* STICKY TOP CHROME */
+    .top-chrome { position: sticky; top: 0; z-index: 60; }
+    .pub-holiday-bar {
+      background: linear-gradient(90deg, #1b4332, #991b1b, #b45309);
+      color: #ffffff; text-align: center; padding: 5px 12px;
+      font-size: 0.78rem; font-weight: 900; letter-spacing: 0.5px;
+    }
+    .util-bar {
+      background: var(--forest); color: #f1f5f9; font-size: 0.75rem; font-weight: 600;
+      padding: 6px 0; border-bottom: 2px solid var(--gold-lt);
+    }
     .util-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
     .util-bar a { color: var(--gold-lt); text-decoration: none; font-weight: 800; }
 
     .site-nav {
-      position: sticky; top: 0; z-index: 50; background: rgba(253, 248, 238, 0.84);
-      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-      border-bottom: 1px solid var(--border); padding: 10px 0;
+      background: rgba(253, 248, 238, 0.82);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border); padding: 8px 0;
     }
-    .nav-inner { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
-    .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; color: var(--forest); }
-    .brand img { width: 46px; height: 46px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover; background: #fff; }
-    .brand strong { display: block; font-size: 1.08rem; letter-spacing: 0.4px; font-weight: 900; }
-    .brand small { color: var(--muted); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.3px; }
-    .nav-links { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-    .nav-links a { color: var(--forest); text-decoration: none; font-size: 0.87rem; font-weight: 800; }
+    .nav-inner { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: nowrap; }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--forest); flex-shrink: 0; }
+    .brand img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover; background: #0b2219; }
+    .brand strong { display: block; font-size: 1rem; letter-spacing: 0.3px; font-weight: 900; white-space: nowrap; }
+    .brand small { color: var(--muted); font-size: 0.68rem; font-weight: 800; white-space: nowrap; }
+    .nav-links { display: flex; align-items: center; gap: 15px; white-space: nowrap; }
+    .nav-links a { color: var(--forest); text-decoration: none; font-size: 0.84rem; font-weight: 800; }
     .nav-links a:hover { color: var(--gold); }
+    @media (max-width: 980px) { .nav-links { display: none; } }
 
     .btn-gold {
-      background: var(--gold-lt); color: #111827 !important; padding: 10px 17px; border-radius: 9px;
+      background: var(--gold-lt); color: #111827 !important; padding: 9px 15px; border-radius: 9px;
       font-weight: 900 !important; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
-      border: 1.5px solid #d97706; cursor: pointer; font-size: 0.88rem; box-shadow: 0 4px 12px rgba(217,119,6,0.18);
+      border: 1.5px solid #d97706; cursor: pointer; font-size: 0.84rem; white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(217,119,6,0.18);
     }
     .btn-gold:hover { background: #f59e0b; }
     .btn-green {
-      background: var(--green); color: #ffffff !important; padding: 10px 17px; border-radius: 9px;
-      font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; border: none; font-size: 0.88rem;
+      background: var(--green); color: #ffffff !important; padding: 9px 15px; border-radius: 9px;
+      font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+      border: none; font-size: 0.84rem; white-space: nowrap; cursor: pointer;
     }
 
-    .pub-holiday-bar {
-      background: linear-gradient(90deg, #1b4332, #991b1b, #b45309); color: #ffffff;
-      text-align: center; padding: 6px 14px; font-size: 0.82rem; font-weight: 900; letter-spacing: 0.5px;
+    /* =====================================================================
+       FIXED CENTERPIECE STAGE: 100% OPAQUE & UNBLOCKED AT TOP,
+       SMOOTHLY RECEDES INTO THE BACKGROUND AS YOU SCROLL!
+       ===================================================================== */
+    .fixed-brand-stage {
+      position: fixed;
+      left: 0; right: 0; top: 96px;
+      height: calc(100svh - 96px);
+      z-index: 1;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: clamp(8px, 2.2vh, 26px);
+      will-change: opacity, transform;
+      transform-origin: center 42%;
+    }
+    .stage-crest-logo {
+      width: clamp(235px, 35vh, 360px);
+      height: clamp(235px, 35vh, 360px);
+      border-radius: 50%;
+      border: 5px solid var(--gold-lt);
+      object-fit: cover;
+      background: #0b2219;
+      box-shadow: 0 18px 46px rgba(15, 46, 32, 0.25);
+      position: relative;
+      z-index: 1;
+      flex-shrink: 0;
+    }
+    .stage-dogs-cutout {
+      width: min(670px, 92vw);
+      max-height: clamp(210px, 38vh, 355px);
+      object-fit: contain;
+      margin-top: clamp(-110px, -13vh, -75px);
+      position: relative;
+      z-index: 2;
+      filter: drop-shadow(0 14px 24px rgba(15, 23, 42, 0.2));
+      flex-shrink: 0;
+    }
+    .stage-dogs-cutout.photo-fallback {
+      width: min(520px, 88vw);
+      max-height: 270px;
+      object-fit: cover;
+      border-radius: 18px;
+      border: 3px solid var(--gold-lt);
+      margin-top: -54px;
     }
 
-    .hero { padding: 34px 0 38px; }
-    .hero-grid { display: grid; grid-template-columns: 1.22fr 0.78fr; gap: 26px; align-items: center; }
-    @media (max-width: 920px) { .hero-grid { grid-template-columns: 1fr; } .nav-links { display: none; } }
+    /* =====================================================================
+       SCROLLING FOREGROUND LAYER:
+       - Top 100svh is OPEN AIR except the Dogs' Greeting Bubble (which fades out on scroll!)
+       - Everything below scrolls over the Crest + Dogs in translucent glass!
+       ===================================================================== */
+    .scroll-foreground { position: relative; z-index: 5; background: transparent; }
 
-    .pups-showcase {
-      background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      border: 1.5px solid var(--border); border-radius: 22px; padding: 22px 24px;
-      box-shadow: 0 16px 38px rgba(15, 46, 32, 0.08); text-align: center; position: relative;
+    .hero-opening-spacer {
+      min-height: calc(100svh - 102px);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 0 16px clamp(16px, 3vh, 32px);
+      pointer-events: none;
+    }
+    .greeting-fade-wrap {
+      pointer-events: auto;
+      text-align: center;
+      max-width: 650px;
+      width: 100%;
+      will-change: opacity, transform;
+    }
+    .dog-speech-bubble {
+      background: rgba(255, 255, 255, 0.96);
+      border: 2.5px solid var(--green);
+      border-radius: 18px;
+      padding: 12px 18px;
+      margin: 0 auto 10px;
+      font-size: clamp(0.86rem, 1.4vw, 0.98rem);
+      font-weight: 800;
+      color: var(--forest);
+      box-shadow: 0 12px 30px rgba(15, 46, 32, 0.18);
+    }
+    .hero-quick-bar {
+      display: inline-flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      box-shadow: 0 6px 18px rgba(15, 46, 32, 0.1);
+    }
+    .scroll-hint {
+      margin-top: 6px;
+      font-size: 0.74rem;
+      font-weight: 900;
+      color: var(--forest);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      opacity: 0.78;
+    }
+
+    /* TRANSLUCENT FROSTED GLASS CARDS (KEEP BACKGROUND DOGS & CREST VISIBLE!) */
+    .glass-card {
+      background: var(--glass-strong);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border: 1.5px solid rgba(255, 255, 255, 0.85);
+      outline: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: 0 12px 32px rgba(15, 46, 32, 0.08);
     }
     .rin-pill {
-      display: inline-flex; align-items: center; gap: 7px; background: #ecfdf5; border: 1.5px solid #6ee7b7;
-      color: #065f46; font-size: 0.75rem; font-weight: 900; padding: 5px 13px; border-radius: 999px;
-      letter-spacing: 0.4px; text-transform: uppercase;
-    }
-    .hero-stage { position: relative; margin: 12px auto 6px; max-width: 540px; display: flex; flex-direction: column; align-items: center; }
-    .hero-crest-medallion {
-      width: 126px; height: 126px; border-radius: 50%; border: 4px solid var(--gold-lt);
-      box-shadow: 0 8px 24px rgba(15, 46, 32, 0.22); object-fit: cover; background: #0b2219;
-      margin-bottom: -26px; position: relative; z-index: 1;
-    }
-    .hero-dogs-img {
-      width: 100%; max-height: 315px; object-fit: cover; border-radius: 18px; border: 3px solid var(--gold-lt);
-      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14); position: relative; z-index: 2; background: var(--cream);
-    }
-    .hero-dogs-img.illustrated-blend { object-fit: contain; border: none; box-shadow: none; mix-blend-mode: multiply; max-height: 330px; }
-
-    .dog-speech-bubble {
-      position: relative; z-index: 3; background: #ffffff; border: 2px solid var(--green); border-radius: 16px;
-      padding: 11px 16px; margin: -10px auto 14px; max-width: 510px; font-size: 0.91rem; font-weight: 800;
-      color: var(--forest); box-shadow: 0 8px 22px rgba(15, 46, 32, 0.12);
-    }
-    .sla-strip {
-      display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 14px; background: rgba(255, 255, 255, 0.9);
-      border: 1px solid var(--border); border-radius: 10px; padding: 9px 14px; margin-bottom: 14px; font-size: 0.84rem;
+      display: inline-flex; align-items: center; gap: 7px; background: rgba(236, 253, 245, 0.9);
+      border: 1.5px solid #6ee7b7; color: #065f46; font-size: 0.74rem; font-weight: 900;
+      padding: 5px 12px; border-radius: 999px; letter-spacing: 0.4px; text-transform: uppercase;
     }
 
-    .glass-card {
-      background: var(--glass-strong); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-      border: 1.5px solid var(--border); border-radius: 18px; padding: 22px; box-shadow: 0 12px 32px rgba(15, 46, 32, 0.08);
-    }
-    .tracker-card h3 { margin: 0 0 4px; font-size: 1.08rem; color: var(--forest); }
+    .top-action-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 22px; align-items: stretch; }
+    @media (max-width: 880px) { .top-action-grid { grid-template-columns: 1fr; } }
+
     .step-dots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 10px; }
-    .step-dot { height: 8px; border-radius: 999px; background: #e2e8f0; }
+    .step-dot { height: 8px; border-radius: 999px; background: rgba(203, 213, 225, 0.8); }
     .step-dot.done { background: var(--emerald); }
 
     .kpi-band {
-      background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 18px 0;
+      margin: 28px 0;
+      background: var(--glass);
+      backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
+      border-top: 1.5px solid rgba(255,255,255,0.8);
+      border-bottom: 1.5px solid rgba(255,255,255,0.8);
+      outline: 1px solid var(--border);
+      padding: 18px 0;
     }
     .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; text-align: center; }
     @media (max-width: 720px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
     .kpi-item strong { display: block; font-size: 1.4rem; font-weight: 900; color: var(--green); }
-    .kpi-item span { font-size: 0.76rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; }
+    .kpi-item span { font-size: 0.75rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; }
 
-    .sec { padding: 48px 0; }
-    .sec-hdr { margin-bottom: 22px; }
-    .sec-hdr small { color: var(--gold); font-weight: 900; text-transform: uppercase; letter-spacing: 0.8px; font-size: 0.76rem; }
-    .sec-hdr h2 { margin: 4px 0 6px; font-size: 1.75rem; color: var(--forest); }
+    .sec { padding: 38px 0; background: transparent; }
+    .sec-hdr {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.62);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      padding: 8px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.8);
+      margin-bottom: 18px;
+    }
+    .sec-hdr small { color: var(--gold); font-weight: 900; text-transform: uppercase; letter-spacing: 0.8px; font-size: 0.75rem; display: block; }
+    .sec-hdr h2 { margin: 2px 0 0; font-size: 1.68rem; color: var(--forest); }
+
     .cap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
     .cap-card {
-      background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
-      box-shadow: 0 6px 18px rgba(15, 46, 32, 0.05); display: flex; flex-direction: column;
+      background: var(--glass);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border: 1.5px solid rgba(255, 255, 255, 0.82);
+      outline: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 8px 22px rgba(15, 46, 32, 0.06); display: flex; flex-direction: column;
     }
-    .cap-card img { width: 100%; height: 175px; object-fit: cover; }
-    .cap-body { padding: 16px 18px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    .cap-card img { width: 100%; height: 170px; object-fit: cover; }
+    .cap-body { padding: 15px 17px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
     .spec-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; }
-    .spec-tag { font-size: 0.7rem; font-weight: 800; padding: 3px 8px; border-radius: 5px; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .spec-tag { font-size: 0.7rem; font-weight: 800; padding: 3px 8px; border-radius: 5px; background: rgba(236, 253, 245, 0.9); color: #065f46; border: 1px solid #a7f3d0; }
 
     .fleet-banner {
-      background: rgba(255, 255, 255, 0.82); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-      border: 2px solid rgba(217, 119, 6, 0.35); border-radius: 20px; padding: 26px;
-      display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 24px; align-items: center; box-shadow: 0 12px 30px rgba(15, 46, 32, 0.07);
+      background: var(--glass-strong);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border: 2px solid rgba(217, 119, 6, 0.4);
+      border-radius: 20px; padding: 24px;
+      display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 24px; align-items: center;
+      box-shadow: 0 12px 30px rgba(15, 46, 32, 0.08);
     }
-    @media (max-width: 860px) { .fleet-banner { grid-template-columns: 1fr; padding: 20px; } }
+    @media (max-width: 860px) { .fleet-banner { grid-template-columns: 1fr; padding: 18px; } }
     .fleet-imgs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .fleet-imgs img { width: 100%; height: 190px; object-fit: cover; border-radius: 12px; border: 2px solid var(--gold-lt); }
+    .fleet-imgs img { width: 100%; height: 185px; object-fit: cover; border-radius: 12px; border: 2px solid var(--gold-lt); }
 
     .portal-grid { display: grid; grid-template-columns: 0.86fr 1.14fr; gap: 22px; align-items: start; }
     @media (max-width: 860px) { .portal-grid { grid-template-columns: 1fr; } }
-    label { display: block; font-size: 0.73rem; font-weight: 800; text-transform: uppercase; color: #334155; margin-bottom: 4px; }
+    label { display: block; font-size: 0.73rem; font-weight: 800; text-transform: uppercase; color: #1e293b; margin-bottom: 4px; }
     input:not([type="checkbox"]), select, textarea {
-      width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.94rem; color: var(--slate); background: rgba(255,255,255,0.94);
+      width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px;
+      font-size: 0.94rem; color: var(--slate); background: rgba(255, 255, 255, 0.9);
     }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
     @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
 
-    .mode-tab { padding: 10px 6px; border-radius: 9px; border: 1.5px solid #cbd5e1; background: #ffffff; font-weight: 900; cursor: pointer; text-align: center; font-size: 0.76rem; color: var(--slate); }
+    .mode-tab { padding: 10px 6px; border-radius: 9px; border: 1.5px solid #cbd5e1; background: rgba(255,255,255,0.9); font-weight: 900; cursor: pointer; text-align: center; font-size: 0.76rem; color: var(--slate); }
     .mode-tab.active { background: var(--green); color: #fff; border-color: var(--forest); }
 
     .acct-pills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
     @media (max-width: 500px) { .acct-pills { grid-template-columns: 1fr; } }
-    .acct-pill { padding: 8px 6px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #fff; font-weight: 800; font-size: 0.78rem; cursor: pointer; text-align: center; color: var(--slate); }
+    .acct-pill { padding: 8px 6px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: rgba(255,255,255,0.9); font-weight: 800; font-size: 0.78rem; cursor: pointer; text-align: center; color: var(--slate); }
     .acct-pill.active { background: #ecfdf5; border-color: #10b981; color: #065f46; }
 
     .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 5px 0 8px; }
-    .quick-chip { background: #f0fdf4; color: #065f46; border: 1px solid #86efac; border-radius: 7px; padding: 5px 9px; font-size: 0.75rem; font-weight: 800; cursor: pointer; }
+    .quick-chip { background: rgba(240, 253, 244, 0.95); color: #065f46; border: 1px solid #86efac; border-radius: 7px; padding: 5px 9px; font-size: 0.75rem; font-weight: 800; cursor: pointer; }
     .quick-chip:hover { background: #dcfce7; }
 
     .btn-submit { width: 100%; background: var(--green); color: #fff; border: none; padding: 13px; border-radius: 9px; font-size: 0.98rem; font-weight: 900; cursor: pointer; margin-top: 12px; }
     .btn-submit:hover { background: var(--forest); }
     .alert-box { padding: 12px 14px; border-radius: 10px; font-weight: 700; font-size: 0.88rem; margin-top: 11px; }
-    .alert-ok { background: #ecfdf5; border: 1.5px solid #6ee7b7; color: #065f46; }
-    .alert-warn { background: #fffbeb; border: 1.5px solid #fcd34d; color: #92400e; }
-    .alert-bad { background: #fef2f2; border: 1.5px solid #fca5a5; color: #991b1b; }
+    .alert-ok { background: rgba(236, 253, 245, 0.92); border: 1.5px solid #6ee7b7; color: #065f46; }
+    .alert-warn { background: rgba(255, 251, 235, 0.92); border: 1.5px solid #fcd34d; color: #92400e; }
+    .alert-bad { background: rgba(254, 242, 242, 0.94); border: 1.5px solid #fca5a5; color: #991b1b; }
 
-    footer { background: var(--forest); color: #cbd5e1; padding: 30px 0; font-size: 0.84rem; border-top: 3px solid var(--gold-lt); position: relative; z-index: 2; }
+    footer { background: var(--forest); color: #cbd5e1; padding: 28px 0; font-size: 0.84rem; border-top: 3px solid var(--gold-lt); position: relative; z-index: 6; margin-top: 24px; }
     footer a { color: #fde68a; text-decoration: none; font-weight: 700; }
   </style>
 </head>
 <body>
-  <div class="locked-crest-bg" aria-hidden="true">
-    <img src="/static/images/logo-crest.jpg" alt="" onerror="this.src='/icon.svg'" />
-  </div>
-
-  <div class="page-layer">
+  <!-- STICKY TOP BARS -->
+  <div class="top-chrome" id="topChrome">
     <div id="pubHolidayBanner" class="pub-holiday-bar" hidden></div>
-
     <div class="util-bar">
       <div class="wrap util-inner">
         <div>U.S. D.O.T. Certified Facility • <strong>RIN B386</strong> (49 CFR §180.215) • 3086 Legionville Rd, Baden, PA 15005</div>
-        <div>Hours: Mon &amp; Fri 9–4 | Tue–Thu 9–2 | <strong>24/7 Back Room (Loading Dock)</strong> • <a href="tel:7242668008">📞 724-266-8008</a> • <a href="https://ops.weberstanktesting.com/ops">Crew Login</a></div>
+        <div>Mon &amp; Fri 9–4 | Tue–Thu 9–2 | <strong>24/7 Back Room (Loading Dock)</strong> • <a href="tel:7242668008">📞 724-266-8008</a> • <a href="https://ops.weberstanktesting.com/ops">Crew Login</a></div>
       </div>
     </div>
-
     <header class="site-nav">
       <div class="wrap nav-inner">
         <a href="#" class="brand">
           <img src="/static/images/logo-crest.jpg" alt="Weber's Tank Testing RIN B386" onerror="this.src='/icon.svg'" />
           <div>
             <strong>WEBER'S TANK TESTING</strong>
-            <small>U.S. D.O.T. RIN B386 • BADEN, PENNSYLVANIA</small>
+            <small>U.S. D.O.T. RIN B386 • BADEN, PA</small>
           </div>
         </a>
         <nav class="nav-links">
+          <a href="#dropoff">24/7 Check-In</a>
+          <a href="#tracker">Track Ticket</a>
           <a href="#capabilities">Cylinder Types</a>
           <a href="#departments">Fire &amp; Fleet</a>
-          <a href="#dropoff">24/7 Check-In</a>
           <a href="#checker">DOT Date Checker</a>
           <a href="#facility">Location</a>
         </nav>
         <a href="#dropoff" class="btn-gold">📥 24/7 Drop-Off &amp; Pick-Up</a>
       </div>
     </header>
+  </div>
 
-    <section class="hero">
-      <div class="wrap hero-grid">
-        <div class="pups-showcase">
-          <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
-            <span class="rin-pill">✓ Authorized U.S. D.O.T. Facility • RIN B386</span>
-            <span class="rin-pill" id="heroHolidayPill" style="background:#fef3c7;border-color:#f59e0b;color:#92400e;" hidden></span>
+  <!-- ========================================================================
+       FIXED CENTERPIECE STAGE:
+       100% Solid & Unblocked on Open -> Smoothly Falls Into Background on Scroll
+       ======================================================================== -->
+  <div class="fixed-brand-stage" id="fixedBrandStage" aria-hidden="true">
+    <img src="/static/images/logo-crest.jpg" alt="Weber's Tank Testing Crest" class="stage-crest-logo" onerror="this.src='/icon.svg'" />
+    <img id="heroDogsImg" src="/static/images/dogs-thanksgiving.png" alt="Pongo, Zeke & Pierce" class="stage-dogs-cutout" onerror="this.onerror=null;this.src='/static/images/shop-dogs.jpg';this.classList.add('photo-fallback');" />
+  </div>
+
+  <!-- ========================================================================
+       SCROLLING FOREGROUND LAYER
+       ======================================================================== -->
+  <div class="scroll-foreground">
+    <!-- OPENING SCREEN: Unblocked Crest + Dogs, with Greeting Bubble that disappears as you scroll -->
+    <section class="hero-opening-spacer">
+      <div class="greeting-fade-wrap" id="greetingFadeBox">
+        <div class="dog-speech-bubble" id="heroDogsBubble">
+          🐾 Welcome to Weber's Tank Testing from Pongo, Zeke &amp; Pierce! Pull up to our Loading Dock for 24/7 Back Room drop-off &amp; pickup anytime!
+        </div>
+        <div class="hero-quick-bar">
+          <a href="#dropoff" class="btn-gold">📥 24/7 Back Room Check-In</a>
+          <a href="#dropoff" onclick="setCheckinMode('TRUCK_REQUEST')" class="btn-green">🚚 Truck Pickup</a>
+          <a href="#tracker" class="btn-green" style="background:#334155;">🔍 Track Ticket #</a>
+        </div>
+        <div class="scroll-hint">⌄ Scroll for Check-In, Live Tracking &amp; Capabilities ⌄</div>
+      </div>
+    </section>
+
+    <!-- LIVE READY TIMES & TICKET TRACKER (FIRST GLASS CARDS THAT SCROLL OVER THE DOGS + CREST) -->
+    <section class="sec" id="tracker" style="padding-top:12px;">
+      <div class="wrap top-action-grid">
+        <div class="glass-card" style="display:flex;flex-direction:column;justify-content:space-between;gap:12px;">
+          <div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+              <span class="rin-pill">✓ Authorized U.S. D.O.T. Facility • RIN B386</span>
+              <span class="rin-pill" id="heroHolidayPill" style="background:#fef3c7;border-color:#f59e0b;color:#92400e;" hidden></span>
+            </div>
+            <h2 style="margin:0 0 6px;font-size:1.5rem;color:var(--forest);">Live Baden Shop Turnaround</h2>
+            <p style="margin:0;font-size:0.9rem;color:var(--muted);">
+              Calibrated water-jacket hydrostatic testing up to <strong>7,500+ PSI</strong> for Fire/EMS, Industrial, Scuba &amp; Paintball HPA—with <strong>24/7 Loading Dock Back Room</strong> drop-off &amp; pickup.
+            </p>
           </div>
-
-          <div class="hero-stage">
-            <img src="/static/images/logo-crest.jpg" alt="Weber's Tank Testing Crest" class="hero-crest-medallion" onerror="this.src='/icon.svg'" />
-            <img id="heroDogsImg" src="/static/images/shop-dogs.jpg" alt="Pongo, Zeke & Pierce — Weber's Tank Testing Shop Dogs" class="hero-dogs-img" />
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="background:rgba(236,253,245,0.88);border:1.5px solid #6ee7b7;padding:10px 12px;border-radius:10px;">
+              <small style="font-weight:900;color:#065f46;display:block;font-size:0.72rem;">🟢 EST. STANDARD READY</small>
+              <strong id="slaStdTxt" style="font-size:1.05rem;color:var(--forest);">Checking...</strong>
+            </div>
+            <div style="background:rgba(255,251,235,0.9);border:1.5px solid #fcd34d;padding:10px 12px;border-radius:10px;">
+              <small style="font-weight:900;color:#92400e;display:block;font-size:0.72rem;">🔥 PAID RUSH TURNAROUND</small>
+              <strong id="slaRushTxt" style="font-size:1.05rem;color:#b45309;">Checking...</strong>
+            </div>
           </div>
-
-          <div class="dog-speech-bubble" id="heroDogsBubble">
-            🐾 Welcome to Weber's Tank Testing from Pongo, Zeke &amp; Pierce! Pull up to our Loading Dock for 24/7 Back Room drop-off &amp; pickup anytime!
-          </div>
-
-          <div class="sla-strip">
-            <div>🟢 <strong>Est. Standard Ready:</strong> <span id="slaStdTxt">Checking schedule...</span></div>
-            <div>🔥 <strong>Paid Rush Service:</strong> <span id="slaRushTxt" style="color:#b45309;font-weight:900;">Checking...</span></div>
-          </div>
-
-          <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
-            <a href="#dropoff" class="btn-gold">📥 24/7 Back Room Check-In</a>
-            <a href="#dropoff" onclick="setCheckinMode('TRUCK_REQUEST')" class="btn-green">🚚 Request Truck Pickup</a>
-            <a href="tel:7242668008" class="btn-green" style="background:#334155;">📞 724-266-8008</a>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a href="#dropoff" class="btn-gold">📥 Log 24/7 Back Room Drop-Off</a>
+            <a href="tel:7242668008" class="btn-green" style="background:#334155;">📞 Call / Text 724-266-8008</a>
           </div>
         </div>
 
-        <div class="glass-card tracker-card" id="tracker">
-          <h3>🔍 Track Your Drop-Off Ticket</h3>
+        <div class="glass-card">
+          <h3 style="margin:0 0 4px;font-size:1.12rem;color:var(--forest);">🔍 Track Your Drop-Off Ticket</h3>
           <p style="margin:0 0 12px;font-size:0.86rem;color:var(--muted);">
-            Enter the <strong>BR-XXXX</strong> ticket number from your Back Room check-in to check live progress:
+            Enter the <strong>BR-XXXX</strong> ticket number from your Back Room check-in:
           </p>
           <div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:8px;margin-bottom:10px;">
             <input id="trkTicket" placeholder="Ticket # (e.g. BR-0001)" onkeydown="if(event.key==='Enter')lookupTicket()" style="font-weight:800;" />
@@ -255,16 +391,14 @@
           </div>
           <button class="btn-gold" style="width:100%;justify-content:center;padding:12px;" onclick="lookupTicket()">Check Live Shop Status</button>
           <div id="trkResult" style="margin-top:12px;" hidden></div>
-
-          <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);font-size:0.82rem;color:var(--muted);">
-            <strong style="color:var(--forest);display:block;margin-bottom:3px;">📍 24/7 Loading Dock &amp; Back Room:</strong>
-            3086 Legionville Rd, Baden, PA 15005<br />
-            <em>Pull up to the right-side Loading Dock / Ramp anytime day or night!</em>
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:0.81rem;color:var(--muted);">
+            <strong style="color:var(--forest);">📍 3086 Legionville Rd, Baden, PA 15005</strong> — Pull up to our right-side <strong>Loading Dock / Ramp</strong> anytime 24/7!
           </div>
         </div>
       </div>
     </section>
 
+    <!-- FROSTED KPI BAND -->
     <section class="kpi-band">
       <div class="wrap kpi-grid">
         <div class="kpi-item"><strong>7,500+ PSI</strong><span>Dual Water-Jacket Stand</span></div>
@@ -274,82 +408,8 @@
       </div>
     </section>
 
-    <section class="sec" id="capabilities">
-      <div class="wrap">
-        <div class="sec-hdr">
-          <small>49 CFR §180.205 – §180.215 Certified Testing</small>
-          <h2>Cylinders We Test &amp; Certify</h2>
-        </div>
-        <div class="cap-grid">
-          <div class="cap-card">
-            <img src="/static/images/fire-rescue.jpg" alt="Firefighter SCBA & Cascade Cylinder Testing" />
-            <div class="cap-body">
-              <div>
-                <h3 style="margin:0 0 6px;font-size:1.05rem;color:var(--forest);">Fire &amp; Rescue SCBA / Cascade</h3>
-                <p style="margin:0;font-size:0.86rem;color:var(--muted);">30-, 45-, and 60-minute carbon-wrapped SCBA bottles and 6,000 PSI cascade cylinders with REE verification and epoxy B386 labeling.</p>
-              </div>
-              <div class="spec-tags"><span class="spec-tag">DOT-SP Carbon</span><span class="spec-tag">2216 / 4500 / 6000 PSI</span><span class="spec-tag">15-Yr Life Check</span></div>
-            </div>
-          </div>
-          <div class="cap-card">
-            <img src="/static/images/ems-oxygen.jpg" alt="EMS Medical Oxygen & Industrial Gas Cylinders" />
-            <div class="cap-body">
-              <div>
-                <h3 style="margin:0 0 6px;font-size:1.05rem;color:var(--forest);">EMS Oxygen &amp; Industrial Gas</h3>
-                <p style="margin:0;font-size:0.86rem;color:var(--muted);">Medical D, E, and M oxygen cylinders alongside welding Argon, Nitrogen, Helium, and C25 mix cylinders—including 10-year star (★) steel qualification.</p>
-              </div>
-              <div class="spec-tags"><span class="spec-tag">DOT-3A / 3AA ★</span><span class="spec-tag">DOT-3AL Alum</span><span class="spec-tag">O2 / N2 / Ar / Mix</span></div>
-            </div>
-          </div>
-          <div class="cap-card">
-            <img src="/static/images/paintball-hpa.jpg" alt="Paintball & Airsoft HPA Carbon Fiber Tanks" />
-            <div class="cap-body">
-              <div>
-                <h3 style="margin:0 0 6px;font-size:1.05rem;color:var(--forest);">Paintball &amp; Airsoft HPA Systems</h3>
-                <p style="margin:0;font-size:0.86rem;color:var(--muted);">48ci/3000 aluminum and 68ci–90ci/4500 carbon fiber HPA bottles (Ninja, HK Army, Empire, First Strike). Every regulator is tagged and matched back to your tank.</p>
-              </div>
-              <div class="spec-tags"><span class="spec-tag">3000 &amp; 4500 PSI HPA</span><span class="spec-tag">Regulator Tagged</span><span class="spec-tag">Mini B386 Label</span></div>
-            </div>
-          </div>
-          <div class="cap-card">
-            <img src="/static/images/scuba-co2.jpg" alt="Scuba Dive Tanks & Beverage CO2 Cylinders" />
-            <div class="cap-body">
-              <div>
-                <h3 style="margin:0 0 6px;font-size:1.05rem;color:var(--forest);">Scuba, Beverage CO2 &amp; Safety</h3>
-                <p style="margin:0;font-size:0.86rem;color:var(--muted);">AL80, pony bottles, steel dive tanks, kegerator/homebrew CO2 (5 lb–50 lb), fire suppression bottles, and O-ring / burst-disc replacement.</p>
-              </div>
-              <div class="spec-tags"><span class="spec-tag">AL80 &amp; Steel Dive</span><span class="spec-tag">5–50 lb CO2</span><span class="spec-tag">Neck Stamped</span></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="sec" id="departments" style="padding-top:0;">
-      <div class="wrap">
-        <div class="fleet-banner">
-          <div>
-            <span class="rin-pill" style="margin-bottom:10px;">First-Responder Operated Standards</span>
-            <h2 style="margin:0 0 10px;font-size:1.7rem;color:var(--forest);">Built for Fire Departments, EMS Agencies &amp; Commercial Fleets</h2>
-            <p style="margin:0 0 14px;color:var(--muted);font-size:0.94rem;">
-              Operated by active Beaver County emergency service personnel, our Baden shop delivers audit-ready <strong>Form 393-001 Retest Data Sheets</strong>, Method B calibration logs, Net-30 municipal billing, and regional station truck pickup &amp; return delivery runs.
-            </p>
-            <ul style="margin:0 0 18px;padding-left:18px;color:var(--slate);font-size:0.88rem;line-height:1.7;">
-              <li><strong>Zero Mixed Valves:</strong> Every pulled valve or HPA regulator gets a dedicated numbered tag at our Stamp &amp; Valve Bench.</li>
-              <li><strong>Heated Dry &amp; Mark Gate:</strong> Full drying rack cycle followed by clean neck stamping or epoxy-sealed <code>B386</code> composite labels.</li>
-              <li><strong>Instant Ready Texts:</strong> Direct SMS alert with a printed pickup slip on your batch inside our Back Room.</li>
-            </ul>
-            <a href="#dropoff" onclick="setCheckinMode('TRUCK_REQUEST')" class="btn-gold">🚚 Schedule Department Truck Run</a>
-          </div>
-          <div class="fleet-imgs">
-            <img src="/static/images/fire-rescue.jpg" alt="Fire Rescue Apparatus" />
-            <img src="/static/images/ems-oxygen.jpg" alt="Emergency Response & Medical Gas Service" />
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="sec" id="dropoff" style="padding-top:10px;">
+    <!-- 24/7 BACK ROOM CHECK-IN & TRUCK PICKUP / DELIVERY PORTAL -->
+    <section class="sec" id="dropoff">
       <div class="wrap">
         <div class="sec-hdr">
           <small>24/7 Loading Dock Back Room + Regional Truck Service • 3086 Legionville Rd, Baden, PA</small>
@@ -358,7 +418,7 @@
         <div class="portal-grid">
           <div class="glass-card">
             <h3 style="margin-top:0;color:var(--green);">Where to Drop Off &amp; Pick Up</h3>
-            <ol style="padding-left:18px;font-size:0.9rem;color:#334155;line-height:1.7;">
+            <ol style="padding-left:18px;font-size:0.9rem;color:#1e293b;line-height:1.7;">
               <li><strong>Pull Up to the Loading Dock:</strong> Drive around to the right side of <strong>3086 Legionville Rd, Baden</strong> to our <strong>Loading Dock &amp; Ramp</strong> to step right inside our <strong>24/7 Back Room</strong>.</li>
               <li><strong>📥 BACKROOM DROP-OFF:</strong> Set your tanks inside the Back Room and submit the form to save your <strong>BR-XXXX</strong> ticket PDF.</li>
               <li><strong>✅ BACKROOM PICK-UP:</strong> Once we text you that your finished batch is staged by the Loading Dock door, tap <strong>BACKROOM PICK-UP</strong> to sign them out.</li>
@@ -419,7 +479,7 @@
                   <input id="dropSummary" placeholder="e.g. 2x Ninja 68/4500 HPA, or any special notes..." />
                 </div>
 
-                <div style="grid-column:1/-1;background:#fef2f2;border:1px solid #fca5a5;padding:9px 12px;border-radius:8px;">
+                <div style="grid-column:1/-1;background:rgba(254,242,242,0.92);border:1px solid #fca5a5;padding:9px 12px;border-radius:8px;">
                   <label style="display:flex;align-items:center;gap:9px;margin:0;text-transform:none;font-size:0.86rem;color:#991b1b;cursor:pointer;">
                     <input type="checkbox" id="dropRush" style="width:18px;height:18px;accent-color:#dc2626;" />
                     <span>🔥 <strong>Request Paid Rush Turnaround</strong> (Est. Ready: <span id="formRushSla">soonest window</span>)</span>
@@ -470,7 +530,7 @@
                 <div><label>Preferred Pickup Date</label><input type="date" id="trkPrefDate" /></div>
                 <div><label>Approx. Cylinder Count *</label><input type="number" id="trkCount" min="1" max="250" value="6" /></div>
                 <div style="grid-column:1/-1;"><label>Cylinder Types / PO # / Gate Notes</label><input id="trkSummary" placeholder="e.g. 12x 4500# SCBA, 4x Med O2 • Call 15 min prior" /></div>
-                <div style="grid-column:1/-1;background:#fef2f2;border:1px solid #fca5a5;padding:8px 12px;border-radius:8px;">
+                <div style="grid-column:1/-1;background:rgba(254,242,242,0.92);border:1px solid #fca5a5;padding:8px 12px;border-radius:8px;">
                   <label style="display:flex;align-items:center;gap:9px;margin:0;text-transform:none;font-size:0.85rem;color:#991b1b;cursor:pointer;">
                     <input type="checkbox" id="trkRush" style="width:18px;height:18px;accent-color:#dc2626;" />
                     <span>🔥 <strong>Priority / Paid Rush Turnaround Needed</strong></span>
@@ -486,12 +546,90 @@
       </div>
     </section>
 
-    <section class="sec" id="checker">
+    <!-- CYLINDER CAPABILITIES -->
+    <section class="sec" id="capabilities">
+      <div class="wrap">
+        <div class="sec-hdr">
+          <small>49 CFR §180.205 – §180.215 Certified Testing</small>
+          <h2>Cylinders We Test &amp; Certify</h2>
+        </div>
+        <div class="cap-grid">
+          <div class="cap-card">
+            <img src="/static/images/fire-rescue.jpg" alt="Firefighter SCBA & Cascade Cylinder Testing" />
+            <div class="cap-body">
+              <div>
+                <h3 style="margin:0 0 6px;font-size:1.05rem;color:var(--forest);">Fire &amp; Rescue SCBA / Cascade</h3>
+                <p style="margin:0;font-size:0.86rem;color:var(--muted);">30-, 45-, and 60-minute carbon-wrapped SCBA bottles and 6,000 PSI cascade cylinders with REE verification and epoxy B386 labeling.</p>
+              </div>
+              <div class="spec-tags"><span class="spec-tag">DOT-SP Carbon</span><span class="spec-tag">2216 / 4500 / 6000 PSI</span><span class="spec-tag">15-Yr Life Check</span></div>
+            </div>
+          </div>
+          <div class="cap-card">
+            <img src="/static/images/ems-oxygen.jpg" alt="EMS Medical Oxygen & Industrial Gas Cylinders" />
+            <div class="cap-body">
+              <div>
+                <h3 style="margin:0 0 6px;font-size:1.05rem;color:var(--forest);">EMS Oxygen &amp; Industrial Gas</h3>
+                <p style="margin:0;font-size:0.86rem;color:var(--muted);">Medical D, E, and M oxygen cylinders alongside welding Argon, Nitrogen, Helium, and C25 mix cylinders—including 10-year star (★) steel qualification.</p>
+              </div>
+              <div class="spec-tags"><span class="spec-tag">DOT-3A / 3AA ★</span><span class="spec-tag">DOT-3AL Alum</span><span class="spec-tag">O2 / N2 / Ar / Mix</span></div>
+            </div>
+          </div>
+          <div class="cap-card">
+            <img src="/static/images/paintball-hpa.jpg" alt="Paintball & Airsoft HPA Carbon Fiber Tanks" />
+            <div class="cap-body">
+              <div>
+                <h3 style="margin:0 0 6px;font-size:1.05rem;color:var(--forest);">Paintball &amp; Airsoft HPA Systems</h3>
+                <p style="margin:0;font-size:0.86rem;color:var(--muted);">48ci/3000 aluminum and 68ci–90ci/4500 carbon fiber HPA bottles (Ninja, HK Army, Empire, First Strike). Every regulator is tagged and matched back to your tank.</p>
+              </div>
+              <div class="spec-tags"><span class="spec-tag">3000 &amp; 4500 PSI HPA</span><span class="spec-tag">Regulator Tagged</span><span class="spec-tag">Mini B386 Label</span></div>
+            </div>
+          </div>
+          <div class="cap-card">
+            <img src="/static/images/scuba-co2.jpg" alt="Scuba Dive Tanks & Beverage CO2 Cylinders" />
+            <div class="cap-body">
+              <div>
+                <h3 style="margin:0 0 6px;font-size:1.05rem;color:var(--forest);">Scuba, Beverage CO2 &amp; Safety</h3>
+                <p style="margin:0;font-size:0.86rem;color:var(--muted);">AL80, pony bottles, steel dive tanks, kegerator/homebrew CO2 (5 lb–50 lb), fire suppression bottles, and O-ring / burst-disc replacement.</p>
+              </div>
+              <div class="spec-tags"><span class="spec-tag">AL80 &amp; Steel Dive</span><span class="spec-tag">5–50 lb CO2</span><span class="spec-tag">Neck Stamped</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FIRE & FLEET BANNER -->
+    <section class="sec" id="departments" style="padding-top:0;">
+      <div class="wrap">
+        <div class="fleet-banner">
+          <div>
+            <span class="rin-pill" style="margin-bottom:10px;">First-Responder Operated Standards</span>
+            <h2 style="margin:0 0 10px;font-size:1.7rem;color:var(--forest);">Built for Fire Departments, EMS Agencies &amp; Commercial Fleets</h2>
+            <p style="margin:0 0 14px;color:var(--muted);font-size:0.94rem;">
+              Operated by active Beaver County emergency service personnel, our Baden shop delivers audit-ready <strong>Form 393-001 Retest Data Sheets</strong>, Method B calibration logs, Net-30 municipal billing, and regional station truck pickup &amp; return delivery runs.
+            </p>
+            <ul style="margin:0 0 18px;padding-left:18px;color:var(--slate);font-size:0.88rem;line-height:1.7;">
+              <li><strong>Zero Mixed Valves:</strong> Every pulled valve or HPA regulator gets a dedicated numbered tag at our Stamp &amp; Valve Bench.</li>
+              <li><strong>Heated Dry &amp; Mark Gate:</strong> Full drying rack cycle followed by clean neck stamping or epoxy-sealed <code>B386</code> composite labels.</li>
+              <li><strong>Instant Ready Texts:</strong> Direct SMS alert with a printed pickup slip on your batch inside our Back Room.</li>
+            </ul>
+            <a href="#dropoff" onclick="setCheckinMode('TRUCK_REQUEST')" class="btn-gold">🚚 Schedule Department Truck Run</a>
+          </div>
+          <div class="fleet-imgs">
+            <img src="/static/images/fire-rescue.jpg" alt="Fire Rescue Apparatus" />
+            <img src="/static/images/ems-oxygen.jpg" alt="Emergency Response & Medical Gas Service" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DOT HYDRO DATE CHECKER -->
+    <section class="sec" id="checker" style="padding-top:0;">
       <div class="wrap">
         <div class="glass-card">
-          <div class="sec-hdr" style="margin-bottom:14px;">
-            <small>Instant Stamp &amp; Label Calculator</small>
-            <h2 style="margin:2px 0;">Is My Cylinder Due for Hydro Testing?</h2>
+          <div style="margin-bottom:14px;">
+            <small style="color:var(--gold);font-weight:900;text-transform:uppercase;font-size:0.75rem;">Instant Stamp &amp; Label Calculator</small>
+            <h2 style="margin:2px 0;color:var(--forest);">Is My Cylinder Due for Hydro Testing?</h2>
           </div>
           <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));align-items:end;">
             <div>
@@ -511,6 +649,7 @@
       </div>
     </section>
 
+    <!-- BADEN FACILITY & DIRECTIONS -->
     <section class="sec" id="facility" style="padding-top:0;">
       <div class="wrap">
         <div class="glass-card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px;">
@@ -522,7 +661,7 @@
             </p>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <a class="btn-green" href="https://www.google.com/maps/search/?api=1&query=3086+Legionville+Rd,+Baden,+PA+15005" target="_blank" rel="noopener">🗺️ Google Maps Directions</a>
+            <a class="btn-green" href="https://www.google.com/maps/search/?api=1&query=3086+Legionville+Rd+Baden+PA+15005" target="_blank" rel="noopener">🗺️ Google Maps Directions</a>
             <a class="btn-green" style="background:#1877f2;" href="https://www.facebook.com/share/1K52tfW568/" target="_blank" rel="noopener">👍 Follow on Facebook</a>
           </div>
         </div>
@@ -547,6 +686,31 @@
       return String(s ?? '').replace(/[&<>"]/g, m => map[m]);
     }
 
+    // 60FPS SCROLL CHOREOGRAPHY:
+    // At top (scrollY = 0): Crest + Dogs are 100% solid & unblocked; Greeting Bubble is crisp.
+    // On scroll: Greeting Bubble fades & disappears; Crest + Dogs recede smoothly into fixed background!
+    function updateHeroScrollEffect() {
+      const y = window.scrollY || window.pageYOffset || 0;
+      const stage = document.getElementById('fixedBrandStage');
+      const greet = document.getElementById('greetingFadeBox');
+
+      if (greet) {
+        const gProg = Math.min(1, Math.max(0, y / 190));
+        greet.style.opacity = (1 - gProg).toFixed(3);
+        greet.style.transform = `translate3d(0, ${(-gProg * 24).toFixed(1)}px, 0)`;
+        greet.style.visibility = gProg >= 0.99 ? 'hidden' : 'visible';
+      }
+
+      if (stage) {
+        const sProg = Math.min(1, Math.max(0, y / 360));
+        const stageOpacity = 1 - (sProg * 0.78); // 1.00 solid -> 0.22 fixed background watermark
+        const stageScale = 1 - (sProg * 0.08);   // subtle depth recede
+        stage.style.opacity = stageOpacity.toFixed(3);
+        stage.style.transform = `translate3d(0, 0, 0) scale(${stageScale.toFixed(3)})`;
+      }
+    }
+    window.addEventListener('scroll', () => requestAnimationFrame(updateHeroScrollEffect), { passive: true });
+
     function formatPubPhone(el) {
       const d = el.value.replace(/\D/g, '').slice(0, 10);
       if (d.length >= 7) el.value = `${d.slice(0,3)}-${d.slice(3,6)}-${d.slice(6)}`;
@@ -568,12 +732,26 @@
         if (t.active && t.enable_public) {
           if (pill && t.countdown_label) { pill.hidden = false; pill.textContent = t.countdown_label; }
           if (bar && t.countdown_label) { bar.hidden = false; bar.textContent = `${t.countdown_label}  •  24/7 Loading Dock Back Room Open All Holiday Week!`; }
-          if (img && t.dog_image && t.dog_image !== 'shop-dogs.jpg') {
-            const probe = new Image();
-            probe.onload = () => { img.src = '/static/images/' + t.dog_image; img.classList.add('illustrated-blend'); };
-            probe.onerror = () => { img.src = '/static/images/shop-dogs.jpg'; img.classList.remove('illustrated-blend'); };
-            probe.src = '/static/images/' + t.dog_image;
+          if (img && t.dog_image) {
+            const stem = t.dog_image.replace(/\.(jpg|jpeg|png)$/i, '');
+            const pngUrl = `/static/images/${stem}.png`;
+            const jpgUrl = `/static/images/${t.dog_image}`;
+            const probePng = new Image();
+            probePng.onload = () => { img.classList.remove('photo-fallback'); img.src = pngUrl; };
+            probePng.onerror = () => {
+              const probeJpg = new Image();
+              probeJpg.onload = () => {
+                img.src = jpgUrl;
+                img.classList.toggle('photo-fallback', t.dog_image === 'shop-dogs.jpg');
+              };
+              probeJpg.onerror = () => { img.src = '/static/images/shop-dogs.jpg'; img.classList.add('photo-fallback'); };
+              probeJpg.src = jpgUrl;
+            };
+            probePng.src = pngUrl;
           }
+        } else if (img) {
+          img.src = '/static/images/shop-dogs.jpg';
+          img.classList.add('photo-fallback');
         }
       } catch (_) {}
     }
@@ -592,11 +770,11 @@
       tabPick.classList.toggle('active', isPick);
       tabTruck.classList.toggle('active', isTruck);
 
-      tabPick.style.background = isPick ? '#0369a1' : '#ffffff';
+      tabPick.style.background = isPick ? '#0369a1' : 'rgba(255,255,255,0.9)';
       tabPick.style.borderColor = isPick ? '#075985' : '#cbd5e1';
       tabPick.style.color = isPick ? '#ffffff' : 'var(--slate)';
 
-      tabTruck.style.background = isTruck ? '#b45309' : '#ffffff';
+      tabTruck.style.background = isTruck ? '#b45309' : 'rgba(255,255,255,0.9)';
       tabTruck.style.borderColor = isTruck ? '#92400e' : '#cbd5e1';
       tabTruck.style.color = isTruck ? '#ffffff' : 'var(--slate)';
 
@@ -666,7 +844,7 @@
       let dots = '';
       for (let i = 1; i <= 5; i++) dots += `<div class="step-dot ${i <= data.step_num ? 'done' : ''}"></div>`;
       box.innerHTML = `
-        <div style="background:#ecfdf5;border:1.5px solid #6ee7b7;padding:12px;border-radius:10px;">
+        <div style="background:rgba(236,253,245,0.95);border:1.5px solid #6ee7b7;padding:12px;border-radius:10px;">
           <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:#065f46;font-weight:900;">
             <span>TICKET ${esc(data.ticket_no)} (${data.bottle_count} Cyl)</span>
             <span>${data.estimated_ready ? 'Est: ' + esc(data.estimated_ready) : ''}</span>
@@ -889,6 +1067,7 @@
 
     (function initStorefront() {
       document.getElementById('trkPrefDate').value = new Date().toISOString().slice(0, 10);
+      updateHeroScrollEffect();
       loadHolidayStorefrontTheme();
       const params = new URLSearchParams(location.search);
       const savedT = localStorage.getItem('webers_last_ticket') || '';
@@ -896,7 +1075,10 @@
       if (params.get('ticket')) {
         document.getElementById('trkTicket').value = params.get('ticket');
         if (params.get('p')) document.getElementById('trkLast4').value = params.get('p');
-        setTimeout(() => lookupTicket(), 200);
+        setTimeout(() => {
+          document.getElementById('tracker')?.scrollIntoView({ behavior: 'smooth' });
+          lookupTicket();
+        }, 200);
       } else if (savedT) {
         document.getElementById('trkTicket').value = savedT;
         document.getElementById('trkLast4').value = savedP;

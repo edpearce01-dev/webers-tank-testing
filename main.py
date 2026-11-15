@@ -4979,7 +4979,7 @@ def compute_active_theme(conn) -> dict:
         "effect": meta["effect"],
         "garland": meta["garland"],
         "accent": meta["accent"],
-        "dog_image": meta["dog_image"],
+        "dog_image": (meta["dog_image"].rsplit(".", 1)[0] + ".png") if (STATIC_DIR / "images" / (meta["dog_image"].rsplit(".", 1)[0] + ".png")).exists() else meta["dog_image"],
         "dog_message": custom_msg or meta["dog_msg"],
         "enable_public": en_pub,
         "enable_tv": en_tv,
