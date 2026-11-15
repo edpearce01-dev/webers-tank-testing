@@ -905,20 +905,112 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Weber's Tank Testing - DOT RIN B386", lifespan=lifespan)
 
 
+
+AUTH_COOKIE = "webers_ops_auth"
+AUTH_SECRET = (os.getenv("WEBERS_AUTH_SECRET") or "webers-rin-b386-midnight-auth-key").encode("utf-8")
+
+
+def seconds_until_midnight_eastern() -> int:
+    now_e = now_eastern()
+    tomorrow_midnight = (now_e + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    return max(60, int((tomorrow_midnight - now_e).total_seconds()))
+
+
+def make_user_auth_token(user_id: int, initials: str, role: str, pin: str, auth_date: str) -> str:
+    msg = f"B386:{user_id}:{initials}:{role}:{pin}:{auth_date}".encode("utf-8")
+    sig = hmac.new(AUTH_SECRET, msg, hashlib.sha256).hexdigest()
+    return f"{user_id}|{auth_date}|{sig}"
+
+
+def make_tv_kiosk_token(pin_seed: str) -> str:
+    return hmac.new(AUTH_SECRET, f"B386-TV:{pin_seed}".encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def default_day_plan_for_date(d: date, default_cap: int = 24) -> tuple[str, int]:
+    if d.weekday() >= 5:
+        return ("BACKROOM_ONLY", 0)
+    return ("FULL_HYDRO", int(default_cap or 24))
+
+
+def get_date_jacket_ceilings(conn, work_date_iso: str) -> dict:
+    out = {}
+    for j_name in ("Short Jacket", "Tall Jacket"):
+        row = conn.execute(
+            "SELECT COALESCE(MAX(target_pressure_psi), 0) AS mx FROM daily_verifications WHERE test_date=? AND jacket_type=? AND passed=1;",
+            (work_date_iso, j_name),
+        ).fetchone()
+        mx = int(row["mx"] or 0) if row else 0
+        out[j_name] = {
+            "max_calibrated_psi": mx,
+            "max_allowed_test_psi": dot_max_allowed_test_psi(mx) if mx > 0 else 0,
+        }
+    return out
+
+
+def get_current_session_user(request: Request) -> Optional[dict]:
+    """Validates daily individual PIN session cookie — strictly resets at 12:00 AM Eastern."""
+    raw = request.cookies.get(AUTH_COOKIE, "")
+    today_iso = today_eastern()
+    if raw and "|" in raw:
+        parts = raw.split("|")
+        if len(parts) == 3:
+            uid_str, c_date, sig = parts
+            if c_date == today_iso and uid_str.isdigit():
+                uid = int(uid_str)
+                conn = get_conn()
+                u = conn.execute("SELECT * FROM crew_users WHERE id=? AND active=1;", (uid,)).fetchone()
+                conn.close()
+                if u:
+                    expected = make_user_auth_token(u["id"], u["initials"], u["role"], u["pin"], today_iso).split("|")[-1]
+                    if hmac.compare_digest(sig, expected):
+                        return {
+                            "id": u["id"],
+                            "name": u["name"],
+                            "initials": u["initials"],
+                            "role": u["role"],
+                            "can_sign_dot": bool(u["can_sign_dot"] and u["role"] == "OWNER"),
+                        }
+    return None
+
+
+def is_tv_authorized(request: Request) -> bool:
+    if get_current_session_user(request):
+        return True
+    tv_tok = request.cookies.get("webers_tv_auth", "")
+    if not tv_tok:
+        return False
+    conn = get_conn()
+    s_row = conn.execute("SELECT value FROM settings WHERE key='crew_pin';").fetchone()
+    conn.close()
+    seed = s_row["value"] if s_row else "0386"
+    return hmac.compare_digest(tv_tok, make_tv_kiosk_token(seed))
+
+
 @app.middleware("http")
 async def auth_gate_middleware(request: Request, call_next):
+    host = (request.headers.get("host") or "").split(":")[0].lower()
     path = request.url.path
+
+    if path == "/" and host in ("weberstanktesting.com", "www.weberstanktesting.com"):
+        return FileResponse(STATIC_DIR / "landing.html")
+
     public_paths = {
-        "/", "/ops", "/schedule", "/office", "/tv", "/checkin",
-        "/manifest.json", "/sw.js", "/icon.svg",
-        "/api/auth/status", "/api/auth/login", "/api/auth/logout",
-        "/api/public/dropoff", "/api/public/turnaround", "/api/public/track",
+        "/", "/ops", "/schedule", "/office", "/tv", "/manifest.json", "/sw.js", "/icon.svg",
+        "/api/auth/login", "/api/auth/status", "/api/auth/logout",
+        "/api/public/dropoff", "/api/public/track", "/api/public/turnaround", "/api/public/theme",
     }
     if path in public_paths or path.startswith("/static") or path.startswith("/api/public/receipt/"):
         return await call_next(request)
-    if not is_authenticated(request):
-        return JSONResponse({"detail": "Crew PIN login required."}, status_code=401)
+
+    if path == "/api/tv" and is_tv_authorized(request):
+        return await call_next(request)
+
+    user = get_current_session_user(request)
+    if not user:
+        return JSONResponse({"detail": "Daily session expired at midnight — please enter your PIN."}, status_code=401)
+    request.state.user = user
     return await call_next(request)
+
 
 
 # --- PYDANTIC SCHEMAS ---
@@ -3966,7 +4058,8 @@ EXACT SYSTEM MAP & RULES:
    - '2. Prep & Scan': Import waiting 24/7 Backroom Door batches or Scheduled jobs via 'Lock & Scan Batch'. Turn ON 'Lock Batch Specs' for multi-bottle batches so specs stay locked while Serial # and random Valve Tag # reset blank after each bottle.
    - RANDOM VALVE TAGS: Tags (#47, #12, etc.) are grabbed randomly from the bin. If blocked by 'Valve Tag #X is currently active on SN...', go to '4. Finish & Shelf' -> 'Active Valve & Regulator Tags' and click 'Reinstall & Free #X' (or pick another tag).
    - '3. Hydro Stand': Tap any queued cylinder pill at top -> enter Total Expansion (cc) & Permanent Expansion (cc). If >10% perm, >REE, or visual fail, it flips to Code D Condemned and asks for PHMSA legal disposition.
-   - '4. Finish & Shelf': Passing tanks CANNOT move to Zone E Pickup Shelf until marked 'Stamped' or 'Stickered' (B386). Tap '+ Neck O-Ring', '+ Burst Disc', or '+ Tumble/Clean' here so parts auto-add to the invoice. Click 'Claim Slip' to print the Zone E slip (QR code auto-opens PICK-UP sign-out).
+   - PHYSICAL SHOP LAYOUT: Customers use the right-side Loading Dock / Ramp -> 24/7 Back Room (Drop-Off & Pickup). Inside the Test Room are the Vice, Stamp & Valve Bench, 2 Water Test Jackets (Short & Tall), and Pump/Test Desk. Outside in the Fire Truck Bay is the Drying Rack.
+   - '4. Finish & Shelf': Passing tanks dry on the Main Bay Drying Rack and CANNOT move to Back Room Pickup until marked 'Stamped' or 'Stickered' (B386) at the Stamp & Valve Bench. Tap '+ Neck O-Ring', '+ Burst Disc', or '+ Tumble/Clean' here so parts auto-add to the invoice. Click 'Claim Slip' to print the Zone E slip (QR code auto-opens PICK-UP sign-out).
 3. SCHEDULE (/schedule — 4 Left-Menu Tabs):
    - '1. Month Calendar': Full Sunday-Saturday month grid. Use 'Prev / Next', month picker, or yellow 'Jump to Today' (also 'Prev | Today | Next' date stepper in top-right bar of every page). Click any day square to set Operating Window (Full Hydro, Prep Only, Road Run, or 24/7 Backroom Only) & bottle capacity.
    - '2. Book & Quote': Full booking form + Phone Turnaround Calculator.
@@ -4647,6 +4740,283 @@ def complete_end_of_day(payload: EndOfDayInput, request: Request):
     conn.close()
     trigger_sheets_sync_bg()
     return {"closed": True, "rolled_jobs": rolled}
+
+
+
+class ThemeSettingsInput(BaseModel):
+    theme_mode: str = "AUTO"
+    enable_public: bool = True
+    enable_tv: bool = True
+    enable_ops: bool = True
+    custom_dog_message: str = ""
+
+
+def _easter_sunday(year: int) -> date:
+    a = year % 19
+    b = year // 100
+    c = year % 100
+    d = b // 4
+    e = b % 4
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i = c // 4
+    k = c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    month = (h + l - 7 * m + 114) // 31
+    day = ((h + l - 7 * m + 114) % 31) + 1
+    return date(year, month, day)
+
+
+def _nth_weekday(year: int, month: int, weekday: int, n: int) -> date:
+    first = date(year, month, 1)
+    offset = (weekday - first.weekday()) % 7
+    return first + timedelta(days=offset + 7 * (n - 1))
+
+
+def _last_weekday(year: int, month: int, weekday: int) -> date:
+    nxt = date(year, month + 1, 1) if month < 12 else date(year + 1, 1, 1)
+    last = nxt - timedelta(days=1)
+    offset = (last.weekday() - weekday) % 7
+    return last - timedelta(days=offset)
+
+
+HOLIDAY_CATALOG = {
+    "NEW_YEAR": {
+        "name": "New Year's",
+        "icon": "🎆",
+        "effect": "fireworks",
+        "garland": "gold_lights",
+        "dog_image": "dogs-newyear.jpg",
+        "accent": "#d97706",
+        "dog_msg": "🐾 Happy New Year from Pongo, Zeke & Pierce! Starting the year fresh — drop off 24/7 in our Back Room via the Loading Dock!",
+    },
+    "VALENTINES": {
+        "name": "Valentine's Day",
+        "icon": "❤️",
+        "effect": "hearts",
+        "garland": "warm_pink_lights",
+        "dog_image": "dogs-valentines.jpg",
+        "accent": "#e11d48",
+        "dog_msg": "🐾 Sending puppy love from Pongo, Zeke & Pierce! Show your cylinders some love — 24/7 Back Room drop-off is always open!",
+    },
+    "ST_PATRICKS": {
+        "name": "St. Patrick's Day",
+        "icon": "🍀",
+        "effect": "shamrocks",
+        "garland": "emerald_lights",
+        "dog_image": "dogs-stpatricks.jpg",
+        "accent": "#16a34a",
+        "dog_msg": "🐾 Don't rely on luck with high-pressure tanks! Pongo, Zeke & Pierce have our 24/7 Baden Back Room ready for your drop-offs!",
+    },
+    "EASTER": {
+        "name": "Easter",
+        "icon": "🐰",
+        "effect": "spring",
+        "garland": "pastel_lights",
+        "dog_image": "dogs-easter.jpg",
+        "accent": "#8b5cf6",
+        "dog_msg": "🐾 Happy Spring & Easter from Pongo, Zeke & Pierce! Getting scuba, paintball, or fire bottles ready for spring? Drop off 24/7!",
+    },
+    "MEMORIAL_DAY": {
+        "name": "Memorial Day",
+        "icon": "🇺🇸",
+        "effect": "patriotic",
+        "garland": "patriotic_lights",
+        "dog_image": "dogs-patriotic.jpg",
+        "accent": "#dc2626",
+        "dog_msg": "🐾 Remembering & honoring those who served. From Pongo, Zeke, Pierce & the Weber's crew — 24/7 Back Room drop-off stays open all weekend!",
+    },
+    "JULY_4TH": {
+        "name": "4th of July",
+        "icon": "🎇",
+        "effect": "patriotic",
+        "garland": "patriotic_lights",
+        "dog_image": "dogs-july4.jpg",
+        "accent": "#2563eb",
+        "dog_msg": "🐾 Happy 4th of July from Pongo, Zeke & Pierce! Keep the fireworks in the sky, not in expired tanks — drop off 24/7 at our Loading Dock!",
+    },
+    "LABOR_DAY": {
+        "name": "Labor Day",
+        "icon": "🛠️",
+        "effect": "patriotic",
+        "garland": "patriotic_lights",
+        "dog_image": "dogs-laborday.jpg",
+        "accent": "#0284c7",
+        "dog_msg": "🐾 Happy Labor Day to our hard-working Beaver County crews & first responders! Pongo, Zeke & Pierce are holding down the 24/7 Back Room!",
+    },
+    "HALLOWEEN": {
+        "name": "Halloween",
+        "icon": "🎃",
+        "effect": "halloween",
+        "garland": "spooky_lights",
+        "dog_image": "dogs-halloween.jpg",
+        "accent": "#ea580c",
+        "dog_msg": "🐾 No tricks, just certified treats (especially for us)! Pongo, Zeke & Pierce welcome your 24/7 Back Room drop-offs!",
+    },
+    "VETERANS_DAY": {
+        "name": "Veterans Day",
+        "icon": "🎖️",
+        "effect": "patriotic",
+        "garland": "patriotic_lights",
+        "dog_image": "dogs-veterans.jpg",
+        "accent": "#b91c1c",
+        "dog_msg": "🐾 Thank you to all Veterans from Pongo, Zeke, Pierce & the Weber's family! Proudly serving our region's departments & fleets.",
+    },
+    "THANKSGIVING": {
+        "name": "Thanksgiving",
+        "icon": "🦃",
+        "effect": "autumn_leaves",
+        "garland": "autumn_lights",
+        "dog_image": "dogs-thanksgiving.jpg",
+        "accent": "#d97706",
+        "dog_msg": "🐾 Grateful for all our customers & local departments! Pongo, Zeke & Pierce say save us some turkey — 24/7 Back Room drop-off is open all weekend!",
+    },
+    "CHRISTMAS": {
+        "name": "Christmas",
+        "icon": "🎄",
+        "effect": "snow",
+        "garland": "christmas_lights",
+        "dog_image": "dogs-christmas.jpg",
+        "accent": "#dc2626",
+        "dog_msg": "🐾 Merry Christmas & Happy Holidays from Pongo, Zeke, and Pierce! Drop off 24/7 at our Loading Dock Back Room — we'll get your tanks ready in a jiffy!",
+    },
+}
+
+
+def _holiday_dates_for_year(y: int) -> list[tuple[str, date, int]]:
+    return [
+        ("CHRISTMAS", date(y, 12, 25), 1),
+        ("THANKSGIVING", _nth_weekday(y, 11, 3, 4), 2),
+        ("JULY_4TH", date(y, 7, 4), 3),
+        ("HALLOWEEN", date(y, 10, 31), 4),
+        ("NEW_YEAR", date(y, 1, 1), 5),
+        ("MEMORIAL_DAY", _last_weekday(y, 5, 0), 6),
+        ("VETERANS_DAY", date(y, 11, 11), 7),
+        ("EASTER", _easter_sunday(y), 8),
+        ("ST_PATRICKS", date(y, 3, 17), 9),
+        ("LABOR_DAY", _nth_weekday(y, 9, 0, 1), 10),
+        ("VALENTINES", date(y, 2, 14), 11),
+    ]
+
+
+def compute_active_theme(conn) -> dict:
+    s_map = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings;").fetchall()}
+    mode = (s_map.get("theme_mode") or "AUTO").strip().upper()
+    en_pub = s_map.get("theme_enable_public", "1") != "0"
+    en_tv = s_map.get("theme_enable_tv", "1") != "0"
+    en_ops = s_map.get("theme_enable_ops", "1") != "0"
+    custom_msg = (s_map.get("theme_custom_dog_msg") or "").strip()
+
+    today_d = date.fromisoformat(today_eastern())
+    chosen_key = None
+    chosen_date = None
+
+    if mode == "OFF":
+        chosen_key = None
+    elif mode in HOLIDAY_CATALOG:
+        chosen_key = mode
+        all_d = _holiday_dates_for_year(today_d.year) + _holiday_dates_for_year(today_d.year + 1)
+        matches = [hd for k, hd, _ in all_d if k == chosen_key and (hd - today_d).days >= -2]
+        chosen_date = matches[0] if matches else today_d
+    else:
+        candidates = []
+        for y in (today_d.year - 1, today_d.year, today_d.year + 1):
+            for key, hdate, prio in _holiday_dates_for_year(y):
+                diff = (hdate - today_d).days
+                if -2 <= diff <= 15:
+                    if key == "VETERANS_DAY" and diff < 0:
+                        continue
+                    if key == "NEW_YEAR" and today_d.month == 12 and today_d.day <= 27:
+                        continue
+                    candidates.append((prio, abs(diff), key, hdate))
+        if candidates:
+            candidates.sort(key=lambda x: (x[0], x[1]))
+            _, _, chosen_key, chosen_date = candidates[0]
+
+    default_dog_msg = "🐾 Welcome to Weber's Tank Testing from Pongo, Zeke & Pierce! Pull up to our Loading Dock for 24/7 Back Room drop-off & pickup anytime!"
+    if not chosen_key:
+        return {
+            "active": False,
+            "mode": mode,
+            "key": "NONE",
+            "name": "Classic Year-Round",
+            "icon": "🐾",
+            "days_until": None,
+            "countdown_label": "",
+            "effect": "none",
+            "garland": "none",
+            "accent": "#f59e0b",
+            "dog_image": "shop-dogs.jpg",
+            "dog_message": custom_msg or default_dog_msg,
+            "enable_public": en_pub,
+            "enable_tv": en_tv,
+            "enable_ops": en_ops,
+            "custom_dog_message": custom_msg,
+            "available_holidays": [{"key": k, "name": v["name"], "icon": v["icon"]} for k, v in HOLIDAY_CATALOG.items()],
+        }
+
+    meta = HOLIDAY_CATALOG[chosen_key]
+    diff_days = (chosen_date - today_d).days if chosen_date else 0
+    if diff_days > 1:
+        cd_lbl = f"{meta['icon']} {diff_days} DAYS TILL {meta['name'].upper()}!"
+    elif diff_days == 1:
+        cd_lbl = f"{meta['icon']} TOMORROW IS {meta['name'].upper()}!"
+    elif diff_days == 0:
+        cd_lbl = f"{meta['icon']} HAPPY {meta['name'].upper()}!"
+    else:
+        cd_lbl = f"{meta['icon']} HAPPY {meta['name'].upper()} WEEKEND!"
+
+    return {
+        "active": True,
+        "mode": mode,
+        "key": chosen_key,
+        "name": meta["name"],
+        "icon": meta["icon"],
+        "days_until": diff_days,
+        "countdown_label": cd_lbl,
+        "effect": meta["effect"],
+        "garland": meta["garland"],
+        "accent": meta["accent"],
+        "dog_image": meta["dog_image"],
+        "dog_message": custom_msg or meta["dog_msg"],
+        "enable_public": en_pub,
+        "enable_tv": en_tv,
+        "enable_ops": en_ops,
+        "custom_dog_message": custom_msg,
+        "available_holidays": [{"key": k, "name": v["name"], "icon": v["icon"]} for k, v in HOLIDAY_CATALOG.items()],
+    }
+
+
+@app.get("/api/public/theme")
+def get_public_holiday_theme():
+    conn = get_conn()
+    data = compute_active_theme(conn)
+    conn.close()
+    return data
+
+
+@app.post("/api/theme/settings")
+def save_holiday_theme_settings(payload: ThemeSettingsInput, request: Request):
+    require_owner_or_admin(request)
+    mode = payload.theme_mode.strip().upper()
+    if mode not in ("AUTO", "OFF") and mode not in HOLIDAY_CATALOG:
+        mode = "AUTO"
+    conn = get_conn()
+    for k, v in [
+        ("theme_mode", mode),
+        ("theme_enable_public", "1" if payload.enable_public else "0"),
+        ("theme_enable_tv", "1" if payload.enable_tv else "0"),
+        ("theme_enable_ops", "1" if payload.enable_ops else "0"),
+        ("theme_custom_dog_msg", payload.custom_dog_message.strip()[:260]),
+    ]:
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?);", (k, v))
+    bump_db_version(conn)
+    data = compute_active_theme(conn)
+    conn.commit()
+    conn.close()
+    return data
 
 
 # --- CREW FEEDBACK & PDF ENDPOINTS ---

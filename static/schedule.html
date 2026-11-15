@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b2219" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/static/ops.css?v=9.0" />
+  <link rel="stylesheet" href="/static/ops.css?v=9.1" />
   <title>Weber's Tank Testing — Month Schedule &amp; Dispatch | DOT B386</title>
 </head>
 <body>
@@ -215,9 +215,9 @@
                 <div>
                   <label>Initial Shop Zone</label>
                   <select id="sjZone">
-                    <option value="ZONE_A_BACKROOM">Zone A • Backroom Drop</option>
-                    <option value="ZONE_B_DEVALVE">Zone B • Devalve &amp; Tag</option>
-                    <option value="ZONE_C_READY_RACK">Zone C • Ready Rack</option>
+                    <option value="ZONE_A_BACKROOM">Back Room • Loading Dock Drop</option>
+                    <option value="ZONE_B_DEVALVE">Vice &amp; Stamp/Valve Bench</option>
+                    <option value="ZONE_C_READY_RACK">Test Jackets &amp; Pump Desk</option>
                     <option value="OUTBOUND_TRUCK">🚚 Truck / Road Stop</option>
                   </select>
                 </div>
@@ -801,7 +801,8 @@
 
     bootSchedule();
   </script>
-  <script src="/static/day-flow.js?v=9.0"></script>
-  <script src="/static/help-bot.js?v=9.0"></script>
+  <script src="/static/day-flow.js?v=9.1"></script>
+  <script src="/static/theme-engine.js?v=9.1"></script>
+  <script src="/static/help-bot.js?v=9.1"></script>
 </body>
 </html>

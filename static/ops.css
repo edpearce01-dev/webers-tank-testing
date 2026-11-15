@@ -503,3 +503,21 @@ td { text-align: left; padding: 8px 7px; border-bottom: 1px solid var(--border-s
   font-weight: 900 !important; font-size: 1rem !important; letter-spacing: 2px;
   background: #fffbeb !important; border: 1.5px solid #f59e0b !important; color: #78350f !important; text-align: center;
 }
+
+/* Interactive Baden Shop Floor Plan Schematic */
+.shop-map-grid {
+  display: grid; grid-template-columns: 1.15fr 1fr 0.42fr; gap: 8px;
+  background: #f1f5f9; border: 2px solid #334155; border-radius: 12px; padding: 10px;
+}
+@media (max-width: 760px) { .shop-map-grid { grid-template-columns: 1fr; } }
+.map-room {
+  background: #ffffff; border: 2px solid #475569; border-radius: 9px; padding: 10px;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 8px; position: relative;
+}
+.map-spot {
+  border-radius: 8px; padding: 7px 9px; font-size: 0.76rem; font-weight: 800;
+  display: flex; justify-content: space-between; align-items: center; gap: 6px;
+  cursor: pointer; border: 1.5px solid transparent; transition: transform 0.12s;
+}
+.map-spot:hover { transform: translateY(-1px); }
+.map-cnt { padding: 2px 8px; border-radius: 999px; font-size: 0.74rem; font-weight: 900; background: #fff; }

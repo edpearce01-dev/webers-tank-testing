@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b2219" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/static/ops.css?v=9.0" />
+  <link rel="stylesheet" href="/static/ops.css?v=9.1" />
   <title>Weber's Tank Testing — Office, Rolodex, Printouts &amp; Supplies | RIN B386</title>
 </head>
 <body>
@@ -404,7 +404,7 @@
               <button class="secondary" onclick="addCustomInvoiceLine('INTERNAL_CLEAN', 'Internal Cylinder Tumble / Cleaning')">+ Add Tumble / Clean</button>
               <button class="secondary" onclick="addCustomInvoiceLine('NECK_ORING', 'Neck / Valve O-Ring Replacement')">+ Add O-Ring</button>
               <button class="secondary" onclick="addCustomInvoiceLine('VALVE_RELIEF', 'Burst Disc / Relief Assembly')">+ Add Burst Disc</button>
-              <button class="secondary" onclick="openSelectedClaimSlip()">🏷️ Print Zone E Claim Slip</button>
+              <button class="secondary" onclick="openSelectedClaimSlip()">🏷️ Print Back Room Claim Slip</button>
               <button class="secondary" onclick="sendCustomerPickupSmsFromBilling()">📲 Text Ready + Total</button>
             </div>
 
@@ -539,7 +539,7 @@
 
               <div class="card" style="border-left:4px solid #10b981;">
                 <div class="card-hdr">
-                  <h3>🏷️ Zone E Backroom Shelf Claim Slip</h3>
+                  <h3>🏷️ Back Room Pickup Slip (Loading Dock)</h3>
                   <span class="sub-badge">Tape to Lead Tank</span>
                 </div>
                 <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
@@ -1888,7 +1888,8 @@
 
     bootOffice();
   </script>
-  <script src="/static/day-flow.js?v=9.0"></script>
-  <script src="/static/help-bot.js?v=9.0"></script>
+  <script src="/static/day-flow.js?v=9.1"></script>
+  <script src="/static/theme-engine.js?v=9.1"></script>
+  <script src="/static/help-bot.js?v=9.1"></script>
 </body>
 </html>

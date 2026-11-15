@@ -171,6 +171,9 @@
           <button type="button" class="rail-btn" onclick="window.openPinManagerModal()">
             <span>🔐 Individual PINs</span><span class="nav-badge">PIN</span>
           </button>
+          <button type="button" class="rail-btn" onclick="window.openHolidayThemeModal && window.openHolidayThemeModal()">
+            <span>🎨 Holiday Themes</span><span class="nav-badge green">🎄</span>
+          </button>
           <button type="button" class="rail-btn" onclick="window.openEndYourDayModal()">
             <span>🌙 End Your Day</span><span class="nav-badge">Out</span>
           </button>`;

@@ -1645,3 +1645,81 @@ async function saveAllSettings() {
 }
 
 checkAuthAndBoot();
+
+function renderLiveFloorPlanMap() {
+  const host = document.getElementById('liveShopFloorMap');
+  if (!host || !window.STATE) return;
+  const recs = STATE.records || [];
+  const drops = (STATE.dropoffs || []).filter(d => ((d.status === 'IN_BACKROOM' || d.status === 'CHECKED_IN') && (d.imported_count || 0) < d.bottle_count));
+  const dropBottles = drops.reduce((s, d) => s + Math.max(0, d.bottle_count - (d.imported_count || 0)), 0);
+  const viceTags = (STATE.active_valve_tags || []).length;
+  const atJackets = recs.filter(r => r.status === 'QUEUED').length;
+  const atDryStamp = recs.filter(r => r.status === 'COMPLETED' && r.shop_stage !== 'PICKED_UP' && r.shop_stage !== 'READY_BACKROOM').length;
+  const atPickup = recs.filter(r => r.status === 'COMPLETED' && r.shop_stage === 'READY_BACKROOM').length;
+
+  host.innerHTML = `
+    <div class="card-hdr" style="margin-bottom:8px;">
+      <h3>🗺️ Live Baden Shop Floor Map (Click Any Station)</h3>
+      <span class="sub-badge">3086 Legionville Rd Layout</span>
+    </div>
+    <div class="shop-map-grid">
+      <div class="map-room">
+        <div style="display:flex;justify-content:space-between;gap:6px;">
+          <span style="font-size:0.7rem;font-weight:900;color:var(--muted);">🚒 MAIN BAY (FIRE TRUCK)</span>
+          <span style="font-size:0.68rem;background:#f1f5f9;padding:2px 7px;border-radius:5px;border:1px solid #cbd5e1;font-weight:800;">🚪 Entrance</span>
+        </div>
+        <div style="background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:8px;padding:14px 10px;text-align:center;color:#64748b;font-size:0.78rem;font-weight:800;">
+          🚒 Fire Truck Bay &amp; Shelving
+        </div>
+        <div class="map-spot" style="background:#fef3c7;border-color:#d97706;color:#78350f;" onclick="switchStation('finish')">
+          <span>💨 Drying Rack (Main Bay)</span>
+          <span class="map-cnt">${atDryStamp} Cyl</span>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="map-room" style="border-color:#1b4332;">
+          <div style="font-size:0.7rem;font-weight:900;color:var(--green);">🔬 HYDRO TEST ROOM</div>
+          <div class="map-spot" style="background:#dcfce7;border-color:#16a34a;color:#065f46;" onclick="switchStation('finish')">
+            <span>🔨 Stamp &amp; Valve Bench</span>
+            <span class="map-cnt">${viceTags} Tags</span>
+          </div>
+          <div class="map-spot" style="background:#fce7f3;border-color:#ec4899;color:#831843;" onclick="switchStation('prep')">
+            <span>🔧 Vice (Devalve &amp; Revalve)</span>
+            <span class="map-cnt">Prep</span>
+          </div>
+          <div class="map-spot" style="background:#dbeafe;border-color:#2563eb;color:#1e3a8a;" onclick="switchStation('stand')">
+            <span>🔵🔵 Short &amp; Tall Test Jackets</span>
+            <span class="map-cnt">${atJackets} Queued</span>
+          </div>
+          <div class="map-spot" style="background:#fef9c3;border-color:#eab308;color:#713f12;" onclick="switchStation('stand')">
+            <span>📋 Pump / Test Desk</span>
+            <span class="map-cnt">Sheet #${STATE.binder_state?.active_sheet_no || 8095}</span>
+          </div>
+        </div>
+
+        <div class="map-room" style="border-color:#b45309;">
+          <div style="font-size:0.7rem;font-weight:900;color:#92400e;">🚪 24/7 BACK ROOM</div>
+          <div class="map-spot" style="background:#ffedd5;border-color:#f97316;color:#7c2d12;" onclick="switchStation('prep')">
+            <span>📥 Incoming Drop-Offs</span>
+            <span class="map-cnt">${dropBottles} Waiting</span>
+          </div>
+          <div class="map-spot" style="background:#ecfdf5;border-color:#10b981;color:#065f46;" onclick="switchStation('finish')">
+            <span>✅ Back Room Pickup Ready</span>
+            <span class="map-cnt">${atPickup} Ready</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="map-room" style="flex:1;border-color:#2563eb;background:#eff6ff;justify-content:center;text-align:center;">
+          <div style="font-size:0.74rem;font-weight:900;color:#1d4ed8;">📐 Loading Dock Ramp</div>
+        </div>
+        <div class="map-room" style="flex:1;border-color:#dc2626;background:#fef2f2;justify-content:center;text-align:center;">
+          <div style="font-size:0.74rem;font-weight:900;color:#b91c1c;">🚚 Loading Dock</div>
+          <small style="font-size:0.66rem;color:#991b1b;font-weight:700;">24/7 Customer Door</small>
+        </div>
+      </div>
+    </div>`;
+}
+
