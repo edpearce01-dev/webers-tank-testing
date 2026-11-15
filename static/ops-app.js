@@ -371,6 +371,7 @@ async function loadState(rebuildLadder = false) {
     `Sheet #${b.active_sheet_no || STATE.starting_sheet_no} • Row #${b.next_row_number || 1}/12`;
 
   renderStartOfDayHuddle(queued, openSched, waitingDrops);
+  renderLiveFloorPlanMap();
   renderCalibrationControls();
   renderBackroomInbox();
   renderIntakeAndQueue(queued);
@@ -392,7 +393,7 @@ setInterval(async () => {
   if (document.getElementById('appShell').hidden || BENCH_SUBMITTING) return;
   try {
     const res = await fetch('/api/ping');
-    if (res.status === 401) { bootApp(); return; }
+    if (res.status === 401) { checkAuthAndBoot(); return; }
     if (res.ok) {
       const p = await res.json();
       if (p.db_version !== STATE.db_version) loadState(false);
@@ -1652,7 +1653,7 @@ function renderLiveFloorPlanMap() {
   const recs = STATE.records || [];
   const drops = (STATE.dropoffs || []).filter(d => ((d.status === 'IN_BACKROOM' || d.status === 'CHECKED_IN') && (d.imported_count || 0) < d.bottle_count));
   const dropBottles = drops.reduce((s, d) => s + Math.max(0, d.bottle_count - (d.imported_count || 0)), 0);
-  const viceTags = (STATE.active_valve_tags || []).length;
+  const viceTags = (STATE.active_valves || []).length;
   const atJackets = recs.filter(r => r.status === 'QUEUED').length;
   const atDryStamp = recs.filter(r => r.status === 'COMPLETED' && r.shop_stage !== 'PICKED_UP' && r.shop_stage !== 'READY_BACKROOM').length;
   const atPickup = recs.filter(r => r.status === 'COMPLETED' && r.shop_stage === 'READY_BACKROOM').length;
@@ -1671,7 +1672,7 @@ function renderLiveFloorPlanMap() {
         <div style="background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:8px;padding:14px 10px;text-align:center;color:#64748b;font-size:0.78rem;font-weight:800;">
           🚒 Fire Truck Bay &amp; Shelving
         </div>
-        <div class="map-spot" style="background:#fef3c7;border-color:#d97706;color:#78350f;" onclick="switchStation('finish')">
+        <div class="map-spot" style="background:#fef3c7;border-color:#d97706;color:#78350f;" onclick="jumpToTab('logs')">
           <span>💨 Drying Rack (Main Bay)</span>
           <span class="map-cnt">${atDryStamp} Cyl</span>
         </div>
@@ -1680,19 +1681,19 @@ function renderLiveFloorPlanMap() {
       <div style="display:flex;flex-direction:column;gap:8px;">
         <div class="map-room" style="border-color:#1b4332;">
           <div style="font-size:0.7rem;font-weight:900;color:var(--green);">🔬 HYDRO TEST ROOM</div>
-          <div class="map-spot" style="background:#dcfce7;border-color:#16a34a;color:#065f46;" onclick="switchStation('finish')">
+          <div class="map-spot" style="background:#dcfce7;border-color:#16a34a;color:#065f46;" onclick="jumpToTab('logs')">
             <span>🔨 Stamp &amp; Valve Bench</span>
             <span class="map-cnt">${viceTags} Tags</span>
           </div>
-          <div class="map-spot" style="background:#fce7f3;border-color:#ec4899;color:#831843;" onclick="switchStation('prep')">
+          <div class="map-spot" style="background:#fce7f3;border-color:#ec4899;color:#831843;" onclick="jumpToTab('intake')">
             <span>🔧 Vice (Devalve &amp; Revalve)</span>
             <span class="map-cnt">Prep</span>
           </div>
-          <div class="map-spot" style="background:#dbeafe;border-color:#2563eb;color:#1e3a8a;" onclick="switchStation('stand')">
+          <div class="map-spot" style="background:#dbeafe;border-color:#2563eb;color:#1e3a8a;" onclick="jumpToTab('bench')">
             <span>🔵🔵 Short &amp; Tall Test Jackets</span>
             <span class="map-cnt">${atJackets} Queued</span>
           </div>
-          <div class="map-spot" style="background:#fef9c3;border-color:#eab308;color:#713f12;" onclick="switchStation('stand')">
+          <div class="map-spot" style="background:#fef9c3;border-color:#eab308;color:#713f12;" onclick="jumpToTab('bench')">
             <span>📋 Pump / Test Desk</span>
             <span class="map-cnt">Sheet #${STATE.binder_state?.active_sheet_no || 8095}</span>
           </div>
@@ -1700,11 +1701,11 @@ function renderLiveFloorPlanMap() {
 
         <div class="map-room" style="border-color:#b45309;">
           <div style="font-size:0.7rem;font-weight:900;color:#92400e;">🚪 24/7 BACK ROOM</div>
-          <div class="map-spot" style="background:#ffedd5;border-color:#f97316;color:#7c2d12;" onclick="switchStation('prep')">
+          <div class="map-spot" style="background:#ffedd5;border-color:#f97316;color:#7c2d12;" onclick="jumpToTab('intake')">
             <span>📥 Incoming Drop-Offs</span>
             <span class="map-cnt">${dropBottles} Waiting</span>
           </div>
-          <div class="map-spot" style="background:#ecfdf5;border-color:#10b981;color:#065f46;" onclick="switchStation('finish')">
+          <div class="map-spot" style="background:#ecfdf5;border-color:#10b981;color:#065f46;" onclick="jumpToTab('logs')">
             <span>✅ Back Room Pickup Ready</span>
             <span class="map-cnt">${atPickup} Ready</span>
           </div>

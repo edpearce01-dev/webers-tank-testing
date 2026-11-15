@@ -1,8 +1,8 @@
-// Weber's Tank Testing — v9.3 Clarity-First Holiday Theme Engine
+// Weber's Tank Testing — v9.4 Clarity-First Holiday Theme Engine (.app-topbar + Unsquished .tv-stage)
 (function () {
   const MUTE_KEY = 'webers_mute_ops_theme';
   let THEME = null;
-  let LAST_KEY = '';
+  let LAST_SIG = '';
 
   const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
 
@@ -28,52 +28,53 @@
     const st = document.createElement('style');
     st.id = 'webersThemeCss';
     st.textContent = `
-      body.webers-ops-themed .ops-topbar { position: sticky; overflow: visible !important; }
+      /* Subtle micro-lights anchored to bottom edge of .app-topbar on /ops, /schedule & /office */
+      body.webers-ops-themed .app-topbar { position: sticky; overflow: visible !important; }
       .ops-light-strand {
-        position: absolute; left: 0; right: 0; bottom: -9px; height: 10px; z-index: 45;
-        pointer-events: none; overflow: hidden; display: flex; justify-content: space-around; padding: 0 8px;
+        position: absolute; left: 0; right: 0; bottom: -9px; height: 10px; z-index: 46;
+        pointer-events: none; overflow: hidden; display: flex; justify-content: space-around; padding: 0 10px;
       }
       .ops-bulb {
         width: 6px; height: 8px; border-radius: 45% 45% 55% 55%;
-        animation: wTwinkle 2.4s infinite alternate ease-in-out; box-shadow: 0 0 5px currentColor;
+        animation: wTwinkle 2.2s infinite alternate ease-in-out; box-shadow: 0 0 6px currentColor;
       }
-      .ops-bulb:nth-child(odd) { animation-duration: 1.8s; }
-      @keyframes wTwinkle { 0% { opacity: 0.45; transform: scale(0.92); } 100% { opacity: 0.95; transform: scale(1.06); } }
+      .ops-bulb:nth-child(odd) { animation-duration: 1.6s; }
+      @keyframes wTwinkle { 0% { opacity: 0.45; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1.08); } }
 
-      body.webers-tv-themed { padding: 6px !important; box-sizing: border-box !important; }
-      .tv-perimeter-lights { position: fixed; inset: 0; pointer-events: none; z-index: 90; border: 2px solid rgba(251,191,36,0.25); }
-      .tv-edge-row { position: absolute; left: 10px; right: 10px; display: flex; justify-content: space-around; }
+      /* /tv: Bezel perimeter lights + Morale Strip INSIDE main.tv-stage (preserves 3-row 1080p grid!) */
+      .tv-perimeter-lights { position: fixed; inset: 0; pointer-events: none; z-index: 85; }
+      .tv-edge-row { position: absolute; left: 12px; right: 12px; display: flex; justify-content: space-around; }
       .tv-edge-row.top { top: 1px; } .tv-edge-row.bottom { bottom: 1px; }
-      .tv-edge-col { position: absolute; top: 16px; bottom: 16px; display: flex; flex-direction: column; justify-content: space-around; }
-      .tv-edge-col.left { left: 1px; } .tv-edge-col.right { right: 1px; }
-      .tv-bulb { width: 7px; height: 9px; border-radius: 50%; animation: wTwinkle 1.6s infinite alternate ease-in-out; box-shadow: 0 0 7px currentColor; }
+      .tv-edge-col { position: absolute; top: 18px; bottom: 18px; display: flex; flex-direction: column; justify-content: space-around; }
+      .tv-edge-col.left { left: 2px; } .tv-edge-col.right { right: 2px; }
+      .tv-bulb { width: 7px; height: 9px; border-radius: 50%; animation: wTwinkle 1.5s infinite alternate ease-in-out; box-shadow: 0 0 8px currentColor; }
 
       .tv-morale-strip {
-        display: flex; align-items: center; justify-content: space-between; gap: 10px;
-        background: linear-gradient(90deg, rgba(15,46,32,0.95), rgba(27,67,50,0.95) 65%, rgba(120,53,15,0.92));
-        border: 1.5px solid rgba(251,191,36,0.6); border-radius: 9px;
-        padding: 4px 12px; margin: 3px 10px 4px; color: #fff; flex-shrink: 0; position: relative; z-index: 20;
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        background: linear-gradient(90deg, rgba(19,51,38,0.95), rgba(120,53,15,0.88));
+        border: 1px solid rgba(251,191,36,0.55); border-radius: 10px;
+        padding: 5px 12px; color: #fff; flex-shrink: 0;
       }
-      .tv-morale-left { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1; }
-      .tv-morale-left img { height: 32px; width: auto; border-radius: 6px; background: #fdf8ee; padding: 1px 3px; border: 1.5px solid #fde68a; }
-      .tv-morale-msg { font-size: 0.8rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .tv-countdown-pill { background: rgba(254,243,199,0.16); border: 1.5px solid #fde68a; color: #fde68a; border-radius: 999px; padding: 2px 11px; font-weight: 900; font-size: 0.76rem; white-space: nowrap; }
-      .tv-mute-pill { background: rgba(15,23,42,0.55); border: 1px solid rgba(255,255,255,0.28); color: #cbd5e1; border-radius: 999px; padding: 2px 8px; font-size: 0.68rem; font-weight: 800; cursor: pointer; }
+      .tv-morale-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+      .tv-morale-left img { height: 32px; width: auto; border-radius: 6px; background: #fdf8ee; padding: 1px 4px; border: 1.5px solid #fde68a; flex-shrink: 0; }
+      .tv-morale-msg { font-size: 0.8rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #f8fafc; }
+      .tv-countdown-pill { background: rgba(251,191,36,0.18); border: 1px solid #fde68a; color: #fde68a; border-radius: 999px; padding: 2px 10px; font-weight: 900; font-size: 0.74rem; white-space: nowrap; }
+      .tv-mute-pill { background: rgba(5,13,10,0.65); border: 1px solid rgba(255,255,255,0.24); color: #cbd5e1; border-radius: 999px; padding: 2px 8px; font-size: 0.68rem; font-weight: 800; cursor: pointer; }
 
-      .tv-particles-wrap { position: fixed; inset: 0; pointer-events: none; z-index: 4; overflow: hidden; }
-      .tv-particle { position: absolute; top: -30px; font-size: 1rem; opacity: 0.2; animation: tvFall linear infinite; }
-      @keyframes tvFall { 0% { transform: translateY(-25px) rotate(0deg); opacity: 0.24; } 100% { transform: translateY(105vh) rotate(260deg); opacity: 0.06; } }
+      .tv-particles-wrap { position: fixed; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+      .tv-particle { position: absolute; top: -30px; font-size: 1rem; opacity: 0.18; animation: tvFall linear infinite; }
+      @keyframes tvFall { 0% { transform: translateY(-25px) rotate(0deg); opacity: 0.22; } 100% { transform: translateY(104vh) rotate(260deg); opacity: 0.05; } }
     `;
     document.head.appendChild(st);
   }
 
   function clearDom() {
-    document.body.classList.remove('webers-ops-themed', 'webers-tv-themed');
+    document.body.classList.remove('webers-ops-themed');
     ['webersOpsStrand', 'webersTvLights', 'webersTvParticles', 'webersTvMoraleBar'].forEach(id => document.getElementById(id)?.remove());
   }
 
   function renderOps() {
-    const topBar = document.querySelector('.ops-topbar');
+    const topBar = document.querySelector('.app-topbar');
     const topCtrls = document.querySelector('.top-controls');
     let btn = document.getElementById('opsThemeToggleBtn');
     const muted = localStorage.getItem(MUTE_KEY) === '1';
@@ -85,7 +86,10 @@
       btn.onclick = () => { localStorage.setItem(MUTE_KEY, localStorage.getItem(MUTE_KEY) === '1' ? '0' : '1'); renderOps(); };
       topCtrls.prepend(btn);
     }
-    if (btn) btn.textContent = muted ? `${THEME.icon} Off` : `${THEME.icon} ON`;
+    if (btn) {
+      btn.textContent = muted ? `${THEME.icon} Off` : `${THEME.icon} Lights`;
+      btn.title = 'Toggle subtle holiday header lights on this screen';
+    }
     if (muted || !topBar) { clearDom(); return; }
 
     document.body.classList.add('webers-ops-themed');
@@ -93,29 +97,30 @@
       const pal = PALETTES[THEME.garland] || PALETTES.gold_lights;
       const strand = document.createElement('div');
       strand.id = 'webersOpsStrand'; strand.className = 'ops-light-strand';
-      strand.innerHTML = Array.from({ length: 32 }, (_, i) => `<span class="ops-bulb" style="background:${pal[i % pal.length]};color:${pal[i % pal.length]};"></span>`).join('');
+      strand.innerHTML = Array.from({ length: 34 }, (_, i) => `<span class="ops-bulb" style="background:${pal[i % pal.length]};color:${pal[i % pal.length]};"></span>`).join('');
       topBar.appendChild(strand);
     }
   }
 
   function renderTv() {
+    const stage = document.querySelector('main.tv-stage');
     const muted = localStorage.getItem('webers_mute_tv_theme') === '1';
-    if (!THEME || !THEME.active || !THEME.enable_tv) { clearDom(); return; }
+    if (!THEME || !THEME.active || !THEME.enable_tv || !stage) { clearDom(); return; }
 
     let strip = document.getElementById('webersTvMoraleBar');
     if (!strip) {
-      strip = document.createElement('div'); strip.id = 'webersTvMoraleBar'; strip.className = 'tv-morale-strip';
-      const hdr = document.querySelector('header, .tv-header, .tv-topbar') || document.body.firstElementChild;
-      if (hdr?.parentNode) hdr.insertAdjacentElement('afterend', strip); else document.body.prepend(strip);
+      strip = document.createElement('div');
+      strip.id = 'webersTvMoraleBar';
+      strip.className = 'tv-morale-strip';
+      stage.prepend(strip); // Inside <main class="tv-stage"> so body grid stays 56px | 1fr | 38px!
     }
+
     if (muted) {
-      document.body.classList.remove('webers-tv-themed');
       ['webersTvLights', 'webersTvParticles'].forEach(id => document.getElementById(id)?.remove());
-      strip.innerHTML = `<span class="tv-morale-msg" style="color:#94a3b8;">${esc(THEME.icon)} TV Holiday Theme Paused</span><button class="tv-mute-pill" onclick="window.toggleTvThemeMute()">Enable</button>`;
+      strip.innerHTML = `<span class="tv-morale-msg" style="color:#94a3b8;">${esc(THEME.icon)} TV Holiday Theme Muted</span><button class="tv-mute-pill" onclick="window.toggleTvThemeMute()">Turn On</button>`;
       return;
     }
 
-    document.body.classList.add('webers-tv-themed');
     strip.innerHTML = `
       <div class="tv-morale-left">
         <img src="/static/images/${esc(THEME.dog_image)}" onerror="this.onerror=null;this.src='/static/images/shop-dogs.jpg'" alt="Shop Dogs" />
@@ -130,13 +135,13 @@
     if (!document.getElementById('webersTvLights')) {
       const box = document.createElement('div'); box.id = 'webersTvLights'; box.className = 'tv-perimeter-lights';
       const mk = n => Array.from({ length: n }, (_, i) => `<span class="tv-bulb" style="background:${pal[i % pal.length]};color:${pal[i % pal.length]};"></span>`).join('');
-      box.innerHTML = `<div class="tv-edge-row top">${mk(34)}</div><div class="tv-edge-row bottom">${mk(34)}</div><div class="tv-edge-col left">${mk(16)}</div><div class="tv-edge-col right">${mk(16)}</div>`;
+      box.innerHTML = `<div class="tv-edge-row top">${mk(36)}</div><div class="tv-edge-row bottom">${mk(36)}</div><div class="tv-edge-col left">${mk(16)}</div><div class="tv-edge-col right">${mk(16)}</div>`;
       document.body.appendChild(box);
     }
     if (!document.getElementById('webersTvParticles')) {
       const ems = PARTICLES[THEME.effect] || ['✨'];
       const pw = document.createElement('div'); pw.id = 'webersTvParticles'; pw.className = 'tv-particles-wrap';
-      pw.innerHTML = Array.from({ length: 10 }, (_, i) => `<span class="tv-particle" style="left:${Math.round(4 + i * 9.2)}%;animation-duration:${(13 + (i % 5) * 2.2).toFixed(1)}s;animation-delay:-${(i * 1.3).toFixed(1)}s;">${ems[i % ems.length]}</span>`).join('');
+      pw.innerHTML = Array.from({ length: 9 }, (_, i) => `<span class="tv-particle" style="left:${Math.round(5 + i * 10)}%;animation-duration:${(14 + (i % 4) * 2.5).toFixed(1)}s;animation-delay:-${(i * 1.6).toFixed(1)}s;">${ems[i % ems.length]}</span>`).join('');
       document.body.appendChild(pw);
     }
   }
@@ -153,7 +158,7 @@
       if (!res.ok) return;
       const d = await res.json();
       const sig = `${d.key}|${d.enable_ops}|${d.enable_tv}|${d.dog_message}`;
-      if (sig !== LAST_KEY) { LAST_KEY = sig; clearDom(); }
+      if (sig !== LAST_SIG) { LAST_SIG = sig; clearDom(); }
       THEME = d;
       if (location.pathname === '/tv') renderTv();
       else if (document.getElementById('appShell') && !document.getElementById('appShell').hidden) renderOps();
@@ -172,7 +177,7 @@
     m.hidden = false;
     const opts = [
       `<option value="AUTO" ${THEME.mode === 'AUTO' ? 'selected' : ''}>🤖 Auto-Schedule (15 Days Before → 2 Days After All Holidays)</option>`,
-      `<option value="OFF" ${THEME.mode === 'OFF' ? 'selected' : ''}>🌲 Off (Neutral Cream &amp; Green Year-Round)</option>`,
+      `<option value="OFF" ${THEME.mode === 'OFF' ? 'selected' : ''}>🌲 Off (Clean Year-Round)</option>`,
       ...(THEME.available_holidays || []).map(h => `<option value="${esc(h.key)}" ${THEME.mode === h.key ? 'selected' : ''}>${esc(h.icon)} Force Preview / Activate: ${esc(h.name)}</option>`),
     ].join('');
     document.getElementById('holidayThemeModalInner').innerHTML = `
@@ -184,9 +189,9 @@
         <label>Active Holiday Mode</label>
         <select id="tmModeSel" style="margin-bottom:10px;">${opts}</select>
         <div style="display:flex;gap:14px;flex-wrap:wrap;padding:8px 10px;background:#fff;border:1px solid var(--border-soft);border-radius:8px;margin-bottom:10px;">
-          <label class="inline-check"><input type="checkbox" id="tmPubChk" ${THEME.enable_public ? 'checked' : ''} /><span>🌐 Main Site (Outer Arch &amp; Dogs)</span></label>
+          <label class="inline-check"><input type="checkbox" id="tmPubChk" ${THEME.enable_public ? 'checked' : ''} /><span>🌐 Main Site (Outer Wreath &amp; Dogs)</span></label>
           <label class="inline-check"><input type="checkbox" id="tmTvChk" ${THEME.enable_tv ? 'checked' : ''} /><span>📺 Live TV (Morale Strip &amp; Frame)</span></label>
-          <label class="inline-check"><input type="checkbox" id="tmOpsChk" ${THEME.enable_ops ? 'checked' : ''} /><span>🔧 Ops/Office (Header Micro-Lights)</span></label>
+          <label class="inline-check"><input type="checkbox" id="tmOpsChk" ${THEME.enable_ops ? 'checked' : ''} /><span>🔧 Ops/Office (Top Header Lights)</span></label>
         </div>
         <label>Custom Message from Pongo, Zeke &amp; Pierce (Blank = Auto Holiday Greeting)</label>
         <input id="tmDogMsg" value="${esc(THEME.custom_dog_message || '')}" placeholder="${esc(THEME.dog_message || '')}" />
@@ -209,10 +214,10 @@
       }),
     });
     if (!res.ok) return alert('Could not save theme.');
-    LAST_KEY = ''; await syncTheme();
+    LAST_SIG = ''; await syncTheme();
     document.getElementById('holidayThemeModal').hidden = true;
   };
 
   window.addEventListener('load', () => setTimeout(syncTheme, 250));
-  setInterval(syncTheme, 20000);
+  setInterval(syncTheme, 15000);
 })();

@@ -35,7 +35,7 @@
     }
 
     // Inject PIN Manager Button inside Settings Modal on /ops if present
-    const settingsModal = document.querySelector('#settingsModal .modal');
+    const settingsModal = document.querySelector('#guideModal .modal');
     if (settingsModal && !document.getElementById('btnOpenPinMgrInSettings')) {
       const box = document.createElement('div');
       box.id = 'settingsDayAndPinBox';
@@ -46,8 +46,8 @@
           <div style="font-size:0.76rem;color:#047857;">Re-open Start Your Day or view/edit Crew &amp; Admin PIN numbers</div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button type="button" class="secondary" onclick="closeSettingsModal();window.openStartYourDayModal(true)">☀️ Start Your Day</button>
-          <button type="button" class="primary" id="btnOpenPinMgrInSettings" style="width:auto;margin:0;padding:8px 12px;" onclick="closeSettingsModal();window.openPinManagerModal()">🔐 Crew &amp; Admin PINs</button>
+          <button type="button" class="secondary" onclick="toggleGuide(false);window.openStartYourDayModal(true)">☀️ Start Your Day</button>
+          <button type="button" class="primary" id="btnOpenPinMgrInSettings" style="width:auto;margin:0;padding:8px 12px;" onclick="toggleGuide(false);window.openPinManagerModal()">🔐 Crew &amp; Admin PINs</button>
         </div>`;
       const h3 = settingsModal.querySelector('.card-hdr');
       if (h3) h3.insertAdjacentElement('afterend', box);
@@ -89,7 +89,7 @@
     if (!u || !d) return;
 
     localStorage.setItem('webers_active_crew', u.initials);
-    const badge = document.getElementById('activeCrewBadge');
+    const badge = document.getElementById('menuCrewInitials');
     if (badge) badge.textContent = u.role === 'SYSTEM_ADMIN' ? `${u.initials} 🛡️` : u.initials;
 
     // Show Admin No-Legal-Sign-Off pill when logged in as Eric (EP)
@@ -136,7 +136,7 @@
     }
 
     // Lock out Calibration Ladder & Facility Settings for CREW role
-    const calArea = document.getElementById('calActiveArea');
+    const calArea = document.getElementById('calFormCard');
     if (calArea) {
       let crewLockMsg = document.getElementById('crewCalLockNotice');
       if (u.role === 'CREW') {
@@ -196,9 +196,9 @@
       location.href = '/ops?tab=cal';
       return;
     }
-    if (typeof switchStation === 'function') switchStation('cal');
-    if (typeof toggleCalPanel === 'function') toggleCalPanel(true);
-    setTimeout(() => document.getElementById('calTargetPsi')?.focus(), 100);
+    if (typeof jumpToTab === 'function') jumpToTab('cal');
+    if (typeof setCalExpanded === 'function') setCalExpanded(true);
+    setTimeout(() => (document.getElementById('stepIn_0') || document.getElementById('calMaxPsi'))?.focus(), 100);
   };
 
   window.refreshDayFlowState = async function (checkAutoOpen = false) {
@@ -426,7 +426,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ job_id: jobId, action, bottle_count: val ? parseInt(val, 10) : null }),
     });
-    if (typeof refreshWorkspace === 'function') refreshWorkspace();
+    if (typeof loadState === 'function') loadState(false);
     window.openStartYourDayModal(true);
   };
 
@@ -480,7 +480,7 @@
     if (!res.ok) { alert((await res.json()).detail || 'Could not lock lineup.'); return; }
 
     window.dismissOwnerStartModal();
-    if (typeof refreshWorkspace === 'function') await refreshWorkspace();
+    if (typeof loadState === 'function') await loadState(false);
     await window.refreshDayFlowState(false);
 
     if (calibrateNow) {

@@ -284,7 +284,8 @@ def build_retest_datasheet_pdf(
                 c.setLineWidth(0.35)
 
                 c.drawCentredString((col_x[16] + col_x[17]) / 2, y_val, rec.get("hydro_disposition") or "A")
-                c.drawCentredString((col_x[17] + col_x[18]) / 2, y_val, PRIMARY_INITIALS)
+                op_cell = "ADM*" if "ADMIN" in str(rec.get("operator_initials", "")) or "ADMIN" in str(rec.get("tested_by", "")) else PRIMARY_INITIALS
+                c.drawCentredString((col_x[17] + col_x[18]) / 2, y_val, op_cell)
 
                 row_note = _format_dot_row_notes(rec)
                 if row_note:
@@ -298,8 +299,10 @@ def build_retest_datasheet_pdf(
         c.drawString(left_x + 8, fy, "I hereby certify that all of the above tests were made under my supervision and")
         c.drawString(left_x + 8, fy - 9, "in accordance with DOT and/or TC regulations.")
 
+        real_rows = [r for r in chunk if r]
+        all_adm = bool(real_rows) and all("ADMIN" in str(r.get("operator_initials", "")) or "ADMIN" in str(r.get("tested_by", "")) for r in real_rows)
         c.setFont("Times-Italic", 10)
-        c.drawString(left_x + 20, fy - 25, PRIMARY_MANAGER)
+        c.drawString(left_x + 20, fy - 25, "ADMIN DIAGNOSTIC (NOT DOT SIGNED)" if all_adm else PRIMARY_MANAGER)
         c.setLineWidth(0.6)
         c.line(left_x + 8, fy - 28, left_x + 178, fy - 28)
         c.setFont("Times-Roman", 7.4)
@@ -408,8 +411,9 @@ def build_verification_pdf(work_date: str, verifications: list[dict], cal_serial
             40, cur_y - 18,
             "CFR Title 49 §180.215(b)(1): Verification must demonstrate ±1.0% accuracy and permanent expansion returning to zero prior to daily testing.",
         )
+        all_v_adm = bool(chunk) and all("ADMIN" in str(v.get("operator_initials", "")) or "ADMIN" in str(v.get("logged_by", "")) for v in chunk if v)
         c.setFont("Times-Italic", 10)
-        c.drawString(48, cur_y - 38, PRIMARY_MANAGER)
+        c.drawString(48, cur_y - 38, "ADMIN DIAGNOSTIC (NOT DOT SIGNED)" if all_v_adm else PRIMARY_MANAGER)
         c.line(40, cur_y - 41, 215, cur_y - 41)
         c.setFont("Times-Roman", 7.8)
         c.drawString(220, cur_y - 40, "(Verified By - Facility Manager)")

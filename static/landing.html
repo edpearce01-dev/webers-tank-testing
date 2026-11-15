@@ -18,8 +18,8 @@
       --gold-lt: #fbbf24;
       --slate: #0f172a;
       --muted: #334155;
-      --glass: rgba(255, 255, 255, 0.88);
-      --glass-strong: rgba(255, 255, 255, 0.92);
+      --glass: rgba(255, 255, 255, 0.70);
+      --glass-strong: rgba(255, 255, 255, 0.76);
       --border: rgba(27, 67, 50, 0.18);
     }
     * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; scroll-behavior: smooth; }
@@ -98,16 +98,21 @@
     }
     .crest-arch-wrap {
       position: relative;
-      width: clamp(295px, 43vh, 435px);
-      height: clamp(295px, 43vh, 435px);
+      width: clamp(290px, 41vh, 420px);
+      height: clamp(290px, 41vh, 420px);
       flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
-      margin-top: 8px;
+      margin-top: clamp(22px, 3.6vh, 38px);
     }
-    .stage-holiday-arch {
-      position: absolute; inset: -14%; width: 128%; height: 128%;
-      z-index: 0; pointer-events: none; overflow: visible;
-      filter: drop-shadow(0 8px 16px rgba(44, 24, 16, 0.14));
+    .stage-holiday-arch-img {
+      position: absolute;
+      inset: -19%;
+      width: 138%;
+      height: 138%;
+      object-fit: contain;
+      z-index: 0;
+      pointer-events: none;
+      filter: drop-shadow(0 8px 18px rgba(44, 24, 16, 0.16));
     }
     .stage-crest-logo {
       width: 100%; height: 100%;
@@ -339,7 +344,7 @@
        ======================================================================== -->
   <div class="fixed-brand-stage" id="fixedBrandStage" aria-hidden="true">
     <div class="crest-arch-wrap">
-      <svg id="heroHolidayArch" class="stage-holiday-arch" viewBox="0 0 500 500" hidden></svg>
+      <img id="heroHolidayArchImg" class="stage-holiday-arch-img" alt="" hidden />
       <img src="/static/images/logo-crest.jpg" alt="Weber's Tank Testing Crest" class="stage-crest-logo" onerror="this.src='/icon.svg'" />
     </div>
     <img id="heroDogsImg" src="/static/images/dogs-thanksgiving.png" alt="Pongo, Zeke & Pierce" class="stage-dogs-cutout" onerror="this.onerror=null;this.src='/static/images/shop-dogs.jpg';this.classList.add('photo-fallback');" />
@@ -788,7 +793,7 @@
         const ribbonsH = document.getElementById('topChrome')?.offsetHeight || 58;
         const navH = document.getElementById('stickySiteNav')?.offsetHeight || 56;
         stage.style.top = `${Math.max(navH + 6, navH + ribbonsH - y)}px`;
-        const stageOpacity = 1 - (sProg * 0.88); // 1.00 solid -> 0.12 crisp background watermark
+        const stageOpacity = 1 - (sProg * 0.74); // 1.00 solid at top -> 0.26 visible background behind glass!
         const stageScale = 1 - (sProg * 0.08);   // subtle depth recede
         stage.style.opacity = stageOpacity.toFixed(3);
         stage.style.transform = `translate3d(0, 0, 0) scale(${stageScale.toFixed(3)})`;
@@ -814,9 +819,23 @@
 
         if (bubble && t.dog_message) bubble.textContent = t.dog_message;
 
-        const arch = document.getElementById('heroHolidayArch');
+        const archImg = document.getElementById('heroHolidayArchImg');
         if (t.active && t.enable_public) {
-          if (arch) { arch.innerHTML = buildOuterHolidayArchSvg(t.key); arch.hidden = false; }
+          if (archImg) {
+            const archMap = { THANKSGIVING: 'arch-thanksgiving', HALLOWEEN: 'arch-thanksgiving', CHRISTMAS: 'arch-christmas' };
+            const archStem = archMap[t.key] || 'arch-thanksgiving';
+            const tryPng = `/static/images/${archStem}.png`;
+            const tryJpg = `/static/images/${archStem}.jpg`;
+            const pA = new Image();
+            pA.onload = () => { archImg.src = tryPng; archImg.style.mixBlendMode = 'normal'; archImg.hidden = false; };
+            pA.onerror = () => {
+              const pB = new Image();
+              pB.onload = () => { archImg.src = tryJpg; archImg.style.mixBlendMode = 'multiply'; archImg.hidden = false; };
+              pB.onerror = () => { archImg.hidden = true; };
+              pB.src = tryJpg;
+            };
+            pA.src = tryPng;
+          }
           if (pill && t.countdown_label) { pill.hidden = false; pill.textContent = t.countdown_label; }
           if (bar && t.countdown_label) { bar.hidden = false; bar.textContent = `${t.countdown_label}  •  24/7 Loading Dock Back Room Open All Holiday Week!`; }
           if (img && t.dog_image) {
@@ -837,7 +856,7 @@
             probePng.src = pngUrl;
           }
         } else if (img) {
-          if (arch) arch.hidden = true;
+          if (archImg) archImg.hidden = true;
           img.src = '/static/images/shop-dogs.jpg';
           img.classList.add('photo-fallback');
         }

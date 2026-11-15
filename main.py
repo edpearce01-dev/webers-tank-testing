@@ -1027,6 +1027,10 @@ class PublicDropoffInput(BaseModel):
     customer_phone: str = ""
     customer_email: str = ""
     pickup_address: str = ""
+    street_address: str = ""
+    city: str = ""
+    state: str = "PA"
+    zip_code: str = ""
     preferred_date: str = ""
     truck_mode: str = "ROAD_ROUNDTRIP"
     bottle_count: int = 1
@@ -1069,6 +1073,10 @@ class ScheduleJobInput(BaseModel):
     customer_name: str
     customer_phone: str = ""
     location_notes: str = ""
+    street_address: str = ""
+    city: str = ""
+    state: str = "PA"
+    zip_code: str = ""
     bottle_count: int = 1
     tank_summary: str = ""
     valves_attached: bool = True
@@ -1522,112 +1530,6 @@ def auth_login(payload: LoginInput, response: Response):
 def auth_logout(response: Response):
     response.delete_cookie(AUTH_COOKIE)
     return {"authenticated": False}
-
-
-@app.get("/")
-def serve_root(request: Request):
-    host = (request.headers.get("host") or "").split(":")[0].lower()
-    landing_file = STATIC_DIR / "landing.html"
-    if (host in ("weberstanktesting.com", "www.weberstanktesting.com") or request.query_params.get("view") == "public") and landing_file.exists():
-        return FileResponse(landing_file, headers=NO_CACHE_HEADERS)
-    return FileResponse(STATIC_DIR / "index.html", headers=NO_CACHE_HEADERS)
-
-
-@app.get("/checkin")
-def serve_public_checkin():
-    landing_file = STATIC_DIR / "landing.html"
-    return FileResponse(landing_file if landing_file.exists() else STATIC_DIR / "index.html", headers=NO_CACHE_HEADERS)
-
-
-@app.get("/ops")
-def serve_ops():
-    return FileResponse(STATIC_DIR / "index.html", headers=NO_CACHE_HEADERS)
-
-
-@app.get("/schedule")
-def serve_schedule_page():
-    f = STATIC_DIR / "schedule.html"
-    return FileResponse(f if f.exists() else STATIC_DIR / "index.html", headers=NO_CACHE_HEADERS)
-
-
-@app.get("/office")
-def serve_office_page():
-    f = STATIC_DIR / "office.html"
-    return FileResponse(f if f.exists() else STATIC_DIR / "index.html", headers=NO_CACHE_HEADERS)
-
-
-@app.get("/tv")
-def serve_tv_board():
-    tv_file = STATIC_DIR / "tv.html"
-    if not tv_file.exists():
-        raise HTTPException(404, "tv.html not found in static/ folder.")
-    return FileResponse(tv_file, headers=NO_CACHE_HEADERS)
-
-
-@app.get("/icon.svg")
-def serve_icon():
-    svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
-      <rect width="192" height="192" rx="36" fill="#1b4332"/>
-      <rect x="74" y="24" width="44" height="18" rx="6" fill="#fbbf24"/>
-      <rect x="84" y="42" width="24" height="14" fill="#d1d5db"/>
-      <rect x="54" y="54" width="84" height="114" rx="28" fill="#ffffff"/>
-      <text x="96" y="108" font-family="Arial,sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#1b4332">B386</text>
-      <text x="96" y="136" font-family="Arial,sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#2d6a4f">WEBER'S</text>
-    </svg>"""
-    return Response(content=svg, media_type="image/svg+xml")
-
-
-@app.get("/manifest.json")
-def serve_manifest():
-    return {
-        "name": "Weber's Tank Testing — Ops (DOT B386)",
-        "short_name": "Weber's Ops",
-        "start_url": "/ops",
-        "display": "standalone",
-        "background_color": "#0b2219",
-        "theme_color": "#1b4332",
-        "icons": [{"src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}],
-    }
-
-
-@app.get("/sw.js")
-def serve_sw():
-    js = "self.addEventListener('install', e => self.skipWaiting()); self.addEventListener('activate', e => self.clients.claim()); self.addEventListener('fetch', () => {});"
-    return Response(content=js, media_type="application/javascript", headers=NO_CACHE_HEADERS)
-
-
-@app.get("/api/auth/status")
-def auth_status(request: Request):
-    return {"authenticated": is_authenticated(request)}
-
-
-@app.post("/api/auth/login")
-def auth_login(payload: LoginInput, request: Request):
-    conn = get_conn()
-    saved_pin = conn.execute("SELECT value FROM settings WHERE key='shop_pin';").fetchone()["value"]
-    conn.close()
-    expected_pin = os.getenv("WEBER_SHOP_PIN") or saved_pin
-    if not hmac.compare_digest(payload.pin.strip(), expected_pin):
-        raise HTTPException(401, "Incorrect Shop PIN.")
-
-    resp = JSONResponse({"authenticated": True})
-    is_https = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
-    resp.set_cookie(
-        key=COOKIE_NAME,
-        value=compute_session_token(),
-        max_age=60 * 60 * 24 * 30,
-        httponly=True,
-        samesite="lax",
-        secure=is_https,
-    )
-    return resp
-
-
-@app.post("/api/auth/logout")
-def auth_logout():
-    resp = JSONResponse({"authenticated": False})
-    resp.delete_cookie(COOKIE_NAME)
-    return resp
 
 
 # --- PUBLIC STOREFRONT ENDPOINTS (DROP-OFF, VERIFIED PICKUP, SLA & TRACKER) ---
@@ -2650,8 +2552,10 @@ def update_settings(payload: SettingsInput, request: Request):
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('testing_mode', ?);", ("1" if payload.testing_mode else "0",))
     pin_changed = False
     if payload.shop_pin is not None and payload.shop_pin.strip():
-        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('shop_pin', ?);", (payload.shop_pin.strip(),))
-        pin_changed = True
+        new_p = payload.shop_pin.strip()
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('shop_pin', ?);", (new_p,))
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('crew_pin', ?);", (new_p,))
+        conn.execute("UPDATE crew_users SET pin=? WHERE role='OWNER' AND initials='RP';", (new_p,))
     bump_db_version(conn)
     conn.commit()
     conn.close()
@@ -2711,12 +2615,18 @@ async def manual_sync_now():
 
 
 @app.post("/api/verify-ladder")
-def log_verification_ladder(payload: VerificationLadderInput):
+def log_verification_ladder(payload: VerificationLadderInput, request: Request):
+    sess_u = getattr(request.state, "user", None) or get_current_session_user(request)
+    if not sess_u or sess_u["role"] not in ("OWNER", "SYSTEM_ADMIN"):
+        raise HTTPException(403, "Only Ryan Pearce (Owner) is authorized to certify water-jacket calibrations.")
+    is_adm = sess_u["role"] == "SYSTEM_ADMIN"
     est = now_eastern()
     t_date = payload.test_date or est.date().isoformat()
     t_time = est.strftime("%I:%M %p")
     run_id = f"{t_date}-{payload.jacket_type[:5]}-{est.strftime('%H%M%S')}"
-    logged_by = (payload.logged_by or "RP").strip().upper()[:4] or "RP"
+    logged_by = "EP-ADMIN" if is_adm else "RP"
+    op_name = "ADMIN DIAGNOSTIC (NO DOT SIGN-OFF)" if is_adm else "Ryan Pearce"
+    op_init = "ADMIN" if is_adm else "RP"
 
     conn = get_conn()
     cal_serial = conn.execute("SELECT value FROM settings WHERE key='calibrated_serial';").fetchone()["value"]
@@ -2754,11 +2664,11 @@ def log_verification_ladder(payload: VerificationLadderInput):
                (run_id, test_date, test_time, jacket_type, calibrated_serial, max_target_psi,
                 target_pressure_psi, expected_cc, actual_total_cc, permanent_cc,
                 elastic_cc, percent_deviation, passed, logged_by, operator_name, operator_initials)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Ryan Pearce', 'RP');""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);""",
             (
                 run_id, t_date, t_time, payload.jacket_type, cal_serial,
                 payload.max_target_psi, exp_psi, expected_a, actual_b,
-                perm, elastic, pct_dev, step_passed, logged_by,
+                perm, elastic, pct_dev, step_passed, logged_by, op_name, op_init,
             ),
         )
     bump_db_version(conn)
@@ -3443,7 +3353,9 @@ async def scan_and_import_bottle(payload: ScanBottleJsonInput):
 
 
 @app.post("/api/records/{record_id}/complete")
-def complete_record(record_id: int, payload: TestCompleteInput):
+def complete_record(record_id: int, payload: TestCompleteInput, request: Request):
+    sess_u = getattr(request.state, "user", None) or get_current_session_user(request)
+    is_adm = bool(sess_u and sess_u["role"] == "SYSTEM_ADMIN")
     conn = get_conn()
     rec = conn.execute("SELECT * FROM cylinder_records WHERE id=?;", (record_id,)).fetchone()
     if not rec:
@@ -3511,7 +3423,9 @@ def complete_record(record_id: int, payload: TestCompleteInput):
             assigned_sheet_no = binder["active_sheet_no"]
             conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('current_sheet_no', ?);", (str(assigned_sheet_no),))
 
-    tested_by = (payload.tested_by or "RP").strip().upper()[:4] or "RP"
+    tested_by = "EP-ADMIN" if is_adm else ((payload.tested_by or "RP").strip().upper()[:4] or "RP")
+    op_name = "ADMIN DIAGNOSTIC (NO DOT SIGN-OFF)" if is_adm else "Ryan Pearce"
+    op_init = "ADMIN" if is_adm else "RP"
     completed_ts = now_eastern().strftime("%I:%M %p")
     rin_marked = 1 if (payload.rin_marked or payload.rin_mark_type) else 0
     rin_type = payload.rin_mark_type.strip().upper() if payload.rin_mark_type else ("MARKED" if rin_marked else "")
@@ -3547,7 +3461,7 @@ def complete_record(record_id: int, payload: TestCompleteInput):
            chk_fire_damage=?, chk_bulges=?, chk_neck_defects=?,
            relief_valve_changed=?, addon_oring=?, addon_burst_disc=?, addon_clean=?, condemn_action=?,
            visual_pass=?, hydro_disposition=?, visual_disposition=?,
-           tested_by=?, completed_at=?, operator_name='Ryan Pearce', operator_initials='RP', notes=?, synced=0
+           tested_by=?, completed_at=?, operator_name=?, operator_initials=?, notes=?, synced=0
            WHERE id=?;""",
         (
             eff_test_date, assigned_sheet_no, next_stage, next_zone, ver_id,
@@ -3559,7 +3473,7 @@ def complete_record(record_id: int, payload: TestCompleteInput):
             payload.chk_leaks, payload.chk_fire_damage, payload.chk_bulges, payload.chk_neck_defects,
             rel_chg, oring, bdisc, clean, c_act,
             vis_pass, hydro_disp, vis_disp,
-            tested_by, completed_ts, payload.notes, record_id,
+            tested_by, completed_ts, op_name, op_init, payload.notes, record_id,
         ),
     )
     bump_db_version(conn)
