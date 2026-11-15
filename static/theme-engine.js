@@ -62,9 +62,32 @@
       .tv-countdown-pill { background: rgba(251,191,36,0.18); border: 1px solid #fde68a; color: #fde68a; border-radius: 999px; padding: 2px 10px; font-weight: 900; font-size: 0.74rem; white-space: nowrap; }
       .tv-mute-pill { background: rgba(5,13,10,0.65); border: 1px solid rgba(255,255,255,0.24); color: #cbd5e1; border-radius: 999px; padding: 2px 8px; font-size: 0.68rem; font-weight: 800; cursor: pointer; }
 
-      .tv-particles-wrap { position: fixed; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
-      .tv-particle { position: absolute; top: -30px; font-size: 1rem; opacity: 0.18; animation: tvFall linear infinite; }
-      @keyframes tvFall { 0% { transform: translateY(-25px) rotate(0deg); opacity: 0.22; } 100% { transform: translateY(104vh) rotate(260deg); opacity: 0.05; } }
+      .tv-particles-wrap {
+        position: fixed; inset: 0; pointer-events: none; z-index: 2; overflow: hidden;
+        opacity: 0.72; transition: opacity 1.6s ease;
+      }
+      body.tv-screensaver .tv-particles-wrap,
+      body.tv-bg-reveal .tv-particles-wrap {
+        opacity: 1; z-index: 20;
+      }
+      body.tv-screensaver .tv-bulb {
+        width: 9px; height: 11px; box-shadow: 0 0 12px currentColor, 0 0 22px currentColor;
+      }
+      .tv-particle {
+        position: absolute; top: -48px;
+        filter: drop-shadow(0 3px 5px rgba(15, 23, 42, 0.14));
+        animation: tvFallSway linear infinite;
+        will-change: transform, opacity;
+      }
+      @keyframes tvFallSway {
+        0%   { transform: translate3d(0px, -45px, 0) rotate(0deg); opacity: 0; }
+        10%  { opacity: 0.92; }
+        25%  { transform: translate3d(28px, 24vh, 0) rotate(85deg); }
+        50%  { transform: translate3d(-24px, 52vh, 0) rotate(175deg); }
+        75%  { transform: translate3d(26px, 78vh, 0) rotate(265deg); }
+        90%  { opacity: 0.88; }
+        100% { transform: translate3d(-16px, 108vh, 0) rotate(355deg); opacity: 0; }
+      }
     `;
     document.head.appendChild(st);
   }
@@ -142,7 +165,13 @@
     if (!document.getElementById('webersTvParticles')) {
       const ems = PARTICLES[THEME.effect] || ['✨'];
       const pw = document.createElement('div'); pw.id = 'webersTvParticles'; pw.className = 'tv-particles-wrap';
-      pw.innerHTML = Array.from({ length: 9 }, (_, i) => `<span class="tv-particle" style="left:${Math.round(5 + i * 10)}%;animation-duration:${(14 + (i % 4) * 2.5).toFixed(1)}s;animation-delay:-${(i * 1.6).toFixed(1)}s;">${ems[i % ems.length]}</span>`).join('');
+      pw.innerHTML = Array.from({ length: 32 }, (_, i) => {
+        const left = ((i * 3.15) + (i % 3) * 1.1).toFixed(1);
+        const sz = (1.15 + (i % 5) * 0.24).toFixed(2);
+        const dur = (10.5 + (i % 6) * 2.1).toFixed(1);
+        const del = ((i * 0.85) % 15).toFixed(1);
+        return `<span class="tv-particle" style="left:${left}%;font-size:${sz}rem;animation-duration:${dur}s;animation-delay:-${del}s;">${ems[i % ems.length]}</span>`;
+      }).join('');
       document.body.appendChild(pw);
     }
   }

@@ -1463,7 +1463,7 @@ def serve_manifest():
 
 @app.get("/sw.js")
 def serve_sw():
-    js = "self.addEventListener('install', e => self.skipWaiting()); self.addEventListener('activate', e => self.clients.claim()); self.addEventListener('fetch', () => {});"
+    js = "self.addEventListener('install', e => self.skipWaiting()); self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.map(k => caches.delete(k)))).then(() => self.clients.claim())); });"
     return Response(content=js, media_type="application/javascript", headers=NO_CACHE_HEADERS)
 
 
