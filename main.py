@@ -4087,7 +4087,7 @@ def create_invoice(payload: InvoiceCreateInput):
         raise HTTPException(400, "Add at least one line item to create an invoice.")
     est_today = today_eastern()
     conn = get_conn()
-    nxt_num = conn.execute("SELECT COUNT(*) + 1 FROM invoices;").fetchone()[0]
+    nxt_num = conn.execute("SELECT COALESCE(MAX(CAST(SUBSTR(invoice_no, -4) AS INTEGER)), 0) + 1 FROM invoices WHERE invoice_no LIKE ?;", (f"INV-{est_today[:4]}-%",)).fetchone()[0]
     inv_no = f"INV-{est_today[:4]}-{nxt_num:04d}"
 
     phone_clean = clean_phone(payload.customer_phone)

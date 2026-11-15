@@ -1141,3 +1141,13 @@ html, body {
   background: #ecfdf5; border-color: var(--forest); color: var(--forest);
   box-shadow: 0 0 0 2px rgba(12, 38, 27, 0.12);
 }
+
+/* v11.4 Exact Invoice Column Alignment */
+@media (min-width: 681px) {
+  .inv-table-hdr, .inv-line-row {
+    display: grid !important;
+    grid-template-columns: minmax(180px, 1fr) 82px 116px 96px 42px !important;
+    gap: 8px !important;
+    align-items: center !important;
+  }
+}

@@ -521,9 +521,12 @@ async function sendBase64Batch(b64List, urlList) {
     body: JSON.stringify({
       images_b64: b64List,
       work_date: STATE.selected_date,
-      customer_name: document.getElementById('inCustomer').value,
-      customer_phone: document.getElementById('inPhone').value,
+      customer_name: (document.getElementById('fCustomer')?.value || document.getElementById('inCustomer')?.value || '').trim(),
+      customer_phone: (document.getElementById('fPhone')?.value || document.getElementById('inPhone')?.value || '').trim(),
       dropoff_id: window.ACTIVE_DROPOFF_ID || null,
+      schedule_job_id: window.ACTIVE_SCHEDULE_JOB_ID || null,
+      priority: document.getElementById('fPriority')?.value || 'STANDARD',
+      rush_fee: (document.getElementById('fPriority')?.value === 'RUSH'),
       service_mode: document.getElementById('inMode').value,
       intake_by: getActiveCrew(),
       auto_import: document.getElementById('chkAutoQueue').checked,
@@ -577,7 +580,7 @@ async function sendBase64Batch(b64List, urlList) {
     fb.textContent = `Complete missing field(s) below: ${missing.join(', ')}`;
   } else {
     fb.className = 'notice';
-    fb.textContent = `✅ Scan Ready! Tap reference photos to zoom stamps, verify ${f.outside_dia || '?'}" × ${f.length_in || '?'}" size, then click Verify & Add.`;
+    fb.textContent = `✅ Scan Ready! Tap reference photos to zoom stamps, verify ${f.outside_dia || '?'}" × ${f.length_in || '?'}" size, then click ✓ Queue Bottle & Next.`;
   }
   document.getElementById('verifyFormCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }

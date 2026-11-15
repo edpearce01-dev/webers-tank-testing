@@ -408,16 +408,23 @@
       object-fit: contain !important; width: 40px !important; height: 40px !important;
     }
 
+  
+    .tv-crest-wrap { position: relative !important; width: min(64vw, 68dvh, 620px) !important; height: min(64vw, 68dvh, 620px) !important; margin: 0 auto !important; }
+    .tv-crest-wrap .tv-arch-img { position: absolute !important; width: 148% !important; height: 148% !important; left: -24% !important; top: -22% !important; object-fit: contain !important; z-index: 1 !important; }
+    .tv-crest-wrap .tv-crest-img { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; z-index: 2 !important; }
+    .tv-crest-wrap .tv-dogs-img { position: absolute !important; left: 50% !important; bottom: 18.2% !important; width: 56.5% !important; max-height: none !important; height: auto !important; margin: 0 !important; transform: translate3d(-50%, 0, 42px) !important; z-index: 3 !important; }
+    .tv-crest-wrap .tv-ribbon-lip { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; object-fit: contain !important; transform: translate3d(0, 0, 68px) !important; z-index: 4 !important; pointer-events: none; }
   </style>
 </head>
 <body>
   <!-- LOCKED CENTERPIECE BACKGROUND (CREST + WREATH ARCH + SHOP DOGS) -->
   <div class="tv-brand-bg" id="tvBrandBg" aria-hidden="true">
     <div class="tv-crest-wrap">
-      <img id="tvBgArchImg" class="tv-arch-img" alt="" hidden />
-      <img src="/static/images/crest-backplate.png?v=11.3" alt="" class="tv-crest-img" onerror="this.src='/icon.svg'" />
-    </div>
-    <img id="tvBgDogsImg" src="/static/images/dogs-thanksgiving.png" alt="" class="tv-dogs-img" onerror="this.onerror=null;this.src='/static/images/shop-dogs.jpg';this.classList.add('photo-fallback');" />
+        <img id="tvBgArchImg" class="tv-arch-img" alt="" hidden />
+      <img src="/static/images/crest-backplate.png?v=11.4" alt="" class="tv-crest-img" onerror="this.src='/icon.svg'" />
+        <img id="tvBgDogsImg" src="/static/images/dogs-thanksgiving.png" alt="" class="tv-dogs-img" onerror="this.onerror=null;this.src='/static/images/shop-dogs.jpg';this.classList.add('photo-fallback');" />
+        <img src="/static/images/crest-ribbon-front.png?v=11.4" alt="" class="tv-ribbon-lip" onerror="this.hidden=true" />
+      </div>
   </div>
 <!-- SCREENSAVER CLOCK & DATE OVERLAY (SHOWS WHEN SHOP IS IDLE OR SAVER CLICKED) -->
   <div class="tv-screensaver-hud" id="tvScreensaverHud" aria-hidden="true">
@@ -434,7 +441,7 @@
   <!-- TV PAIRING PIN GATE -->
   <div id="tvPinGate" class="pin-gate" hidden>
     <div class="pin-box">
-      <img src="/static/images/logo-crest.png?v=11.3" alt="B386" style="width:62px;height:62px;border-radius:50%;border:2px solid var(--gold-bright);margin-bottom:8px;" />
+      <img src="/static/images/logo-crest.png?v=11.4" alt="B386" style="width:62px;height:62px;border-radius:50%;border:2px solid var(--gold-bright);margin-bottom:8px;" />
       <h3 style="margin:0;font-family:var(--font-display);font-size:1.5rem;color:var(--forest);">Testing Room TV Display</h3>
       <p style="font-size:0.83rem;color:var(--muted);margin:5px 0 0;">Enter any valid Shop PIN once to pair this TV</p>
       <input type="password" inputmode="numeric" id="tvPinInput" placeholder="••••" onkeydown="if(event.key==='Enter')unlockTv()" />
@@ -445,7 +452,7 @@
   <!-- FROSTED 1080P BROADCAST HEADER -->
   <header class="tv-hdr">
     <div class="hdr-brand">
-      <img src="/static/images/logo-crest.png?v=11.3" alt="B386" onerror="this.src='/icon.svg'" />
+      <img src="/static/images/logo-crest.png?v=11.4" alt="B386" onerror="this.src='/icon.svg'" />
       <div>
         <span class="hdr-title">Weber's Tank Testing</span>
         <span class="hdr-sub" id="hdrShiftTxt">DOT RIN B386</span>
@@ -750,7 +757,7 @@
         } else {
           if (ssBadge) ssBadge.hidden = true;
           if (archImg) archImg.hidden = true;
-          if (dogsImg) { dogsImg.src = '/static/images/dogs-classic.png?v=11.3'; dogsImg.classList.remove('photo-fallback'); }
+          if (dogsImg) { dogsImg.src = '/static/images/dogs-classic.png?v=11.4'; dogsImg.classList.remove('photo-fallback'); }
         }
       } catch (_) {}
     }
@@ -968,6 +975,6 @@ function playChime() {
     setInterval(pollTv, 3500);
     setInterval(syncTvBackgroundArtwork, 20000);
   </script>
-  <script src="/static/theme-engine.js?v=11.3"></script>
+  <script src="/static/theme-engine.js?v=11.4"></script>
 </body>
 </html>

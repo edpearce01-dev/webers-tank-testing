@@ -580,107 +580,48 @@
       .brand-sub { display: none; }
       .track-inputs-grid { grid-template-columns: 1fr; }
     }
-
-  
     /* =====================================================================
-       v11.0 TRUE 3-PLANE 3D SHADOWBOX ENTRANCE & INTERACTIVE PARALLAX
+       v11.4 CENTERED 3D CREST + WREATH + SCROLL-DOCKING SHOP DOGS
        ===================================================================== */
     .brand img {
       border-radius: 0 !important; border: none !important; background: transparent !important;
-      object-fit: contain !important; width: 44px !important; height: 44px !important;
-      filter: drop-shadow(0 2px 5px rgba(12, 38, 27, 0.22));
+      object-fit: contain !important; width: 46px !important; height: 46px !important;
+      box-shadow: none !important; filter: drop-shadow(0 2px 5px rgba(12, 38, 27, 0.24));
     }
-    .fixed-brand-stage {
-      perspective: 1150px;
-      perspective-origin: 50% 44%;
-    }
-    .stage-3d-rig {
-      display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-      transform-style: preserve-3d;
-      will-change: transform;
-    }
-    .crest-arch-wrap {
-      transform-style: preserve-3d;
-    }
-    .arch-layer {
-      transform: translate3d(0, 0, -58px) scale(1.05);
-      animation: arch3dEnter 1.35s cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
-    .crest-circle {
-      border-radius: 0 !important;
-      border: none !important;
-      background: transparent !important;
-      object-fit: contain !important;
-      box-shadow: none !important;
-      filter: drop-shadow(0 22px 34px rgba(12, 38, 27, 0.28));
-      transform: translate3d(0, 0, 0px);
-      animation: crest3dEnter 1.25s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
-    }
-    .crest-gold-sheen {
-      position: absolute; inset: 4%; border-radius: 50%; z-index: 2; pointer-events: none;
-      background: linear-gradient(115deg, transparent 32%, rgba(255, 250, 220, 0.62) 50%, transparent 68%);
-      background-size: 240% 240%;
-      mix-blend-mode: overlay;
-      animation: crestSheenSweep 1.6s ease-out 0.45s both;
-    }
-    .stage-dogs-cutout {
-      transform: translate3d(0, 0, 64px);
-      filter: drop-shadow(0 22px 24px rgba(12, 38, 27, 0.32)) !important;
-      animation: dogs3dEnter 1.38s cubic-bezier(0.22, 1, 0.36, 1) 0.18s both;
-    }
-    @keyframes arch3dEnter {
-      0%   { opacity: 0; transform: translate3d(0, 20px, -175px) scale(0.76) rotateZ(-5deg); }
-      100% { opacity: 1; transform: translate3d(0, 0, -58px) scale(1.05) rotateZ(0deg); }
-    }
-    @keyframes crest3dEnter {
-      0%   { opacity: 0; transform: translate3d(0, -28px, -130px) rotateX(24deg) rotateY(-14deg) scale(0.84); }
-      100% { opacity: 1; transform: translate3d(0, 0, 0px) rotateX(0deg) rotateY(0deg) scale(1); }
-    }
-    @keyframes dogs3dEnter {
-      0%   { opacity: 0; transform: translate3d(0, 48px, -24px) rotateX(14deg) scale(0.86); }
-      100% { opacity: 1; transform: translate3d(0, 0, 64px) rotateX(0deg) scale(1); }
-    }
-    @keyframes crestSheenSweep {
-      0%   { background-position: 180% 0%; opacity: 0; }
-      25%  { opacity: 0.95; }
-      100% { background-position: -60% 100%; opacity: 0; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .arch-layer, .crest-circle, .stage-dogs-cutout, .crest-gold-sheen { animation: none !important; }
-    }
-
-  
-    /* =====================================================================
-       v11.2 ENLARGED CREST + WREATH & SCROLL-INTO-LOGO DOG DOCKING
-       ===================================================================== */
     .fixed-brand-stage {
       position: fixed !important;
-      inset: 0 !important;
+      top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+      height: 100dvh !important;
       padding-top: clamp(86px, 9.5dvh, 104px) !important;
       display: flex !important;
-      align-items: flex-start !important;
-      justify-content: center !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: flex-start !important;
       pointer-events: none;
       overflow: hidden;
-      perspective: 1150px;
+      z-index: 1;
+      perspective: 1200px;
     }
     .crest-dock-stage {
-      --crest-sz: min(78vw, 55dvh, 535px);
+      --crest-sz: min(58vw, 43dvh, 400px);
       position: relative;
       width: var(--crest-sz);
       height: var(--crest-sz);
+      margin: 0 auto !important;
       transform-style: preserve-3d;
       will-change: transform;
     }
     .crest-dock-stage .arch-layer {
       position: absolute !important;
-      width: 134% !important;
-      height: 134% !important;
-      left: -17% !important;
-      top: -15% !important;
+      width: 152% !important;
+      height: 152% !important;
+      left: -26% !important;
+      top: -24% !important;
       object-fit: contain !important;
       z-index: 1 !important;
       pointer-events: none;
+      transform: translate3d(0, 0, -40px);
+      filter: drop-shadow(0 10px 22px rgba(44, 24, 16, 0.16));
     }
     .crest-dock-stage .crest-circle {
       position: absolute !important;
@@ -693,20 +634,38 @@
       border-radius: 0 !important;
       background: transparent !important;
       box-shadow: none !important;
-      filter: drop-shadow(0 20px 34px rgba(12, 38, 27, 0.24));
+      transform: translate3d(0, 0, 0px);
+      filter: drop-shadow(0 18px 32px rgba(12, 38, 27, 0.24));
+    }
+    .crest-bay-emblem {
+      position: absolute;
+      left: 50%; top: 64%;
+      transform: translate(-50%, -50%);
+      z-index: 2;
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: clamp(0.95rem, 2.1dvh, 1.3rem);
+      letter-spacing: 0.14em;
+      color: rgba(253, 230, 138, 0.55);
+      text-transform: uppercase;
+      text-align: center;
+      line-height: 1.15;
+      pointer-events: none;
+      white-space: nowrap;
     }
     .crest-dock-stage .stage-dogs-cutout {
       position: absolute !important;
       left: 50% !important;
       bottom: 18.2% !important;
-      width: 55% !important;
+      width: 56.5% !important;
+      max-width: none !important;
       max-height: none !important;
       height: auto !important;
       margin: 0 !important;
       z-index: 3 !important;
       transform-origin: center bottom;
-      transform: translate3d(-50%, 74px, 65px) scale(1.26);
-      filter: drop-shadow(0 22px 24px rgba(12, 38, 27, 0.32)) !important;
+      transform: translate3d(-50%, 155px, 32px) scale(1.28);
+      filter: drop-shadow(0 16px 22px rgba(12, 38, 27, 0.28)) !important;
       will-change: transform;
     }
     .crest-dock-stage .crest-ribbon-lip {
@@ -715,14 +674,16 @@
       width: 100% !important;
       height: 100% !important;
       object-fit: contain !important;
-      z-index: 4 !important;
+      z-index: 5 !important;
+      transform: translate3d(0, 0, 60px);
       pointer-events: none;
     }
+    .crest-gold-sheen { display: none !important; }
     .fleet-showcase-single {
       border-radius: 14px;
       overflow: hidden;
       border: 2px solid rgba(251, 191, 36, 0.55);
-      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.24);
       background: #fdf8ee;
     }
     .fleet-showcase-single img {
@@ -733,12 +694,11 @@
       object-fit: cover;
     }
     @media (max-width: 680px) {
-      .fixed-brand-stage { padding-top: 74px !important; }
+      .fixed-brand-stage { padding-top: 72px !important; }
       .crest-dock-stage {
-        --crest-sz: min(84vw, 44dvh, 340px);
+        --crest-sz: min(68vw, 35dvh, 275px);
       }
     }
-
   </style>
 </head>
 <body>
@@ -768,7 +728,7 @@
   <header class="site-nav" id="stickySiteNav">
     <div class="wrap nav-inner">
       <a href="#" class="brand">
-        <img src="/static/images/logo-crest.png?v=11.3" alt="Weber's Tank Testing RIN B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=11.4" alt="Weber's Tank Testing RIN B386" onerror="this.src='/icon.svg'" />
         <div>
           <span class="brand-title">Weber's Tank Testing</span>
           <span class="brand-sub">U.S. D.O.T. RIN B386 • BADEN, PA</span>
@@ -793,9 +753,10 @@
   <div class="fixed-brand-stage" id="fixedBrandStage" aria-hidden="true">
     <div class="crest-dock-stage" id="pub3dRig">
       <img id="heroHolidayArchImg" class="arch-layer" alt="" hidden />
-      <img id="heroCrestBackImg" src="/static/images/crest-backplate.png?v=11.3" alt="Weber's Tank Testing Crest" class="crest-circle" onerror="this.onerror=null;this.src='/icon.svg'" />
-      <img id="heroDogsImg" src="/static/images/dogs-thanksgiving.png?v=11.3" alt="Pongo, Zeke & Pierce" class="stage-dogs-cutout" onerror="this.onerror=null;this.src='/static/images/dogs-classic.png?v=11.3';" />
-      <img id="heroRibbonFrontImg" src="/static/images/crest-ribbon-front.png?v=11.3" alt="" class="crest-ribbon-lip" onerror="this.hidden=true" />
+      <img id="heroCrestBackImg" src="/static/images/crest-backplate.png?v=11.4" alt="Weber's Tank Testing Crest" class="crest-circle" onerror="this.onerror=null;this.src='/icon.svg'" />
+      <div id="crestBayEmblem" class="crest-bay-emblem">U.S. D.O.T.<br/>RIN B386</div>
+      <img id="heroDogsImg" src="/static/images/dogs-thanksgiving.png?v=11.4" alt="Pongo, Zeke & Pierce" class="stage-dogs-cutout" onerror="this.onerror=null;this.src='/static/images/dogs-classic.png?v=11.4';" />
+      <img id="heroRibbonFrontImg" src="/static/images/crest-ribbon-front.png?v=11.4" alt="" class="crest-ribbon-lip" onerror="this.hidden=true" />
       <div class="crest-gold-sheen"></div>
     </div>
   </div>
@@ -1176,7 +1137,7 @@
             </a>
           </div>
           <div class="fleet-showcase-single">
-            <img src="/static/images/shop-yard-color.jpg?v=11.2"
+            <img src="/static/images/shop-yard-color.jpg?v=11.4"
                  onerror="this.onerror=null;this.src='/static/images/merch/merch-shop-scene.jpg'"
                  alt="Weber's Tank Testing 3086 Legionville Rd Shop, 1956 American LaFrance Ladder Truck & Shop Dogs" />
           </div>
@@ -1259,41 +1220,44 @@
       const rig = document.getElementById('pub3dRig');
       const dogs = document.getElementById('heroDogsImg');
       const lip = document.getElementById('heroRibbonFrontImg');
+      const bayTxt = document.getElementById('crestBayEmblem');
       const greet = document.getElementById('greetingFadeBox');
       const nav = document.getElementById('stickySiteNav');
 
       if (nav) nav.classList.toggle('scrolled', y > 24);
 
       if (greet) {
-        const gProg = Math.min(1, y / 175);
+        const gProg = Math.min(1, y / 170);
         greet.style.opacity = (1 - gProg).toFixed(3);
-        greet.style.transform = `translate3d(0, ${(-gProg * 26).toFixed(1)}px, 0)`;
+        greet.style.transform = `translate3d(0, ${(-gProg * 24).toFixed(1)}px, 0)`;
         greet.style.visibility = gProg >= 0.99 ? 'hidden' : 'visible';
       }
 
       if (stage && rig && dogs) {
         const isMob = window.innerWidth <= 680;
-        const dockDist = isMob ? 210 : 290;
-        const rawDock = Math.min(1, y / dockDist);
-        // Smooth cubic ease-out: Dogs glide up & back into the open Crest bay behind the gold ribbon!
-        const dock = 1 - Math.pow(1 - rawDock, 3);
+        const crestH = rig.offsetHeight || (isMob ? 255 : 385);
+        const dockDist = isMob ? 210 : 280;
+        const rawP = Math.min(1, y / dockDist);
+        const dock = 1 - Math.pow(1 - rawP, 3);
 
-        const startDropPx = isMob ? 48 : 74;
+        // At scroll=0: Dogs sit cleanly BELOW the 'BADEN, PA • 724-266-8008' gold banner right above Speech Bubble!
+        // As you scroll (dock -> 1): Crest enlarges 1.22x into center while Dogs glide smoothly UP behind the gold ribbon!
+        const startDropPx = crestH * (isMob ? 0.43 : 0.42);
         const dogY = startDropPx * (1 - dock);
-        const dogZ = 65 * (1 - dock);
-        const dogScale = (isMob ? 1.22 : 1.26) - ((isMob ? 0.22 : 0.26) * dock);
-        dogs.style.animation = 'none';
+        const dogZ = 32 * (1 - dock);
+        const dogScale = (isMob ? 1.24 : 1.28) - ((isMob ? 0.24 : 0.28) * dock);
         dogs.style.transform = `translate3d(-50%, ${dogY.toFixed(1)}px, ${dogZ.toFixed(1)}px) scale(${dogScale.toFixed(3)})`;
 
-        if (lip) lip.style.opacity = (0.15 + 0.85 * dock).toFixed(2);
+        if (bayTxt) bayTxt.style.opacity = Math.max(0, 1 - dock * 2.2).toFixed(2);
+        if (lip) lip.style.opacity = dock < 0.25 ? '0' : Math.min(1, (dock - 0.25) / 0.35).toFixed(2);
 
-        const centerShiftY = dock * (isMob ? 26 : 36);
-        rig.style.transform = `translate3d(0, ${centerShiftY.toFixed(1)}px, 0) scale(${(1 - dock * 0.04).toFixed(3)})`;
+        const growScale = 1 + dock * (isMob ? 0.16 : 0.22);
+        const shiftDown = dock * (isMob ? 58 : 74);
+        rig.style.transform = `translate3d(0, ${shiftDown.toFixed(1)}px, 0) scale(${growScale.toFixed(3)})`;
 
-        // Stay crisp while you watch the dogs lock into the crest, then soften smoothly behind form cards
-        const fadeStart = dockDist * 0.78;
-        const fadeProg = y <= fadeStart ? 0 : Math.min(1, (y - fadeStart) / 260);
-        stage.style.opacity = (1 - fadeProg * 0.78).toFixed(3);
+        const fadeStart = dockDist * 0.85;
+        const fadeProg = y <= fadeStart ? 0 : Math.min(1, (y - fadeStart) / 280);
+        stage.style.opacity = (1 - fadeProg * 0.76).toFixed(3);
       }
     }
     window.addEventListener('scroll', () => requestAnimationFrame(updateHeroScrollEffect), { passive: true });
@@ -1347,14 +1311,14 @@
                 img.src = jpgUrl;
                 img.classList.toggle('photo-fallback', t.dog_image === 'shop-dogs.jpg');
               };
-              probeJpg.onerror = () => { img.src = '/static/images/dogs-classic.png?v=11.3'; img.classList.remove('photo-fallback'); };
+              probeJpg.onerror = () => { img.src = '/static/images/dogs-classic.png?v=11.4'; img.classList.remove('photo-fallback'); };
               probeJpg.src = jpgUrl;
             };
             probePng.src = pngUrl;
           }
         } else if (img) {
           if (archImg) archImg.hidden = true;
-          img.src = '/static/images/dogs-classic.png?v=11.3';
+          img.src = '/static/images/dogs-classic.png?v=11.4';
           img.classList.remove('photo-fallback');
         }
       } catch (_) {}

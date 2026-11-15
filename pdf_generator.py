@@ -25,20 +25,12 @@ CONDEMN_LABELS = {
 
 
 def _stamp_pdf_crest(c: canvas.Canvas, x: float, y: float, size: float, watermark_page: tuple | None = None) -> None:
+    """Draws crisp header crest badge in dedicated non-overlapping margin space."""
     logo_p = Path(__file__).parent / "static" / "images" / "logo-crest.png"
-    if not logo_p.exists():
+    if not logo_p.exists() or size <= 0:
         return
     try:
-        if watermark_page:
-            pw, ph = watermark_page
-            c.saveState()
-            if hasattr(c, "setFillAlpha"):
-                c.setFillAlpha(0.055)
-            wm = 235
-            c.drawImage(str(logo_p), (pw - wm) / 2.0, (ph - wm) / 2.0 - 20, width=wm, height=wm, preserveAspectRatio=True, mask="auto")
-            c.restoreState()
-        if size > 0:
-            c.drawImage(str(logo_p), x, y, width=size, height=size, preserveAspectRatio=True, mask="auto")
+        c.drawImage(str(logo_p), x, y, width=size, height=size, preserveAspectRatio=True, mask="auto")
     except Exception:
         pass
 
@@ -822,16 +814,17 @@ def build_backroom_poster_pdf(
 
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 24)
-    _stamp_pdf_crest(c, 34, H - 116, 96)
-    c.drawCentredString(W / 2, H - 46, "WEBER'S TANK TESTING")
-    c.setFont("Helvetica-Bold", 11.2)
+    _stamp_pdf_crest(c, 26, H - 111, 90)
+    hdr_cx = 356
+    c.drawCentredString(hdr_cx, H - 46, "WEBER'S TANK TESTING")
+    c.setFont("Helvetica-Bold", 10.6)
     c.setFillColor(colors.HexColor("#fde68a"))
-    c.drawCentredString(W / 2, H - 67, f"{SHOP_ADDRESS.upper()}  |  U.S. D.O.T. RIN {dot_rin}")
+    c.drawCentredString(hdr_cx, H - 67, f"{SHOP_ADDRESS.upper()}  |  U.S. D.O.T. RIN {dot_rin}")
     c.setFillColor(colors.HexColor("#e2e8f0"))
-    c.setFont("Helvetica-Bold", 9.4)
-    c.drawCentredString(W / 2, H - 86, f"Regular Shop Hours: {SHOP_HOURS}")
-    c.setFont("Helvetica", 9.5)
-    c.drawCentredString(W / 2, H - 105, "SCBA  |  EMS Oxygen  |  Paintball HPA  |  Industrial & Welding Gas  |  CO2  |  Scuba")
+    c.setFont("Helvetica-Bold", 8.8)
+    c.drawCentredString(hdr_cx, H - 86, f"Hours: {SHOP_HOURS}")
+    c.setFont("Helvetica", 9.0)
+    c.drawCentredString(hdr_cx, H - 105, "SCBA  |  EMS Oxygen  |  Paintball HPA  |  Industrial Gas  |  CO2  |  Scuba")
 
     c.setFillColor(colors.HexColor("#0f172a"))
     c.setFont("Helvetica-Bold", 21)
@@ -909,7 +902,7 @@ def build_invoice_pdf(invoice: dict, items: list[dict], phone: str = "724-266-80
     c = canvas.Canvas(buf, pagesize=letter)
     inv_no = invoice.get("invoice_no") or "INVOICE"
     _set_pdf_meta(c, f"{inv_no} - {invoice.get('customer_name', '')} | Weber's Tank Testing")
-    _stamp_pdf_crest(c, W - 210, H - 96, 56, watermark_page=(W, H))
+    _stamp_pdf_crest(c, 40, H - 96, 58)
 
     def draw_table_header(top_y: float) -> float:
         c.setFillColor(colors.Color(0.93, 0.95, 0.94))
@@ -922,15 +915,15 @@ def build_invoice_pdf(invoice: dict, items: list[dict], phone: str = "724-266-80
         c.drawRightString(W - 52, top_y - 14, "Line Total")
         return top_y - 20
 
-    c.setFont("Helvetica-Bold", 18)
-    c.drawString(45, H - 48, "WEBER'S TANK TESTING")
-    c.setFont("Helvetica-Bold", 9.6)
-    c.drawString(45, H - 63, f"{SHOP_ADDRESS}  |  Phone / Text: {phone}")
-    c.setFont("Helvetica", 9.3)
-    c.drawString(45, H - 76, f"U.S. D.O.T. Certified Cylinder Testing (RIN {dot_rin})  |  Facility Manager: {PRIMARY_MANAGER}")
+    c.setFont("Helvetica-Bold", 17.5)
+    c.drawString(106, H - 48, "WEBER'S TANK TESTING")
+    c.setFont("Helvetica-Bold", 9.2)
+    c.drawString(106, H - 63, f"{SHOP_ADDRESS}  |  Phone: {phone}")
+    c.setFont("Helvetica", 8.8)
+    c.drawString(106, H - 76, f"U.S. D.O.T. Certified Testing (RIN {dot_rin})  |  Manager: {PRIMARY_MANAGER}")
     c.setFillColor(colors.HexColor("#475569"))
-    c.setFont("Helvetica", 8.5)
-    c.drawString(45, H - 89, f"Hours: {SHOP_HOURS}")
+    c.setFont("Helvetica", 8.1)
+    c.drawString(106, H - 89, f"Hours: {SHOP_HOURS}")
     c.setFillColor(colors.black)
 
     c.setFont("Helvetica-Bold", 16)
@@ -953,10 +946,12 @@ def build_invoice_pdf(invoice: dict, items: list[dict], phone: str = "724-266-80
     addr_bits = []
     if prof.get("contact_person"):
         addr_bits.append(f"Attn: {prof['contact_person']}")
-    city_st = " ".join(filter(None, [prof.get("city"), prof.get("state"), prof.get("zip_code")])).strip()
-    full_addr = ", ".join(filter(None, [prof.get("street_address"), city_st])).strip()
-    if full_addr:
-        addr_bits.append(full_addr)
+    has_real_loc = bool((prof.get("street_address") or "").strip() or (prof.get("city") or "").strip())
+    if has_real_loc:
+        city_st = " ".join(filter(None, [prof.get("city"), prof.get("state"), prof.get("zip_code")])).strip()
+        full_addr = ", ".join(filter(None, [prof.get("street_address"), city_st])).strip()
+        if full_addr:
+            addr_bits.append(full_addr)
     if prof.get("email"):
         addr_bits.append(str(prof["email"]))
     y_svc = H - 136
@@ -1038,10 +1033,10 @@ def build_shelf_claim_slip_pdf(
     # Bold Zone E Header Banner (easy to read across the backroom)
     c.setFillColor(colors.HexColor("#0f291e"))
     c.rect(36, H - 108, W - 72, 72, fill=1, stroke=0)
-    _stamp_pdf_crest(c, W - 110, H - 105, 66, watermark_page=(W, H))
+    _stamp_pdf_crest(c, W - 104, H - 103, 60)
     c.setFillColor(colors.HexColor("#fbbf24"))
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(50, H - 54, f"24/7 BACK ROOM PICKUP (LOADING DOCK)  |  WEBER'S TANK TESTING (DOT RIN {dot_rin})")
+    c.drawString(50, H - 54, f"24/7 BACK ROOM PICKUP  •  WEBER'S TANK TESTING (RIN {dot_rin})")
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 22)
     c.drawString(50, H - 80, (customer_name or "CUSTOMER BATCH")[:32].upper())
@@ -1175,7 +1170,7 @@ def build_dropoff_receipt_pdf(
 
     c.setFillColorRGB(0.04, 0.13, 0.09)
     c.rect(36, H - 122, W - 72, 86, fill=1, stroke=0)
-    _stamp_pdf_crest(c, W - 122, H - 118, 78, watermark_page=(W, H))
+    _stamp_pdf_crest(c, W - 116, H - 115, 72)
     c.setFillColorRGB(0.98, 0.75, 0.14)
     c.setFont("Helvetica-Bold", 11)
     c.drawString(54, H - 62, f"U.S. D.O.T. CERTIFIED FACILITY  •  RIN {dot_rin}")

@@ -619,9 +619,11 @@ def wipe_all_operational_data(conn: sqlite3.Connection) -> None:
         "crew_tasks",
         "invoice_items",
         "invoices",
+        "crew_feedback",
+        "customers",
     ):
         conn.execute(f"DELETE FROM {tbl};")
-    conn.execute("DELETE FROM sqlite_sequence WHERE name IN ('daily_verifications','cylinder_records','dropoffs','schedule_jobs','crew_tasks','invoice_items','invoices');")
+    conn.execute("DELETE FROM sqlite_sequence WHERE name IN ('daily_verifications','cylinder_records','dropoffs','schedule_jobs','crew_tasks','invoice_items','invoices','crew_feedback','customers');")
     base = conn.execute("SELECT value FROM settings WHERE key='starting_sheet_no';").fetchone()
     if base:
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('current_sheet_no', ?);", (base["value"],))
