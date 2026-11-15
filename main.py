@@ -24,6 +24,7 @@ from pydantic import BaseModel
 
 from database import bump_db_version, get_conn, init_db, wipe_all_operational_data
 from pdf_generator import (
+    _format_dot_row_notes,
     build_backroom_poster_pdf,
     build_dropoff_receipt_pdf,
     build_invoice_pdf,
@@ -757,7 +758,11 @@ def push_unsynced_to_sheets() -> dict:
             rc = dict(r)
             if rc.get("percent_permanent") is not None:
                 rc["percent_permanent"] = round(float(rc["percent_permanent"]), 1)
-            rc["operator_initials"] = "RP"
+            if "ADMIN" not in str(rc.get("operator_initials") or "") and "ADMIN" not in str(rc.get("tested_by") or ""):
+                rc["operator_initials"] = "RP"
+            if rc.get("addon_burst_disc"):
+                rc["relief_valve_changed"] = "Yes"
+            rc["notes"] = _format_dot_row_notes(rc)
             mfg_d = (rc.get("mfg_date") or "").strip()
             if mfg_d and not mfg_d.startswith("'") and re.match(r"^\d{1,2}[-/]\d{2,4}$", mfg_d):
                 rc["mfg_date"] = f"'{mfg_d}"
@@ -1670,7 +1675,7 @@ def submit_public_dropoff(payload: PublicDropoffInput):
         raise HTTPException(400, "Please enter your name, fire department, or company name.")
     ph_clean = clean_phone(payload.customer_phone)
     ph_digits = re.sub(r"\D", "", ph_clean)
-    if len(ph_digits) < 10:
+    if payload.entry_type.strip().upper() != "PICKUP_NOTICE" and len(ph_digits) < 10:
         raise HTTPException(400, "Please enter a valid 10-digit cell or station phone number.")
 
     cnt = max(1, min(250, int(payload.bottle_count or 1)))
@@ -1806,7 +1811,7 @@ def submit_public_dropoff(payload: PublicDropoffInput):
     trigger_sheets_sync_bg()
 
     ticket_code = f"BR-{did:04d}"
-    last4 = ph_digits[-4:]
+    last4 = ph_digits[-4:] if len(ph_digits) >= 4 else ""
     receipt_pdf_path = f"/api/public/receipt/{ticket_code}.pdf?p={last4}"
     if em_clean or etype in ("DROPOFF", "TRUCK_REQUEST"):
         trigger_ticket_email_bg({

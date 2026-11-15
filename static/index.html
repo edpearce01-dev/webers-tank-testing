@@ -8,14 +8,14 @@
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   
-  <link rel="stylesheet" href="/static/ops.css?v=10.3" />
+  <link rel="stylesheet" href="/static/ops.css?v=10.4" />
   <title>Weber's Tank Testing — Shop Floor Ops | DOT B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.jpg?v=10.3" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
+      <img src="/static/images/logo-crest.jpg?v=10.4" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Tank Testing</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">
         Shop Floor Operations Workspace<br />
@@ -55,7 +55,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.jpg?v=10.3" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.jpg?v=10.4" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>WEBER'S OPS</h1>
           <small>RIN B386 • Sign-Off: RP</small>
@@ -71,7 +71,7 @@
 
       <div class="top-controls">
         <button type="button" id="topHelpAiBtn" class="menu-pill" onclick="document.querySelector('.help-fab')?.click()" title="Open Shop Help AI">? Help</button>
-        <button id="testModeChip" class="test-chip" onclick="toggleGuide(true)" title="Testing Mode Active" hidden>TEST</button>
+        <button id="testModeChip" data-owner-only="1" class="test-chip" onclick="toggleGuide(true)" title="Testing Mode Active" hidden>TEST</button>
         <div class="date-stepper">
           <button type="button" class="step-btn" onclick="stepWorkingDate(-1)" title="Previous Day">◀</button>
           <button type="button" class="today-btn" onclick="jumpWorkingDateToday()" title="Jump Back to Today">Today</button>
@@ -108,7 +108,7 @@
 
         <div class="rail-footer">
           <button class="secondary" id="railSyncChip" onclick="triggerManualSync()" style="width:100%;">Syncing...</button>
-          <button class="secondary" onclick="toggleMenuDrawer(true)" style="width:100%;">More Tools &amp; Admin ☰</button>
+          <button class="secondary" onclick="toggleMenuDrawer(true)" style="width:100%;">Account &amp; Tools ☰</button>
           <a id="railSupplyLink" href="/office?tab=supplies" hidden>Supplies</a>
         </div>
       </aside>
@@ -327,16 +327,21 @@
 
                 <div id="compositeAlertBox" class="notice bad" hidden></div>
 
-                <!-- 3. Everyday Per-Bottle Stamps (Clean & Fast) -->
+                <!-- 3. Complete DOT Form 393-001 Shoulder/Label Stamps (Exact Order Read Off Bottle) -->
                 <div class="grid" id="intakeFieldsGrid">
                   <div><label>Serial # *</label><input id="fSerial" placeholder="e.g. GTS-0291277" onkeydown="if(event.key==='Enter')document.getElementById('fValveTag').focus()" /></div>
                   <div><label>Valve / Reg Tag #</label><input id="fValveTag" placeholder="Tag # (e.g. 47)" onkeydown="if(event.key==='Enter')submitIntake(false)" /></div>
-                  <div><label>MFG Date (MM-YY)</label><input id="fMfgDate" placeholder="MM-YY" oninput="checkIntakeLifespanLive()" /></div>
                   <div><label>DOT / Permit Spec *</label><input id="fSpec" placeholder="3AA / 3AL / SP10915" oninput="autoMatchSpecDimensions();updateAdvSpecsSummary()" /></div>
                   <div><label>Service PSI *</label><input type="number" id="fSvcPsi" placeholder="2015 / 3000 / 4500" oninput="autoMatchSpecDimensions();updateAdvSpecsSummary()" /></div>
                   <div><label>Target Test PSI</label><input type="number" id="fTestPsi" placeholder="Auto 5/3×" /></div>
+                  <div><label>MFG ID / Brand</label><input id="fMfg" placeholder="LUXFER / WK / NINJA" /></div>
+                  <div><label>MFG Date (MM-YY)</label><input id="fMfgDate" placeholder="MM-YY" oninput="checkIntakeLifespanLive()" /></div>
+                  <div><label>Outside Dia (in)</label><input id="fDia" placeholder="e.g. 6.8 or 7" oninput="checkIntakeLifespanLive()" /></div>
+                  <div><label>Length (in)</label><input id="fLen" placeholder="e.g. 21.5 or 43" oninput="checkIntakeLifespanLive()" /></div>
+                  <div><label>Gas Service</label><input id="fGas" value="AIR" oninput="updateAdvSpecsSummary()" /></div>
+                  <div><label>REE Limit (SP Carbon)</label><input type="number" step="0.1" id="fRee" placeholder="Blank on Steel/Alum" /></div>
                   <div>
-                    <label>Turnaround Priority</label>
+                    <label>Priority</label>
                     <select id="fPriority">
                       <option value="STANDARD">Standard</option>
                       <option value="RUSH">Paid Rush (Fee)</option>
@@ -345,29 +350,24 @@
                   </div>
                 </div>
 
-                <!-- 4. Collapsible Secondary Specs & Overrides -->
+                <!-- 4. Rare Workflow Overrides Only -->
                 <details class="adv-specs-drawer" id="advSpecsDrawer">
                   <summary>
-                    <span>More Specs &amp; Overrides (Brand, OD × Length, Gas, REE, Mode)</span>
-                    <span class="sub-badge" id="advSpecsSummary">AIR • Hydro + Visual</span>
+                    <span>Workflow Overrides (Annual Visual-Only Mode, Due Date, Staging Area)</span>
+                    <span class="sub-badge" id="advSpecsSummary">Hydro + Visual</span>
                   </summary>
                   <div class="adv-specs-body">
                     <div class="grid">
-                      <div><label>MFG / Brand</label><input id="fMfg" placeholder="LUXFER / NINJA / WK" oninput="updateAdvSpecsSummary()" /></div>
-                      <div><label>Gas Service</label><input id="fGas" value="AIR" oninput="updateAdvSpecsSummary()" /></div>
-                      <div><label>Outside Dia (in)</label><input id="fDia" placeholder="e.g. 6.8" oninput="checkIntakeLifespanLive();updateAdvSpecsSummary()" /></div>
-                      <div><label>Length (in)</label><input id="fLen" placeholder="e.g. 21.5" oninput="checkIntakeLifespanLive();updateAdvSpecsSummary()" /></div>
-                      <div><label>REE Limit (Composite)</label><input type="number" step="0.1" id="fRee" placeholder="Blank for Steel/Alum" /></div>
                       <div>
                         <label>Service Mode</label>
                         <select id="inMode" onchange="updateAdvSpecsSummary()">
-                          <option value="HYDRO_AND_VISUAL">Hydrostatic + Visual</option>
-                          <option value="VISUAL_ONLY">Visual Inspection Only</option>
+                          <option value="HYDRO_AND_VISUAL">Hydrostatic + Visual (Form 393-001)</option>
+                          <option value="VISUAL_ONLY">Annual Visual Inspection Only</option>
                         </select>
                       </div>
                       <div><label>Promised Due Date</label><input type="date" id="fPromisedDate" /></div>
                       <div>
-                        <label>Shop Holding Area</label>
+                        <label>Staging Area</label>
                         <select id="fHoldingZone">
                           <option value="ZONE_C_READY_RACK">Test Jackets &amp; Pump Desk</option>
                           <option value="ZONE_B_DEVALVE">Vice &amp; Stamp/Valve Bench</option>
@@ -705,10 +705,10 @@
     </div>
   </div>
 
-  <script src="/static/ops-camera.js?v=10.3"></script>
-  <script src="/static/ops-app.js?v=10.3"></script>
-  <script src="/static/day-flow.js?v=10.3"></script>
-  <script src="/static/theme-engine.js?v=10.3"></script>
-  <script src="/static/help-bot.js?v=10.3"></script>
+  <script src="/static/ops-camera.js?v=10.4"></script>
+  <script src="/static/ops-app.js?v=10.4"></script>
+  <script src="/static/day-flow.js?v=10.4"></script>
+  <script src="/static/theme-engine.js?v=10.4"></script>
+  <script src="/static/help-bot.js?v=10.4"></script>
 </body>
 </html>

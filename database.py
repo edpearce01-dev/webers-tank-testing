@@ -472,11 +472,13 @@ def init_db() -> None:
         cur.executemany(
             "INSERT OR IGNORE INTO calibration_targets (serial_number, pressure_psi, expected_cc) VALUES (?, ?, ?);",
             [
-                ("1SF11904", 3000, 44.5),
-                ("1SF11904", 4000, 59.8),
-                ("1SF11904", 5000, 75.2),
-                ("1SF11904", 6000, 90.8),
-                ("1SF11904", 7000, 106.5),
+                ("1SF11904", 2000, 34.2),
+                ("1SF11904", 2500, 42.8),
+                ("1SF11904", 3000, 51.4),
+                ("1SF11904", 4000, 68.6),
+                ("1SF11904", 5000, 86.2),
+                ("1SF11904", 6000, 103.6),
+                ("1SF11904", 7000, 121.8),
             ],
         )
 
@@ -513,6 +515,9 @@ def init_db() -> None:
             ("NECK_ORING", "Cylinder Neck / Valve O-Ring Replacement", 0.0, "", 60),
             ("VALVE_RELIEF", "Relief / Burst Disc Assembly Replacement", 0.0, "", 70),
             ("INTERNAL_CLEAN", "Internal Cylinder Tumble / Cleaning", 0.0, "", 80),
+            ("REG_SERVICE", "Paintball HPA Regulator Removal / Reinstall", 0.0, "", 85),
+            ("CONDEMNED_FEE", "Condemned / Rejected Cylinder Handling", 0.0, "", 90),
+            ("TRUCK_RUN", "Regional Truck Pickup / Delivery Stop", 0.0, "", 95),
         ],
     )
     cur.execute("DELETE FROM pricing_rates WHERE code='AIR_FILL';")
@@ -597,6 +602,7 @@ def wipe_all_operational_data(conn: sqlite3.Connection) -> None:
         "invoices",
     ):
         conn.execute(f"DELETE FROM {tbl};")
+    conn.execute("DELETE FROM sqlite_sequence WHERE name IN ('daily_verifications','cylinder_records','dropoffs','schedule_jobs','crew_tasks','invoice_items','invoices');")
     base = conn.execute("SELECT value FROM settings WHERE key='starting_sheet_no';").fetchone()
     if base:
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('current_sheet_no', ?);", (base["value"],))

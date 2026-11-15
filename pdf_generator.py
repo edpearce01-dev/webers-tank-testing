@@ -109,8 +109,19 @@ def build_retest_datasheet_pdf(
     c = canvas.Canvas(buf, pagesize=(W, H))
     _set_pdf_meta(c, f"DOT Retest Data Sheet - {work_date} (RIN {dot_rin})")
 
-    hydro_rows = [r for r in records if r.get("service_mode") == "HYDRO_AND_VISUAL"] or [None]
-    chunks = [hydro_rows[i : i + 12] for i in range(0, len(hydro_rows), 12)]
+    hydro_only = [r for r in records if r.get("service_mode") == "HYDRO_AND_VISUAL"]
+    if not hydro_only:
+        chunks = [[None]]
+    else:
+        chunks = []
+        by_sheet: dict[int, list[dict]] = {}
+        for r in hydro_only:
+            sn = int(r.get("sheet_no") or base_sheet_no)
+            by_sheet.setdefault(sn, []).append(r)
+        for sn in sorted(by_sheet.keys()):
+            s_rows = by_sheet[sn]
+            for i in range(0, len(s_rows), 12):
+                chunks.append(s_rows[i : i + 12])
     m_str, d_str, y_str = _fmt_slash_date(work_date)
 
     left_x = 28
@@ -838,7 +849,7 @@ def build_backroom_poster_pdf(
 
     steps = [
         ("1. SCAN QR CODE WITH YOUR PHONE CAMERA", "Opens our instant check-in & verified pickup form - no app download needed."),
-        ("2. ENTER NAME / DEPT, CELL #, & TANK DETAILS", "Receive a live Ticket # (BR-XXXX) and get texted when your tanks hit Zone E."),
+        ("2. ENTER NAME / DEPT, CELL #, & TANK DETAILS", "Receive a live Ticket # (BR-XXXX) and get texted when your batch is staged in our Back Room."),
         ("3. GROUP TANKS NEATLY IN DESIGNATED ZONE", "Every removed valve & paintball HPA regulator is numbered & matched to its serial #."),
     ]
     sy = box_y + box_h - 32
@@ -1005,7 +1016,7 @@ def build_shelf_claim_slip_pdf(
     c.rect(36, H - 108, W - 72, 72, fill=1, stroke=0)
     c.setFillColor(colors.HexColor("#fbbf24"))
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(50, H - 54, f"ZONE E BACKROOM PICKUP SHELF  |  WEBER'S TANK TESTING (DOT RIN {dot_rin})")
+    c.drawString(50, H - 54, f"24/7 BACK ROOM PICKUP (LOADING DOCK)  |  WEBER'S TANK TESTING (DOT RIN {dot_rin})")
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 22)
     c.drawString(50, H - 80, (customer_name or "CUSTOMER BATCH")[:32].upper())
@@ -1112,7 +1123,7 @@ def build_shelf_claim_slip_pdf(
     c.drawString(128, foot_y + 62, "SELF-SERVE 24/7 PICKUP CHECK-OUT (TAKES 10 SECONDS)")
     c.setFillColor(colors.HexColor("#334155"))
     c.setFont("Helvetica", 9.0)
-    c.drawString(128, foot_y + 45, "1. Verify cylinder count above matches your group on the Zone E Pickup Shelf.")
+    c.drawString(128, foot_y + 45, "1. Verify cylinder count above matches your group inside our 24/7 Back Room pickup area.")
     c.drawString(128, foot_y + 30, "2. Scan QR code -> tap 'BACKROOM PICK-UP' -> enter your name to confirm pickup.")
     c.setFont("Helvetica-Bold", 8.5)
     c.drawString(128, foot_y + 13, f"NOTE: Testing facility only - cylinders are returned clean, dry & depressurized.  |  {phone}")

@@ -821,6 +821,13 @@
                 <div><label>10-Digit Contact Phone *</label><input id="dropPhone" class="mono" type="tel" placeholder="724-555-0199" oninput="formatPubPhone(this)" /></div>
                 <div><label>Email for Ticket Receipt <span class="opt">(Optional)</span></label><input id="dropEmail" type="email" placeholder="you@example.com" /></div>
                 <div><label>Cylinder Count *</label><input type="number" id="dropCount" class="mono" min="1" max="250" value="1" oninput="refreshPublicSla(this.value)" /></div>
+                <div>
+                  <label>Service Needed *</label>
+                  <select id="dropServiceMode">
+                    <option value="Hydro + Visual">5-Yr / 10-Yr DOT Hydro Test</option>
+                    <option value="Visual Inspection Only">Annual Visual Inspection Only</option>
+                  </select>
+                </div>
                 <div id="dropPoWrap" hidden><label>Station # or PO # <span class="opt">(Optional)</span></label><input id="dropPo" placeholder="e.g. Station 47 / PO #204" /></div>
 
                 <div style="grid-column:1/-1;">
@@ -871,7 +878,7 @@
               <div class="form-grid">
                 <div><label>Customer / Dept Name on Batch *</label><input id="pickCustName" placeholder="e.g. Baden VFD or John Smith" /></div>
                 <div><label>Picked Up By (Your Full Name) *</label><input id="pickPersonName" placeholder="Who is taking the cylinders today" /></div>
-                <div><label>10-Digit Contact Phone *</label><input id="pickPhone" class="mono" type="tel" placeholder="724-555-0199" oninput="formatPubPhone(this)" /></div>
+                <div><label>Contact Phone <span class="opt">(Optional)</span></label><input id="pickPhone" class="mono" type="tel" placeholder="724-555-0199" oninput="formatPubPhone(this)" /></div>
                 <div><label>Cylinders Picked Up *</label><input type="number" id="pickCount" class="mono" min="1" max="250" value="1" /></div>
                 <div style="grid-column:1/-1;"><label>Ticket # from Text or Claim Slip <span class="opt">(Optional)</span></label><input id="pickTicket" class="mono" placeholder="BR-0004" /></div>
               </div>
@@ -1346,7 +1353,8 @@
       if (street.length < 3 || city.length < 2 || zip.length < 5) { alert('Please enter your Billing / Mailing Street Address, City, and ZIP Code.'); document.getElementById('dropStreet').focus(); return; }
 
       const sumUp = summary.toUpperCase();
-      const svc = sumUp.includes('VISUAL ONLY') ? 'Visual Inspection Only'
+      const pickedSvc = document.getElementById('dropServiceMode')?.value || 'Hydro + Visual';
+      const svc = (pickedSvc === 'Visual Inspection Only' || sumUp.includes('VISUAL ONLY')) ? 'Visual Inspection Only'
         : ((sumUp.includes('PAINTBALL') || sumUp.includes('HPA')) ? 'Paintball HPA Hydro' : 'Hydro + Visual');
 
       const btn = document.getElementById('btnSubmitDrop');
@@ -1379,7 +1387,7 @@
       const ticket = document.getElementById('pickTicket').value.trim();
       const cnt = Math.max(1, parseInt(document.getElementById('pickCount').value || '1', 10));
 
-      if (!custName || !personName || phone.replace(/\D/g, '').length < 10) { alert('Please enter the Customer/Dept Name, Your Full Name, and a 10-digit Phone Number.'); return; }
+      if (!custName || !personName) { alert('Please enter the Customer/Dept Name and Your Full Name.'); return; }
       const btn = document.getElementById('btnSubmitPick');
       btn.disabled = true;
       try {

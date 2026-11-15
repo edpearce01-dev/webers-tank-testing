@@ -7,14 +7,14 @@
   <link rel="manifest" href="/manifest.json" />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/ops.css?v=10.3" />
+  <link rel="stylesheet" href="/static/ops.css?v=10.4" />
   <title>Weber's Tank Testing — Month Schedule &amp; Dispatch | DOT B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.jpg?v=10.3" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
+      <img src="/static/images/logo-crest.jpg?v=10.4" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:72px;height:72px;margin-bottom:8px;border-radius:50%;border:2px solid var(--gold);background:#000;" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Schedule &amp; Dispatch</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter your Individual PIN (Access resets daily at Midnight)</p>
       <div style="text-align:left;">
@@ -32,7 +32,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.jpg?v=10.3" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.jpg?v=10.4" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>WALL SCHEDULE</h1>
           <small>RIN B386 • Calendar &amp; Dispatch</small>
@@ -210,15 +210,7 @@
                   <input id="sjPoStation" placeholder="e.g. Station #2 / PO-1042" />
                 </div>
                 <div><label>Total Cylinder Count *</label><input type="number" id="sjCount" min="1" value="1" /></div>
-                <div>
-                  <label>Initial Shop Zone</label>
-                  <select id="sjZone">
-                    <option value="ZONE_A_BACKROOM">Back Room • Loading Dock Drop</option>
-                    <option value="ZONE_B_DEVALVE">Vice &amp; Stamp/Valve Bench</option>
-                    <option value="ZONE_C_READY_RACK">Test Jackets &amp; Pump Desk</option>
-                    <option value="OUTBOUND_TRUCK">🚚 Truck / Road Stop</option>
-                  </select>
-                </div>
+                <input type="hidden" id="sjZone" value="ZONE_A_BACKROOM" />
               </div>
 
               <div style="margin-top:10px;">
@@ -244,7 +236,7 @@
 
               <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:11px;padding:9px 11px;background:#f8fafc;border-radius:8px;border:1px solid var(--border-soft);">
                 <label class="inline-check"><input type="checkbox" id="sjValvesOn" checked /><span>Valves / HPA Regulators Attached</span></label>
-                <label class="inline-check"><input type="checkbox" id="sjNeedsFill" /><span>💨 Customer Requested Air / Gas Refill</span></label>
+                
               </div>
 
               <button class="primary" onclick="submitScheduleJob()">Save to Month Calendar &amp; Live TV</button>
@@ -805,8 +797,8 @@
 
     bootSchedule();
   </script>
-  <script src="/static/day-flow.js?v=10.3"></script>
-  <script src="/static/theme-engine.js?v=10.3"></script>
-  <script src="/static/help-bot.js?v=10.3"></script>
+  <script src="/static/day-flow.js?v=10.4"></script>
+  <script src="/static/theme-engine.js?v=10.4"></script>
+  <script src="/static/help-bot.js?v=10.4"></script>
 </body>
 </html>

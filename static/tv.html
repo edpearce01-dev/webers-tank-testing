@@ -358,107 +358,7 @@
       background: #f8fafc; color: var(--forest); margin: 14px 0;
     }
   
-    /* =====================================================================
-       v9.11 LIVING SCREENSAVER & EASTER-EGG ANIMATIONS
-       ===================================================================== */
-    body.tv-screensaver .tv-dogs-img {
-      transform-origin: center bottom;
-      animation: pupsLivingBreathe 4.6s ease-in-out infinite;
-      transition: opacity 0.45s ease, transform 0.45s ease;
-    }
-    @keyframes pupsLivingBreathe {
-      0%, 100% { transform: scaleY(1) scaleX(1) translateY(0); }
-      50%      { transform: scaleY(1.018) scaleX(0.994) translateY(-2px); }
-    }
-    body.tv-screensaver .tv-dogs-img.trick-tilt {
-      animation: pupsHeadTilt 4.2s ease-in-out 1 !important;
-    }
-    @keyframes pupsHeadTilt {
-      0%, 100% { transform: rotate(0deg) scale(1); }
-      20%, 45% { transform: rotate(-3.5deg) translateY(-4px) scale(1.02); }
-      60%, 82% { transform: rotate(3.5deg) translateY(-4px) scale(1.02); }
-    }
-    body.tv-screensaver .tv-dogs-img.trick-hop {
-      animation: pupsHappyHop 2.6s cubic-bezier(0.34, 1.56, 0.64, 1) 1 !important;
-    }
-    @keyframes pupsHappyHop {
-      0%, 100% { transform: translateY(0) scale(1); }
-      22%      { transform: translateY(-28px) scale(1.03) rotate(-1.5deg); }
-      44%      { transform: translateY(0) scale(0.98, 1.02); }
-      66%      { transform: translateY(-22px) scale(1.025) rotate(1.5deg); }
-      85%      { transform: translateY(0) scale(1); }
-    }
-    body.tv-screensaver .tv-dogs-img.trick-laugh {
-      animation: pupsChuckle 1.8s ease-in-out 1 !important;
-    }
-    @keyframes pupsChuckle {
-      0%, 100% { transform: translateY(0); }
-      20%, 60% { transform: translateY(-7px) rotate(-0.8deg); }
-      40%, 80% { transform: translateY(-2px) rotate(0.8deg); }
-    }
-    body.tv-screensaver .tv-dogs-img.chasing-hide {
-      opacity: 0 !important;
-      transform: translateX(-60px) scale(0.92) !important;
-    }
-
-    /* Dad-Joke & Trick Speech Bubbles Above Pongo (Left), Zeke (Center), Pierce (Right) */
-    .tv-pup-bubble {
-      position: fixed; z-index: 36; pointer-events: none;
-      max-width: 390px; background: #fffefb; color: var(--forest);
-      border: 2.5px solid var(--forest); border-radius: 18px;
-      padding: 12px 18px; font-size: 1.02rem; font-weight: 800; line-height: 1.38;
-      box-shadow: 0 16px 36px rgba(12, 38, 27, 0.24);
-      opacity: 0; transform: translateY(12px) scale(0.92);
-      transition: opacity 0.38s ease, transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    .tv-pup-bubble.show { opacity: 1; transform: translateY(0) scale(1); }
-    .tv-pup-bubble::after {
-      content: ''; position: absolute; bottom: -11px; left: 50%;
-      width: 16px; height: 16px; background: #fffefb;
-      border-right: 2.5px solid var(--forest); border-bottom: 2.5px solid var(--forest);
-      transform: translateX(-50%) rotate(45deg);
-    }
-    .tv-pup-bubble .pup-speaker {
-      display: block; font-family: var(--font-mono); font-size: 0.68rem;
-      text-transform: uppercase; letter-spacing: 0.06em; color: var(--gold); margin-bottom: 3px;
-    }
-    .tv-pup-bubble.pos-left   { left: max(6vw, calc(50vw - 440px)); top: 38vh; }
-    .tv-pup-bubble.pos-center { left: 50%; transform: translate(-50%, 12px) scale(0.92); top: 28vh; }
-    .tv-pup-bubble.pos-center.show { transform: translate(-50%, 0) scale(1); }
-    .tv-pup-bubble.pos-right  { right: max(6vw, calc(50vw - 440px)); top: 38vh; }
-
-    /* Economy VFD Fire Truck + Sprinting Dogs Sprite */
-    .tv-firetruck-stage {
-      position: fixed; left: 0; right: 0; bottom: 13vh; height: 260px;
-      z-index: 35; pointer-events: none; overflow: hidden;
-      display: none;
-    }
-    body.tv-screensaver .tv-firetruck-stage.active { display: block; }
-    .tv-firetruck-runner {
-      position: absolute; bottom: 0; left: -920px; height: 235px; width: auto;
-      filter: drop-shadow(0 14px 22px rgba(15, 23, 42, 0.25));
-      animation: economyTruckRun 8.6s linear forwards;
-    }
-    @keyframes economyTruckRun {
-      0%   { transform: translateX(0) translateY(0); }
-      12%  { transform: translateX(26vw) translateY(-4px); }
-      25%  { transform: translateX(52vw) translateY(0); }
-      38%  { transform: translateX(78vw) translateY(-5px); }
-      50%  { transform: translateX(104vw) translateY(0); }
-      65%  { transform: translateX(136vw) translateY(-4px); }
-      80%  { transform: translateX(168vw) translateY(0); }
-      100% { transform: translateX(215vw) translateY(-3px); }
-    }
-    .tv-siren-glow {
-      position: fixed; inset: 0; z-index: 34; pointer-events: none; opacity: 0;
-    }
-    body.tv-screensaver .tv-siren-glow.active {
-      animation: sirenEdgePulse 0.55s ease-in-out 14;
-    }
-    @keyframes sirenEdgePulse {
-      0%, 100% { box-shadow: inset 0 0 0 rgba(220, 38, 38, 0); opacity: 0; }
-      50%      { box-shadow: inset 0 0 95px rgba(220, 38, 38, 0.28); opacity: 1; }
-    }
+    
 
   
     /* 720p, 1080p & 4K Smart TV Fluid Scaling */
@@ -482,7 +382,7 @@
   <div class="tv-brand-bg" id="tvBrandBg" aria-hidden="true">
     <div class="tv-crest-wrap">
       <img id="tvBgArchImg" class="tv-arch-img" alt="" hidden />
-      <img src="/static/images/logo-crest.jpg?v=10.3" alt="" class="tv-crest-img" onerror="this.src='/icon.svg'" />
+      <img src="/static/images/logo-crest.jpg?v=10.4" alt="" class="tv-crest-img" onerror="this.src='/icon.svg'" />
     </div>
     <img id="tvBgDogsImg" src="/static/images/dogs-thanksgiving.png" alt="" class="tv-dogs-img" onerror="this.onerror=null;this.src='/static/images/shop-dogs.jpg';this.classList.add('photo-fallback');" />
   </div>
@@ -501,7 +401,7 @@
   <!-- TV PAIRING PIN GATE -->
   <div id="tvPinGate" class="pin-gate" hidden>
     <div class="pin-box">
-      <img src="/static/images/logo-crest.jpg?v=10.3" alt="B386" style="width:62px;height:62px;border-radius:50%;border:2px solid var(--gold-bright);margin-bottom:8px;" />
+      <img src="/static/images/logo-crest.jpg?v=10.4" alt="B386" style="width:62px;height:62px;border-radius:50%;border:2px solid var(--gold-bright);margin-bottom:8px;" />
       <h3 style="margin:0;font-family:var(--font-display);font-size:1.5rem;color:var(--forest);">Testing Room TV Display</h3>
       <p style="font-size:0.83rem;color:var(--muted);margin:5px 0 0;">Enter any valid Shop PIN once to pair this TV</p>
       <input type="password" inputmode="numeric" id="tvPinInput" placeholder="••••" onkeydown="if(event.key==='Enter')unlockTv()" />
@@ -512,7 +412,7 @@
   <!-- FROSTED 1080P BROADCAST HEADER -->
   <header class="tv-hdr">
     <div class="hdr-brand">
-      <img src="/static/images/logo-crest.jpg?v=10.3" alt="B386" onerror="this.src='/icon.svg'" />
+      <img src="/static/images/logo-crest.jpg?v=10.4" alt="B386" onerror="this.src='/icon.svg'" />
       <div>
         <span class="hdr-title">Weber's Tank Testing</span>
         <span class="hdr-sub" id="hdrShiftTxt">DOT RIN B386</span>
@@ -542,7 +442,6 @@
       </select>
       <button class="tv-btn on" id="btnFlipView" onclick="manualFlipView()">⇄ Cal (0:45)</button>
       <button class="tv-btn" onclick="enterScreensaver(true)" title="Start Screensaver Now">Saver</button>
-      <button class="tv-btn" onclick="window.triggerNextTvScene&&window.triggerNextTvScene(true)" title="Cycle Through All 5 Animated Screensaver Scenes!">🎬 Scene</button>
       <button class="tv-btn on" id="btnChime" onclick="toggleChime()" title="Back Room Door Chime">
         <svg class="ico" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
       </button>
@@ -668,7 +567,7 @@
       LAST_ACTIVITY_MS = Date.now();
       if (!SCREENSAVER_ON) return;
       SCREENSAVER_ON = false;
-      if (window.stopAllTvScenes) window.stopAllTvScenes();
+      
       document.body.classList.remove('tv-screensaver');
       SECS_LEFT = ACTIVE_VIEW === 'dash' ? DASH_SECS : CAL_SECS;
       updateFlipBtnLabel();
@@ -1036,7 +935,6 @@ function playChime() {
     setInterval(pollTv, 3500);
     setInterval(syncTvBackgroundArtwork, 20000);
   </script>
-  <script src="/static/theme-engine.js?v=10.3"></script>
-  <script src="/static/tv-animations.js?v=10.3"></script>
+  <script src="/static/theme-engine.js?v=10.4"></script>
 </body>
 </html>
