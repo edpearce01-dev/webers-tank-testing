@@ -376,7 +376,7 @@ LOCAL_PA_COORDS = {
     "MARS": (40.6959, -80.0117), "ZELIENOPLE": (40.7945, -80.1398), "HARMONY": (40.8031, -80.1289),
     "SEWICKLEY": (40.5365, -80.1845), "CORAOPOLIS": (40.5184, -80.1667), "MOON": (40.5170, -80.2070),
     "ROBINSON": (40.4534, -80.1328), "WEXFORD": (40.6256, -80.0562), "MCCANDLESS": (40.5798, -80.0259),
-    "ROSS": (40.5256, -80.0089), "PITTSBURGH": (40.4406, -79.9959), "BUTLER": (40.8612, -79.8953),
+    "ROSS": (40.5256, -80.0089), "PITTSBURGH": (40.4406, -79.9959), "PITT": (40.4444, -79.9608), "EAST LIBERTY": (40.4615, -79.9255), "E LIBERTY": (40.4615, -79.9255), "OAKLAND": (40.4417, -79.9569), "SHADYSIDE": (40.4551, -79.9329), "LAWRENCEVILLE": (40.4681, -79.9605), "NORTH HILLS": (40.5428, -80.0160), "WASHINGTON": (40.1740, -80.2462), "BUTLER": (40.8612, -79.8953),
     "ELLWOOD CITY": (40.8584, -80.2887), "MIDLAND": (40.6326, -80.4465), "NEW CASTLE": (40.9998, -80.3470),
     "IMPERIAL": (40.4517, -80.2451), "OAKDALE": (40.3987, -80.1859), "CARNEGIE": (40.4087, -80.0834),
 }
@@ -503,11 +503,57 @@ def get_operating_schedule_bundle(conn) -> dict:
     }
 
 
+
+def _fast_local_eta(raw_addr: str) -> tuple[float, int]:
+    import math as _math
+    up = (raw_addr or "").strip().upper()
+    if len(up) < 3:
+        return (0.0, 0)
+    for town, (t_lat, t_lon) in sorted(LOCAL_PA_COORDS.items(), key=lambda kv: -len(kv[0])):
+        if town in up:
+            dlat = _math.radians(t_lat - SHOP_LAT)
+            dlon = _math.radians(t_lon - SHOP_LON)
+            a = _math.sin(dlat / 2) ** 2 + _math.cos(_math.radians(SHOP_LAT)) * _math.cos(_math.radians(t_lat)) * _math.sin(dlon / 2) ** 2
+            straight_mi = 3958.8 * 2 * _math.atan2(_math.sqrt(a), _math.sqrt(1 - a))
+            road_mi = round(max(1.5, straight_mi * 1.28), 1)
+            eta_m = max(5, int(round((road_mi / 34.0) * 60 + 3)))
+            return (road_mi, eta_m)
+    return (0.0, 0)
+
+
+def _compute_leave_by_time(raw_time: str, drive_mins: int) -> str:
+    if not raw_time or drive_mins <= 0:
+        return ""
+    s = raw_time.strip()
+    mt = re.search(r"\b(\d{1,2}):(\d{2})\s*(am|pm)?\b", s, flags=re.I)
+    if mt:
+        h, mn, ap = int(mt.group(1)), int(mt.group(2)), (mt.group(3) or "").upper()
+    else:
+        mt2 = re.search(r"\b(\d{1,2})\s*(am|pm)\b", s, flags=re.I)
+        if not mt2:
+            return ""
+        h, mn, ap = int(mt2.group(1)), 0, mt2.group(2).upper()
+    if ap == "PM" and h < 12:
+        h += 12
+    elif ap == "AM" and h == 12:
+        h = 0
+    total_m = (h * 60 + mn - int(drive_mins)) % (24 * 60)
+    lh, lm = total_m // 60, total_m % 60
+    lap = "PM" if lh >= 12 else "AM"
+    lh12 = lh % 12 or 12
+    return f"{lh12}:{lm:02d} {lap}"
+
+
 def enrich_schedule_job_view(j: dict, leg: str = "PRIMARY") -> dict:
     out = dict(j)
     addr = (out.get("return_address") if leg == "RETURN" and out.get("return_address") else out.get("location_notes")) or ""
     out["maps_route_url"] = build_shop_maps_url(addr)
     jt = (out.get("job_type") or "SHOP_BATCH").upper()
+    if jt != "SHOP_BATCH" and addr and not int(out.get("drive_eta_mins") or 0):
+        f_mi, f_eta = _fast_local_eta(addr)
+        if f_eta > 0:
+            out["drive_miles"] = f_mi
+            out["drive_eta_mins"] = f_eta
     if leg == "RETURN":
         out["cal_leg"] = "RETURN"
         out["cal_leg_label"] = "📤 Return Delivery"
@@ -533,6 +579,7 @@ def enrich_schedule_job_view(j: dict, leg: str = "PRIMARY") -> dict:
         out["cal_leg_label"] = "📌 Shop Drop-Off"
         out["cal_time"] = out.get("pickup_time") or ""
         out["cal_done"] = out.get("status") == "COMPLETED"
+    out["leave_by_time"] = _compute_leave_by_time(out.get("cal_time") or "", int(out.get("drive_eta_mins") or 0))
     return out
 
 
@@ -969,6 +1016,10 @@ def push_unsynced_to_sheets() -> dict:
         dict(r)
         for r in conn.execute("SELECT * FROM crew_feedback WHERE synced=0 ORDER BY id ASC LIMIT 30;").fetchall()
     ]
+    punches = [
+        dict(r)
+        for r in conn.execute("SELECT * FROM time_punches WHERE synced=0 AND status='CLOSED' ORDER BY id ASC LIMIT 50;").fetchall()
+    ]
     rates = [dict(r) for r in conn.execute("SELECT * FROM pricing_rates ORDER BY sort_order ASC, code ASC;").fetchall()]
     conn.close()
 
@@ -978,7 +1029,7 @@ def push_unsynced_to_sheets() -> dict:
     pushed_total = 0
     ctx = ssl.create_default_context()
 
-    if webhook_url and (cals or recs or invs or drops):
+    if webhook_url and (cals or recs or invs or drops or punches):
         sheets_recs = []
         for r in recs:
             rc = dict(r)
@@ -1001,6 +1052,7 @@ def push_unsynced_to_sheets() -> dict:
                 "invoices": invs,
                 "dropoffs": drops,
                 "pricing_rates": rates,
+                "time_punches": punches,
                 "feedback": fbs if fb_webhook_url == webhook_url else [],
             }
         ).encode("utf-8")
@@ -1023,6 +1075,8 @@ def push_unsynced_to_sheets() -> dict:
             conn.executemany("UPDATE invoices SET synced=1 WHERE id=?;", [(iv["id"],) for iv in invs])
         if drops:
             conn.executemany("UPDATE dropoffs SET synced=1 WHERE id=?;", [(d["id"],) for d in drops])
+        if punches:
+            conn.executemany("UPDATE time_punches SET synced=1 WHERE id=?;", [(p["id"],) for p in punches])
         if fbs and fb_webhook_url == webhook_url:
             conn.executemany("UPDATE crew_feedback SET synced=1 WHERE id=?;", [(f["id"],) for f in fbs])
             pushed_total += len(fbs)
@@ -1030,7 +1084,7 @@ def push_unsynced_to_sheets() -> dict:
         bump_db_version(conn)
         conn.commit()
         conn.close()
-        pushed_total += len(cals) + len(recs) + len(invs) + len(drops)
+        pushed_total += len(cals) + len(recs) + len(invs) + len(drops) + len(punches)
 
     if fb_webhook_url and fbs:
         fb_bytes = json.dumps({"action": "crew_feedback", "feedback": fbs}).encode("utf-8")
@@ -6419,20 +6473,32 @@ def update_feedback_status(fb_id: int, payload: FeedbackStatusInput):
 
 
 @app.get("/api/pdf/retest")
-def download_retest_pdf(work_date: str, customer: str = "", sheet_no: Optional[int] = None):
+def download_retest_pdf(work_date: str = "", customer: str = "", sheet_no: Optional[int] = None, by_sheet: bool = False):
     conn = get_conn()
     s_map = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings;").fetchall()}
-    sql = "SELECT * FROM cylinder_records WHERE work_date=? AND status='COMPLETED'" + (" AND customer_name=?" if customer else "") + " ORDER BY id ASC;"
-    rows = conn.execute(sql, (work_date, customer) if customer else (work_date,)).fetchall()
+    if (by_sheet or not work_date) and sheet_no:
+        sql = (
+            "SELECT * FROM cylinder_records WHERE sheet_no=? AND service_mode='HYDRO_AND_VISUAL' AND status='COMPLETED'"
+            + (" AND customer_name=?" if customer else "")
+            + " ORDER BY id ASC;"
+        )
+        rows = conn.execute(sql, (sheet_no, customer) if customer else (sheet_no,)).fetchall()
+        eff_date = rows[-1]["work_date"] if rows else (work_date or today_eastern())
+        fname = f"DOT_Form_393-001_Sheet_{sheet_no}.pdf"
+    else:
+        eff_date = work_date or today_eastern()
+        sql = "SELECT * FROM cylinder_records WHERE work_date=? AND status='COMPLETED'" + (" AND customer_name=?" if customer else "") + " ORDER BY id ASC;"
+        rows = conn.execute(sql, (eff_date, customer) if customer else (eff_date,)).fetchall()
+        fname = f"DOT_Retest_Sheet_{eff_date}.pdf"
     conn.close()
     pdf_bytes = build_retest_datasheet_pdf(
-        work_date=work_date,
+        work_date=eff_date,
         records=[dict(r) for r in rows],
         dot_rin=s_map.get("dot_rin", "B386"),
         tc_reg=s_map.get("tc_reg", ""),
         base_sheet_no=sheet_no or int(s_map.get("current_sheet_no") or s_map.get("starting_sheet_no") or 8095),
     )
-    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="DOT_Retest_Sheet_{work_date}.pdf"'})
+    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="{fname}"'})
 
 
 @app.get("/api/pdf/verification")
@@ -6540,6 +6606,304 @@ def download_invoice_pdf(inv_id: int):
     conn.close()
     pdf_bytes = build_invoice_pdf(dict(inv), items, customer_profile=dict(rolo) if rolo else None)
     return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="{inv["invoice_no"]}.pdf"'})
+
+
+
+# --- 5-YEAR DOT AUDIT FILING CABINET & 1-CLICK AUDIT PACKET (.ZIP) ---
+@app.get("/api/cabinet/index")
+def get_filing_cabinet_index(year: str = ""):
+    yr_filter = year.strip()[:4] if (year and year.strip().isdigit() and len(year.strip()) == 4) else ""
+    conn = get_conn()
+    s_map = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings;").fetchall()}
+
+    # 1. 12-Row Retest Sheets (grouped by exact sheet_no across multi-day spans!)
+    sheet_sql = """
+        SELECT sheet_no,
+               COUNT(*) AS row_count,
+               MIN(work_date) AS first_date,
+               MAX(work_date) AS last_date,
+               SUM(CASE WHEN hydro_disposition='A' THEN 1 ELSE 0 END) AS pass_count,
+               SUM(CASE WHEN hydro_disposition!='A' THEN 1 ELSE 0 END) AS condemn_count,
+               GROUP_CONCAT(DISTINCT customer_name) AS customers,
+               MIN(serial_number) AS first_sn,
+               MAX(serial_number) AS last_sn
+        FROM cylinder_records
+        WHERE service_mode='HYDRO_AND_VISUAL' AND status='COMPLETED' AND sheet_no > 0
+        GROUP BY sheet_no
+        ORDER BY sheet_no DESC;
+    """
+    all_sheets = [dict(r) for r in conn.execute(sheet_sql).fetchall()]
+    if yr_filter:
+        all_sheets = [s for s in all_sheets if str(s["last_date"] or "").startswith(yr_filter) or str(s["first_date"] or "").startswith(yr_filter)]
+    for sh in all_sheets:
+        sh["sealed"] = int(sh["row_count"] or 0) >= 12
+
+    # 2. Daily Water-Jacket Calibrations (Method B)
+    cal_sql = """
+        SELECT test_date,
+               MAX(CASE WHEN jacket_type='Short Jacket' AND passed=1 THEN target_pressure_psi ELSE 0 END) AS short_cal_psi,
+               MAX(CASE WHEN jacket_type='Tall Jacket' AND passed=1 THEN target_pressure_psi ELSE 0 END) AS tall_cal_psi,
+               MAX(calibrated_serial) AS calibrated_serial,
+               COUNT(*) AS step_count,
+               MIN(passed) AS all_passed,
+               MAX(test_time) AS last_time
+        FROM daily_verifications
+        GROUP BY test_date
+        ORDER BY test_date DESC;
+    """
+    cal_days = [dict(r) for r in conn.execute(cal_sql).fetchall()]
+    if yr_filter:
+        cal_days = [c for c in cal_days if str(c["test_date"] or "").startswith(yr_filter)]
+
+    # 3. Visual & Propane Inspection Logs by Date + Condemned Cylinder Register
+    vis_sql = """
+        SELECT work_date,
+               COUNT(*) AS total_count,
+               SUM(CASE WHEN service_mode='VISUAL_ONLY' THEN 1 ELSE 0 END) AS visual_only_count,
+               SUM(CASE WHEN gas_service='LPG' OR dot_spec LIKE '4B%' THEN 1 ELSE 0 END) AS propane_count,
+               SUM(CASE WHEN hydro_disposition='A' AND visual_pass=1 THEN 1 ELSE 0 END) AS pass_count,
+               SUM(CASE WHEN hydro_disposition!='A' OR visual_pass=0 THEN 1 ELSE 0 END) AS fail_count,
+               GROUP_CONCAT(DISTINCT customer_name) AS customers
+        FROM cylinder_records
+        WHERE status='COMPLETED'
+        GROUP BY work_date
+        ORDER BY work_date DESC;
+    """
+    vis_days = [dict(r) for r in conn.execute(vis_sql).fetchall()]
+    if yr_filter:
+        vis_days = [v for v in vis_days if str(v["work_date"] or "").startswith(yr_filter)]
+
+    condemned = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT id, work_date, sheet_no, customer_name, serial_number, dot_spec, service_psi,
+                      hydro_disposition, condemn_action, notes
+               FROM cylinder_records
+               WHERE status='COMPLETED' AND (hydro_disposition!='A' OR visual_pass=0)
+               ORDER BY work_date DESC, id DESC LIMIT 300;"""
+        ).fetchall()
+    ]
+    if yr_filter:
+        condemned = [c for c in condemned if str(c["work_date"] or "").startswith(yr_filter)]
+
+    # 4. Customer Invoices & Loading Dock BR-XXXX Tickets
+    invs = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT i.*, (SELECT COUNT(*) FROM invoice_items it WHERE it.invoice_id=i.id) AS line_count
+               FROM invoices i ORDER BY i.id DESC LIMIT 300;"""
+        ).fetchall()
+    ]
+    if yr_filter:
+        invs = [iv for iv in invs if str(iv["invoice_date"] or "").startswith(yr_filter)]
+
+    tickets = [
+        dict(r)
+        for r in conn.execute("SELECT * FROM dropoffs ORDER BY id DESC LIMIT 200;").fetchall()
+    ]
+    if yr_filter:
+        tickets = [t for t in tickets if str(t["work_date"] or "").startswith(yr_filter)]
+    for t in tickets:
+        t["ticket_no"] = f"BR-{int(t['id']):04d}"
+        digits = re.sub(r"\D", "", t.get("customer_phone") or "")
+        t["phone_last4"] = digits[-4:] if len(digits) >= 4 else ""
+
+    # 5. Worker Timecards Grouped by Month (YYYY-MM) + Recent Shifts
+    tc_months = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT SUBSTR(work_date, 1, 7) AS ym,
+                      COUNT(*) AS shift_count,
+                      COUNT(DISTINCT crew_initials) AS worker_count,
+                      COALESCE(SUM(duration_minutes), 0) AS total_minutes
+               FROM time_punches
+               WHERE status='CLOSED'
+               GROUP BY SUBSTR(work_date, 1, 7)
+               ORDER BY ym DESC;"""
+        ).fetchall()
+    ]
+    if yr_filter:
+        tc_months = [tm for tm in tc_months if str(tm["ym"] or "").startswith(yr_filter)]
+    for tm in tc_months:
+        tm["total_hours"] = round(int(tm["total_minutes"] or 0) / 60.0, 2)
+
+    recent_punches = [
+        dict(r)
+        for r in conn.execute("SELECT * FROM time_punches ORDER BY id DESC LIMIT 120;").fetchall()
+    ]
+    if yr_filter:
+        recent_punches = [p for p in recent_punches if str(p["work_date"] or "").startswith(yr_filter)]
+
+    # Available years for quick filter dropdown
+    years_rows = conn.execute(
+        """SELECT DISTINCT SUBSTR(d, 1, 4) AS yr FROM (
+               SELECT work_date AS d FROM cylinder_records
+               UNION SELECT test_date AS d FROM daily_verifications
+               UNION SELECT invoice_date AS d FROM invoices
+               UNION SELECT work_date AS d FROM time_punches
+           ) WHERE LENGTH(d) >= 4 ORDER BY yr DESC;"""
+    ).fetchall()
+    avail_years = [r["yr"] for r in years_rows if r["yr"] and r["yr"].isdigit()]
+    cur_yr = today_eastern()[:4]
+    if cur_yr not in avail_years:
+        avail_years.insert(0, cur_yr)
+
+    unsynced = conn.execute(
+        "SELECT (SELECT COUNT(*) FROM daily_verifications WHERE synced=0) + "
+        "(SELECT COUNT(*) FROM cylinder_records WHERE synced=0 AND status='COMPLETED') + "
+        "(SELECT COUNT(*) FROM invoices WHERE synced=0) + "
+        "(SELECT COUNT(*) FROM dropoffs WHERE synced=0);"
+    ).fetchone()[0]
+    conn.close()
+
+    return {
+        "selected_year": yr_filter or "ALL",
+        "available_years": avail_years,
+        "retest_sheets": all_sheets,
+        "calibration_days": cal_days,
+        "visual_days": vis_days,
+        "condemned_records": condemned,
+        "invoices": invs,
+        "tickets": tickets,
+        "timecard_months": tc_months,
+        "recent_punches": recent_punches,
+        "stats": {
+            "total_sheets": len(all_sheets),
+            "sealed_sheets": sum(1 for s in all_sheets if s["sealed"]),
+            "cal_days_count": len(cal_days),
+            "condemned_count": len(condemned),
+            "invoices_count": len(invs),
+            "tickets_count": len(tickets),
+            "unsynced_count": unsynced,
+            "has_sheets_webhook": bool((s_map.get("sheets_webhook_url") or "").strip()),
+            "master_sheet_url": (s_map.get("master_sheet_url") or "").strip(),
+        },
+    }
+
+
+@app.get("/api/cabinet/audit-pack.zip")
+def download_complete_audit_packet_zip(request: Request, year: str = ""):
+    require_owner_or_admin(request)
+    import sqlite3 as _sq3
+    import tempfile as _tmp
+    import zipfile as _zf
+
+    yr_filter = year.strip()[:4] if (year and year.strip().isdigit() and len(year.strip()) == 4) else ""
+    scope_lbl = yr_filter or "ALL_YEARS"
+    today_iso = today_eastern()
+
+    conn = get_conn()
+    s_map = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings;").fetchall()}
+    dot_rin = s_map.get("dot_rin", "B386")
+    tc_reg = s_map.get("tc_reg", "")
+    cal_sn = s_map.get("calibrated_serial", "1SF11904")
+
+    mem_zip = io.BytesIO()
+    with _zf.ZipFile(mem_zip, mode="w", compression=_zf.ZIP_DEFLATED) as zf:
+        # 1. Every Form 393-001 12-Row Retest Sheet PDF (grouped by sheet_no)
+        sheet_nums = [
+            r["sheet_no"]
+            for r in conn.execute(
+                "SELECT DISTINCT sheet_no, MAX(work_date) AS ld FROM cylinder_records WHERE service_mode='HYDRO_AND_VISUAL' AND status='COMPLETED' AND sheet_no > 0 GROUP BY sheet_no ORDER BY sheet_no ASC;"
+            ).fetchall()
+            if (not yr_filter or str(r["ld"] or "").startswith(yr_filter))
+        ]
+        for sn in sheet_nums[:500]:
+            s_rows = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM cylinder_records WHERE sheet_no=? AND service_mode='HYDRO_AND_VISUAL' AND status='COMPLETED' ORDER BY id ASC;",
+                    (sn,),
+                ).fetchall()
+            ]
+            if s_rows:
+                ld = s_rows[-1]["work_date"]
+                pdf_b = build_retest_datasheet_pdf(work_date=ld, records=s_rows, dot_rin=dot_rin, tc_reg=tc_reg, base_sheet_no=sn)
+                zf.writestr(f"01_DOT_Retest_Sheets_Form_393-001/Sheet_{sn}_{ld}.pdf", pdf_b)
+
+        # 2. Daily Water-Jacket Calibrations (Method B PDFs)
+        cal_dates = [
+            r["test_date"]
+            for r in conn.execute("SELECT DISTINCT test_date FROM daily_verifications ORDER BY test_date ASC;").fetchall()
+            if (not yr_filter or str(r["test_date"] or "").startswith(yr_filter))
+        ]
+        for cd in cal_dates[:400]:
+            v_rows = [dict(r) for r in conn.execute("SELECT * FROM daily_verifications WHERE test_date=? ORDER BY id ASC;", (cd,)).fetchall()]
+            if v_rows:
+                zf.writestr(
+                    f"02_Daily_Jacket_Verifications/Verification_{cd}.pdf",
+                    build_verification_pdf(work_date=cd, verifications=v_rows, cal_serial=cal_sn),
+                )
+
+        # 3. Daily 7-Point Visual & Propane Inspection Logs
+        vis_dates = [
+            r["work_date"]
+            for r in conn.execute("SELECT DISTINCT work_date FROM cylinder_records WHERE status='COMPLETED' ORDER BY work_date ASC;").fetchall()
+            if (not yr_filter or str(r["work_date"] or "").startswith(yr_filter))
+        ]
+        for vd in vis_dates[:400]:
+            vr = [dict(r) for r in conn.execute("SELECT * FROM cylinder_records WHERE work_date=? AND status='COMPLETED' ORDER BY id ASC;", (vd,)).fetchall()]
+            if vr:
+                zf.writestr(f"03_Visual_and_Propane_Logs/Visual_Log_{vd}.pdf", build_visual_log_pdf(work_date=vd, records=vr, dot_rin=dot_rin))
+
+        # 4. Condemned Cylinders CSV Register
+        cond_buf = io.StringIO()
+        cw = csv.writer(cond_buf)
+        cw.writerow(["Test Date", "Sheet #", "Customer", "Serial #", "DOT Spec", "Service PSI", "Disposition", "Legal Condemn Action", "Notes"])
+        for cr in conn.execute("SELECT * FROM cylinder_records WHERE status='COMPLETED' AND (hydro_disposition!='A' OR visual_pass=0) ORDER BY work_date DESC, id DESC;").fetchall():
+            if not yr_filter or str(cr["work_date"] or "").startswith(yr_filter):
+                cw.writerow([cr["work_date"], cr["sheet_no"], cr["customer_name"], cr["serial_number"], cr["dot_spec"], cr["service_psi"], cr["hydro_disposition"], cr["condemn_action"], cr["notes"]])
+        zf.writestr("04_Condemned_Cylinders_Register.csv", cond_buf.getvalue())
+
+        # 5. Customer Invoices (PDFs + Ledger CSV)
+        inv_buf = io.StringIO()
+        iw = csv.writer(inv_buf)
+        iw.writerow(["Invoice #", "Invoice Date", "Work Date", "Customer", "Phone", "Subtotal", "Tax", "Total", "Status", "Payment Method", "Paid At"])
+        invs_all = conn.execute("SELECT * FROM invoices ORDER BY id ASC;").fetchall()
+        for iv in invs_all:
+            if yr_filter and not str(iv["invoice_date"] or "").startswith(yr_filter):
+                continue
+            iw.writerow([iv["invoice_no"], iv["invoice_date"], iv["work_date"], iv["customer_name"], iv["customer_phone"], iv["subtotal"], iv["tax_amount"], iv["total_amount"], iv["status"], iv["payment_method"], iv["paid_at"]])
+            items = [dict(x) for x in conn.execute("SELECT * FROM invoice_items WHERE invoice_id=? ORDER BY id;", (iv["id"],)).fetchall()]
+            rolo = conn.execute("SELECT * FROM customers WHERE UPPER(customer_name)=UPPER(?) LIMIT 1;", (iv["customer_name"],)).fetchone()
+            zf.writestr(f"05_Customer_Invoices/{iv['invoice_no']}.pdf", build_invoice_pdf(dict(iv), items, customer_profile=dict(rolo) if rolo else None))
+        zf.writestr("05_Customer_Invoices/Invoices_Ledger.csv", inv_buf.getvalue())
+
+        # 6. Worker Timecards CSV
+        tc_buf = io.StringIO()
+        tw = csv.writer(tc_buf)
+        tw.writerow(["Date", "Worker", "Initials", "Clock In", "Clock Out", "Minutes", "Hours", "Status", "Notes"])
+        for tp in conn.execute("SELECT * FROM time_punches ORDER BY work_date DESC, id DESC;").fetchall():
+            if not yr_filter or str(tp["work_date"] or "").startswith(yr_filter):
+                mins = int(tp["duration_minutes"] or 0)
+                tw.writerow([tp["work_date"], tp["crew_name"], tp["crew_initials"], tp["clock_in_at"], tp["clock_out_at"], mins, round(mins / 60.0, 2), tp["status"], tp["notes"]])
+        zf.writestr(f"06_Worker_Timecards/Timecards_{scope_lbl}.csv", tc_buf.getvalue())
+
+        # 7. Master Cylinder CSV + Full SQLite .db Snapshot
+        mc_buf = io.StringIO()
+        mw = csv.writer(mc_buf)
+        mw.writerow(["ID", "Test Date", "Sheet #", "Customer", "Serial #", "MFG", "MFG Date", "DOT Spec", "Service PSI", "Test PSI", "Total cc", "Perm cc", "Elastic cc", "% Perm", "REE", "10-Yr Star", "Disp", "RIN Mark", "Operator", "Notes"])
+        for rec in conn.execute("SELECT * FROM cylinder_records WHERE status='COMPLETED' ORDER BY id ASC;").fetchall():
+            if not yr_filter or str(rec["work_date"] or "").startswith(yr_filter):
+                mw.writerow([rec["id"], rec["work_date"], rec["sheet_no"], rec["customer_name"], rec["serial_number"], rec["mfg_id"], rec["mfg_date"], rec["dot_spec"], rec["service_psi"], rec["test_psi"], rec["total_cc"], rec["permanent_cc"], rec["elastic_cc"], rec["percent_permanent"], rec["ree_limit"], "Yes" if rec["star_10yr"] else "No", rec["hydro_disposition"], rec["rin_mark_type"], rec["operator_initials"], rec["notes"]])
+        zf.writestr("07_Master_Database_Backup/Master_Completed_Cylinders.csv", mc_buf.getvalue())
+
+        with _tmp.NamedTemporaryFile(suffix=".db", delete=False) as tf:
+            tmp_db_p = Path(tf.name)
+        try:
+            dst = _sq3.connect(tmp_db_p)
+            conn.backup(dst)
+            dst.close()
+            zf.writestr(f"07_Master_Database_Backup/webers_hydro_backup_{today_iso}.db", tmp_db_p.read_bytes())
+        finally:
+            tmp_db_p.unlink(missing_ok=True)
+
+    conn.close()
+    return Response(
+        content=mem_zip.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="Webers_DOT_Filing_Cabinet_{scope_lbl}_{today_iso}.zip"'},
+    )
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

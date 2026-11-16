@@ -479,7 +479,7 @@ function renderStartOfDayHuddle(queued, openSched, waitingDrops) {
         return `
           <div class="rec-item job-card-clickable" onclick="openOpsJobModal(${j.id})">
             <div class="rec-main">
-              <div class="rec-title"><span>${ico}: ${escHtml(j.customer_name)} (${j.bottle_count} Cyl)</span>${j.pickup_time ? `<span class="time-window-pill">🕒 ${escHtml(j.pickup_time)}</span>` : ""}${j.drive_eta_mins ? `<span class="eta-route-pill">🚗 ~${j.drive_eta_mins}m (${j.drive_miles} mi)</span>` : ""}${j.rush_fee ? '<span class="rush-badge">🔥 RUSH</span>' : ''}</div>
+              <div class="rec-title"><span>${ico}: ${escHtml(j.customer_name)} (${j.bottle_count} Cyl)</span>${j.pickup_time ? `<span class="time-window-pill">🕒 ${escHtml(j.pickup_time)}</span>` : ""}${j.leave_by_time ? `<span class="leave-by-pill">🚦 Leave by ${escHtml(j.leave_by_time)}</span>` : ""}${j.drive_eta_mins ? `<span class="eta-route-pill">🚗 ~${j.drive_eta_mins}m (${j.drive_miles} mi)</span>` : ""}${j.rush_fee ? '<span class="rush-badge">🔥 RUSH</span>' : ''}</div>
               <div class="rec-sub">${escHtml(j.scheduled_date)}${j.location_notes ? ' • 📍 ' + escHtml(j.location_notes) : ''}${j.tank_summary ? ' • ' + escHtml(j.tank_summary) : ''}</div>
             </div>
             <div class="rec-actions" onclick="event.stopPropagation()">
@@ -2031,7 +2031,7 @@ async function refreshOpsDispatchRadar() {
             <div class="radar-card" style="cursor:pointer;" onclick="openOpsJobModal(${j.id})">
               <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;">
                 <span class="radar-badge ${b.cls}">${b.lbl}</span>
-                ${j.pickup_time ? `<span class="time-window-pill">🕒 ${escHtml(j.pickup_time)}</span>` : ""}${j.drive_eta_mins ? `<span class="eta-route-pill">🚗 ~${j.drive_eta_mins}m (${j.drive_miles} mi)</span>` : ""}<span class="mono" style="font-size:0.74rem;font-weight:800;color:${(j.scheduled_date||'') < today ? '#b91c1c' : '#0c261b'};">
+                ${j.pickup_time ? `<span class="time-window-pill">🕒 ${escHtml(j.pickup_time)}</span>` : ""}${j.leave_by_time ? `<span class="leave-by-pill">🚦 Leave by ${escHtml(j.leave_by_time)}</span>` : ""}${j.drive_eta_mins ? `<span class="eta-route-pill">🚗 ~${j.drive_eta_mins}m (${j.drive_miles} mi)</span>` : ""}<span class="mono" style="font-size:0.74rem;font-weight:800;color:${(j.scheduled_date||'') < today ? '#b91c1c' : '#0c261b'};">
                   ${(j.scheduled_date||'') < today ? '⚠️ OVERDUE ' : ''}${escHtml(j.scheduled_date || today)}
                 </span>
               </div>

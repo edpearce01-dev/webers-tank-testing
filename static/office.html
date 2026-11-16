@@ -7,14 +7,14 @@
   <link rel="manifest" href="/manifest.json" />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/ops.css?v=13.1" />
+  <link rel="stylesheet" href="/static/ops.css?v=13.2" />
   <title>Weber's Tank Testing — Office, Rolodex, Printouts &amp; Supplies | RIN B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=13.1" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
+      <img src="/static/images/logo-crest.png?v=13.2" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Office &amp; Print Center</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter your Individual PIN (Access resets daily at Midnight)</p>
       <div style="text-align:left;">
@@ -32,7 +32,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=13.1" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=13.2" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>OFFICE &amp; PRINT</h1>
           <small>RIN B386 • Billing, Rolodex &amp; Supply</small>
@@ -80,7 +80,10 @@
           <button class="rail-btn" data-tab="rolodex" onclick="switchOfficeTab('rolodex')">
             <span>📇 Customer Rolodex</span><span class="nav-badge" id="navBadgeRolo">0</span>
           </button>
-          <div class="rail-section-lbl" style="margin-top:6px;">Print &amp; Shop Stock</div>
+          <div class="rail-section-lbl" style="margin-top:6px;">Records, Audit &amp; Stock</div>
+          <button class="rail-btn" data-tab="cabinet" onclick="switchOfficeTab('cabinet')">
+            <span>🗄️ Filing Cabinet</span><span class="nav-badge green" id="navBadgeCabinet">Vault</span>
+          </button>
           <button class="rail-btn" data-tab="print" onclick="switchOfficeTab('print')">
             <span>🖨️ DOT &amp; Claim PDFs</span><span class="nav-badge green">PDF</span>
           </button>
@@ -557,8 +560,46 @@
           </div>
         </section>
 
+        <!-- 5-YEAR DOT AUDIT FILING CABINET -->
+        <section id="tab-cabinet" hidden>
+          <div class="card" style="border-top:4px solid var(--forest);">
+            <div class="card-hdr" style="align-items:flex-start;">
+              <div>
+                <h3 style="font-size:1.15rem;">🗄️ Shop Filing Cabinet &amp; 5-Year DOT Audit Vault</h3>
+                <small style="color:var(--muted);">Every completed 12-row Retest Sheet, Daily Jacket Calibration, Visual/Propane Log, Condemned Record, Invoice, Dock Ticket &amp; Timecard — saved permanently &amp; ready for inspection</small>
+              </div>
+              <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;">
+                <select id="cabYearSel" onchange="loadFilingCabinet()" style="width:auto;padding:7px 10px;font-weight:800;">
+                  <option value="">All Years</option>
+                </select>
+                <button type="button" class="primary" data-owner-only="1" style="width:auto;margin:0;padding:8px 14px;background:#0c261b;border:1.5px solid #f59e0b;color:#fef3c7;" onclick="downloadAuditZipPacket()">📦 Download Full Audit Packet (.ZIP)</button>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+              <input id="cabSearchInput" style="flex:1;min-width:240px;" placeholder="🔍 Quick-Find: Type any Sheet # (e.g. 8095), Serial #, Customer / Fire Dept, Invoice #, BR-Ticket, or Date..." oninput="renderFilingCabinetActiveDrawer()" />
+              <button type="button" class="secondary" onclick="document.getElementById('cabSearchInput').value='';renderFilingCabinetActiveDrawer()">Clear</button>
+            </div>
+
+            <div class="cabinet-drawer-tabs" id="cabDrawerTabs">
+              <button type="button" class="cab-tab active" data-cdrawer="sheets" onclick="setCabinetDrawer('sheets')">📖 1. 12-Row Retest Sheets <span class="sub-badge" id="cabCntSheets">0</span></button>
+              <button type="button" class="cab-tab" data-cdrawer="cals" onclick="setCabinetDrawer('cals')">📊 2. Daily Calibrations <span class="sub-badge" id="cabCntCals">0</span></button>
+              <button type="button" class="cab-tab" data-cdrawer="visual" onclick="setCabinetDrawer('visual')">🔍 3. Visual &amp; Condemned <span class="sub-badge" id="cabCntVis">0</span></button>
+              <button type="button" class="cab-tab" data-cdrawer="billing" onclick="setCabinetDrawer('billing')">💲 4. Invoices &amp; Dock Tickets <span class="sub-badge" id="cabCntBill">0</span></button>
+              <button type="button" class="cab-tab" data-cdrawer="timecards" onclick="setCabinetDrawer('timecards')">⏱️ 5. Timecards <span class="sub-badge" id="cabCntTc">0</span></button>
+              <button type="button" class="cab-tab" data-cdrawer="backups" onclick="setCabinetDrawer('backups')">☁️ 6. Cloud &amp; DB Backups</button>
+            </div>
+
+            <div id="cabinetDrawerBody"></div>
+          </div>
+        </section>
+
         <!-- TAB 4: DOT COMPLIANCE SHEETS, STICKERS & ZONE E CLAIM SLIPS -->
         <section id="tab-print" hidden>
+          <div class="notice" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:#ecfdf5;border:1.5px solid #6ee7b7;margin-bottom:12px;">
+            <span>🗄️ <strong>Need a completed 12-row Retest Sheet (#8095+), past Calibration, Invoice, or Audit ZIP?</strong> Everything is filed automatically by Sheet # and Year.</span>
+            <button type="button" class="primary" style="width:auto;margin:0;padding:8px 14px;" onclick="switchOfficeTab('cabinet')">🗄️ Open 5-Year Audit Filing Cabinet →</button>
+          </div>
           <div class="split-2">
             <div>
               <div class="card" style="border-top:4px solid #1e3a8a;">
@@ -583,7 +624,7 @@
                   <button class="pdf-card-btn" style="background:#92400e;" onclick="openPdf('valvetags')">🏷️ 4. Active Valve Tag Sheet<br /><small style="font-weight:500;opacity:0.85;">Shop Clipboard Match Grid</small></button>
                 </div>
                 <button class="pdf-card-btn" style="width:100%;margin-top:10px;background:#0f291e;border:2px solid var(--gold);" onclick="openPdf('poster')">
-                  🚪 5. Printable 24/7 Backroom Drop-Off &amp; Pickup QR Wall Sign (8.5×11)
+                  🚪 5. Printable 24/7 Loading Dock Drop-Off &amp; Pickup QR Wall Sign (8.5×11)
                 </button>
               </div>
 
@@ -862,6 +903,7 @@
         <span class="ico">💲</span><span>Bill</span><span class="bnav-dot" id="mobBadgeUnbilled" hidden>0</span>
       </button>
       <button class="bnav-btn" data-tab="rolodex" onclick="switchOfficeTab('rolodex')"><span class="ico">📇</span><span>Rolodex</span></button>
+      <button class="bnav-btn" data-tab="cabinet" onclick="switchOfficeTab('cabinet')"><span class="ico">🗄️</span><span>Vault</span></button>
       <button class="bnav-btn" data-tab="print" onclick="switchOfficeTab('print')"><span class="ico">🖨️</span><span>Print</span></button>
       <button class="bnav-btn" data-tab="supplies" onclick="switchOfficeTab('supplies')">
         <span class="ico">📦</span><span>Supplies</span><span class="bnav-dot" id="mobBadgeSupplies" hidden>0</span>
@@ -942,7 +984,9 @@
       if (tab === 'dispatch') setTimeout(() => document.getElementById('tdCustomer')?.focus(), 40);
       if (tab === 'timeclock') loadTimeclockOfficeTab(14);
       if (tab === 'sms') loadSmsOutboxTab();
+      if (CURRENT_TAB === 'cabinet') loadFilingCabinet();
       if (tab === 'setup') renderOperatingScheduleTab();
+      if (tab === 'cabinet') loadFilingCabinet();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -970,7 +1014,7 @@
       if (tabParam) {
         const mapLegacy = { billing: 'invoice', print: 'print', rates: 'setup', hours: 'setup', settings: 'setup' };
         const cleanTab = mapLegacy[tabParam] || tabParam;
-        if (['quick', 'dispatch', 'invoice', 'saved', 'rolodex', 'print', 'supplies', 'setup', 'timeclock', 'sms'].includes(cleanTab)) {
+        if (['quick', 'dispatch', 'invoice', 'saved', 'rolodex', 'cabinet', 'print', 'supplies', 'setup', 'timeclock', 'sms'].includes(cleanTab)) {
           switchOfficeTab(cleanTab);
         }
       }
@@ -2530,6 +2574,204 @@
       await fetch(`/api/sms-outbox/${id}/ack`, { method: 'POST' });
       setTimeout(loadSmsOutboxTab, 350);
     }
+
+    // --- 🗄️ 5-YEAR DOT AUDIT FILING CABINET ---
+    let CAB_DATA = null;
+    let CAB_DRAWER = 'sheets';
+
+    function setCabinetDrawer(d) {
+      CAB_DRAWER = d;
+      document.querySelectorAll('#cabDrawerTabs .cab-tab').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-cdrawer') === d);
+      });
+      renderFilingCabinetActiveDrawer();
+    }
+
+    function downloadAuditZipPacket() {
+      const yr = document.getElementById('cabYearSel')?.value || '';
+      window.location.href = '/api/cabinet/audit-pack.zip' + (yr ? `?year=${encodeURIComponent(yr)}` : '');
+    }
+
+    async function loadFilingCabinet() {
+      const yr = document.getElementById('cabYearSel')?.value || '';
+      const res = await fetch('/api/cabinet/index' + (yr ? `?year=${encodeURIComponent(yr)}` : ''));
+      if (!res.ok) return;
+      CAB_DATA = await res.json();
+
+      const sel = document.getElementById('cabYearSel');
+      if (sel) {
+        const cur = yr || '';
+        sel.innerHTML = '<option value="">All Years (5-Yr Vault)</option>' +
+          (CAB_DATA.available_years || []).map(y => `<option value="${escHtml(y)}" ${y === cur ? 'selected' : ''}>${escHtml(y)} Records</option>`).join('');
+      }
+      const st = CAB_DATA.stats || {};
+      const nb = document.getElementById('navBadgeCabinet');
+      if (nb) nb.textContent = st.total_sheets ? `${st.total_sheets} Sh` : 'Vault';
+      document.getElementById('cabCntSheets').textContent = String((CAB_DATA.retest_sheets || []).length);
+      document.getElementById('cabCntCals').textContent = String((CAB_DATA.calibration_days || []).length);
+      document.getElementById('cabCntVis').textContent = String((CAB_DATA.visual_days || []).length);
+      document.getElementById('cabCntBill').textContent = String((CAB_DATA.invoices || []).length + (CAB_DATA.tickets || []).length);
+      document.getElementById('cabCntTc').textContent = String((CAB_DATA.timecard_months || []).length);
+
+      renderFilingCabinetActiveDrawer();
+    }
+
+    function renderFilingCabinetActiveDrawer() {
+      const host = document.getElementById('cabinetDrawerBody');
+      if (!host || !CAB_DATA) return;
+      const q = (document.getElementById('cabSearchInput')?.value || '').trim().toLowerCase();
+      const matchQ = (...vals) => !q || vals.some(v => String(v || '').toLowerCase().includes(q));
+
+      if (CAB_DRAWER === 'sheets') {
+        const rows = (CAB_DATA.retest_sheets || []).filter(s => matchQ('sheet #' + s.sheet_no, s.sheet_no, s.customers, s.first_date, s.last_date, s.first_sn, s.last_sn));
+        host.innerHTML = rows.length ? rows.map(s => {
+          const span = s.first_date === s.last_date ? s.last_date : `${s.first_date} → ${s.last_date}`;
+          return `<div class="rec-item">
+            <div class="rec-main">
+              <div class="rec-title">
+                <span style="font-size:0.98rem;color:var(--forest);">📖 Form 393-001 • <strong>Sheet #${s.sheet_no}</strong></span>
+                <span class="${s.sealed ? 'pass' : 'sub-badge'}">${s.sealed ? '✅ Complete 12/12 Binder Sheet' : `⏳ In Progress (${s.row_count}/12 Rows)`}</span>
+                ${s.condemn_count ? `<span class="rush-badge">⛔ ${s.condemn_count} Condemned</span>` : ''}
+              </div>
+              <div class="rec-sub">
+                Dates: <strong>${escHtml(span)}</strong> • Passed: <strong>${s.pass_count}</strong> • Customers: ${escHtml(s.customers || '—')} • Serials: ${escHtml(s.first_sn)}..${escHtml(s.last_sn)}
+              </div>
+            </div>
+            <div class="rec-actions">
+              <a class="primary" style="width:auto;margin:0;padding:8px 14px;" href="/api/pdf/retest?sheet_no=${s.sheet_no}&by_sheet=true" target="_blank">📄 Open Sheet #${s.sheet_no} PDF</a>
+            </div>
+          </div>`;
+        }).join('') : '<div style="color:var(--muted);font-size:0.86rem;padding:10px 2px;">No Form 393-001 hydro retest sheets match yet — sheets file here automatically as cylinders complete on Station 3.</div>';
+        return;
+      }
+
+      if (CAB_DRAWER === 'cals') {
+        const rows = (CAB_DATA.calibration_days || []).filter(c => matchQ(c.test_date, c.calibrated_serial, c.short_cal_psi, c.tall_cal_psi));
+        host.innerHTML = rows.length ? rows.map(c => `
+          <div class="rec-item">
+            <div class="rec-main">
+              <div class="rec-title">
+                <span>📊 Daily Verification — <strong>${escHtml(c.test_date)}</strong></span>
+                <span class="${c.all_passed ? 'pass' : 'fail'}">${c.all_passed ? '✓ CERTIFIED (±1.0%)' : '⚠ CHECK LOG'}</span>
+              </div>
+              <div class="rec-sub">
+                Master Cyl: <strong>${escHtml(c.calibrated_serial)}</strong> • Short Jacket: <strong>${c.short_cal_psi ? c.short_cal_psi + ' PSI' : 'Not Run'}</strong> • Tall Jacket: <strong>${c.tall_cal_psi ? c.tall_cal_psi + ' PSI' : 'Not Run'}</strong> (${c.step_count} ladder steps • Last ${escHtml(c.last_time)})
+              </div>
+            </div>
+            <div class="rec-actions">
+              <a class="primary" style="width:auto;margin:0;padding:8px 14px;" href="/api/pdf/verification?work_date=${encodeURIComponent(c.test_date)}" target="_blank">📄 Open Calibration PDF</a>
+            </div>
+          </div>`).join('') : '<div style="color:var(--muted);font-size:0.86rem;padding:10px 2px;">No daily calibration sheets filed in this filter yet.</div>';
+        return;
+      }
+
+      if (CAB_DRAWER === 'visual') {
+        const vRows = (CAB_DATA.visual_days || []).filter(v => matchQ(v.work_date, v.customers));
+        const cRows = (CAB_DATA.condemned_records || []).filter(c => matchQ(c.work_date, c.serial_number, c.customer_name, c.dot_spec, c.condemn_action));
+        host.innerHTML = `
+          <h4 style="margin:4px 0 8px;color:var(--forest);">🔍 Daily 7-Point &amp; Propane Visual Inspection Logs</h4>
+          ${vRows.length ? vRows.map(v => `
+            <div class="rec-item">
+              <div class="rec-main">
+                <div class="rec-title">
+                  <span>🔍 Visual Inspection Log — <strong>${escHtml(v.work_date)}</strong></span>
+                  <span class="sub-badge">${v.total_count} Inspected</span>
+                  ${v.propane_count ? `<span class="sub-badge" style="background:#fef3c7;color:#92400e;">🔥 ${v.propane_count} Propane</span>` : ''}
+                  ${v.fail_count ? `<span class="rush-badge">⛔ ${v.fail_count} Condemned</span>` : ''}
+                </div>
+                <div class="rec-sub">Customers: ${escHtml(v.customers || '—')}</div>
+              </div>
+              <div class="rec-actions">
+                <a class="secondary" style="font-weight:800;" href="/api/pdf/visual?work_date=${encodeURIComponent(v.work_date)}" target="_blank">📄 Open Visual Log PDF</a>
+              </div>
+            </div>`).join('') : '<div style="color:var(--muted);font-size:0.85rem;margin-bottom:12px;">No visual logs in this filter yet.</div>'}
+
+          <h4 style="margin:16px 0 8px;color:#991b1b;">⛔ Condemned / Rejected Cylinders Register (49 CFR §180.205(i))</h4>
+          ${cRows.length ? cRows.map(c => `
+            <div class="rec-item" style="border-left:4px solid #dc2626;">
+              <div class="rec-main">
+                <div class="rec-title"><span>SN <strong>${escHtml(c.serial_number)}</strong> — ${escHtml(c.customer_name)}</span><span class="fail">Code ${escHtml(c.hydro_disposition)}</span></div>
+                <div class="rec-sub">${escHtml(c.work_date)}${c.sheet_no ? ' • Sheet #' + c.sheet_no : ''} • ${escHtml(c.dot_spec)}-${c.service_psi} • Action: <strong>${escHtml(c.condemn_action || 'Condemned')}</strong>${c.notes ? ' • ' + escHtml(c.notes) : ''}</div>
+              </div>
+            </div>`).join('') : '<div style="color:var(--muted);font-size:0.85rem;">Zero condemned cylinders recorded in this period.</div>'}`;
+        return;
+      }
+
+      if (CAB_DRAWER === 'billing') {
+        const iRows = (CAB_DATA.invoices || []).filter(i => matchQ(i.invoice_no, i.customer_name, i.invoice_date, i.work_date, i.status));
+        const tRows = (CAB_DATA.tickets || []).filter(t => matchQ(t.ticket_no, t.customer_name, t.work_date, t.service_requested));
+        host.innerHTML = `
+          <h4 style="margin:4px 0 8px;color:var(--forest);">💲 Saved Customer Invoices (${iRows.length})</h4>
+          ${iRows.length ? iRows.map(iv => `
+            <div class="rec-item">
+              <div class="rec-main">
+                <div class="rec-title"><span><strong>${escHtml(iv.invoice_no)}</strong> — ${escHtml(iv.customer_name)}</span><span class="${iv.status === 'PAID' ? 'pass' : 'dwell-badge'}">$${Number(iv.total_amount || 0).toFixed(2)} (${escHtml(iv.status)})</span></div>
+                <div class="rec-sub">Date: ${escHtml(iv.invoice_date)} • ${iv.line_count || 1} line(s)${iv.payment_method ? ' • ' + escHtml(iv.payment_method) : ''}</div>
+              </div>
+              <div class="rec-actions">
+                <a class="secondary" style="font-weight:800;" href="/api/pdf/invoice/${iv.id}" target="_blank">📄 Invoice PDF</a>
+                <a class="secondary" href="/api/pdf/claim-slip?customer=${encodeURIComponent(iv.customer_name)}&work_date=${encodeURIComponent(iv.work_date)}" target="_blank">🏷️ Claim Slip</a>
+              </div>
+            </div>`).join('') : '<div style="color:var(--muted);font-size:0.85rem;margin-bottom:12px;">No invoices in this filter yet.</div>'}
+
+          <h4 style="margin:16px 0 8px;color:var(--forest);">📥 24/7 Loading Dock &amp; Truck Tickets (${tRows.length})</h4>
+          ${tRows.length ? tRows.slice(0, 60).map(t => `
+            <div class="rec-item">
+              <div class="rec-main">
+                <div class="rec-title"><span><strong>${escHtml(t.ticket_no)}</strong> — ${escHtml(t.customer_name)} (${t.bottle_count} Cyl)</span><span class="sub-badge">${escHtml(t.entry_type)}</span></div>
+                <div class="rec-sub">${escHtml(t.created_at)} • ${escHtml(t.service_requested || '')}${t.tank_summary ? ' • ' + escHtml(t.tank_summary) : ''}</div>
+              </div>
+              <div class="rec-actions">
+                <a class="secondary" href="/api/public/receipt/${encodeURIComponent(t.ticket_no)}.pdf?p=${encodeURIComponent(t.phone_last4)}" target="_blank">📄 Ticket PDF</a>
+              </div>
+            </div>`).join('') : '<div style="color:var(--muted);font-size:0.85rem;">No Loading Dock tickets logged in this filter yet.</div>'}`;
+        return;
+      }
+
+      if (CAB_DRAWER === 'timecards') {
+        const mRows = CAB_DATA.timecard_months || [];
+        const pRows = (CAB_DATA.recent_punches || []).filter(p => matchQ(p.work_date, p.crew_name, p.crew_initials, p.notes));
+        host.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+            <h4 style="margin:0;color:var(--forest);">⏱️ Monthly Payroll Summaries</h4>
+            <a class="secondary" data-owner-only="1" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7;font-weight:800;" href="/api/timeclock/export.csv?days=365">📥 Download Full-Year Payroll CSV</a>
+          </div>
+          <div class="huddle-kpis" style="margin-bottom:14px;">
+            ${mRows.length ? mRows.map(m => `<div class="huddle-kpi"><small>${escHtml(m.ym)} (${m.worker_count} Crew)</small><strong>${m.total_hours} hrs (${m.shift_count} shifts)</strong></div>`).join('') : '<div style="color:var(--muted);font-size:0.84rem;">No completed shifts recorded yet.</div>'}
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Worker</th><th>In</th><th>Out</th><th>Hours</th><th>Note</th></tr></thead>
+              <tbody>
+                ${pRows.length ? pRows.map(p => `<tr><td><strong>${escHtml(p.work_date)}</strong></td><td>${escHtml(p.crew_name)}</td><td>${escHtml(p.clock_in_at)}</td><td>${p.status === 'OPEN' ? '<span class="pass">ACTIVE</span>' : escHtml(p.clock_out_at)}</td><td><strong>${p.status === 'OPEN' ? 'Running' : (Number(p.duration_minutes || 0) / 60).toFixed(2) + ' hr'}</strong></td><td><small>${escHtml(p.notes || '')}</small></td></tr>`).join('') : '<tr><td colspan="6">No punches in filter.</td></tr>'}
+              </tbody>
+            </table>
+          </div>`;
+        return;
+      }
+
+      const st = CAB_DATA.stats || {};
+      host.innerHTML = `
+        <div class="split-2">
+          <div class="card" style="margin:0;border-left:4px solid #10b981;">
+            <h4 style="margin:0 0 6px;">📦 1-Click Inspector / Accountant Audit Packet</h4>
+            <p style="font-size:0.84rem;color:var(--muted);margin:0 0 12px;">Downloads one organized <code>.ZIP</code> file containing every 12-row Form 393-001 PDF, Daily Calibration PDF, Visual Log PDF, Condemned Register CSV, Invoice PDF, Timecard CSV, and full SQLite database backup.</p>
+            <button type="button" class="primary" style="margin:0;" onclick="downloadAuditZipPacket()">📦 Download Audit Packet (.ZIP)</button>
+          </div>
+          <div class="card" style="margin:0;border-left:4px solid #2563eb;">
+            <h4 style="margin:0 0 6px;">☁️ Live Redundant Storage Status</h4>
+            <p style="font-size:0.84rem;color:var(--muted);margin:0 0 12px;">
+              <strong>Render Persistent Disk:</strong> Active (${st.total_sheets || 0} Retest Sheets, ${st.cal_days_count || 0} Cal Days)<br/>
+              <strong>Google Sheets Cloud Sync:</strong> ${st.has_sheets_webhook ? (st.unsynced_count ? `${st.unsynced_count} row(s) queued` : '✅ 100% Synced') : 'Webhook not pasted in Shop Setup yet'}
+            </p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <a class="secondary" style="font-weight:800;" href="/api/admin/backup-db">💾 Download Raw .db Backup</a>
+              ${st.master_sheet_url ? `<a class="secondary" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7;font-weight:800;" href="${escHtml(st.master_sheet_url)}" target="_blank">📊 Open Master Google Sheet ↗</a>` : ''}
+            </div>
+          </div>
+        </div>`;
+    }
+
     // --- TAB 6: MASTER SERVICE RATES ---
     function renderRateScheduleTable() {
       document.getElementById('pricingList').innerHTML = EDITABLE_RATES.map((p, i) => `
@@ -2593,8 +2835,8 @@
 
     bootOffice();
   </script>
-  <script src="/static/day-flow.js?v=13.1"></script>
-  <script src="/static/theme-engine.js?v=13.1"></script>
-  <script src="/static/help-bot.js?v=13.1"></script>
+  <script src="/static/day-flow.js?v=13.2"></script>
+  <script src="/static/theme-engine.js?v=13.2"></script>
+  <script src="/static/help-bot.js?v=13.2"></script>
 </body>
 </html>

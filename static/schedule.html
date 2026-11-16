@@ -7,14 +7,14 @@
   <link rel="manifest" href="/manifest.json" />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/ops.css?v=13.1" />
+  <link rel="stylesheet" href="/static/ops.css?v=13.2" />
   <title>Weber's Tank Testing — Month Schedule &amp; Dispatch | DOT B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=13.1" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
+      <img src="/static/images/logo-crest.png?v=13.2" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Schedule &amp; Dispatch</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter your Individual PIN (Access resets daily at Midnight)</p>
       <div style="text-align:left;">
@@ -32,7 +32,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=13.1" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=13.2" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>WALL SCHEDULE</h1>
           <small>RIN B386 • Calendar &amp; Dispatch</small>
@@ -714,7 +714,7 @@
               <span style="font-size:0.96rem;color:var(--forest);">${escHtml(j.customer_name)} — <strong>${j.bottle_count} Cyl</strong></span>
               <span class="sub-badge" style="background:${leg === 'RETURN' ? '#dbeafe;color:#1e40af' : '#fef3c7;color:#92400e'};">${typeBadge}</span>
               ${(j.rush_fee || j.priority === 'RUSH') ? '<span class="rush-badge">🔥 RUSH</span>' : ''}
-              ${activeTime ? `<span class="time-window-pill">🕒 ${escHtml(activeTime)}</span>` : ''}
+              ${activeTime ? `<span class="time-window-pill">🕒 ${escHtml(activeTime)}</span>` : ''}${j.leave_by_time ? `<span class="leave-by-pill">🚦 Leave Shop by ${escHtml(j.leave_by_time)}</span>` : ''}
               ${j.job_type !== 'SHOP_BATCH' ? etaBadgeHtml(j) : ''}
               ${isPrepped ? '<span class="stage-chip ready">✓ Prepped</span>' : ''}
             </div>
@@ -780,7 +780,7 @@
         rb.hidden = false;
         rb.innerHTML = `<strong>🛣️ Pre-Planned Route from 3086 Legionville Rd, Baden:</strong> ` +
           (j.drive_eta_mins
-            ? `<strong>~${j.drive_eta_mins} mins one-way</strong> (${j.drive_miles} miles) • Round-trip drive time: ~${j.drive_eta_mins * 2} mins.`
+            ? `<strong>~${j.drive_eta_mins} mins one-way</strong> (${j.drive_miles} miles)${j.leave_by_time ? ` • 🚦 <strong>Leave Baden Shop by ${escHtml(j.leave_by_time)}</strong>` : ''} • Round-trip drive: ~${j.drive_eta_mins * 2} mins.`
             : `Click <strong>Navigate from Shop</strong> above to open live turn-by-turn route to <strong>${escHtml(pickupAddr)}</strong>.`);
       } else {
         rb.hidden = true;
@@ -1186,8 +1186,8 @@
     };
     setTimeout(() => window.syncBookingAddressVisibility && window.syncBookingAddressVisibility(), 80);
   </script>
-  <script src="/static/day-flow.js?v=13.1"></script>
-  <script src="/static/theme-engine.js?v=13.1"></script>
-  <script src="/static/help-bot.js?v=13.1"></script>
+  <script src="/static/day-flow.js?v=13.2"></script>
+  <script src="/static/theme-engine.js?v=13.2"></script>
+  <script src="/static/help-bot.js?v=13.2"></script>
 </body>
 </html>

@@ -1289,3 +1289,28 @@ html, body {
 @media (max-width: 640px) {
   .hours-day-row { grid-template-columns: 1fr 1fr; }
 }
+
+/* v13.2 Filing Cabinet & Topbar Cleanliness */
+.top-controls button[onclick*="HolidayTheme"],
+.top-controls .theme-top-pill,
+#webersThemeTopBtn { display: none !important; }
+.cabinet-drawer-tabs {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  padding: 7px; background: #f1f5f9; border: 1px solid var(--border-soft);
+  border-radius: 11px; margin-bottom: 12px;
+}
+.cab-tab {
+  padding: 8px 13px; border-radius: 8px; border: 1px solid transparent;
+  background: transparent; font-weight: 800; font-size: 0.81rem;
+  color: #475569; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+}
+.cab-tab.active {
+  background: var(--forest); color: #fef3c7; border-color: var(--forest);
+  box-shadow: 0 2px 8px rgba(12, 38, 27, 0.16);
+}
+.leave-by-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 999px;
+  background: #dcfce7; border: 1px solid #86efac; color: #166534;
+  font-family: var(--font-mono); font-size: 0.71rem; font-weight: 800;
+}

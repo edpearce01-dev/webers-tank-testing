@@ -111,7 +111,7 @@
       btn = document.createElement('button');
       btn.id = 'opsThemeToggleBtn'; btn.type = 'button'; btn.className = 'menu-pill';
       btn.onclick = () => { localStorage.setItem(MUTE_KEY, localStorage.getItem(MUTE_KEY) === '1' ? '0' : '1'); renderOps(); };
-      topCtrls.prepend(btn);
+      /* Topbar theme pill hidden in v13.2 — accessible via Shop Setup & Account Drawer */
     }
     if (btn) {
       btn.textContent = muted ? `${THEME.icon} Off` : `${THEME.icon} Lights`;
