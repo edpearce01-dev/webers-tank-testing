@@ -1455,10 +1455,10 @@ def serve_manifest():
             "background_color": "#fdf8ee",
             "theme_color": "#0c261b",
             "icons": [
-                {"src": f"/pwa-icon.png?size=192&mode=any&v=11&theme={t_tag}", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-                {"src": f"/pwa-icon.png?size=512&mode=any&v=11&theme={t_tag}", "sizes": "512x512", "type": "image/png", "purpose": "any"},
-                {"src": f"/pwa-icon.png?size=192&mode=maskable&v=11&theme={t_tag}", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
-                {"src": f"/pwa-icon.png?size=512&mode=maskable&v=11&theme={t_tag}", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+                {"src": f"/pwa-icon.png?size=192&mode=any&v=12.1&theme={t_tag}", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+                {"src": f"/pwa-icon.png?size=512&mode=any&v=12.1&theme={t_tag}", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+                {"src": f"/pwa-icon.png?size=192&mode=maskable&v=12.1&theme={t_tag}", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+                {"src": f"/pwa-icon.png?size=512&mode=maskable&v=12.1&theme={t_tag}", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
             ],
         },
         headers=NO_CACHE_HEADERS,
@@ -5096,10 +5096,10 @@ _PWA_ICON_CACHE: dict[tuple, bytes] = {}
 
 
 def _build_dynamic_pwa_icon_png(theme: dict, size: int = 512, maskable: bool = False) -> bytes:
-    """Composites Warm Cream + Active Holiday Wreath + Dogs-Free Crest Backplate + Shop Dogs into PNG icon."""
+    """Composites Warm Cream + Active Holiday Wreath + Original Circular Crest + Shop Dogs Out in Front."""
     t_key = theme.get("key", "NONE") if (theme.get("active") and (theme.get("enable_public") or theme.get("enable_ops"))) else "NONE"
     dog_file = theme.get("dog_image", "dogs-classic.png") if t_key != "NONE" else "dogs-classic.png"
-    cache_key = ("v11_5", t_key, dog_file, size, maskable)
+    cache_key = ("v12_1", t_key, dog_file, size, maskable)
     if cache_key in _PWA_ICON_CACHE:
         return _PWA_ICON_CACHE[cache_key]
 
@@ -5115,18 +5115,17 @@ def _build_dynamic_pwa_icon_png(theme: dict, size: int = 512, maskable: bool = F
     if maskable:
         draw.rectangle((0, 0, S, S), fill=(245, 233, 206, 255))
         draw.ellipse((20, 16, S - 20, S - 16), fill=(253, 248, 238, 255))
-        crest_d, crest_cy = 276, 212
-        dogs_max_w, dogs_max_h, dogs_bottom_y = 152, 100, 316
+        crest_d, crest_cy = 276, 204
+        dogs_max_w, dogs_max_h, dogs_bottom_y = 374, 202, 456
     else:
         draw.rounded_rectangle((6, 6, S - 7, S - 7), radius=104, fill=(12, 38, 27, 255))
         draw.rounded_rectangle((16, 16, S - 17, S - 17), radius=94, fill=(217, 155, 38, 255))
         draw.rounded_rectangle((24, 24, S - 25, S - 25), radius=86, fill=(253, 248, 238, 255))
-        crest_d, crest_cy = 324, 210
-        dogs_max_w, dogs_max_h, dogs_bottom_y = 178, 116, 332
+        crest_d, crest_cy = 316, 202
+        dogs_max_w, dogs_max_h, dogs_bottom_y = 440, 236, 488
 
     img_dir = STATIC_DIR / "images"
 
-    # Plane 1: Holiday Botanical Wreath Arch
     if t_key != "NONE":
         arch_map = {"THANKSGIVING": "arch-thanksgiving.png", "HALLOWEEN": "arch-thanksgiving.png", "CHRISTMAS": "arch-christmas.png", "NEW_YEAR": "arch-newyear.png"}
         arch_p = img_dir / arch_map.get(t_key, "arch-thanksgiving.png")
@@ -5136,20 +5135,16 @@ def _build_dynamic_pwa_icon_png(theme: dict, size: int = 512, maskable: bool = F
                 a_rgba = a_im.convert("RGBA").resize((arch_d, arch_d), Image.Resampling.LANCZOS)
                 canvas_im.alpha_composite(a_rgba, ((S - arch_d) // 2, crest_cy - arch_d // 2))
 
-    # Plane 2: Sculpted Dogs-Free Heritage Crest Backplate (Never Double-Renders Dogs!)
-    backplate_p = img_dir / "crest-backplate.png"
-    fallback_p = img_dir / "logo-crest.png"
-    chosen_crest = backplate_p if backplate_p.exists() else fallback_p
-    if chosen_crest.exists():
-        with Image.open(chosen_crest) as c_im:
+    crest_p = img_dir / "logo-crest.png"
+    if crest_p.exists():
+        with Image.open(crest_p) as c_im:
             c_rgba = c_im.convert("RGBA").resize((crest_d, crest_d), Image.Resampling.LANCZOS)
             canvas_im.alpha_composite(c_rgba, ((S - crest_d) // 2, crest_cy - crest_d // 2))
 
-    # Plane 3: Foreground Shop Dogs (Holiday Outfit OR Year-Round Leather Collars)
     stem = dog_file.rsplit(".", 1)[0]
     dog_candidates = [img_dir / f"{stem}.png", img_dir / dog_file, img_dir / "dogs-classic.png", img_dir / "dogs-thanksgiving.png"]
     chosen_dog = next((p for p in dog_candidates if p.exists()), None)
-    if chosen_dog and chosen_crest == backplate_p:
+    if chosen_dog:
         with Image.open(chosen_dog) as d_im:
             d_rgba = d_im.convert("RGBA")
             d_rgba.thumbnail((dogs_max_w, dogs_max_h), Image.Resampling.LANCZOS)

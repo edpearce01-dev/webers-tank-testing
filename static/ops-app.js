@@ -262,12 +262,8 @@ function updateCalCollapseUI() {
 }
 
 async function eraseAllTestData() {
-  if (!confirm('ERASE ALL PRACTICE / TEST DATA?
-
-Wipes practice calibrations, cylinders, drop-offs, schedule jobs, tasks, and invoices while keeping API keys, supplies, crew, and service rates intact.')) return;
-  const wipeCusts = confirm('Also clear current Customer Rolodex profiles (e.g. practice test accounts)?
-
-Click OK to clear Rolodex too, or Cancel to KEEP saved Customer Rolodex profiles.');
+  if (!confirm('ERASE ALL PRACTICE / TEST DATA?\n\nWipes practice calibrations, cylinders, drop-offs, schedule jobs, tasks, and invoices while keeping API keys, supplies, crew, and service rates intact.')) return;
+  const wipeCusts = confirm('Also clear current Customer Rolodex profiles (e.g. practice test accounts)?\n\nClick OK to clear Rolodex too, or Cancel to KEEP saved Customer Rolodex profiles.');
   const res = await fetch('/api/admin/wipe-test-data?wipe_customers=' + wipeCusts, { method: 'POST' });
   const data = await res.json();
   if (!res.ok) { alert(data.detail || 'Wipe failed.'); return; }
