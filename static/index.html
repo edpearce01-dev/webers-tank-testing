@@ -8,14 +8,15 @@
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   
-  <link rel="stylesheet" href="/static/ops.css?v=14.0" />
+  <link rel="stylesheet" href="/static/ops.css?v=15.0" />
+  <link rel="stylesheet" href="/static/css/modern-ui.css?v=15.0" />
   <title>Weber's Tank Testing — Shop Floor Ops | DOT B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=14.0" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
+      <img src="/static/images/logo-crest.png?v=15.0" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Tank Testing</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">
         Shop Floor Operations Workspace<br />
@@ -55,10 +56,10 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=14.0" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=15.0" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
-          <h1>WEBER'S OPS</h1>
-          <small>RIN B386 • Sign-Off: RP</small>
+          <h1>Shop Floor</h1>
+          <small>DOT RIN B386</small>
         </div>
       </a>
 
@@ -115,9 +116,9 @@
 
       <!-- MAIN SHOP FLOOR WORKSPACE -->
       <main class="ops-workspace">
-        <div id="opsDispatchRadar" class="ops-dispatch-radar calm" hidden></div>
         <div id="complianceAlertBanner" hidden></div>
-        <div id="lowSupplyAlertBanner" hidden></div>
+        <div id="opsDispatchRadar" style="display:none!important;" hidden></div>
+        <div id="lowSupplyAlertBanner" style="display:none!important;" hidden></div>
 
         <!-- STATION 1: START-OF-DAY BINDER HUDDLE & MORNING CALIBRATION -->
         <section id="tab-cal">
@@ -137,9 +138,8 @@
                   <div style="font-size:0.8rem;color:#cbd5e1;margin-top:2px;" id="binderLastNote">Sheet numbers assign automatically in exact test completion order.</div>
                 </div>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-                  <button class="secondary" data-owner-only="1" style="background:#fde68a;color:#111827;border:none;" onclick="advanceToFreshSheet()">📄 Start Fresh Next Sheet</button>
-                  <input type="number" data-owner-only="1" id="customBinderInput" placeholder="Sheet #" style="width:90px;padding:6px 8px;font-size:0.82rem;font-weight:800;" />
-                  <button class="secondary" data-owner-only="1" onclick="setCustomBinderSheet()">Set #</button>
+                  <button class="secondary" data-owner-only="1" onclick="advanceToFreshSheet()">New Retest Sheet</button>
+                  <input type="hidden" id="customBinderInput" />
                 </div>
               </div>
               <div class="sheet-slots" id="binderSlotsGrid"></div>
@@ -148,8 +148,6 @@
             <div class="huddle-kpis" id="huddleKpiRow"></div>
             <div id="huddleLineupList"></div>
           </div>
-
-          <div class="card" id="liveShopFloorMap"></div>
 
           <div id="calCollapsedBanner" class="card" style="background:#f0fdf4;border:2px solid #86efac;" hidden>
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
@@ -447,7 +445,7 @@
               <h3>Post-Test Finish: Drying Rack → Stamp/Sticker → Revalve → Loading Dock</h3>
               <div style="display:flex;gap:6px;align-items:center;">
                 <span class="sub-badge" id="finishCountBadge">0 In Post-Test</span>
-                <a class="secondary" href="/office?tab=print">🖨️ Print Stickers →</a>
+                <a class="secondary" href="/print">🖨️ Print Stickers →</a>
                 <a class="secondary" href="/office?tab=invoice">💲 Bill →</a>
               </div>
             </div>
@@ -473,6 +471,7 @@
 
         <!-- STATION 5: MASTER CYLINDER LOOKUP & HISTORY -->
         <section id="tab-search" hidden>
+          <div class="card" id="liveShopFloorMap"></div>
           <div class="card">
             <div class="card-hdr">
               <h3>Master Cylinder Lookup &amp; Serial History</h3>
@@ -497,18 +496,18 @@
 
     <!-- PHONE FIXED BOTTOM TAB BAR -->
     <nav class="bottom-nav">
-      <button class="bnav-btn active" data-tab="cal" onclick="jumpToTab('cal')"><span class="ico">☀️</span><span>1. Start</span></button>
+      <button class="bnav-btn active" data-tab="cal" onclick="jumpToTab('cal')"><span class="ico">01</span><span>Calibrate</span></button>
       <button class="bnav-btn" data-tab="intake" onclick="jumpToTab('intake')">
-        <span class="ico">📷</span><span>2. Prep</span><span class="bnav-dot" id="mobBadgeIntake" hidden>0</span>
+        <span class="ico">02</span><span>Scan</span><span class="bnav-dot" id="mobBadgeIntake" hidden>0</span>
       </button>
       <button class="bnav-btn" data-tab="bench" onclick="jumpToTab('bench')">
-        <span class="ico">💧</span><span>3. Stand</span><span class="bnav-dot" id="mobBadgeBench" hidden>0</span>
+        <span class="ico">03</span><span>Stand</span><span class="bnav-dot" id="mobBadgeBench" hidden>0</span>
       </button>
       <button class="bnav-btn" data-tab="logs" onclick="jumpToTab('logs')">
-        <span class="ico">🔨</span><span>4. Finish</span><span class="bnav-dot" id="mobBadgeValves" hidden>0</span>
+        <span class="ico">04</span><span>Finish</span><span class="bnav-dot" id="mobBadgeValves" hidden>0</span>
       </button>
       <button class="bnav-btn" data-tab="search" onclick="jumpToTab('search')">
-        <span class="ico">🔍</span><span>5. Lookup</span>
+        <span class="ico">05</span><span>Lookup</span>
       </button>
     </nav>
   </div>
@@ -749,12 +748,13 @@
     </div>
   </div>
 
-  <script src="/static/ops-camera.js?v=14.0"></script>
-  <script src="/static/js/ops-core-cal.js?v=14.0"></script>
-  <script src="/static/js/ops-intake-stand.js?v=14.0"></script>
-  <script src="/static/js/ops-finish-radar.js?v=14.0"></script>
-  <script src="/static/day-flow.js?v=14.0"></script>
-  <script src="/static/theme-engine.js?v=14.0"></script>
-  <script src="/static/help-bot.js?v=14.0"></script>
+  <script src="/static/ops-camera.js?v=15.0"></script>
+  <script src="/static/js/ops-core-cal.js?v=15.0"></script>
+  <script src="/static/js/ops-intake-stand.js?v=15.0"></script>
+  <script src="/static/js/ops-finish-radar.js?v=15.0"></script>
+  <script src="/static/day-flow.js?v=15.0"></script>
+  <script src="/static/theme-engine.js?v=15.0"></script>
+  <script src="/static/js/app-switcher.js?v=15.0"></script>
+  <script src="/static/help-bot.js?v=15.0"></script>
 </body>
 </html>

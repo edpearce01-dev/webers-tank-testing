@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#f4f6f9" />
+  <link rel="manifest" href="/manifest.json" />
+  <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
+  <link rel="stylesheet" href="/static/ops.css?v=15.0" />
+  <link rel="stylesheet" href="/static/css/modern-ui.css?v=15.0" />
+  <title>Weber's Tank Testing — Print &amp; Audit Vault | DOT B386</title>
+</head>
+<body data-workspace="print">
+  <div id="loginScreen" class="login-wrap" hidden>
+    <div class="login-card">
+      <img src="/static/images/logo-crest.png?v=15.0" alt="Weber's" onerror="this.src='/icon.svg'" style="width:88px;height:88px;margin-bottom:8px;object-fit:contain;" />
+      <h2 style="margin:4px 0;">Print &amp; Audit Vault</h2>
+      <p style="margin:0 0 18px;color:var(--ui-muted);font-size:0.88rem;">Enter your Individual PIN</p>
+      <div style="text-align:left;"><label>Access PIN</label><input type="password" inputmode="numeric" id="loginPinInput" placeholder="••••" onkeydown="if(event.key==='Enter')submitLoginPin()" style="text-align:center;font-size:1.35rem;letter-spacing:6px;font-weight:800;" /></div>
+      <div id="loginError" class="notice bad" style="margin-top:12px;" hidden>Incorrect PIN.</div>
+      <button class="primary" onclick="submitLoginPin()">Unlock Print &amp; Vault</button>
+    </div>
+  </div>
+
+  <div id="appShell" hidden>
+    <header class="app-topbar">
+      <a href="/print" class="top-brand">
+        <img src="/static/images/logo-crest.png?v=15.0" alt="B386" onerror="this.src='/icon.svg'" />
+        <div class="top-brand-txt">
+          <h1>Print &amp; Audit Vault</h1>
+          <small>5-Year DOT Records, Stickers &amp; PDFs</small>
+        </div>
+      </a>
+      <div class="top-controls">
+        <button type="button" class="menu-pill" onclick="document.querySelector('.help-fab')?.click()">? Help</button>
+        <div class="date-stepper">
+          <button type="button" class="step-btn" onclick="stepPrintDate(-1)">◀</button>
+          <button type="button" class="today-btn" onclick="jumpPrintToday()">Today</button>
+          <input type="date" id="globalDate" class="top-date" onchange="changePrintDate()" />
+          <button type="button" class="step-btn" onclick="stepPrintDate(1)">▶</button>
+        </div>
+        <button class="menu-pill" id="syncBtnTop" onclick="triggerManualSync()">Sync</button>
+      </div>
+    </header>
+
+    <div class="ops-layout">
+      <aside class="side-rail">
+        <div class="rail-nav">
+          <div class="rail-section-lbl">Compliance &amp; Labels</div>
+          <button class="rail-btn active" data-tab="cabinet" onclick="switchPrintTab('cabinet')">
+            <span>5-Year Filing Cabinet</span><span class="nav-badge green" id="navBadgeCabinet">Vault</span>
+          </button>
+          <button class="rail-btn" data-tab="print" onclick="switchPrintTab('print')">
+            <span>Stickers, Signs &amp; PDFs</span><span class="nav-badge">Print</span>
+          </button>
+        </div>
+        <div class="rail-footer">
+          <a class="secondary" id="railMasterSheetBtn" href="https://drive.google.com" target="_blank" rel="noopener" style="width:100%;">Open Master Sheet ↗</a>
+          <a class="secondary" data-owner-only="1" href="/api/cabinet/audit-pack.zip" style="width:100%;">Download Audit .ZIP</a>
+        </div>
+      </aside>
+
+      <main class="ops-workspace">
+        <section id="tab-cabinet">
+          <div class="card" style="border-top:4px solid var(--forest);">
+            <div class="card-hdr" style="align-items:flex-start;">
+              <div>
+                <h3 style="font-size:1.15rem;">🗄️ Shop Filing Cabinet &amp; 5-Year DOT Audit Vault</h3>
+                <small style="color:var(--muted);">Every completed 12-row Retest Sheet, Daily Jacket Calibration, Visual/Propane Log, Condemned Record, Invoice, Dock Ticket &amp; Timecard — saved permanently &amp; ready for inspection</small>
+              </div>
+              <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;">
+                <select id="cabYearSel" onchange="loadFilingCabinet()" style="width:auto;padding:7px 10px;font-weight:800;">
+                  <option value="">All Years</option>
+                </select>
+                <button type="button" class="primary" data-owner-only="1" style="width:auto;margin:0;padding:8px 14px;background:#0c261b;border:1.5px solid #f59e0b;color:#fef3c7;" onclick="downloadAuditZipPacket()">📦 Download Full Audit Packet (.ZIP)</button>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+              <input id="cabSearchInput" style="flex:1;min-width:240px;" placeholder="🔍 Quick-Find: Type any Sheet # (e.g. 8095), Serial #, Customer / Fire Dept, Invoice #, BR-Ticket, or Date..." oninput="renderFilingCabinetActiveDrawer()" />
+              <button type="button" class="secondary" onclick="document.getElementById('cabSearchInput').value='';renderFilingCabinetActiveDrawer()">Clear</button>
+            </div>
+
+            <div class="cabinet-drawer-tabs" id="cabDrawerTabs">
+              <button type="button" class="cab-tab active" data-cdrawer="sheets" onclick="setCabinetDrawer('sheets')">📖 1. 12-Row Retest Sheets <span class="sub-badge" id="cabCntSheets">0</span></button>
+              <button type="button" class="cab-tab" data-cdrawer="cals" onclick="setCabinetDrawer('cals')">📊 2. Daily Calibrations <span class="sub-badge" id="cabCntCals">0</span></button>
+              <button type="button" class="cab-tab" data-cdrawer="visual" onclick="setCabinetDrawer('visual')">🔍 3. Visual &amp; Condemned <span class="sub-badge" id="cabCntVis">0</span></button>
+              <button type="button" class="cab-tab" data-cdrawer="billing" onclick="setCabinetDrawer('billing')">💲 4. Invoices &amp; Dock Tickets <span class="sub-badge" id="cabCntBill">0</span></button>
+              <button type="button" class="cab-tab" data-cdrawer="timecards" onclick="setCabinetDrawer('timecards')">⏱️ 5. Timecards <span class="sub-badge" id="cabCntTc">0</span></button>
+              <button type="button" class="cab-tab" data-cdrawer="backups" onclick="setCabinetDrawer('backups')">☁️ 6. Cloud &amp; DB Backups</button>
+            </div>
+
+            <div id="cabinetDrawerBody"></div>
+          </div>
+        </section>
+        <section id="tab-print" hidden>
+          <div class="split-2">
+            <div>
+              <div class="card" style="border-top:4px solid #1e3a8a;">
+                <div class="card-hdr">
+                  <h3>🖨️ Official DOT Compliance Sheets (<span id="pdfDateLabel">Selected Date</span>)</h3>
+                  <span class="sub-badge">Signed Off: Ryan Pearce (RP)</span>
+                </div>
+                <div class="grid" style="margin-bottom:12px;">
+                  <div>
+                    <label>Filter Customer (Optional)</label>
+                    <select id="pdfCustomerFilter"></select>
+                  </div>
+                  <div>
+                    <label>Retest Sheet # Override</label>
+                    <input type="number" id="pdfSheetNo" value="8095" />
+                  </div>
+                </div>
+                <div class="grid-2">
+                  <button class="pdf-card-btn" onclick="openPdf('retest')">📄 1. DOT Retest Data Sheet<br /><small style="font-weight:500;opacity:0.85;">12-Row Landscape Form 393-001</small></button>
+                  <button class="pdf-card-btn" onclick="openPdf('verification')">📊 2. Daily Verification Sheet<br /><small style="font-weight:500;opacity:0.85;">Method B Calibration Ladder (±1.0%)</small></button>
+                  <button class="pdf-card-btn" onclick="openPdf('visual')">🔍 3. 7-Point Visual Log<br /><small style="font-weight:500;opacity:0.85;">CGA External / Internal Inspection</small></button>
+                  <button class="pdf-card-btn" style="background:#92400e;" onclick="openPdf('valvetags')">🏷️ 4. Active Valve Tag Sheet<br /><small style="font-weight:500;opacity:0.85;">Shop Clipboard Match Grid</small></button>
+                </div>
+                <button class="pdf-card-btn" style="width:100%;margin-top:10px;background:#0f291e;border:2px solid var(--gold);" onclick="openPdf('poster')">
+                  🚪 5. Printable 24/7 Loading Dock Drop-Off &amp; Pickup QR Wall Sign (8.5×11)
+                </button>
+              </div>
+
+              <div class="card" style="border-left:4px solid #10b981;">
+                <div class="card-hdr">
+                  <h3>🏷️ Loading Dock Pickup Slip</h3>
+                  <span class="sub-badge">Tape to Lead Tank</span>
+                </div>
+                <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
+                  <div style="flex:1;min-width:180px;">
+                    <label>Select Customer Batch</label>
+                    <select id="claimSlipCustomerSel"></select>
+                  </div>
+                  <button class="primary" style="width:auto;margin:0;padding:10px 16px;" onclick="printClaimSlipFromTab()">🖨️ Open Claim Slip PDF</button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="card" style="border-top:4px solid #7c3aed;">
+                <div class="card-hdr">
+                  <h3>🏷️ Monthly &amp; Custom B386 Retest Stickers</h3>
+                  <span class="sub-badge">49 CFR §180.213 • Avery 5160</span>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+                  <button class="secondary" style="flex:1;padding:10px;background:#ede9fe;color:#5b21b6;border-color:#c4b5fd;" onclick="preprintFullSheet(false)">🖨️ Full Sheet: 30 Standard SCBA</button>
+                  <button class="secondary" style="flex:1;padding:10px;background:#fef3c7;color:#92400e;border-color:#fcd34d;" onclick="preprintFullSheet(true)">🖨️ Full Sheet: 60 Mini Paintball HPA</button>
+                </div>
+                <div class="grid" style="align-items:end;">
+                  <div><label>Sticker Count</label><input type="number" id="stickerCount" min="1" value="12" /></div>
+                  <div><label>Skip Used Slots (0–29)</label><input type="number" id="stickerSkip" min="0" max="29" value="0" /></div>
+                </div>
+                <label class="inline-check" style="margin-top:10px;">
+                  <input type="checkbox" id="stickerCompact" />
+                  <span><strong>Compact 2-Up Mini Paintball HPA Mode</strong> (2 mini labels per 1"×2-5/8" slot)</span>
+                </label>
+                <button class="primary" style="background:#5b21b6;" onclick="openPdf('stickers')">Open Custom B386 Sticker PDF</button>
+              </div>
+
+              <div class="card">
+                <div class="card-hdr"><h3>Past Test Dates Quick-Jump</h3></div>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>Work Date</th><th>Customers</th><th>Completed</th><th>Load</th></tr></thead>
+                    <tbody id="datesListTable"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <nav class="bottom-nav">
+      <button class="bnav-btn active" data-tab="cabinet" onclick="switchPrintTab('cabinet')"><span class="ico">01</span><span>Filing Vault</span></button>
+      <button class="bnav-btn" data-tab="print" onclick="switchPrintTab('print')"><span class="ico">02</span><span>Print &amp; Labels</span></button>
+    </nav>
+  </div>
+
+  <script src="/static/js/print-app.js?v=15.0"></script>
+  <script src="/static/day-flow.js?v=15.0"></script>
+  <script src="/static/theme-engine.js?v=15.0"></script>
+  <script src="/static/js/app-switcher.js?v=15.0"></script>
+  <script src="/static/help-bot.js?v=15.0"></script>
+</body>
+</html>

@@ -41,7 +41,7 @@ async def auth_gate_middleware(request: Request, call_next):
         return FileResponse(STATIC_DIR / "landing.html")
 
     public_paths = {
-        "/", "/ops", "/schedule", "/office", "/tv", "/manifest.json", "/merch", "/sw.js", "/icon.svg", "/pwa-icon.png", "/apple-touch-icon.png",
+        "/", "/ops", "/schedule", "/office", "/print", "/owner", "/tv", "/manifest.json", "/merch", "/sw.js", "/icon.svg", "/pwa-icon.png", "/apple-touch-icon.png",
         "/api/auth/login", "/api/auth/status", "/api/auth/logout",
         "/api/public/dropoff", "/api/public/track", "/api/public/turnaround", "/api/public/theme",
     }

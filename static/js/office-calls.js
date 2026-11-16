@@ -3,7 +3,7 @@ let STATE = {
       pricing_rates: [], customers_summary: [], customers_rolodex: [],
       recalls: [], shop_supplies: [], invoices: [],
     };
-    let CURRENT_TAB = 'quick';
+    let CURRENT_TAB = 'invoice';
     let DRAFT_ITEMS = [];
     let EDITABLE_RATES = [];
     let INV_FILTER = 'ALL';
@@ -61,9 +61,15 @@ let STATE = {
       if (initD) document.getElementById('globalDate').value = initD;
       const tabParam = params.get('tab') || params.get('sec');
       if (tabParam) {
-        const mapLegacy = { billing: 'invoice', print: 'print', rates: 'setup', hours: 'setup', settings: 'setup' };
-        const cleanTab = mapLegacy[tabParam] || tabParam;
-        if (['quick', 'dispatch', 'invoice', 'saved', 'rolodex', 'cabinet', 'print', 'supplies', 'setup', 'timeclock', 'sms'].includes(cleanTab)) {
+        if (tabParam === 'quick' || tabParam === 'dispatch') { location.replace('/schedule?tab=' + tabParam); return; }
+        if (tabParam === 'print' || tabParam === 'cabinet') { location.replace('/print?tab=' + tabParam); return; }
+        if (['rates', 'hours', 'setup', 'settings'].includes(tabParam)) {
+          const pMap = { rates: 'rates', hours: 'hours', setup: 'hours', settings: 'facility' };
+          location.replace('/owner?pane=' + pMap[tabParam]);
+          return;
+        }
+        const cleanTab = tabParam === 'billing' ? 'invoice' : tabParam;
+        if (['invoice', 'saved', 'rolodex', 'supplies', 'timeclock', 'sms'].includes(cleanTab)) {
           switchOfficeTab(cleanTab);
         }
       }

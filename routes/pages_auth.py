@@ -72,6 +72,18 @@ def serve_office_page():
     return FileResponse(f if f.exists() else STATIC_DIR / "index.html", headers=NO_CACHE_HEADERS)
 
 
+@router.get("/print")
+def serve_print_vault_page():
+    f = STATIC_DIR / "print.html"
+    return FileResponse(f if f.exists() else STATIC_DIR / "office.html", headers=NO_CACHE_HEADERS)
+
+
+@router.get("/owner")
+def serve_owner_controls_page():
+    f = STATIC_DIR / "owner.html"
+    return FileResponse(f if f.exists() else STATIC_DIR / "office.html", headers=NO_CACHE_HEADERS)
+
+
 @router.get("/tv")
 def serve_tv_board():
     tv_file = STATIC_DIR / "tv.html"

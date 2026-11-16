@@ -211,7 +211,7 @@ async function logoutCrew() {
   await fetch('/api/auth/logout', { method: 'POST' });
   toggleMenuDrawer(false);
   toggleGuide(false);
-
+  checkAuthAndBoot();
 }
 
 function acknowledgeDisclaimer() {

@@ -31,7 +31,7 @@ let STATE = { db_version: 0, daily_hydro_capacity: 24, today: '', selected_date:
       const params = new URLSearchParams(location.search);
       const initD = params.get('date') || sessionStorage.getItem('webers_working_date') || '';
       if (initD) document.getElementById('globalDate').value = initD;
-      if (params.get('tab') && ['cal', 'book', 'runs', 'door'].includes(params.get('tab'))) {
+      if (params.get('tab') && ['cal', 'quick', 'dispatch', 'book', 'runs', 'door'].includes(params.get('tab'))) {
         switchSchedTab(params.get('tab'));
       }
       const res = await fetch('/api/auth/status');

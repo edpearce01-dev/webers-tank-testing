@@ -1,0 +1,531 @@
+/* =========================================================================
+   WEBER'S PRECISION DAYLIGHT & MIDNIGHT UI SYSTEM (v15.0)
+   Clean modern geometry, pill controls, iOS toggle switches & Light/Dark mode
+   ========================================================================= */
+
+:root {
+  --ui-bg: #f4f6f9;
+  --ui-bg-subtle: #edf1f6;
+  --ui-surface: #ffffff;
+  --ui-surface-2: #f8fafc;
+  --ui-surface-glass: rgba(255, 255, 255, 0.86);
+  --ui-text: #0f172a;
+  --ui-text-soft: #475569;
+  --ui-muted: #64748b;
+  --ui-border: #e2e8f0;
+  --ui-border-strong: #cbd5e1;
+  --ui-accent: #059669;
+  --ui-accent-hover: #047857;
+  --ui-accent-soft: rgba(5, 150, 105, 0.11);
+  --ui-gold: #d97706;
+  --ui-gold-soft: rgba(245, 158, 11, 0.14);
+  --ui-danger: #ef4444;
+  --ui-danger-soft: rgba(239, 68, 68, 0.12);
+  --ui-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.03);
+  --ui-shadow-md: 0 10px 30px -8px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.03);
+  --ui-shadow-lg: 0 24px 48px -12px rgba(15, 23, 42, 0.18);
+  --bg: var(--ui-bg);
+  --card: var(--ui-surface);
+  --slate: var(--ui-text);
+  --muted: var(--ui-muted);
+  --border: var(--ui-border-strong);
+  --border-soft: var(--ui-border);
+  --forest: #064e3b;
+  --green: #059669;
+  --green-mid: #10b981;
+  --green-soft: rgba(16, 185, 129, 0.12);
+}
+
+/* SLEEK MIDNIGHT DARK MODE */
+html[data-ui-theme="dark"] {
+  --ui-bg: #0b0f17;
+  --ui-bg-subtle: #111824;
+  --ui-surface: #151d29;
+  --ui-surface-2: #1c2636;
+  --ui-surface-glass: rgba(18, 25, 36, 0.86);
+  --ui-text: #f1f5f9;
+  --ui-text-soft: #cbd5e1;
+  --ui-muted: #94a3b8;
+  --ui-border: #243044;
+  --ui-border-strong: #334155;
+  --ui-accent: #10b981;
+  --ui-accent-hover: #059669;
+  --ui-accent-soft: rgba(16, 185, 129, 0.16);
+  --ui-gold: #fbbf24;
+  --ui-gold-soft: rgba(251, 191, 36, 0.16);
+  --ui-danger: #f87171;
+  --ui-danger-soft: rgba(248, 113, 113, 0.16);
+  --ui-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.28);
+  --ui-shadow-md: 0 14px 34px -8px rgba(0, 0, 0, 0.45);
+  --ui-shadow-lg: 0 28px 60px -12px rgba(0, 0, 0, 0.68);
+  --forest: #ecfdf5;
+  --green: #10b981;
+  --green-mid: #34d399;
+  --green-soft: rgba(16, 185, 129, 0.16);
+}
+
+/* Per-Workspace Signature Accent Tints */
+body[data-workspace="schedule"] { --ui-accent: #2563eb; --ui-accent-hover: #1d4ed8; --ui-accent-soft: rgba(37, 99, 235, 0.12); }
+html[data-ui-theme="dark"] body[data-workspace="schedule"] { --ui-accent: #60a5fa; --ui-accent-hover: #3b82f6; --ui-accent-soft: rgba(96, 165, 250, 0.16); }
+
+body[data-workspace="print"] { --ui-accent: #6366f1; --ui-accent-hover: #4f46e5; --ui-accent-soft: rgba(99, 102, 241, 0.12); }
+html[data-ui-theme="dark"] body[data-workspace="print"] { --ui-accent: #818cf8; --ui-accent-hover: #6366f1; --ui-accent-soft: rgba(129, 140, 248, 0.16); }
+
+body[data-workspace="owner"] { --ui-accent: #d97706; --ui-accent-hover: #b45309; --ui-accent-soft: rgba(217, 119, 6, 0.13); }
+html[data-ui-theme="dark"] body[data-workspace="owner"] { --ui-accent: #fbbf24; --ui-accent-hover: #f59e0b; --ui-accent-soft: rgba(251, 191, 36, 0.16); }
+
+/* Clean Geometric Typography */
+body, button, input, select, textarea {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  background-color: var(--ui-bg);
+  color: var(--ui-text);
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.15s ease;
+}
+
+.card-hdr h3, .top-brand-txt h1, .huddle-kpi strong {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
+  letter-spacing: -0.02em !important;
+  text-transform: none !important;
+}
+.card-hdr h3 { font-size: 1.06rem !important; font-weight: 800 !important; color: var(--ui-text) !important; }
+.top-brand-txt h1 { font-size: 1.04rem !important; font-weight: 800 !important; color: var(--ui-text) !important; }
+.top-brand-txt small { color: var(--ui-muted) !important; font-weight: 600 !important; }
+
+/* -------------------------------------------------------------------------
+   1. FROSTED GLASS TOPBAR (NO MORE HEAVY BLACK/CAVE-GREEN SLAB!)
+   ------------------------------------------------------------------------- */
+.app-topbar {
+  background: var(--ui-surface-glass) !important;
+  backdrop-filter: blur(16px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(150%) !important;
+  color: var(--ui-text) !important;
+  border-bottom: 1px solid var(--ui-border) !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+  min-height: 60px !important;
+  padding: 8px 18px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+.top-brand { color: var(--ui-text) !important; gap: 10px !important; }
+.top-brand img { filter: drop-shadow(0 2px 6px rgba(15, 23, 42, 0.14)) !important; }
+
+/* Hide old crowded 4-button switcher once Apps Launcher is installed */
+body.has-ws-launcher .ws-switcher { display: none !important; }
+
+.ws-brand-cluster {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ws-apps-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--ui-border-strong);
+  background: var(--ui-surface-2);
+  color: var(--ui-text);
+  font-size: 0.81rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--ui-shadow-sm);
+}
+.ws-apps-pill:hover {
+  border-color: var(--ui-accent);
+  background: var(--ui-accent-soft);
+  color: var(--ui-accent);
+}
+
+.theme-switch-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--ui-border-strong);
+  background: var(--ui-surface-2);
+  color: var(--ui-text-soft);
+  cursor: pointer;
+  padding: 0;
+}
+.theme-switch-pill:hover {
+  border-color: var(--ui-accent);
+  color: var(--ui-accent);
+}
+
+/* Topbar Controls, Date Stepper & Jacket Status Pills */
+.date-stepper {
+  background: var(--ui-surface-2) !important;
+  border: 1px solid var(--ui-border-strong) !important;
+  border-radius: 999px !important;
+  padding: 2px 4px !important;
+}
+.step-btn { color: var(--ui-text-soft) !important; border-radius: 999px !important; padding: 5px 8px !important; }
+.step-btn:hover { background: var(--ui-border) !important; color: var(--ui-text) !important; }
+.today-btn {
+  background: var(--ui-accent-soft) !important;
+  color: var(--ui-accent) !important;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 4px 10px !important;
+  font-weight: 800 !important;
+}
+.top-date { color: var(--ui-text) !important; background: transparent !important; }
+
+.j-dot {
+  border-radius: 999px !important;
+  padding: 5px 11px !important;
+  font-size: 0.74rem !important;
+}
+.j-dot.ready { background: rgba(16, 185, 129, 0.14) !important; color: #059669 !important; border: 1px solid rgba(16, 185, 129, 0.35) !important; }
+html[data-ui-theme="dark"] .j-dot.ready { color: #34d399 !important; }
+.j-dot.wait { background: var(--ui-gold-soft) !important; color: var(--ui-gold) !important; border: 1px solid rgba(245, 158, 11, 0.35) !important; }
+
+.menu-pill, .role-user-pill {
+  background: var(--ui-surface-2) !important;
+  color: var(--ui-text) !important;
+  border: 1px solid var(--ui-border-strong) !important;
+  border-radius: 999px !important;
+  padding: 6px 13px !important;
+  font-weight: 700 !important;
+}
+.menu-pill:hover, .role-user-pill:hover {
+  border-color: var(--ui-accent) !important;
+}
+.role-user-pill.role-OWNER {
+  background: var(--ui-gold-soft) !important;
+  border-color: rgba(245, 158, 11, 0.45) !important;
+  color: var(--ui-gold) !important;
+}
+.role-user-pill.role-SYSTEM_ADMIN {
+  background: rgba(59, 130, 246, 0.14) !important;
+  border-color: rgba(59, 130, 246, 0.4) !important;
+  color: #3b82f6 !important;
+}
+
+/* -------------------------------------------------------------------------
+   2. CLEAN SIDEBAR RAIL & CARDS (GENEROUS RADIUS + SOFT ELEVATION)
+   ------------------------------------------------------------------------- */
+.side-rail {
+  background: var(--ui-surface) !important;
+  border-right: 1px solid var(--ui-border) !important;
+  top: 60px !important;
+  height: calc(100vh - 60px) !important;
+  padding: 16px 12px !important;
+}
+.rail-section-lbl {
+  color: var(--ui-muted) !important;
+  font-size: 0.68rem !important;
+  letter-spacing: 0.06em !important;
+  padding: 8px 12px 4px !important;
+}
+.rail-btn {
+  border-radius: 12px !important;
+  padding: 10px 13px !important;
+  color: var(--ui-text-soft) !important;
+  font-weight: 600 !important;
+  background: transparent !important;
+  transition: all 0.14s ease !important;
+}
+.rail-btn:hover {
+  background: var(--ui-surface-2) !important;
+  color: var(--ui-text) !important;
+}
+.rail-btn.active {
+  background: var(--ui-accent) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 6px 16px -4px rgba(5, 150, 105, 0.38) !important;
+}
+.rail-btn.active .nav-badge {
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+
+.card, .supply-card, .batch-finish-card, .quote-card, .day-sec-box, .modal {
+  background: var(--ui-surface) !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 18px !important;
+  box-shadow: var(--ui-shadow-sm) !important;
+  color: var(--ui-text) !important;
+}
+.card { padding: 20px !important; margin-bottom: 16px !important; }
+.card-hdr { border-bottom: 1px solid var(--ui-border) !important; padding-bottom: 12px !important; margin-bottom: 14px !important; }
+
+/* Replace dark cave-green Binder Box with a Sleek Modern Progress Card! */
+.binder-box {
+  background: linear-gradient(135deg, var(--ui-surface-2) 0%, var(--ui-accent-soft) 100%) !important;
+  color: var(--ui-text) !important;
+  border: 1px solid var(--ui-border-strong) !important;
+  border-radius: 16px !important;
+  padding: 18px !important;
+}
+.binder-box div[style*="color:#cbd5e1"] { color: var(--ui-text-soft) !important; }
+.sheet-slot {
+  height: 24px !important;
+  border-radius: 999px !important;
+  background: var(--ui-border) !important;
+  color: var(--ui-muted) !important;
+  font-weight: 700 !important;
+}
+.sheet-slot.used {
+  background: var(--ui-accent) !important;
+  color: #ffffff !important;
+}
+.sheet-slot.next {
+  background: var(--ui-gold) !important;
+  color: #111827 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--ui-gold-soft) !important;
+}
+
+.huddle-kpi {
+  background: var(--ui-surface-2) !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 14px !important;
+  padding: 12px 14px !important;
+}
+.huddle-kpi small { color: var(--ui-muted) !important; font-weight: 700 !important; }
+.huddle-kpi strong { color: var(--ui-text) !important; font-size: 1.24rem !important; }
+
+/* -------------------------------------------------------------------------
+   3. SMOOTH PILL BUTTONS & INPUTS (ZERO BOXY GRAY RECTANGLES!)
+   ------------------------------------------------------------------------- */
+button.primary, a.primary {
+  background: linear-gradient(180deg, var(--ui-accent) 0%, var(--ui-accent-hover) 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 12px 22px !important;
+  font-weight: 700 !important;
+  font-size: 0.91rem !important;
+  box-shadow: 0 6px 18px -4px rgba(5, 150, 105, 0.38) !important;
+  transition: transform 0.12s ease, box-shadow 0.15s ease, filter 0.15s ease !important;
+}
+button.primary:hover:not(:disabled), a.primary:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+}
+button.scan-trigger {
+  border-radius: 999px !important;
+  background: linear-gradient(135deg, #059669 0%, #0d9488 100%) !important;
+  box-shadow: 0 6px 16px -4px rgba(13, 148, 136, 0.4) !important;
+}
+
+button.secondary, a.secondary {
+  background: var(--ui-surface-2) !important;
+  color: var(--ui-text) !important;
+  border: 1px solid var(--ui-border-strong) !important;
+  border-radius: 999px !important;
+  padding: 7px 14px !important;
+  font-weight: 700 !important;
+  font-size: 0.8rem !important;
+  transition: all 0.14s ease !important;
+}
+button.secondary:hover, a.secondary:hover {
+  border-color: var(--ui-accent) !important;
+  color: var(--ui-accent) !important;
+  background: var(--ui-accent-soft) !important;
+}
+button.danger-btn {
+  border-radius: 999px !important;
+  background: var(--ui-danger-soft) !important;
+  color: var(--ui-danger) !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+}
+button.danger-btn:hover {
+  background: var(--ui-danger) !important;
+  color: #ffffff !important;
+}
+
+/* Segmented Pill Tabs (.tap-pill, .setup-subtab, .cab-tab, .tmode-btn) */
+.tap-pill, .setup-subtab, .cab-tab, .tmode-btn, .tank-chip, .addon-chip {
+  border-radius: 999px !important;
+  background: var(--ui-surface-2) !important;
+  color: var(--ui-text-soft) !important;
+  border: 1px solid var(--ui-border) !important;
+  font-weight: 700 !important;
+}
+.tap-pill.active, .setup-subtab.active, .cab-tab.active, .tmode-btn.active {
+  background: var(--ui-accent) !important;
+  color: #ffffff !important;
+  border-color: var(--ui-accent) !important;
+  box-shadow: 0 4px 12px -2px rgba(5, 150, 105, 0.35) !important;
+}
+
+/* Modern Inputs & Selects */
+input:not([type="checkbox"]):not([type="radio"]):not(.top-date), select, textarea {
+  background: var(--ui-surface-2) !important;
+  color: var(--ui-text) !important;
+  border: 1.5px solid var(--ui-border) !important;
+  border-radius: 12px !important;
+  padding: 10px 13px !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease !important;
+}
+input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:focus {
+  outline: none !important;
+  background: var(--ui-surface) !important;
+  border-color: var(--ui-accent) !important;
+  box-shadow: 0 0 0 3px var(--ui-accent-soft) !important;
+}
+label { color: var(--ui-text-soft) !important; }
+
+/* -------------------------------------------------------------------------
+   4. REAL iOS-STYLE SLIDING TOGGLE SWITCHES (REPLACES RAW CHECKBOXES!)
+   ------------------------------------------------------------------------- */
+label.inline-check input[type="checkbox"],
+input[type="checkbox"].ui-switch {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 42px !important;
+  height: 24px !important;
+  flex: 0 0 42px !important;
+  border-radius: 999px !important;
+  background: var(--ui-border-strong) !important;
+  position: relative;
+  cursor: pointer;
+  border: none !important;
+  transition: background-color 0.2s ease !important;
+}
+label.inline-check input[type="checkbox"]::after,
+input[type="checkbox"].ui-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+label.inline-check input[type="checkbox"]:checked,
+input[type="checkbox"].ui-switch:checked {
+  background: var(--ui-accent) !important;
+}
+label.inline-check input[type="checkbox"]:checked::after,
+input[type="checkbox"].ui-switch:checked::after {
+  transform: translateX(18px);
+}
+
+/* -------------------------------------------------------------------------
+   5. DARK MODE OVERRIDES FOR INLINE-STYLED CARDS, LISTS, MODALS & LOGIN
+   ------------------------------------------------------------------------- */
+.login-wrap {
+  background: radial-gradient(circle at 50% 20%, var(--ui-surface-2) 0%, var(--ui-bg) 100%) !important;
+}
+.login-card {
+  background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 24px !important;
+  box-shadow: var(--ui-shadow-lg) !important;
+}
+.drawer-panel {
+  background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+  border-left: 1px solid var(--ui-border) !important;
+}
+th { background: var(--ui-surface-2) !important; color: var(--ui-muted) !important; border-bottom-color: var(--ui-border) !important; }
+td, .rec-item { border-bottom-color: var(--ui-border) !important; }
+.mday-cell { background: var(--ui-surface) !important; border-color: var(--ui-border) !important; border-radius: 14px !important; }
+.mday-cell.out-month { background: var(--ui-surface-2) !important; opacity: 0.45 !important; }
+.mday-cell.is-selected { border-color: var(--ui-accent) !important; background: var(--ui-accent-soft) !important; }
+.job-card-clickable, .batch-finish-hdr, .batch-finish-body, .flow-zone, .flow-spot, .ladder-row {
+  background: var(--ui-surface-2) !important;
+  border-color: var(--ui-border) !important;
+  color: var(--ui-text) !important;
+}
+#railTimeClockBox {
+  background: var(--ui-surface-2) !important;
+  border-color: var(--ui-border-strong) !important;
+  border-radius: 14px !important;
+}
+#railTimeClockBox strong, #railTimeClockBox div { color: var(--ui-text) !important; }
+
+/* Mobile Floating Bottom Dock (Matches Screenshot 2!) */
+@media (max-width: 879px) {
+  .bottom-nav {
+    bottom: 10px !important;
+    left: 12px !important;
+    right: 12px !important;
+    border-radius: 999px !important;
+    background: var(--ui-surface-glass) !important;
+    backdrop-filter: blur(18px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
+    border: 1px solid var(--ui-border-strong) !important;
+    box-shadow: var(--ui-shadow-md) !important;
+    padding: 6px 10px !important;
+  }
+  .bnav-btn { color: var(--ui-muted) !important; font-size: 0.66rem !important; }
+  .bnav-btn.active { color: var(--ui-accent) !important; }
+}
+
+/* Workspace Launcher Sheet */
+.ws-sheet-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 98;
+  background: rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 72px 16px 20px;
+}
+.ws-sheet-card {
+  width: 100%;
+  max-width: 680px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 22px;
+  padding: 22px;
+  box-shadow: var(--ui-shadow-lg);
+}
+.ws-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+  margin-top: 14px;
+}
+@media (max-width: 580px) { .ws-sheet-grid { grid-template-columns: 1fr; } }
+.ws-app-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 14px 15px;
+  border-radius: 16px;
+  border: 1.5px solid var(--ui-border);
+  background: var(--ui-surface-2);
+  text-decoration: none;
+  color: var(--ui-text);
+  transition: transform 0.12s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.ws-app-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--ui-accent);
+}
+.ws-app-card.active {
+  border-color: var(--ui-accent);
+  background: var(--ui-accent-soft);
+}
+.ws-app-ico {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #ffffff;
+}
+.ws-app-card strong { display: block; font-size: 0.93rem; font-weight: 800; margin-bottom: 2px; }
+.ws-app-card span { display: block; font-size: 0.76rem; color: var(--ui-muted); line-height: 1.38; }

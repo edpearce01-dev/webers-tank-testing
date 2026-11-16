@@ -7,14 +7,15 @@
   <link rel="manifest" href="/manifest.json" />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/ops.css?v=14.0" />
+  <link rel="stylesheet" href="/static/ops.css?v=15.0" />
+  <link rel="stylesheet" href="/static/css/modern-ui.css?v=15.0" />
   <title>Weber's Tank Testing — Office, Rolodex, Printouts &amp; Supplies | RIN B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=14.0" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
+      <img src="/static/images/logo-crest.png?v=15.0" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Office &amp; Print Center</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter your Individual PIN (Access resets daily at Midnight)</p>
       <div style="text-align:left;">
@@ -32,10 +33,10 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=14.0" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=15.0" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
-          <h1>OFFICE &amp; PRINT</h1>
-          <small>RIN B386 • Billing, Rolodex &amp; Supply</small>
+          <h1>Office &amp; Billing</h1>
+          <small>Invoices, Rolodex, Stock &amp; Timecards</small>
         </div>
       </a>
 
@@ -63,42 +64,25 @@
       <!-- UNIFIED LEFT SIDEBAR MENU -->
       <aside class="side-rail">
         <div class="rail-nav">
-          <div class="rail-section-lbl">Phone &amp; Office</div>
-          <button class="rail-btn active" data-tab="quick" onclick="switchOfficeTab('quick')">
-            <span>📞 Call: Shop Drop-Off</span><span class="nav-badge green" id="navBadgeQuick">Drop</span>
-          </button>
-          <button class="rail-btn" data-tab="dispatch" onclick="switchOfficeTab('dispatch')">
-            <span>🚚 Dispatch: Truck Run</span><span class="nav-badge amber" id="navBadgeDispatch">Truck</span>
-          </button>
-          <div class="rail-section-lbl" style="margin-top:6px;">Billing &amp; Accounts</div>
-          <button class="rail-btn" data-tab="invoice" onclick="switchOfficeTab('invoice')">
-            <span>💲 Create Invoice</span><span class="nav-badge amber" id="navBadgeUnbilled">0</span>
+          <div class="rail-section-lbl">Billing &amp; Accounts</div>
+          <button class="rail-btn active" data-tab="invoice" onclick="switchOfficeTab('invoice')">
+            <span>Create Invoice</span><span class="nav-badge amber" id="navBadgeUnbilled">0</span>
           </button>
           <button class="rail-btn" data-tab="saved" onclick="switchOfficeTab('saved')">
-            <span>📄 Saved Invoices</span><span class="nav-badge" id="navBadgeSaved">0</span>
+            <span>Saved Invoices</span><span class="nav-badge" id="navBadgeSaved">0</span>
           </button>
           <button class="rail-btn" data-tab="rolodex" onclick="switchOfficeTab('rolodex')">
-            <span>📇 Customer Rolodex</span><span class="nav-badge" id="navBadgeRolo">0</span>
+            <span>Customer Rolodex</span><span class="nav-badge" id="navBadgeRolo">0</span>
           </button>
-          <div class="rail-section-lbl" style="margin-top:6px;">Records, Audit &amp; Stock</div>
-          <button class="rail-btn" data-tab="cabinet" onclick="switchOfficeTab('cabinet')">
-            <span>🗄️ Filing Cabinet</span><span class="nav-badge green" id="navBadgeCabinet">Vault</span>
-          </button>
-          <button class="rail-btn" data-tab="print" onclick="switchOfficeTab('print')">
-            <span>🖨️ DOT &amp; Claim PDFs</span><span class="nav-badge green">PDF</span>
-          </button>
+          <div class="rail-section-lbl" style="margin-top:8px;">Shop Desk &amp; Team</div>
           <button class="rail-btn" data-tab="supplies" onclick="switchOfficeTab('supplies')">
-            <span>📦 Stock &amp; Low Limits</span><span class="nav-badge" id="navBadgeSupplies">✓</span>
+            <span>Stock &amp; Low Limits</span><span class="nav-badge" id="navBadgeSupplies">OK</span>
           </button>
           <button class="rail-btn" data-tab="timeclock" onclick="switchOfficeTab('timeclock')">
-            <span>⏱️ Timecards &amp; Hours</span><span class="nav-badge" id="navBadgeClock">⏱️</span>
+            <span>Crew Timecards</span><span class="nav-badge" id="navBadgeClock">Hrs</span>
           </button>
           <button class="rail-btn" data-tab="sms" onclick="switchOfficeTab('sms')">
-            <span>📲 iPhone Text Queue</span><span class="nav-badge amber" id="navBadgeSms">0</span>
-          </button>
-          <div class="rail-section-lbl" data-owner-only="1" style="margin-top:6px;">Owner &amp; Admin</div>
-          <button class="rail-btn" data-owner-only="1" data-tab="setup" onclick="switchOfficeTab('setup')">
-            <span>⚙️ Shop Setup &amp; Hours</span><span class="nav-badge green">Setup</span>
+            <span>iPhone Text Queue</span><span class="nav-badge amber" id="navBadgeSms">0</span>
           </button>
         </div>
 
@@ -112,7 +96,7 @@
       <!-- SINGLE-SCREEN FOCUSED WORKSPACE -->
       <main class="ops-workspace">
         <!-- TAB 0: QUICK PHONE SCHEDULE (45-SECOND CALL COCKPIT) -->
-        <section id="tab-quick">
+        <section id="tab-quick" hidden>
           <datalist id="qsRoloSuggest"></datalist>
           <div id="qsSavedBanner" class="notice" hidden></div>
 
@@ -370,7 +354,7 @@
         </section>
 
         <!-- TAB 1: CREATE CUSTOMER INVOICE -->
-        <section id="tab-invoice" hidden>
+        <section id="tab-invoice">
           <div class="card" style="border-top:4px solid var(--green);">
             <div class="card-hdr">
               <h3>💲 Create Customer Invoice (Auto-Loads Parts &amp; Tax Status)</h3>
@@ -380,7 +364,7 @@
               </div>
             </div>
 
-            <div id="zeroRatesHint" class="notice warn" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;" hidden><span>⚠️ <strong>Master Service Rates are still $0.00</strong> — set standard prices once so invoices calculate automatically.</span><button class="secondary" onclick="switchOfficeTab('setup');switchSetupPane('rates')">⚙️ Set Service Rates →</button></div>
+            <div id="zeroRatesHint" class="notice warn" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;" hidden><span>⚠️ <strong>Master Service Rates are still $0.00</strong> — set standard prices once so invoices calculate automatically.</span><button class="secondary" onclick="location.href='/owner?pane=rates'">⚙️ Set Service Rates →</button></div>
             <div id="unbilledPillsWrap" style="margin-bottom:10px;"></div>
 
             <div class="grid" style="margin-bottom:10px;">
@@ -893,21 +877,15 @@
 
     <!-- PHONE BOTTOM NAVIGATION BAR -->
     <nav class="bottom-nav">
-      <button class="bnav-btn active" data-tab="quick" onclick="switchOfficeTab('quick')">
-        <span class="ico">📞</span><span>Drop Call</span>
+      <button class="bnav-btn active" data-tab="invoice" onclick="switchOfficeTab('invoice')">
+        <span class="ico">01</span><span>Invoice</span><span class="bnav-dot" id="mobBadgeUnbilled" hidden>0</span>
       </button>
-      <button class="bnav-btn" data-tab="dispatch" onclick="switchOfficeTab('dispatch')">
-        <span class="ico">🚚</span><span>Truck</span>
-      </button>
-      <button class="bnav-btn" data-tab="invoice" onclick="switchOfficeTab('invoice')">
-        <span class="ico">💲</span><span>Bill</span><span class="bnav-dot" id="mobBadgeUnbilled" hidden>0</span>
-      </button>
-      <button class="bnav-btn" data-tab="rolodex" onclick="switchOfficeTab('rolodex')"><span class="ico">📇</span><span>Rolodex</span></button>
-      <button class="bnav-btn" data-tab="cabinet" onclick="switchOfficeTab('cabinet')"><span class="ico">🗄️</span><span>Vault</span></button>
-      <button class="bnav-btn" data-tab="print" onclick="switchOfficeTab('print')"><span class="ico">🖨️</span><span>Print</span></button>
+      <button class="bnav-btn" data-tab="saved" onclick="switchOfficeTab('saved')"><span class="ico">02</span><span>Ledger</span></button>
+      <button class="bnav-btn" data-tab="rolodex" onclick="switchOfficeTab('rolodex')"><span class="ico">03</span><span>Rolodex</span></button>
       <button class="bnav-btn" data-tab="supplies" onclick="switchOfficeTab('supplies')">
-        <span class="ico">📦</span><span>Supplies</span><span class="bnav-dot" id="mobBadgeSupplies" hidden>0</span>
+        <span class="ico">04</span><span>Stock</span><span class="bnav-dot" id="mobBadgeSupplies" hidden>0</span>
       </button>
+      <button class="bnav-btn" data-tab="timeclock" onclick="switchOfficeTab('timeclock')"><span class="ico">05</span><span>Hours</span></button>
     </nav>
   </div>
 
@@ -948,11 +926,12 @@
     </div>
   </div>
 
-  <script src="/static/js/office-calls.js?v=14.0"></script>
-  <script src="/static/js/office-billing.js?v=14.0"></script>
-  <script src="/static/js/office-admin.js?v=14.0"></script>
-  <script src="/static/day-flow.js?v=14.0"></script>
-  <script src="/static/theme-engine.js?v=14.0"></script>
-  <script src="/static/help-bot.js?v=14.0"></script>
+  <script src="/static/js/office-calls.js?v=15.0"></script>
+  <script src="/static/js/office-billing.js?v=15.0"></script>
+  <script src="/static/js/office-admin.js?v=15.0"></script>
+  <script src="/static/day-flow.js?v=15.0"></script>
+  <script src="/static/theme-engine.js?v=15.0"></script>
+  <script src="/static/js/app-switcher.js?v=15.0"></script>
+  <script src="/static/help-bot.js?v=15.0"></script>
 </body>
 </html>

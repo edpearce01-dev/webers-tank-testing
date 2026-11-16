@@ -7,14 +7,15 @@
   <link rel="manifest" href="/manifest.json" />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/ops.css?v=14.0" />
+  <link rel="stylesheet" href="/static/ops.css?v=15.0" />
+  <link rel="stylesheet" href="/static/css/modern-ui.css?v=15.0" />
   <title>Weber's Tank Testing — Month Schedule &amp; Dispatch | DOT B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=14.0" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
+      <img src="/static/images/logo-crest.png?v=15.0" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Schedule &amp; Dispatch</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter your Individual PIN (Access resets daily at Midnight)</p>
       <div style="text-align:left;">
@@ -32,10 +33,10 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=14.0" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=15.0" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
-          <h1>WALL SCHEDULE</h1>
-          <small>RIN B386 • Calendar &amp; Dispatch</small>
+          <h1>Schedule &amp; Dispatch</h1>
+          <small>Calendar, Phone Calls &amp; Truck Runs</small>
         </div>
       </a>
 
@@ -64,18 +65,25 @@
       <!-- LEFT SIDEBAR MENU -->
       <aside class="side-rail">
         <div class="rail-nav">
-          <div class="rail-section-lbl">Schedule &amp; Dispatch</div>
+          <div class="rail-section-lbl">Calendar &amp; Lineup</div>
           <button class="rail-btn active" data-tab="cal" onclick="switchSchedTab('cal')">
-            <span>1. Month Calendar</span><span class="nav-badge green" id="navBadgeMonth">📅</span>
-          </button>
-          <button class="rail-btn" data-tab="book" onclick="switchSchedTab('book')">
-            <span>2. Book &amp; Quote</span><span class="nav-badge" id="navBadgeBacklog">0</span>
+            <span>Month Calendar</span><span class="nav-badge green" id="navBadgeMonth">Cal</span>
           </button>
           <button class="rail-btn" data-tab="runs" onclick="switchSchedTab('runs')">
-            <span>3. Active Runs &amp; Prep</span><span class="nav-badge" id="navBadgeRuns">0</span>
+            <span>Active Runs &amp; Prep</span><span class="nav-badge" id="navBadgeRuns">0</span>
           </button>
           <button class="rail-btn" data-tab="door" onclick="switchSchedTab('door')">
-            <span>4. Loading Dock</span><span class="nav-badge amber" id="navBadgeDoor">0</span>
+            <span>Loading Dock Queue</span><span class="nav-badge amber" id="navBadgeDoor">0</span>
+          </button>
+          <div class="rail-section-lbl" style="margin-top:8px;">Phone &amp; Dispatch Loggers</div>
+          <button class="rail-btn" data-tab="quick" onclick="switchSchedTab('quick')">
+            <span>Call: Shop Drop-Off</span><span class="nav-badge green">Fast</span>
+          </button>
+          <button class="rail-btn" data-tab="dispatch" onclick="switchSchedTab('dispatch')">
+            <span>Dispatch: Truck Run</span><span class="nav-badge amber" id="navBadgeDispatch">Truck</span>
+          </button>
+          <button class="rail-btn" data-tab="book" onclick="switchSchedTab('book')">
+            <span>Full Booking &amp; Quote</span><span class="nav-badge" id="navBadgeBacklog">0</span>
           </button>
         </div>
 
@@ -335,18 +343,274 @@
             <div id="backroomDoorList"></div>
           </div>
         </section>
+      
+        <section id="tab-quick" hidden>
+          <datalist id="qsRoloSuggest"></datalist>
+          <div id="qsSavedBanner" class="notice" hidden></div>
+
+          <div class="split-2">
+            <div class="card" style="border-top:4px solid #f59e0b;">
+              <div class="card-hdr">
+                <h3>📞 Call: Shop Drop-Off — Fast Phone Logger</h3>
+                <span class="sub-badge" id="qsBacklogBadge">Backlog: 0 Cyl</span>
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <label style="margin:0;">1. Caller / Account Type</label>
+                <span id="qsKnownBadge" class="sub-badge ai-verified" hidden>✓ Rolodex Auto-Filled</span>
+              </div>
+              <div class="pill-selector-bar" id="qsAcctBar" style="margin-bottom:10px;">
+                <button type="button" class="tap-pill active" data-acct="WALK_IN" onclick="setQsAcct('WALK_IN')">👤 Walk-In / Player</button>
+                <button type="button" class="tap-pill" data-acct="FIRE_EMS" onclick="setQsAcct('FIRE_EMS')">🚒 Fire Dept / EMS</button>
+                <button type="button" class="tap-pill" data-acct="COMMERCIAL" onclick="setQsAcct('COMMERCIAL')">🏢 Commercial / Fleet</button>
+              </div>
+
+              <div class="grid">
+                <div>
+                  <label id="qsNameLbl">Customer Name *</label>
+                  <input id="qsCustomer" list="qsRoloSuggest" placeholder="Start typing name or Fire Dept..." oninput="onQsCustomerInput()" onkeydown="if(event.key==='Enter')document.getElementById('qsPhone').focus()" />
+                </div>
+                <div>
+                  <label>Cell / Station Phone (For Ready Text) *</label>
+                  <input id="qsPhone" type="tel" placeholder="724-555-0199" oninput="formatPhoneLive(this);updateQsScript()" />
+                </div>
+                <div id="qsContactWrap" hidden>
+                  <label>Caller's Name (Required for Dept/Comm) *</label>
+                  <input id="qsContact" placeholder="e.g. Chief Miller / Driver" oninput="updateQsScript()" />
+                </div>
+                <div id="qsPoWrap" hidden>
+                  <label>Station # / PO # (Optional)</label>
+                  <input id="qsPo" placeholder="e.g. Station 47 / PO #104" />
+                </div>
+                <div style="grid-column:1/-1;">
+                  <label>Billing / Mailing Address (Street, City, PA ZIP — For Invoices &amp; 5-Yr Recalls)</label>
+                  <input id="qsMailAddr" placeholder="e.g. 123 State St, Baden, PA 15005 (auto-fills for repeat callers)" />
+                </div>
+              </div>
+
+              <div style="margin-top:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <label style="margin:0;">2. Tap Tank Types (Auto-Quotes Ready Date)</label>
+                  <button type="button" class="secondary" style="padding:2px 8px;font-size:0.7rem;" onclick="clearQsTanks()">↺ Reset Count</button>
+                </div>
+                <div class="tank-chip-bar">
+                  <button type="button" class="tank-chip" onclick="bumpQsTank('4500# SCBA', 1)">+1 SCBA</button>
+                  <button type="button" class="tank-chip" onclick="bumpQsTank('4500# SCBA', 5)">+5 SCBA</button>
+                  <button type="button" class="tank-chip" onclick="bumpQsTank('Paintball HPA', 1)">+1 HPA</button>
+                  <button type="button" class="tank-chip" onclick="bumpQsTank('Scuba', 1)">+1 Scuba</button>
+                  <button type="button" class="tank-chip" onclick="bumpQsTank('Propane Visual', 1)">+1 Propane</button>
+                  <button type="button" class="tank-chip" onclick="bumpQsTank('CO2', 1)">+1 CO2</button>
+                  <button type="button" class="tank-chip" onclick="bumpQsTank('Medical O2', 1)">+1 Med O2</button>
+                  <button type="button" class="tank-chip" onclick="bumpQsTank('Welding/Ind', 1)">+1 Weld/Ind</button>
+                </div>
+                <div class="grid">
+                  <div>
+                    <label>Total Bottle Count *</label>
+                    <input type="number" id="qsCount" min="1" max="250" value="1" oninput="fetchQsQuote()" />
+                  </div>
+                  <div class="span-2-desktop">
+                    <label>Tank Mix / Summary</label>
+                    <input id="qsSummary" placeholder="e.g. 6x 4500# SCBA" oninput="updateQsScript()" />
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top:12px;">
+                <label>3. Drop-Off or Pickup Method</label>
+                <div class="pill-selector-bar" id="qsArriveBar" style="margin-bottom:8px;">
+                  <button type="button" class="tap-pill active" data-mode="BACKROOM" onclick="setQsArrive('BACKROOM')">🚪 24/7 Loading Dock Drop</button>
+                  <button type="button" class="tap-pill" data-mode="SHOP_BATCH" onclick="setQsArrive('SHOP_BATCH')">📌 Scheduled Shop Drop</button>
+                  <button type="button" class="tap-pill" style="background:#fffbeb;border-color:#f59e0b;color:#92400e;" onclick="switchSchedTab('dispatch')">🚚 Switch to Truck Run →</button>
+                </div>
+
+                <div class="grid" style="align-items:end;">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                      <label style="margin:0;" id="qsDateLbl">Expected Drop Date</label>
+                      <span style="display:inline-flex;gap:4px;">
+                        <button type="button" class="secondary" style="padding:1px 6px;font-size:0.68rem;" onclick="setQsQuickDate(0)">Today</button>
+                        <button type="button" class="secondary" style="padding:1px 6px;font-size:0.68rem;" onclick="setQsQuickDate(1)">Tmrw</button>
+                        <button type="button" class="secondary" style="padding:1px 6px;font-size:0.68rem;" onclick="setQsNextMonday()">Mon</button>
+                      </span>
+                    </div>
+                    <input type="date" id="qsDate" onchange="updateQsScript()" />
+                  </div>
+                  <div>
+                    <label>Est. Promise Ready Date</label>
+                    <input type="date" id="qsDueDate" onchange="updateQsScript()" />
+                  </div>
+                </div>
+
+                <div id="qsAddrWrap" style="margin-top:9px;" hidden>
+                  <label>Pickup Street / Station Address *</label>
+                  <input id="qsAddress" placeholder="Street &amp; Town for driver Google Maps" oninput="updateQsScript()" />
+                </div>
+
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:10px;padding:9px 12px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;">
+                  <label class="inline-check" style="color:#991b1b;margin:0;">
+                    <input type="checkbox" id="qsRush" onchange="applyQsQuoteDates()" />
+                    <span>🔥 <strong>Paid Rush Turnaround (Max 12 Cyl)</strong> <small id="qsRushDateHint"></small></span>
+                  </label>
+                  <small style="font-weight:800;color:#166534;" id="qsStdDateHint">Std Ready: —</small>
+                </div>
+
+                <div style="margin-top:9px;">
+                  <label>Quick Note (Optional — Press Enter to Log Call)</label>
+                  <input id="qsNotes" placeholder="Short note only if needed..." onkeydown="if(event.key==='Enter')submitQuickSchedule(false)" />
+                </div>
+              </div>
+
+              <div class="notice" style="margin-top:12px;margin-bottom:4px;background:#ecfdf5;border:2px solid #10b981;color:#064e3b;">
+                <div style="font-size:0.7rem;font-weight:900;text-transform:uppercase;letter-spacing:0.4px;color:#047857;margin-bottom:3px;">🗣️ Read This &amp; Wrap Up Call:</div>
+                <div id="qsScriptBox" style="font-size:0.9rem;line-height:1.42;font-weight:700;">Enter caller name &amp; bottle count to generate your instant wrap-up line.</div>
+              </div>
+
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+                <button class="primary" style="flex:2;margin:0;" id="btnQsSave" onclick="submitQuickSchedule(false)">⚡ Log Call &amp; Clear for Next</button>
+                <button class="secondary" style="flex:1;padding:11px;background:#fef3c7;color:#92400e;border-color:#f59e0b;font-weight:900;" onclick="submitQuickSchedule(true)">📲 Log + Text Info</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-hdr">
+                <h3>📋 Open Phone Bookings &amp; Upcoming Drops</h3>
+                <a class="secondary" href="/schedule">📅 Full Month View →</a>
+              </div>
+              <div id="qsOpenJobsList"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-dispatch" hidden>
+          <div id="tdSavedBanner" class="notice" hidden></div>
+
+          <div class="split-2">
+            <div class="card" style="border-top:4px solid #b45309;">
+              <div class="card-hdr">
+                <h3>🚚 Truck Pickup &amp; Delivery Dispatch — Fast Call Logger</h3>
+                <span class="sub-badge" id="tdBacklogBadge" style="background:#fef3c7;color:#92400e;">Truck Dispatch</span>
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <label style="margin:0;">1. Truck Service Type</label>
+                <span id="tdKnownBadge" class="sub-badge ai-verified" hidden>✓ Station Address Auto-Filled</span>
+              </div>
+              <div class="pill-selector-bar" id="tdModeBar" style="margin-bottom:10px;">
+                <button type="button" class="tap-pill active" data-tmode="ROAD_ROUNDTRIP" onclick="setTdMode('ROAD_ROUNDTRIP')">🔄 Pickup &amp; Return Delivery</button>
+                <button type="button" class="tap-pill" data-tmode="ROAD_PICKUP" onclick="setTdMode('ROAD_PICKUP')">🚚 Truck Pickup Only</button>
+                <button type="button" class="tap-pill" data-tmode="ROAD_DELIVERY" onclick="setTdMode('ROAD_DELIVERY')">📦 Return Delivery Only</button>
+              </div>
+
+              <div class="grid">
+                <div>
+                  <label>Fire Dept / Business Name *</label>
+                  <input id="tdCustomer" list="qsRoloSuggest" placeholder="e.g. Baden VFD" oninput="onTdCustomerInput()" />
+                </div>
+                <div>
+                  <label>Caller / Point of Contact *</label>
+                  <input id="tdContact" placeholder="e.g. Chief Mike Miller" oninput="updateTdScript()" />
+                </div>
+                <div>
+                  <label>Cell / Station Phone *</label>
+                  <input id="tdPhone" type="tel" placeholder="724-555-0199" oninput="formatPhoneLive(this);updateTdScript()" />
+                </div>
+                <div>
+                  <label>Station # / PO # (Optional)</label>
+                  <input id="tdPo" placeholder="e.g. Station 47 / PO #204" />
+                </div>
+                <div style="grid-column:1/-1;">
+                  <label>Pickup / Delivery Street Address &amp; Town (Opens Google Maps) *</label>
+                  <input id="tdAddress" placeholder="e.g. 123 State St, Baden, PA 15005" oninput="updateTdScript()" />
+                </div>
+              </div>
+
+              <div style="margin-top:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <label style="margin:0;">2. Tap Tank Types on Run</label>
+                  <button type="button" class="secondary" style="padding:2px 8px;font-size:0.7rem;" onclick="clearTdTanks()">↺ Reset</button>
+                </div>
+                <div class="tank-chip-bar">
+                  <button type="button" class="tank-chip" onclick="bumpTdTank('4500# SCBA', 1)">+1 SCBA</button>
+                  <button type="button" class="tank-chip" onclick="bumpTdTank('4500# SCBA', 5)">+5 SCBA</button>
+                  <button type="button" class="tank-chip" onclick="bumpTdTank('4500# SCBA', 10)">+10 SCBA</button>
+                  <button type="button" class="tank-chip" onclick="bumpTdTank('Medical O2', 1)">+1 Med O2</button>
+                  <button type="button" class="tank-chip" onclick="bumpTdTank('Welding/Ind', 1)">+1 Weld/Ind</button>
+                  <button type="button" class="tank-chip" onclick="bumpTdTank('CO2', 1)">+1 CO2</button>
+                </div>
+                <div class="grid">
+                  <div>
+                    <label>Total Cylinder Count *</label>
+                    <input type="number" id="tdCount" min="1" max="250" value="6" oninput="fetchTdQuote()" />
+                  </div>
+                  <div class="span-2-desktop">
+                    <label>Tank Mix / Bay Door / Gate Notes</label>
+                    <input id="tdSummary" placeholder="e.g. 12x 4500# SCBA • Rear Engine Bay" oninput="updateTdScript()" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid" style="margin-top:10px;align-items:end;">
+                <div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                    <label style="margin:0;">Scheduled Truck Run Date *</label>
+                    <span style="display:inline-flex;gap:4px;">
+                      <button type="button" class="secondary" style="padding:1px 6px;font-size:0.68rem;" onclick="setTdQuickDate(0)">Today</button>
+                      <button type="button" class="secondary" style="padding:1px 6px;font-size:0.68rem;" onclick="setTdQuickDate(1)">Tmrw</button>
+                    </span>
+                  </div>
+                  <input type="date" id="tdDate" onchange="updateTdScript()" />
+                </div>
+                <div><label>Pickup Time Window</label><input id="tdPickupTime" placeholder="e.g. 9:30 AM or Morning" onchange="updateTdScript()" /></div>
+                <div>
+                  <label>Est. Return / Ready Date</label>
+                  <input type="date" id="tdDueDate" onchange="updateTdScript()" />
+                </div>
+                <div><label>Return Delivery Time</label><input id="tdDropoffTime" placeholder="e.g. 1:30 PM" />
+                </div>
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:10px;padding:9px 12px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;">
+                <label class="inline-check" style="color:#991b1b;margin:0;">
+                  <input type="checkbox" id="tdRush" onchange="applyTdQuoteDates()" />
+                  <span>🔥 <strong>Priority / Paid Rush Turnaround (Max 12 Cyl)</strong> <small id="tdRushHint"></small></span>
+                </label>
+                <small style="font-weight:800;color:#166534;" id="tdStdHint">Std Return: —</small>
+              </div>
+
+              <div class="notice" style="margin-top:12px;margin-bottom:4px;background:#fffbeb;border:2px solid #f59e0b;color:#78350f;">
+                <div style="font-size:0.7rem;font-weight:900;text-transform:uppercase;letter-spacing:0.4px;color:#b45309;margin-bottom:3px;">🗣️ Read This &amp; Wrap Up Dispatch Call:</div>
+                <div id="tdScriptBox" style="font-size:0.9rem;line-height:1.42;font-weight:700;">Enter department/company &amp; address to generate your truck dispatch confirmation line.</div>
+              </div>
+
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+                <button class="primary" style="flex:2;margin:0;background:#b45309;" id="btnTdSave" onclick="submitTruckDispatch(false)">🚚 Log Truck Run &amp; Clear</button>
+                <button class="secondary" style="flex:1;padding:11px;background:#fef3c7;color:#92400e;border-color:#f59e0b;font-weight:900;" onclick="submitTruckDispatch(true)">📲 Log + Text ETA</button>
+              </div>
+            </div>
+
+            <!-- RIGHT COLUMN: ACTIVE TRUCK PICKUP & DELIVERY QUEUE -->
+            <div class="card">
+              <div class="card-hdr">
+                <h3>🚚 Active Truck Runs (Pickup &amp; Delivery Queue)</h3>
+                <a class="secondary" href="/schedule?tab=runs">📅 All Runs →</a>
+              </div>
+              <div id="tdOpenRunsList"></div>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
 
     <!-- PHONE BOTTOM NAVIGATION BAR -->
     <nav class="bottom-nav">
-      <button class="bnav-btn active" data-tab="cal" onclick="switchSchedTab('cal')"><span class="ico">📅</span><span>1. Month</span></button>
-      <button class="bnav-btn" data-tab="book" onclick="switchSchedTab('book')"><span class="ico">➕</span><span>2. Book</span></button>
+      <button class="bnav-btn active" data-tab="cal" onclick="switchSchedTab('cal')"><span class="ico">01</span><span>Calendar</span></button>
+      <button class="bnav-btn" data-tab="quick" onclick="switchSchedTab('quick')"><span class="ico">02</span><span>Drop Call</span></button>
+      <button class="bnav-btn" data-tab="dispatch" onclick="switchSchedTab('dispatch')"><span class="ico">03</span><span>Truck</span></button>
       <button class="bnav-btn" data-tab="runs" onclick="switchSchedTab('runs')">
-        <span class="ico">🚚</span><span>3. Runs</span><span class="bnav-dot" id="mobBadgeRuns" hidden>0</span>
+        <span class="ico">04</span><span>Runs</span><span class="bnav-dot" id="mobBadgeRuns" hidden>0</span>
       </button>
       <button class="bnav-btn" data-tab="door" onclick="switchSchedTab('door')">
-        <span class="ico">🚪</span><span>4. Door</span><span class="bnav-dot" id="mobBadgeDoor" hidden>0</span>
+        <span class="ico">05</span><span>Dock</span><span class="bnav-dot" id="mobBadgeDoor" hidden>0</span>
       </button>
     </nav>
   </div>
@@ -401,9 +665,11 @@
     </div>
   </div>
 
-  <script src="/static/js/schedule-app.js?v=14.0"></script>
-  <script src="/static/day-flow.js?v=14.0"></script>
-  <script src="/static/theme-engine.js?v=14.0"></script>
-  <script src="/static/help-bot.js?v=14.0"></script>
+  <script src="/static/js/schedule-app.js?v=15.0"></script>
+  <script src="/static/js/schedule-calls.js?v=15.0"></script>
+  <script src="/static/day-flow.js?v=15.0"></script>
+  <script src="/static/theme-engine.js?v=15.0"></script>
+  <script src="/static/js/app-switcher.js?v=15.0"></script>
+  <script src="/static/help-bot.js?v=15.0"></script>
 </body>
 </html>

@@ -22,9 +22,9 @@
 
   function roleBadgeLabel(u) {
     if (!u) return 'PIN ☰';
-    if (u.role === 'OWNER') return `👑 ${u.initials} • Owner ☰`;
-    if (u.role === 'SYSTEM_ADMIN') return `🛡️ ${u.initials} • Admin ☰`;
-    return `🔧 ${u.initials} • Crew ☰`;
+    if (u.role === 'OWNER') return `${u.initials} • Owner`;
+    if (u.role === 'SYSTEM_ADMIN') return `${u.initials} • Admin`;
+    return `${u.initials} • Crew`;
   }
 
   function roleFullTitle(u) {
@@ -153,7 +153,7 @@
           <span class="nav-badge">Gear</span>
         </button>
         ${isBoss ? `
-          <button type="button" class="rail-btn" onclick="location.href='/office?tab=setup'">
+          <button type="button" class="rail-btn" onclick="location.href='/owner'">
             <span>⚙️ Shop Setup</span>
             <span class="nav-badge">Admin</span>
           </button>` : ''}
@@ -246,7 +246,7 @@
           <div class="rail-section-lbl" style="padding:0;">Owner &amp; Admin Settings</div>
           <button type="button" class="secondary" style="padding:10px;justify-content:flex-start;" onclick="document.getElementById('unifiedAccountDrawer').hidden=true;window.openPinManagerModal()">🔐 Manage Individual Crew PINs</button>
           <button type="button" class="secondary" style="padding:10px;justify-content:flex-start;" onclick="document.getElementById('unifiedAccountDrawer').hidden=true;window.openHolidayThemeModal&&window.openHolidayThemeModal()">🎨 Holiday Themes &amp; Shop Pups</button>
-          <button type="button" class="secondary" style="padding:10px;justify-content:flex-start;" onclick="document.getElementById('unifiedAccountDrawer').hidden=true;location.href='/office?tab=setup'">⚙ Facility Settings &amp; Cert Dates</button>
+          <button type="button" class="secondary" style="padding:10px;justify-content:flex-start;" onclick="document.getElementById('unifiedAccountDrawer').hidden=true;location.href='/owner'">⚙ Facility Settings &amp; Cert Dates</button>
         </div>` : ''}
 
         <div style="border-top:1px solid var(--border-soft);padding-top:9px;margin-top:auto;display:flex;flex-direction:column;gap:7px;">

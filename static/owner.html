@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#f4f6f9" />
+  <link rel="manifest" href="/manifest.json" />
+  <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
+  <link rel="stylesheet" href="/static/ops.css?v=15.0" />
+  <link rel="stylesheet" href="/static/css/modern-ui.css?v=15.0" />
+  <title>Weber's Tank Testing — Owner Control Center | DOT B386</title>
+</head>
+<body data-workspace="owner">
+  <div id="loginScreen" class="login-wrap" hidden>
+    <div class="login-card">
+      <img src="/static/images/logo-crest.png?v=15.0" alt="Weber's" onerror="this.src='/icon.svg'" style="width:88px;height:88px;margin-bottom:8px;object-fit:contain;" />
+      <h2 style="margin:4px 0;">Owner Control Center</h2>
+      <p style="margin:0 0 18px;color:var(--ui-muted);font-size:0.88rem;">Enter Owner or System Admin PIN</p>
+      <div style="text-align:left;"><label>Access PIN</label><input type="password" inputmode="numeric" id="loginPinInput" placeholder="••••" onkeydown="if(event.key==='Enter')submitLoginPin()" style="text-align:center;font-size:1.35rem;letter-spacing:6px;font-weight:800;" /></div>
+      <div id="loginError" class="notice bad" style="margin-top:12px;" hidden>Incorrect PIN.</div>
+      <button class="primary" onclick="submitLoginPin()">Unlock Owner Controls</button>
+    </div>
+  </div>
+
+  <div id="appShell" hidden>
+    <header class="app-topbar">
+      <a href="/owner" class="top-brand">
+        <img src="/static/images/logo-crest.png?v=15.0" alt="B386" onerror="this.src='/icon.svg'" />
+        <div class="top-brand-txt">
+          <h1>Owner Control Center</h1>
+          <small>Hours, Holidays, Pricing, Team &amp; Alerts</small>
+        </div>
+      </a>
+      <div class="top-controls">
+        <a class="secondary" href="/?view=public" target="_blank" rel="noopener">Preview Public Website ↗</a>
+      </div>
+    </header>
+
+    <div class="ops-layout">
+      <aside class="side-rail">
+        <div class="rail-nav">
+          <div class="rail-section-lbl">Shop Management</div>
+          <button class="rail-btn active" data-spane="hours" onclick="switchSetupPane('hours')">
+            <span>Hours &amp; Holidays</span><span class="nav-badge green">Live</span>
+          </button>
+          <button class="rail-btn" data-spane="rates" onclick="switchSetupPane('rates')">
+            <span>Service Pricing</span><span class="nav-badge">$</span>
+          </button>
+          <button class="rail-btn" data-spane="facility" onclick="switchSetupPane('facility')">
+            <span>Team, Certs &amp; Alerts</span><span class="nav-badge">Shop</span>
+          </button>
+          <button class="rail-btn" data-admin-only="1" data-spane="sysadmin" onclick="switchSetupPane('sysadmin')">
+            <span>System Plumbing</span><span class="nav-badge amber">Admin</span>
+          </button>
+        </div>
+        <div class="rail-footer">
+          <button type="button" class="secondary" onclick="window.openPinManagerModal&&window.openPinManagerModal()" style="width:100%;">Manage Crew PINs</button>
+          <button type="button" class="secondary" onclick="window.openHolidayThemeModal&&window.openHolidayThemeModal()" style="width:100%;">Storefront Themes</button>
+        </div>
+      </aside>
+
+      <main class="ops-workspace">
+        <!-- PANE 1: HOURS & HOLIDAYS (SAFE FOR RYAN) -->
+        <div id="setupPane-hours">
+          <div class="split-2">
+            <div class="card">
+              <div class="card-hdr">
+                <div>
+                  <h3>Weekly Open Days &amp; Hours</h3>
+                  <small style="color:var(--ui-muted);">Toggle open days and adjust hours — updates weberstanktesting.com &amp; Turnaround Quotes immediately</small>
+                </div>
+              </div>
+              <div id="weeklyHoursEditor" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
+              <button class="primary" onclick="saveOperatingSchedule()">Save Weekly Operating Hours</button>
+
+              <div class="notice" style="margin-top:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+                  <strong>Google Business Profile Hours</strong>
+                  <div style="display:flex;gap:6px;">
+                    <button type="button" class="secondary" onclick="copyGbpHoursText()">Copy Formatted Hours</button>
+                    <a id="osOpenGbpBtn" class="secondary" href="https://business.google.com/" target="_blank" rel="noopener">Open Google Profile ↗</a>
+                  </div>
+                </div>
+                <pre id="osGbpPreview" style="margin:0;font-size:0.75rem;white-space:pre-wrap;font-family:var(--font-mono);"></pre>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-hdr">
+                <div>
+                  <h3 id="closureFormHdr">Holiday, Vacation &amp; Special Hours</h3>
+                  <small style="color:var(--ui-muted);">Posts an automatic customer notice on weberstanktesting.com</small>
+                </div>
+                <button type="button" class="secondary" id="btnCancelClosureEdit" onclick="resetClosureForm()" hidden>Cancel Edit</button>
+              </div>
+              <input type="hidden" id="clEditId" />
+              <div class="grid">
+                <div><label>Start Date *</label><input type="date" id="clStart" /></div>
+                <div><label>End Date (Blank = 1 Day)</label><input type="date" id="clEnd" /></div>
+                <div style="grid-column:1/-1;"><label>Holiday / Event Title *</label><input id="clTitle" placeholder="e.g. Thanksgiving Break, Shop Vacation" /></div>
+                <div style="grid-column:1/-1;">
+                  <label>Counter Status</label>
+                  <div class="transport-mode-toggle">
+                    <button type="button" class="tmode-btn active" id="clModeClosedBtn" onclick="setClosureHoursMode(false)">Closed All Day</button>
+                    <button type="button" class="tmode-btn" id="clModeSpecialBtn" onclick="setClosureHoursMode(true)">Special / Reduced Hours</button>
+                  </div>
+                  <input type="hidden" id="clStaffed" value="0" />
+                </div>
+                <div id="clSpecHrsWrap" style="grid-column:1/-1;" hidden>
+                  <div class="grid">
+                    <div><label>Opens At</label><input type="time" id="clOpenTime" value="09:00" onchange="syncClosureTimePreview()" /></div>
+                    <div><label>Closes At</label><input type="time" id="clCloseTime" value="12:00" onchange="syncClosureTimePreview()" /></div>
+                    <div style="grid-column:1/-1;"><label>Hours Label Shown on Website</label><input id="clSpecHrs" placeholder="9:00 AM – 12:00 PM" /></div>
+                  </div>
+                </div>
+                <div style="grid-column:1/-1;">
+                  <label class="inline-check"><input type="checkbox" id="clDockOpen" checked /><span>Keep 24/7 Loading Dock open for self-serve drop-off &amp; pickup</span></label>
+                </div>
+                <div style="grid-column:1/-1;"><label>Optional Website Banner Note</label><input id="clNote" placeholder="e.g. Normal hours resume Monday at 9 AM!" /></div>
+              </div>
+              <button class="primary" id="btnSaveClosure" onclick="addClosureWindow()">Save Holiday / Special Hours</button>
+              <h4 style="margin:18px 0 8px;">Saved Holiday &amp; Special Hour Windows</h4>
+              <div id="closuresListArea"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANE 2: SERVICE PRICING RATES (SAFE FOR RYAN) -->
+        <div id="setupPane-rates" hidden>
+          <div class="card">
+            <div class="card-hdr">
+              <h3>Master Service Pricing Schedule</h3>
+              <span class="sub-badge">Auto-Fills Invoices &amp; Parts</span>
+            </div>
+            <div id="pricingList"></div>
+            <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+              <button class="secondary" onclick="addRateScheduleRow()">+ Add Custom Rate</button>
+              <button class="primary" style="width:auto;margin:0;" onclick="savePricingRates()">Save Service Pricing</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANE 3: RYAN'S SAFE SHOP DEFAULTS, TEAM PINS, CERT DATES & ALERT EMAIL -->
+        <div id="setupPane-facility" hidden>
+          <div class="split-2">
+            <div class="card">
+              <div class="card-hdr">
+                <h3>Shop Capacity, Tax &amp; Compliance Dates</h3>
+              </div>
+              <div class="grid">
+                <div><label>Daily Hydro Bottle Capacity</label><input type="number" id="ofDailyCap" value="24" /></div>
+                <div><label>Retail PA Sales Tax %</label><input type="number" step="0.01" id="ofTaxRate" value="6.0" /></div>
+                <div><label>DOT RIN B386 Renewal Date</label><input type="date" id="ofRinExp" /></div>
+                <div><label>Master Gauge Cert Expires</label><input type="date" id="ofGaugeExp" /></div>
+                <div style="grid-column:1/-1;"><label>Notification Email (Receives Dock, Truck &amp; Low-Supply Alerts)</label><input type="email" id="ofAlertEmail" placeholder="weberstanktesting@gmail.com" /></div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
+                <button class="primary" style="flex:2;margin:0;" onclick="saveFacilitySetupFromOffice()">Save Shop Settings</button>
+                <button type="button" class="secondary" style="flex:1;" onclick="sendOfficeTestEmail()">Send Test Email</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-hdr"><h3>Team Access, Storefront Theme &amp; Merch</h3></div>
+              <p style="font-size:0.86rem;color:var(--ui-muted);margin-top:0;">Manage individual PINs for workers, preview holiday storefront greetings, or open the crew gear locker.</p>
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <button type="button" class="secondary" style="justify-content:space-between;padding:12px 16px;" onclick="window.openPinManagerModal&&window.openPinManagerModal()"><span>Manage Individual Crew &amp; Owner PINs</span><span>→</span></button>
+                <button type="button" class="secondary" style="justify-content:space-between;padding:12px 16px;" onclick="window.openHolidayThemeModal&&window.openHolidayThemeModal()"><span>Storefront Holiday Themes &amp; Greeting</span><span>→</span></button>
+                <a class="secondary" style="justify-content:space-between;padding:12px 16px;" href="/merch"><span>Crew Apparel &amp; Logo Vault</span><span>→</span></a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANE 4: SYSTEM ADMIN PLUMBING (HIDDEN FROM RYAN — VISIBLE ONLY TO ERIC'S SYSTEM_ADMIN PIN!) -->
+        <div id="setupPane-sysadmin" data-admin-only="1" hidden>
+          <div class="card">
+            <div class="card-hdr">
+              <div>
+                <h3>System Admin Plumbing &amp; API Integrations</h3>
+                <small style="color:var(--ui-muted);">Locked to SYSTEM_ADMIN PIN — hidden from Owner &amp; Crew accounts so webhooks and keys stay protected</small>
+              </div>
+            </div>
+            <div class="grid">
+              <div><label>Master Calibrated Cyl Serial #</label><input id="ofCalSerial" value="1SF11904" /></div>
+              <div><label>Starting Form 393-001 Sheet #</label><input type="number" id="ofSheetNo" value="8095" /></div>
+              <div><label>Resend API Key (<span id="ofResendStatus">Not Set</span>)</label><input type="password" id="ofResendKey" placeholder="re_... (blank = keep)" /></div>
+              <div><label>Sender From Address</label><input type="email" id="ofResendFrom" value="alerts@weberstanktesting.com" /></div>
+              <div style="grid-column:1/-1;"><label>Master Google Sheet URL</label><input id="ofMasterSheetUrl" /></div>
+              <div style="grid-column:1/-1;"><label>Google Sheets Apps Script Webhook URL</label><input id="ofWebhookUrl" /></div>
+              <div style="grid-column:1/-1;"><label>Google Business Profile Edit URL</label><input id="ofGbpUrl" /></div>
+              <div style="grid-column:1/-1;"><label>Gemini Vision AI Key (<span id="ofGeminiStatus">Not Set</span>)</label><input type="password" id="ofGeminiKey" placeholder="Blank = keep current key" /></div>
+            </div>
+            <label class="inline-check" style="margin-top:14px;">
+              <input type="checkbox" id="ofTestingMode" />
+              <span>Pre-Launch Testing Mode Banner</span>
+            </label>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
+              <button class="primary" style="flex:2;margin:0;" onclick="saveFacilitySetupFromOffice()">Save System Integrations</button>
+              <a class="secondary" style="flex:1;" href="/api/admin/backup-db">Download Raw .db</a>
+              <button type="button" class="danger-btn" style="flex:1;" onclick="wipePracticeDataFromOffice()">Erase Practice Data</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <nav class="bottom-nav">
+      <button class="bnav-btn active" data-spane="hours" onclick="switchSetupPane('hours')"><span class="ico">01</span><span>Hours</span></button>
+      <button class="bnav-btn" data-spane="rates" onclick="switchSetupPane('rates')"><span class="ico">02</span><span>Pricing</span></button>
+      <button class="bnav-btn" data-spane="facility" onclick="switchSetupPane('facility')"><span class="ico">03</span><span>Shop</span></button>
+    </nav>
+  </div>
+
+  <script src="/static/js/owner-app.js?v=15.0"></script>
+  <script src="/static/day-flow.js?v=15.0"></script>
+  <script src="/static/theme-engine.js?v=15.0"></script>
+  <script src="/static/js/app-switcher.js?v=15.0"></script>
+  <script src="/static/help-bot.js?v=15.0"></script>
+</body>
+</html>
