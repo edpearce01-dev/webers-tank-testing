@@ -471,8 +471,11 @@ function renderStartOfDayHuddle(queued, openSched, waitingDrops) {
     <div class="huddle-kpi"><small>Needs B386 Mark</small><strong>${hud.needs_stamp_count || 0} Dried</strong></div>
     <div class="huddle-kpi"><small>Dock Ready</small><strong>${hud.ready_shelf_count || 0} Ready</strong></div>`;
 
+  const dayNoteHtml = (plan.day_notes || '').trim()
+    ? `<div class="notice warn" style="margin-top:8px;margin-bottom:6px;border-left:4px solid #d97706;">📝 <strong>Day Note (${escHtml(STATE.selected_date)}):</strong> ${escHtml(plan.day_notes)}</div>`
+    : '';
   const todayRuns = openSched.filter(j => j.scheduled_date <= STATE.selected_date);
-  document.getElementById('huddleLineupList').innerHTML = todayRuns.length
+  document.getElementById('huddleLineupList').innerHTML = dayNoteHtml + (todayRuns.length
     ? `<small style="font-weight:800;color:var(--muted);display:block;margin-bottom:4px;">TODAY'S SCHEDULED BATCHES &amp; ROAD RUNS:</small>` +
       todayRuns.slice(0, 4).map(j => {
         const ico = j.job_type === 'ROAD_ROUNDTRIP' ? '🔄 Pickup+Deliv' : (j.job_type === 'ROAD_PICKUP' ? '🚚 Pickup' : (j.job_type === 'ROAD_DELIVERY' ? '🚚 Delivery' : '📌 Batch'));
@@ -489,7 +492,7 @@ function renderStartOfDayHuddle(queued, openSched, waitingDrops) {
             </div>
           </div>`;
       }).join('')
-    : '';
+    : '');
 }
 
 async function advanceToFreshSheet() {

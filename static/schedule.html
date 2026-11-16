@@ -7,14 +7,14 @@
   <link rel="manifest" href="/manifest.json" />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/ops.css?v=13.2" />
+  <link rel="stylesheet" href="/static/ops.css?v=13.3" />
   <title>Weber's Tank Testing — Month Schedule &amp; Dispatch | DOT B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=13.2" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
+      <img src="/static/images/logo-crest.png?v=13.3" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Schedule &amp; Dispatch</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter your Individual PIN (Access resets daily at Midnight)</p>
       <div style="text-align:left;">
@@ -32,7 +32,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=13.2" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=13.3" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>WALL SCHEDULE</h1>
           <small>RIN B386 • Calendar &amp; Dispatch</small>
@@ -172,9 +172,9 @@
                   </div>
                   <div>
                     <label>Day Note (Shows on Wall &amp; Live TV)</label>
-                    <input id="planNotes" placeholder="e.g. Baden VFD 18x SCBA, afternoon road run..." />
+                    <input id="planNotes" placeholder="e.g. Baden VFD 18x SCBA, afternoon road run..." onkeydown="if(event.key==='Enter')saveDayPlan()" />
                   </div>
-                  <button class="primary" style="margin-top:4px;" onclick="saveDayPlan()">Save Day Operating Plan</button>
+                  <button class="primary" id="btnSaveDayPlan" style="margin-top:4px;" onclick="saveDayPlan()">Save Day Operating Plan</button>
                 </div>
               </details>
             </div>
@@ -452,6 +452,8 @@
       window._justLoggedInToast = false;
       await loadScheduleState();
       fetchLiveTurnaroundQuote();
+      const b = document.getElementById('btnSaveDayPlan');
+      if (b) { const orig = b.textContent; b.textContent = '✓ Saved to Wall & Live TV!'; setTimeout(() => { b.textContent = orig; }, 2200); }
     }
 
     async function submitLoginPin() {
@@ -655,6 +657,7 @@
                 ${d.is_today ? '<span style="background:var(--gold);color:#111;font-size:0.58rem;padding:1px 5px;border-radius:4px;">TODAY</span>' : `<span style="font-size:0.62rem;color:var(--green);font-weight:800;">${escHtml(shortMode)}</span>`}
               </div>
               ${d.bottle_capacity > 0 ? `<div class="cap-bar"><div class="cap-fill ${fillCls}" style="width:${pct}%"></div></div>` : ''}
+              ${d.day_notes ? `<div class="mday-note-pill" title="${escHtml(d.day_notes)}">📝 ${escHtml(d.day_notes)}</div>` : ''}
               ${jobsHtml}${extra}
             </div>
             <div style="font-size:0.64rem;color:var(--muted);display:flex;justify-content:space-between;">
@@ -688,10 +691,13 @@
         });
       }
 
+      const noteBannerHtml = selPlan.day_notes
+        ? `<div class="notice warn" style="margin-bottom:8px;padding:8px 11px;border-left:4px solid #d97706;">📝 <strong>Day Note (${escHtml(sel)}):</strong> ${escHtml(selPlan.day_notes)}</div>`
+        : '';
       document.getElementById('dayJobsCountBadge').textContent = `${dayJobs.length} Scheduled`;
-      document.getElementById('selectedDayJobsList').innerHTML = dayJobs.length
+      document.getElementById('selectedDayJobsList').innerHTML = noteBannerHtml + (dayJobs.length
         ? dayJobs.map(j => jobRowHtml(j)).join('')
-        : '<div style="color:var(--muted);font-size:0.85rem;padding:8px 2px;">No truck runs or scheduled drop-offs on this date yet — click <strong>➕ Book Here</strong> above to add one.</div>';
+        : '<div style="color:var(--muted);font-size:0.85rem;padding:8px 2px;">No truck runs or scheduled drop-offs on this date yet — click <strong>➕ Book Here</strong> above to add one.</div>');
     }
 
     function jobRowHtml(j) {
@@ -1186,8 +1192,8 @@
     };
     setTimeout(() => window.syncBookingAddressVisibility && window.syncBookingAddressVisibility(), 80);
   </script>
-  <script src="/static/day-flow.js?v=13.2"></script>
-  <script src="/static/theme-engine.js?v=13.2"></script>
-  <script src="/static/help-bot.js?v=13.2"></script>
+  <script src="/static/day-flow.js?v=13.3"></script>
+  <script src="/static/theme-engine.js?v=13.3"></script>
+  <script src="/static/help-bot.js?v=13.3"></script>
 </body>
 </html>

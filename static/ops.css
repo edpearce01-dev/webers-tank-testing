@@ -1314,3 +1314,10 @@ html, body {
   background: #dcfce7; border: 1px solid #86efac; color: #166534;
   font-family: var(--font-mono); font-size: 0.71rem; font-weight: 800;
 }
+
+.mday-note-pill {
+  background: #fef3c7; border: 1px solid #f59e0b; color: #78350f;
+  font-size: 0.66rem; font-weight: 800; border-radius: 5px;
+  padding: 2px 5px; margin-bottom: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}

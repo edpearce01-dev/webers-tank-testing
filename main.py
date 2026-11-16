@@ -1021,6 +1021,7 @@ def push_unsynced_to_sheets() -> dict:
         for r in conn.execute("SELECT * FROM time_punches WHERE synced=0 AND status='CLOSED' ORDER BY id ASC LIMIT 50;").fetchall()
     ]
     rates = [dict(r) for r in conn.execute("SELECT * FROM pricing_rates ORDER BY sort_order ASC, code ASC;").fetchall()]
+    custs = [dict(r) for r in conn.execute("SELECT * FROM customers ORDER BY customer_name COLLATE NOCASE ASC;").fetchall()]
     conn.close()
 
     if not webhook_url and not fb_webhook_url:
@@ -1052,6 +1053,7 @@ def push_unsynced_to_sheets() -> dict:
                 "invoices": invs,
                 "dropoffs": drops,
                 "pricing_rates": rates,
+                "customers": custs,
                 "time_punches": punches,
                 "feedback": fbs if fb_webhook_url == webhook_url else [],
             }

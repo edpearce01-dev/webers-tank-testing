@@ -381,9 +381,9 @@
   <div class="tv-brand-bg" id="tvBrandBg" aria-hidden="true">
     <div class="tv-crest-wrap">
       <img id="tvBgArchImg" class="tv-arch-img" alt="" hidden />
-      <img src="/static/images/logo-crest.jpg?v=13.2" alt="" class="tv-crest-img" onerror="this.src='/icon.svg'" />
+      <img src="/static/images/logo-crest.jpg?v=13.3" alt="" class="tv-crest-img" onerror="this.src='/icon.svg'" />
     </div>
-    <img id="tvBgDogsImg" src="/static/images/dogs-thanksgiving.png?v=13.2" alt="" class="tv-dogs-img" onerror="this.onerror=null;this.src='/static/images/dogs-classic.png?v=13.2';" />
+    <img id="tvBgDogsImg" src="/static/images/dogs-thanksgiving.png?v=13.3" alt="" class="tv-dogs-img" onerror="this.onerror=null;this.src='/static/images/dogs-classic.png?v=13.3';" />
   </div>
 <!-- SCREENSAVER CLOCK & DATE OVERLAY (SHOWS WHEN SHOP IS IDLE OR SAVER CLICKED) -->
   <div class="tv-screensaver-hud" id="tvScreensaverHud" aria-hidden="true">
@@ -400,7 +400,7 @@
   <!-- TV PAIRING PIN GATE -->
   <div id="tvPinGate" class="pin-gate" hidden>
     <div class="pin-box">
-      <img src="/static/images/logo-crest.png?v=13.2" alt="B386" style="width:62px;height:62px;border-radius:50%;border:2px solid var(--gold-bright);margin-bottom:8px;" />
+      <img src="/static/images/logo-crest.png?v=13.3" alt="B386" style="width:62px;height:62px;border-radius:50%;border:2px solid var(--gold-bright);margin-bottom:8px;" />
       <h3 style="margin:0;font-family:var(--font-display);font-size:1.5rem;color:var(--forest);">Testing Room TV Display</h3>
       <p style="font-size:0.83rem;color:var(--muted);margin:5px 0 0;">Enter any valid Shop PIN once to pair this TV</p>
       <input type="password" inputmode="numeric" id="tvPinInput" placeholder="••••" onkeydown="if(event.key==='Enter')unlockTv()" />
@@ -411,7 +411,7 @@
   <!-- FROSTED 1080P BROADCAST HEADER -->
   <header class="tv-hdr">
     <div class="hdr-brand">
-      <img src="/static/images/logo-crest.png?v=13.2" alt="B386" onerror="this.src='/icon.svg'" />
+      <img src="/static/images/logo-crest.png?v=13.3" alt="B386" onerror="this.src='/icon.svg'" />
       <div>
         <span class="hdr-title">Weber's Tank Testing</span>
         <span class="hdr-sub" id="hdrShiftTxt">DOT RIN B386</span>
@@ -453,6 +453,7 @@
 
   <!-- TRANSLUCENT MAIN TELEMETRY STAGE -->
   <main class="tv-stage" id="tvStage">
+    <div id="tvDayNoteBanner" style="display:none;background:linear-gradient(90deg,#fffbeb,#fef3c7);border:1.5px solid #f59e0b;border-left:6px solid #d97706;border-radius:10px;padding:7px 14px;font-weight:800;font-size:0.96rem;color:#78350f;flex-shrink:0;align-items:center;justify-content:space-between;gap:12px;"></div>
     <div class="score-row">
       <div class="s-tile" id="tileDoor">
         <div><small>Loading Dock • Drop</small><strong id="scDoor">0</strong></div>
@@ -716,7 +717,7 @@
         } else {
           if (ssBadge) ssBadge.hidden = true;
           if (archImg) archImg.hidden = true;
-          if (dogsImg) { dogsImg.src = '/static/images/dogs-classic.png?v=13.2'; dogsImg.classList.remove('photo-fallback'); }
+          if (dogsImg) { dogsImg.src = '/static/images/dogs-classic.png?v=13.3'; dogsImg.classList.remove('photo-fallback'); }
         }
       } catch (_) {}
     }
@@ -795,6 +796,16 @@ function playChime() {
         PREV_COMPLETED = sb.completed_today;
 
         document.getElementById('hdrShiftTxt').textContent = stripLeadEmoji(d.today_plan?.shift_label) || 'DOT RIN B386';
+        const todayNoteTxt = (d.today_plan?.day_notes || '').trim();
+        const dnEl = document.getElementById('tvDayNoteBanner');
+        if (dnEl) {
+          if (todayNoteTxt) {
+            dnEl.style.display = 'flex';
+            dnEl.innerHTML = `<span>📌 <strong>TODAY'S SHOP NOTE:</strong> ${esc(todayNoteTxt)}</span><span class="mono" style="font-size:0.75rem;color:#92400e;">${esc(d.work_date)}</span>`;
+          } else {
+            dnEl.style.display = 'none';
+          }
+        }
         const sJ = d.jacket_ceilings['Short Jacket'] || {}, tJ = d.jacket_ceilings['Tall Jacket'] || {};
         const pS = document.getElementById('tvShortPill'), pT = document.getElementById('tvTallPill');
         pS.className = 'pill ' + (sJ.max_allowed_test_psi ? 'ok' : 'wait');
@@ -861,8 +872,10 @@ function playChime() {
           : '<div style="color:var(--muted);font-size:0.82rem;">No active batches in shop.</div>';
 
         const sched = d.upcoming_schedule || [];
-        document.getElementById('schedCnt').textContent = `${sched.length} Open`;
-        document.getElementById('schedList').innerHTML = sched.length
+        const noteDays = (d.calendar_days || []).filter(cd => (cd.day_notes || '').trim());
+        const noteRowsHtml = noteDays.map(cd => `<div class="row-it" style="background:rgba(254,243,199,0.65);border-radius:6px;padding:5px 8px;"><strong style="color:#92400e;">📝 ${esc(cd.weekday)} ${esc(cd.month_day)} Note:</strong> <span style="font-weight:700;color:#78350f;">${esc(cd.day_notes)}</span></div>`).join('');
+        document.getElementById('schedCnt').textContent = `${sched.length} Open` + (noteDays.length ? ` • ${noteDays.length} Note` : '');
+        document.getElementById('schedList').innerHTML = noteRowsHtml + (sched.length
           ? sched.map(j => {
               const kind = j.job_type === 'ROAD_PICKUP' ? '📥 Pickup:' : (j.job_type === 'ROAD_DELIVERY' ? '📤 Delivery:' : (j.job_type === 'ROAD_ROUNDTRIP' ? '🔄 Round-Trip:' : '📌 Batch:')); const tm = j.pickup_time ? ' @ ' + j.pickup_time : ''; const eta = j.drive_eta_mins ? ` • 🚗 ~${j.drive_eta_mins}m` : '';
               return `
@@ -871,7 +884,7 @@ function playChime() {
                   <span class="pill ${j.prep_status === 'DEVALVED_TAGGED' ? 'ok' : ''}" style="font-size:0.66rem;padding:3px 7px;">${j.prep_status === 'DEVALVED_TAGGED' ? 'Prepped' : 'Scheduled'}</span>
                 </div>`;
             }).join('')
-          : '<div style="color:var(--muted);font-size:0.82rem;">No scheduled runs queued.</div>';
+          : (noteRowsHtml ? '' : '<div style="color:var(--muted);font-size:0.82rem;">No scheduled runs queued.</div>'));
 
         const drops = d.backroom_dropoffs || [];
         document.getElementById('doorPanel').hidden = !drops.length;
@@ -934,6 +947,6 @@ function playChime() {
     setInterval(pollTv, 3500);
     setInterval(syncTvBackgroundArtwork, 20000);
   </script>
-  <script src="/static/theme-engine.js?v=13.2"></script>
+  <script src="/static/theme-engine.js?v=13.3"></script>
 </body>
 </html>
