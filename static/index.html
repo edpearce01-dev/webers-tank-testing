@@ -8,14 +8,14 @@
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   
-  <link rel="stylesheet" href="/static/ops.css?v=11.5" />
+  <link rel="stylesheet" href="/static/ops.css?v=12.0" />
   <title>Weber's Tank Testing — Shop Floor Ops | DOT B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=11.5" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
+      <img src="/static/images/logo-crest.png?v=12.0" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Tank Testing</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">
         Shop Floor Operations Workspace<br />
@@ -55,7 +55,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=11.5" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=12.0" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>WEBER'S OPS</h1>
           <small>RIN B386 • Sign-Off: RP</small>
@@ -349,6 +349,12 @@
                       <option value="HIGH">High Priority</option>
                     </select>
                   </div>
+                  <div style="grid-column:1/-1;">
+                    <label class="inline-check" style="background:#fffbeb;border:1px solid #fcd34d;padding:7px 10px;border-radius:8px;margin:0;">
+                      <input type="checkbox" id="fStar10Yr" />
+                      <span><strong>★ 10-Year Star Qualification</strong> (DOT 3A / 3AA Steel Cylinders Only — stamps ★ &amp; sets 10-yr recall)</span>
+                    </label>
+                  </div>
                 </div>
 
                 <!-- 4. Rare Workflow Overrides Only -->
@@ -620,6 +626,7 @@
       </div>
 
       <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:11px;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid var(--border-soft);">
+        <label class="inline-check" style="color:#92400e;"><input type="checkbox" id="erStar10Yr" /><span><strong>★ 10-Yr Star</strong></span></label>
         <label class="inline-check"><input type="checkbox" id="erOring" /><span>+ Neck O-Ring</span></label>
         <label class="inline-check"><input type="checkbox" id="erBurstDisc" /><span>+ Burst Disc / Relief</span></label>
         <label class="inline-check"><input type="checkbox" id="erClean" /><span>+ Internal Tumble/Clean</span></label>
@@ -678,7 +685,7 @@
           <input type="checkbox" id="testingModeChk" />
           <span><strong>Testing Stage Mode:</strong> Show practice disclaimer &amp; enable test-data wipe</span>
         </label>
-        <button class="danger-btn" style="width:100%;" onclick="eraseAllTestData()">🗑 Erase All Test Data (App + Google Sheets)</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="danger-btn" style="flex:1.4;" onclick="eraseAllTestData()">🗑 Erase All Test Data (App + Sheets)</button><a class="secondary" style="flex:1;padding:10px;justify-content:center;font-weight:800;" href="/api/admin/backup-db">💾 Backup .db File</a></div>
       </div>
       <h4 style="margin:12px 0 6px;">Crew Roster (Internal Audit — DOT PDFs Always Sign Off as RP)</h4>
       <div id="crewRosterList" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
@@ -706,10 +713,10 @@
     </div>
   </div>
 
-  <script src="/static/ops-camera.js?v=11.5"></script>
-  <script src="/static/ops-app.js?v=11.5"></script>
-  <script src="/static/day-flow.js?v=11.5"></script>
-  <script src="/static/theme-engine.js?v=11.5"></script>
-  <script src="/static/help-bot.js?v=11.5"></script>
+  <script src="/static/ops-camera.js?v=12.0"></script>
+  <script src="/static/ops-app.js?v=12.0"></script>
+  <script src="/static/day-flow.js?v=12.0"></script>
+  <script src="/static/theme-engine.js?v=12.0"></script>
+  <script src="/static/help-bot.js?v=12.0"></script>
 </body>
 </html>

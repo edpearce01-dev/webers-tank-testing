@@ -39,7 +39,6 @@ from pdf_generator import (
 STATIC_DIR = Path(__file__).parent / "static"
 STATIC_DIR.mkdir(exist_ok=True)
 
-COOKIE_NAME = "webers_crew_session"
 CACHED_VISION_MODEL: Optional[str] = None
 SHEETS_SYNC_LOCK = asyncio.Lock()
 
@@ -57,12 +56,12 @@ SHIFT_MODES = {
 }
 
 HOLDING_ZONES = {
-    "ZONE_A_BACKROOM": "Zone A • Backroom Drop-Off",
-    "ZONE_B_DEVALVE": "Zone B • Devalve & Tag Bench",
-    "ZONE_C_READY_RACK": "Zone C • Test Room Ready Rack",
-    "ZONE_D_DRY_STAMP": "Zone D • Dryer & Stamp/Sticker",
-    "ZONE_E_PICKUP_SHELF": "Zone E • Backroom Pickup Shelf",
-    "OUTBOUND_TRUCK": "🚚 Staged for Road Delivery",
+    "ZONE_A_BACKROOM": "24/7 Back Room • Drop-Off",
+    "ZONE_B_DEVALVE": "Stamp & Valve Bench",
+    "ZONE_C_READY_RACK": "Test Room • Ready Rack",
+    "ZONE_D_DRY_STAMP": "Main Bay • Drying Rack",
+    "ZONE_E_PICKUP_SHELF": "24/7 Back Room • Pickup",
+    "OUTBOUND_TRUCK": "🚚 Staged for Truck Delivery",
     "PICKED_UP": "✓ Released / Delivered",
 }
 
@@ -462,7 +461,7 @@ def compute_recall_list(conn, ref_today: str) -> list[dict]:
     """Calculates 5-Year Hydro, 10-Year Star, and 1-Year Visual retest recall dates for repeat business."""
     rows = conn.execute(
         """SELECT r.id, r.serial_number, r.customer_name, r.customer_phone,
-                  r.dot_spec, r.service_psi, r.service_mode, r.work_date, r.notes,
+                  r.dot_spec, r.service_psi, r.service_mode, r.star_10yr, r.work_date, r.notes,
                   c.phone AS rolodex_phone, c.email, c.contact_person, c.account_type
            FROM cylinder_records r
            LEFT JOIN customers c ON UPPER(c.customer_name) = UPPER(r.customer_name)
@@ -487,7 +486,7 @@ def compute_recall_list(conn, ref_today: str) -> list[dict]:
         if r["service_mode"] == "VISUAL_ONLY":
             cycle_yrs = 1
             cycle_lbl = "1-Yr Annual Visual"
-        elif "10-YR" in notes_up or "STAR" in notes_up or "★" in (r["dot_spec"] or ""):
+        elif r["star_10yr"] or "10-YR" in notes_up or "STAR" in notes_up or "★" in (r["dot_spec"] or ""):
             cycle_yrs = 10
             cycle_lbl = "10-Yr Star Hydro"
         else:
@@ -652,25 +651,6 @@ def calculate_turnaround_quote(conn, requested_bottles: int = 1) -> dict:
     }
 
 
-def compute_session_token() -> str:
-    conn = get_conn()
-    rows = {
-        r["key"]: r["value"]
-        for r in conn.execute(
-            "SELECT key, value FROM settings WHERE key IN ('shop_pin', 'session_secret');"
-        ).fetchall()
-    }
-    conn.close()
-    pin = os.getenv("WEBER_SHOP_PIN") or rows.get("shop_pin", "0386")
-    secret = rows.get("session_secret", "webers-default-secret")
-    return hmac.new(secret.encode("utf-8"), f"B386:{pin}".encode("utf-8"), hashlib.sha256).hexdigest()
-
-
-def is_authenticated(request: Request) -> bool:
-    token = request.cookies.get(COOKIE_NAME, "")
-    if not token:
-        return False
-    return hmac.compare_digest(token, compute_session_token())
 
 
 def check_duplicate_active_valve_tag(
@@ -993,7 +973,7 @@ def is_tv_authorized(request: Request) -> bool:
 
 @app.middleware("http")
 async def auth_gate_middleware(request: Request, call_next):
-    if request.url.path in ("/merch", "/api/public/merch", "/api/pdf/merch-qr"):
+    if request.url.path == "/merch-go":
         return await call_next(request)
     host = (request.headers.get("host") or "").split(":")[0].lower()
     path = request.url.path
@@ -1174,6 +1154,7 @@ class IntakeInput(BaseModel):
     test_psi: Optional[int] = None
     ree_limit: Optional[float] = None
     service_mode: str = "HYDRO_AND_VISUAL"
+    star_10yr: bool = False
     intake_by: str = "RP"
     notes: str = ""
     allow_duplicate: bool = False
@@ -1251,6 +1232,7 @@ class TestCompleteInput(BaseModel):
     valve_reinstalled: bool = False
     rin_marked: bool = False
     rin_mark_type: str = ""
+    star_10yr: Optional[bool] = None
     shop_stage: str = "DRYING"
     coating_type: str = "Painted"
     coating_condition: str = "Good"
@@ -1282,6 +1264,7 @@ class RecordEditInput(BaseModel):
     valve_reinstalled: bool = False
     rin_marked: bool = False
     rin_mark_type: str = ""
+    star_10yr: bool = False
     shop_stage: str = "IN_SHOP"
     mfg_id: str = ""
     mfg_date: str = ""
@@ -1708,8 +1691,8 @@ def submit_public_dropoff(payload: PublicDropoffInput):
 
     if etype == "DROPOFF" and acct in ("FIRE_EMS", "COMMERCIAL") and len(contact_p) < 2:
         raise HTTPException(400, "Please enter your individual name in 'Dropped Off By'.")
-    if etype == "DROPOFF" and len(payload.street_address.strip() or addr_clean) < 4:
-        raise HTTPException(400, "Please enter your Billing / Mailing Street Address & City.")
+    if etype == "DROPOFF" and acct in ("FIRE_EMS", "COMMERCIAL") and len(payload.street_address.strip() or addr_clean) < 4:
+        raise HTTPException(400, "Please enter your Department / Company Billing Street Address & City.")
     if etype == "TRUCK_REQUEST" and len(addr_clean) < 5:
         raise HTTPException(400, "Please enter the street / station address for Truck Pickup & Delivery.")
 
@@ -1879,7 +1862,8 @@ def delete_dropoff(dropoff_id: int):
 
 # --- BINDER, FULL MONTH CALENDAR & SCHEDULE / DISPATCH ROUTES ---
 @app.post("/api/binder")
-def set_binder_sheet(payload: BinderActionInput):
+def set_binder_sheet(payload: BinderActionInput, request: Request):
+    require_owner_or_admin(request)
     conn = get_conn()
     s_map = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings;").fetchall()}
     b = get_binder_status(conn, s_map)
@@ -2233,7 +2217,7 @@ def get_tv_leaderboard(work_date: Optional[str] = None):
         ticker.append(f"📥 BACKROOM DOOR: {d['customer_name']} — {rem} tank(s) waiting{r_lbl}")
 
     if needs_stamp_count:
-        ticker.append(f"🔨 ZONE D FINISH: {needs_stamp_count} DRIED CYLINDER(S) NEED B386 STAMP / STICKER")
+        ticker.append(f"🔨 DRYING RACK: {needs_stamp_count} DRIED CYLINDER(S) NEED B386 STAMP / STICKER")
 
     if low_supplies:
         ticker.append(f"📦 LOW SHOP SUPPLY: {', '.join(low_supplies[:3]).upper()}")
@@ -2717,12 +2701,12 @@ def bootstrap(work_date: Optional[str] = None, cal_year: Optional[int] = None, c
 
 
 @app.post("/api/admin/wipe-test-data")
-async def admin_wipe_test_data(request: Request):
+async def admin_wipe_test_data(request: Request, wipe_customers: bool = False):
     require_owner_or_admin(request)
     conn = get_conn()
     webhook_row = conn.execute("SELECT value FROM settings WHERE key='sheets_webhook_url';").fetchone()
     webhook_url = (webhook_row["value"] if webhook_row else "").strip()
-    wipe_all_operational_data(conn)
+    wipe_all_operational_data(conn, wipe_customers=wipe_customers)
     conn.commit()
     conn.close()
 
@@ -2765,28 +2749,7 @@ def update_settings(payload: SettingsInput, request: Request):
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('feedback_webhook_url', ?);", (payload.feedback_webhook_url.strip(),))
     if payload.testing_mode is not None:
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('testing_mode', ?);", ("1" if payload.testing_mode else "0",))
-    pin_changed = False
-    if payload.shop_pin is not None and payload.shop_pin.strip():
-        new_p = payload.shop_pin.strip()
-        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('shop_pin', ?);", (new_p,))
-        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('crew_pin', ?);", (new_p,))
-        conn.execute("UPDATE crew_users SET pin=? WHERE role='OWNER' AND initials='RP';", (new_p,))
-    bump_db_version(conn)
-    conn.commit()
-    conn.close()
-
-    resp = JSONResponse({"saved": True})
-    if pin_changed:
-        is_https = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
-        resp.set_cookie(
-            key=COOKIE_NAME,
-            value=compute_session_token(),
-            max_age=60 * 60 * 24 * 30,
-            httponly=True,
-            samesite="lax",
-            secure=is_https,
-        )
-    return resp
+    return JSONResponse({"saved": True})
 
 
 @app.post("/api/crew")
@@ -2808,7 +2771,8 @@ def add_crew_member(payload: CrewInput):
 
 
 @app.delete("/api/crew/{crew_id}")
-def deactivate_crew_member(crew_id: int):
+def deactivate_crew_member(crew_id: int, request: Request):
+    require_owner_or_admin(request)
     conn = get_conn()
     row = conn.execute("SELECT initials FROM crew_members WHERE id=?;", (crew_id,)).fetchone()
     if row and row["initials"] == "RP":
@@ -2863,17 +2827,18 @@ def log_verification_ladder(payload: VerificationLadderInput, request: Request):
         expected_a = float(exp_row["expected_cc"])
         actual_b = float(step.actual_total_cc)
         pct_dev = round(((expected_a - actual_b) / expected_a) * 100.0, 2)
-        if abs(pct_dev) > 1.0:
+        step_ok = (abs(pct_dev) <= 1.0) or (abs(expected_a - actual_b) <= 0.1)
+        if not step_ok:
             all_within_one_pct = False
         is_last = idx == (len(expected_rows) - 1)
         perm = payload.permanent_cc if is_last else 0.0
         elastic = round(actual_b - perm, 2)
         evaluated.append((exp_psi, expected_a, actual_b, perm, elastic, pct_dev))
 
-    run_passed = 1 if (all_within_one_pct and payload.permanent_cc == 0.0) else 0
+    run_passed = 1 if (all_within_one_pct and abs(payload.permanent_cc) <= 0.1) else 0
     cur = conn.cursor()
     for exp_psi, expected_a, actual_b, perm, elastic, pct_dev in evaluated:
-        step_passed = 1 if (run_passed and abs(pct_dev) <= 1.0) else 0
+        step_passed = 1 if (run_passed and (abs(pct_dev) <= 1.0 or abs(expected_a - actual_b) <= 0.1)) else 0
         cur.execute(
             """INSERT INTO daily_verifications
                (run_id, test_date, test_time, jacket_type, calibrated_serial, max_target_psi,
@@ -3018,15 +2983,15 @@ def insert_cylinder_record(payload: IntakeInput) -> dict:
             priority, rush_fee, promised_date, holding_zone,
             serial_number, valve_tag, mfg_id, mfg_date, gas_service,
             outside_dia, length_in, physical_size, dot_spec, service_psi, test_psi,
-            ree_limit, service_mode, shop_stage, intake_by, operator_name, operator_initials, notes)
-           VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'IN_SHOP', ?, 'Ryan Pearce', 'RP', ?);""",
+            ree_limit, service_mode, star_10yr, shop_stage, intake_by, operator_name, operator_initials, notes)
+           VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'IN_SHOP', ?, 'Ryan Pearce', 'RP', ?);""",
         (
             w_date, intake_ts, cust_clean, phone_clean,
             payload.dropoff_id, payload.schedule_job_id, pri, rfee, prom_date, zone,
             serial_clean, v_tag, payload.mfg_id.strip().upper(), payload.mfg_date.strip(),
             gas_clean, dia, length, phys_size,
             spec_clean, payload.service_psi, calc_test_psi,
-            ree, payload.service_mode, payload.intake_by.strip().upper()[:4] or "RP", payload.notes,
+            ree, payload.service_mode, (1 if (payload.star_10yr and spec_clean in ('3A', '3AA')) else 0), payload.intake_by.strip().upper()[:4] or "RP", payload.notes,
         ),
     )
     rid = cur.lastrowid
@@ -3644,6 +3609,9 @@ def complete_record(record_id: int, payload: TestCompleteInput, request: Request
     completed_ts = now_eastern().strftime("%I:%M %p")
     rin_marked = 1 if (payload.rin_marked or payload.rin_mark_type) else 0
     rin_type = payload.rin_mark_type.strip().upper() if payload.rin_mark_type else ("MARKED" if rin_marked else "")
+    star_val = (1 if payload.star_10yr else 0) if payload.star_10yr is not None else int(rec["star_10yr"] or 0)
+    if (rec["dot_spec"] or "").upper() not in ("3A", "3AA") or hydro_disp != "A":
+        star_val = 0
 
     oring = 1 if payload.addon_oring else int(rec["addon_oring"] or 0)
     bdisc = 1 if (payload.addon_burst_disc or payload.relief_valve_changed == "Yes") else int(rec["addon_burst_disc"] or 0)
@@ -3669,7 +3637,7 @@ def complete_record(record_id: int, payload: TestCompleteInput, request: Request
     conn.execute(
         """UPDATE cylinder_records SET
            work_date=?, sheet_no=?, status='COMPLETED', shop_stage=?, holding_zone=?, verification_id=?, jacket_type=?,
-           valve_tag=?, valve_reinstalled=?, rin_marked=?, rin_mark_type=?,
+           valve_tag=?, valve_reinstalled=?, rin_marked=?, rin_mark_type=?, star_10yr=?,
            total_cc=?, permanent_cc=?, elastic_cc=?, percent_permanent=?,
            coating_type=?, coating_condition=?,
            chk_corrosion=?, chk_dents_dings=?, chk_cuts_gouges=?, chk_leaks=?,
@@ -3681,7 +3649,7 @@ def complete_record(record_id: int, payload: TestCompleteInput, request: Request
         (
             eff_test_date, assigned_sheet_no, next_stage, next_zone, ver_id,
             payload.jacket_type if rec["service_mode"] == "HYDRO_AND_VISUAL" else "Road/Visual",
-            final_vtag, final_reinst, rin_marked, rin_type,
+            final_vtag, final_reinst, rin_marked, rin_type, star_val,
             payload.total_cc, payload.permanent_cc, elastic, pct_perm,
             payload.coating_type, payload.coating_condition,
             payload.chk_corrosion, payload.chk_dents_dings, payload.chk_cuts_gouges,
@@ -3769,7 +3737,7 @@ def edit_cylinder_record(record_id: int, payload: RecordEditInput):
     conn.execute(
         """UPDATE cylinder_records SET
            customer_name=?, customer_phone=?, priority=?, rush_fee=?, promised_date=?, holding_zone=?,
-           serial_number=?, valve_tag=?, valve_reinstalled=?, rin_marked=?, rin_mark_type=?, shop_stage=?,
+           serial_number=?, valve_tag=?, valve_reinstalled=?, rin_marked=?, rin_mark_type=?, star_10yr=?, shop_stage=?,
            mfg_id=?, mfg_date=?, gas_service=?, outside_dia=?, length_in=?, physical_size=?,
            dot_spec=?, service_psi=?, test_psi=?, ree_limit=?,
            total_cc=?, permanent_cc=?, elastic_cc=?, percent_permanent=?,
@@ -3784,7 +3752,7 @@ def edit_cylinder_record(record_id: int, payload: RecordEditInput):
             cust_clean, phone_clean, pri, rfee,
             payload.promised_date.strip(), payload.holding_zone or rec["holding_zone"] or "ZONE_C_READY_RACK",
             payload.serial_number.strip().upper().replace(" ", ""),
-            vtag, reinst, rin_marked, rin_type, payload.shop_stage or rec["shop_stage"] or "IN_SHOP",
+            vtag, reinst, rin_marked, rin_type, (1 if (payload.star_10yr and spec_clean in ("3A", "3AA")) else 0), payload.shop_stage or rec["shop_stage"] or "IN_SHOP",
             payload.mfg_id.strip().upper(), payload.mfg_date.strip(), gas_clean,
             dia, length, phys_size, spec_clean, payload.service_psi, payload.test_psi, payload.ree_limit,
             payload.total_cc, payload.permanent_cc, elastic, pct_perm,
@@ -3905,7 +3873,8 @@ def save_customer_rolodex(payload: CustomerRolodexInput):
 
 
 @app.delete("/api/customers/{cust_id}")
-def delete_customer_rolodex(cust_id: int):
+def delete_customer_rolodex(cust_id: int, request: Request):
+    require_owner_or_admin(request)
     conn = get_conn()
     conn.execute("DELETE FROM customers WHERE id=?;", (cust_id,))
     bump_db_version(conn)
@@ -5219,43 +5188,44 @@ def serve_apple_touch_icon():
 
 
 
-async def get_authenticated_user_async(request: Request):
-    import inspect, json
-    try:
-        _st = auth_status(request)
-        if inspect.isawaitable(_st):
-            _st = await _st
-        if hasattr(_st, "body"):
-            _st = json.loads(_st.body)
-        if isinstance(_st, dict) and _st.get("authenticated"):
-            return _st.get("user")
-    except Exception:
-        pass
-    return None
-
-
-class MerchRequestInput(BaseModel):
-    crew_name: str = ""
-    item_key: str
-    item_title: str
-    design_key: str
-    design_title: str
-    placement: str = "Left Chest"
-    color_name: str
-    size: str
-    qty: int = 1
-    order_type: str = "SHOP_ALLOWANCE"
-    notes: str = ""
-
-
-class MerchStatusUpdate(BaseModel):
-    status: str
-
 
 class MerchStoreSettingsInput(BaseModel):
     popup_store_url: str = ""
     allowance_note: str = ""
 
+
+@app.get("/api/admin/backup-db")
+def download_sqlite_backup(request: Request):
+    require_owner_or_admin(request)
+    import sqlite3 as _sq3
+    import tempfile as _tmp
+    src_conn = get_conn()
+    with _tmp.NamedTemporaryFile(suffix=".db", delete=False) as tf:
+        tmp_path = Path(tf.name)
+    try:
+        dst_conn = _sq3.connect(tmp_path)
+        src_conn.backup(dst_conn)
+        dst_conn.close()
+        src_conn.close()
+        data = tmp_path.read_bytes()
+    finally:
+        tmp_path.unlink(missing_ok=True)
+    stamp = today_eastern()
+    return Response(
+        content=data,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="webers_hydro_backup_{stamp}.db"'},
+    )
+
+
+@app.get("/merch-go")
+def redirect_counter_qr_to_store():
+    from fastapi.responses import RedirectResponse
+    conn = get_conn()
+    row = conn.execute("SELECT value FROM settings WHERE key='merch_popup_url';").fetchone()
+    conn.close()
+    url = (row["value"].strip() if row and row["value"] else "")
+    return RedirectResponse(url if url else "/ops", status_code=302)
 
 
 @app.get("/api/pdf/merch-qr")
@@ -5269,7 +5239,7 @@ def print_merch_counter_qr_pdf():
     conn = get_conn()
     row = conn.execute("SELECT value FROM settings WHERE key='merch_popup_url';").fetchone()
     conn.close()
-    target_url = (row["value"].strip() if row and row["value"] else "") or "https://ops.weberstanktesting.com/merch"
+    target_url = (row["value"].strip() if row and row["value"] else "") or "https://ops.weberstanktesting.com/merch-go"
 
     buf = io.BytesIO()
     c = rl_canvas.Canvas(buf, pagesize=letter)
@@ -5282,13 +5252,13 @@ def print_merch_counter_qr_pdf():
 
     logo_p = STATIC_DIR / "images" / "logo-crest.png"
     if logo_p.exists():
-        c.drawImage(str(logo_p), (W - 110) / 2, cy + ch - 128, width=110, height=110, preserveAspectRatio=True, mask="auto")
+        c.drawImage(str(logo_p), (W - 114) / 2, cy + ch - 130, width=114, height=114, preserveAspectRatio=True, mask="auto")
 
     c.setFillColorRGB(0.05, 0.15, 0.11)
     c.setFont("Helvetica-Bold", 17)
-    c.drawCentredString(W / 2, cy + ch - 152, "WEBER'S CREW & FAMILY GEAR")
+    c.drawCentredString(W / 2, cy + ch - 154, "WEBER'S CREW & FAMILY GEAR")
     c.setFont("Helvetica", 10)
-    c.drawCentredString(W / 2, cy + ch - 168, "Hoodies  •  Polos  •  Work Tees  •  Hats  •  Tumblers")
+    c.drawCentredString(W / 2, cy + ch - 170, "Hoodies  •  Polos  •  Work Tees  •  Hats  •  Tumblers")
 
     qr_code = qr.QrCodeWidget(target_url)
     b = qr_code.getBounds()
@@ -5313,8 +5283,8 @@ def serve_merch_locker():
 
 
 @app.get("/api/public/merch")
-async def get_merch_locker_state(request: Request):
-    user = get_current_session_user(request)
+def get_merch_locker_state(request: Request):
+    user = getattr(request.state, "user", None) or get_current_session_user(request)
     conn = get_conn()
     s_rows = conn.execute(
         "SELECT key, value FROM settings WHERE key IN ('merch_popup_url', 'merch_allowance_note');"
@@ -5348,6 +5318,7 @@ def update_merch_store_settings(payload: MerchStoreSettingsInput, request: Reque
     conn.commit()
     conn.close()
     return {"ok": True, "popup_store_url": url}
+
 
 
 
@@ -5570,7 +5541,7 @@ def download_shelf_claim_slip_pdf(customer: str, work_date: str = ""):
         pickup_url=f"https://weberstanktesting.com/?mode=pickup&customer={urllib.parse.quote(customer)}#dropoff",
     )
     safe_c = re.sub(r"[^A-Za-z0-9_-]", "_", customer)[:24]
-    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="ZoneE_Claim_Slip_{safe_c}.pdf"'})
+    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="BackRoom_Claim_Slip_{safe_c}.pdf"'})
 
 
 @app.get("/api/pdf/invoice/{inv_id}")

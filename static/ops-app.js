@@ -262,8 +262,13 @@ function updateCalCollapseUI() {
 }
 
 async function eraseAllTestData() {
-  if (!confirm('ERASE ALL PRACTICE / TEST DATA?\n\nWipes practice calibrations, bottles, drop-offs, schedule jobs, valve tags, and invoices while keeping API keys, Rolodex, supplies, crew, and rates intact.')) return;
-  const res = await fetch('/api/admin/wipe-test-data', { method: 'POST' });
+  if (!confirm('ERASE ALL PRACTICE / TEST DATA?
+
+Wipes practice calibrations, cylinders, drop-offs, schedule jobs, tasks, and invoices while keeping API keys, supplies, crew, and service rates intact.')) return;
+  const wipeCusts = confirm('Also clear current Customer Rolodex profiles (e.g. practice test accounts)?
+
+Click OK to clear Rolodex too, or Cancel to KEEP saved Customer Rolodex profiles.');
+  const res = await fetch('/api/admin/wipe-test-data?wipe_customers=' + wipeCusts, { method: 'POST' });
   const data = await res.json();
   if (!res.ok) { alert(data.detail || 'Wipe failed.'); return; }
   alert(data.sheets_wiped ? 'App database & Google Sheets wiped clean!' : 'Local database wiped clean!');
@@ -678,6 +683,7 @@ function captureBatchSnapshot() {
     dia: document.getElementById('fDia').value,
     len: document.getElementById('fLen').value,
     ree: document.getElementById('fRee').value,
+    star10: Boolean(document.getElementById('fStar10Yr')?.checked),
     priority: document.getElementById('fPriority').value || 'STANDARD',
     promised: document.getElementById('fPromisedDate').value,
     zone: document.getElementById('fHoldingZone').value || 'ZONE_C_READY_RACK',
@@ -884,6 +890,10 @@ function applyPreset() {
   document.getElementById('fLen').value = s.length_in;
   document.getElementById('fRee').value = s.ree_limit ?? '';
   if (BATCH_LOCKED) captureBatchSnapshot();
+  const starChk = document.getElementById('fStar10Yr');
+  if (starChk && sp && !['3A', '3AA'].includes(sp)) starChk.checked = false;
+  const reeEl = document.getElementById('fRee');
+  if (reeEl) reeEl.placeholder = sp.startsWith('SP') ? 'Check carbon label REE!' : 'Blank on Steel/Alum';
   updateAdvSpecsSummary();
   checkIntakeLifespanLive();
 }
@@ -917,6 +927,7 @@ function clearIntakeForm(forceUnlock = false) {
     document.getElementById('fGas').value = 'AIR';
     document.getElementById('fPriority').value = 'STANDARD';
     document.getElementById('cgaPreset').value = '';
+    if (document.getElementById('fStar10Yr')) document.getElementById('fStar10Yr').checked = false;
   } else if (BATCH_LOCKED && LOCKED_SNAPSHOT) {
     document.getElementById('fSerial').value = '';
     document.getElementById('fMfgDate').value = '';
@@ -930,6 +941,7 @@ function clearIntakeForm(forceUnlock = false) {
     document.getElementById('fDia').value = LOCKED_SNAPSHOT.dia;
     document.getElementById('fLen').value = LOCKED_SNAPSHOT.len;
     document.getElementById('fRee').value = LOCKED_SNAPSHOT.ree;
+    if (document.getElementById('fStar10Yr')) document.getElementById('fStar10Yr').checked = Boolean(LOCKED_SNAPSHOT.star10);
     document.getElementById('fPriority').value = LOCKED_SNAPSHOT.priority;
     document.getElementById('fPromisedDate').value = LOCKED_SNAPSHOT.promised;
     document.getElementById('fHoldingZone').value = LOCKED_SNAPSHOT.zone;
@@ -966,6 +978,7 @@ async function submitIntake(allowDup = false) {
       promised_date: document.getElementById('fPromisedDate').value || '',
       holding_zone: document.getElementById('fHoldingZone').value || 'ZONE_C_READY_RACK',
       service_mode: document.getElementById('inMode').value,
+      star_10yr: Boolean(document.getElementById('fStar10Yr')?.checked),
       serial_number: document.getElementById('fSerial').value,
       valve_tag: prevTag,
       mfg_id: document.getElementById('fMfg').value,
@@ -1201,6 +1214,7 @@ function renderBenchForm() {
     <div id="benchVisGrid" class="vis-pills-grid">${renderVisPillsHtml(BENCH_VIS, 'toggleBenchVis')}</div>
 
     <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:11px;padding:9px 11px;background:#f8fafc;border-radius:8px;border:1px solid var(--border-soft);">
+      ${["3A","3AA"].includes((rec.dot_spec||"").toUpperCase()) ? `<label class="inline-check" style="color:#92400e;"><input type="checkbox" id="bStar10Yr" ${rec.star_10yr ? "checked" : ""} /><span><strong>★ 10-Yr Star</strong></span></label>` : ""}
       <label class="inline-check"><input type="checkbox" id="bOring" ${rec.addon_oring ? 'checked' : ''} /><span>+ Neck O-Ring</span></label>
       <label class="inline-check"><input type="checkbox" id="bBurstDisc" ${(rec.addon_burst_disc || rec.relief_valve_changed === 'Yes') ? 'checked' : ''} /><span>+ Burst Disc / Relief</span></label>
       <label class="inline-check"><input type="checkbox" id="bClean" ${rec.addon_clean ? 'checked' : ''} /><span>+ Internal Clean</span></label>
@@ -1257,6 +1271,7 @@ async function completeBottle(id, isHydro) {
         valve_reinstalled: document.getElementById('bValveReinst').checked,
         rin_marked: Boolean(rinType),
         rin_mark_type: rinType,
+        star_10yr: document.getElementById('bStar10Yr') ? document.getElementById('bStar10Yr').checked : Boolean(STATE.records.find(x => x.id === id)?.star_10yr),
         coating_condition: document.getElementById('bCoat').value,
         relief_valve_changed: burstChecked ? 'Yes' : 'No',
         addon_oring: document.getElementById('bOring').checked,
@@ -1325,9 +1340,9 @@ function recordFinishRowHtml(r) {
           <span class="${isPass ? 'pass' : 'fail'}">${isPass ? 'PASS (A)' : 'CONDEMN (' + escHtml(r.hydro_disposition) + ')'}</span>
           ${stageBadgeHtml(r)}
           ${r.post_test_days >= 2 ? dwellBadgeHtml(r.post_test_days, '📦') : ''}
-          ${r.valve_tag && !r.valve_reinstalled ? `<span class="tag-chip">#${escHtml(r.valve_tag)}</span>` : ''}
+          ${r.star_10yr && isPass ? '<span class="tag-chip" style="background:#fef3c7;border-color:#f59e0b;color:#92400e;">★ Stamp 10-Yr Star</span>' : ''}${r.valve_tag && !r.valve_reinstalled ? `<span class="tag-chip">#${escHtml(r.valve_tag)}</span>` : ''}
         </div>
-        <div class="rec-sub">${escHtml(r.customer_name)} • ${escHtml(r.dot_spec)}-${r.service_psi} • Sheet #${r.sheet_no} • Perm: ${fmtPctTenth(r.percent_permanent)}</div>
+        <div class="rec-sub">${escHtml(r.customer_name)} • ${escHtml(r.dot_spec)}-${r.service_psi} • ${r.service_mode === 'VISUAL_ONLY' ? 'Visual Log' : (r.service_mode === 'VISUAL_ONLY' ? 'Visual Log' : 'Sheet #' + r.sheet_no)} • Perm: ${fmtPctTenth(r.percent_permanent)}</div>
         ${addonsHtml}
       </div>
       <div class="rec-actions">
@@ -1581,7 +1596,7 @@ function renderSearchRows(rows) {
                 ${stageBadgeHtml(r)}
                 ${r.valve_tag && !r.valve_reinstalled ? `<span class="tag-chip">#${escHtml(r.valve_tag)}</span>` : ''}
               </div>
-              <div class="rec-sub">${escHtml(r.work_date)} • ${escHtml(r.customer_name)} • ${escHtml(r.dot_spec)}-${r.service_psi} • ${isQueued ? 'Awaiting Stand' : 'Sheet #' + r.sheet_no} • Perm: ${fmtPctTenth(r.percent_permanent)}</div>
+              <div class="rec-sub">${escHtml(r.work_date)} • ${escHtml(r.customer_name)} • ${escHtml(r.dot_spec)}-${r.service_psi} • ${isQueued ? 'Awaiting Stand' : (r.service_mode === 'VISUAL_ONLY' ? 'Visual Log' : 'Sheet #' + r.sheet_no)} • Perm: ${fmtPctTenth(r.percent_permanent)}</div>
             </div>
             <button class="secondary" onclick="openEditModal(${r.id})">Edit</button>
           </div>`;
@@ -1627,6 +1642,7 @@ function openEditModal(recordId) {
   document.getElementById('erDispOvr').value = '';
   document.getElementById('erCondemnAct').value = rec.condemn_action || '';
   document.getElementById('erNotes').value = rec.notes || '';
+  if (document.getElementById('erStar10Yr')) document.getElementById('erStar10Yr').checked = Boolean(rec.star_10yr);
   document.getElementById('erOring').checked = Boolean(rec.addon_oring);
   document.getElementById('erBurstDisc').checked = Boolean(rec.addon_burst_disc || rec.relief_valve_changed === 'Yes');
   document.getElementById('erClean').checked = Boolean(rec.addon_clean);
@@ -1659,6 +1675,7 @@ async function saveEditedRecord() {
       valve_reinstalled: document.getElementById('erReinst').checked,
       rin_marked: Boolean(rinType),
       rin_mark_type: rinType,
+      star_10yr: Boolean(document.getElementById('erStar10Yr')?.checked),
       shop_stage: document.getElementById('erStage').value,
       mfg_id: document.getElementById('erMfg').value,
       mfg_date: document.getElementById('erMfgDate').value,

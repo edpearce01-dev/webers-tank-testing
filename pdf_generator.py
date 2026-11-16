@@ -94,6 +94,8 @@ def _format_dot_row_notes(rec: dict) -> str:
     c_act = (rec.get("condemn_action") or "").strip().upper()
     if c_act and (rec.get("hydro_disposition") == "D" or not rec.get("visual_pass", 1)):
         parts.append(f"[CONDEMNED: {CONDEMN_LABELS.get(c_act, c_act)}]")
+    if rec.get("star_10yr") and rec.get("hydro_disposition") == "A":
+        parts.append("10-Yr Star (★)")
     addons = []
     if rec.get("addon_oring"):
         addons.append("Neck O-Ring")
@@ -290,7 +292,7 @@ def build_retest_datasheet_pdf(
                 c.drawCentredString((col_x[5] + col_x[6]) / 2, y_val, (rec.get("gas_service") or "")[:6])
                 phys = (rec.get("physical_size") or "").replace(" x ", "x")
                 c.drawCentredString((col_x[6] + col_x[7]) / 2, y_val, phys[:12])
-                spec_str = _fmt_spec_psi(rec.get("dot_spec", ""), int(rec.get("service_psi") or 0))
+                spec_str = _fmt_spec_psi(rec.get("dot_spec", ""), int(rec.get("service_psi") or 0)) + (" ★" if (rec.get("star_10yr") and rec.get("hydro_disposition") == "A") else "")
                 c.drawCentredString((col_x[7] + col_x[8]) / 2, y_val, spec_str[:15])
                 c.drawCentredString((col_x[8] + col_x[9]) / 2, y_val, str(rec.get("test_psi") or ""))
                 c.drawCentredString((col_x[9] + col_x[10]) / 2, y_val, _fmt_num(rec.get("total_cc")))
@@ -805,7 +807,6 @@ def build_backroom_poster_pdf(
     W, H = letter
     c = canvas.Canvas(buf, pagesize=letter)
     _set_pdf_meta(c, "Weber's Tank Testing - 24/7 Backroom Drop-Off & Pickup QR Sign")
-    _stamp_pdf_crest(c, 0, 0, 0, watermark_page=(W, H))
 
     c.setFillColor(colors.HexColor("#0f291e"))
     c.rect(0, H - 126, W, 126, fill=1, stroke=0)
@@ -1104,7 +1105,7 @@ def build_shelf_claim_slip_pdf(
         is_pass = r.get("hydro_disposition") == "A"
         c.setFillColor(colors.HexColor("#15803d") if is_pass else colors.HexColor("#b91c1c"))
         c.setFont("Helvetica-Bold", 8.5)
-        mark_txt = "PASS (B386)" if is_pass else f"CONDEMN ({r.get('hydro_disposition')})"
+        mark_txt = ("PASS (B386 ★ 10Y)" if r.get("star_10yr") else "PASS (B386)") if is_pass else f"CONDEMN ({r.get('hydro_disposition')})"
         c.drawString(340, cy + 5, mark_txt)
         c.setFillColor(colors.HexColor("#334155"))
         c.setFont("Helvetica", 7.8)

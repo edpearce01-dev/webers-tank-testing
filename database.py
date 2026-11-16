@@ -74,25 +74,6 @@ def init_db() -> None:
             created_at TEXT DEFAULT ''
         );
 
-        
-        CREATE TABLE IF NOT EXISTS merch_requests (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            created_at TEXT NOT NULL,
-            crew_name TEXT NOT NULL,
-            crew_initials TEXT DEFAULT '',
-            item_key TEXT NOT NULL,
-            item_title TEXT NOT NULL,
-            design_key TEXT NOT NULL,
-            design_title TEXT NOT NULL,
-            placement TEXT DEFAULT '',
-            color_name TEXT NOT NULL,
-            size TEXT NOT NULL,
-            qty INTEGER DEFAULT 1,
-            order_type TEXT DEFAULT 'SHOP_ALLOWANCE',
-            notes TEXT DEFAULT '',
-            status TEXT DEFAULT 'REQUESTED'
-        );
-
         CREATE TABLE IF NOT EXISTS crew_tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             work_date TEXT NOT NULL,
@@ -168,6 +149,7 @@ def init_db() -> None:
             valve_reinstalled INTEGER DEFAULT 0,
             rin_marked INTEGER DEFAULT 0,
             rin_mark_type TEXT DEFAULT '',
+            star_10yr INTEGER DEFAULT 0,
             mfg_id TEXT DEFAULT '',
             mfg_date TEXT DEFAULT '',
             gas_service TEXT DEFAULT 'AIR',
@@ -398,6 +380,7 @@ def init_db() -> None:
         ("valve_reinstalled", "INTEGER DEFAULT 0"),
         ("rin_marked", "INTEGER DEFAULT 0"),
         ("rin_mark_type", "TEXT DEFAULT ''"),
+        ("star_10yr", "INTEGER DEFAULT 0"),
         ("shop_stage", "TEXT DEFAULT 'IN_SHOP'"),
         ("addon_oring", "INTEGER DEFAULT 0"),
         ("addon_burst_disc", "INTEGER DEFAULT 0"),
@@ -609,8 +592,8 @@ def init_db() -> None:
     conn.close()
 
 
-def wipe_all_operational_data(conn: sqlite3.Connection) -> None:
-    for tbl in (
+def wipe_all_operational_data(conn: sqlite3.Connection, wipe_customers: bool = False) -> None:
+    tables = [
         "daily_verifications",
         "cylinder_records",
         "dropoffs",
@@ -620,10 +603,13 @@ def wipe_all_operational_data(conn: sqlite3.Connection) -> None:
         "invoice_items",
         "invoices",
         "crew_feedback",
-        "customers",
-    ):
+    ]
+    if wipe_customers:
+        tables.append("customers")
+    for tbl in tables:
         conn.execute(f"DELETE FROM {tbl};")
-    conn.execute("DELETE FROM sqlite_sequence WHERE name IN ('daily_verifications','cylinder_records','dropoffs','schedule_jobs','crew_tasks','invoice_items','invoices','crew_feedback','customers');")
+    q_marks = ",".join(f"'{t}'" for t in tables)
+    conn.execute(f"DELETE FROM sqlite_sequence WHERE name IN ({q_marks});")
     base = conn.execute("SELECT value FROM settings WHERE key='starting_sheet_no';").fetchone()
     if base:
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('current_sheet_no', ?);", (base["value"],))
