@@ -915,10 +915,11 @@ function applyPreset() {
     document.getElementById('fGas').value = 'LPG';
   }
   if (BATCH_LOCKED) captureBatchSnapshot();
+  const spPreset = (s.dot_spec || '').toUpperCase();
   const starChk = document.getElementById('fStar10Yr');
-  if (starChk && sp && !['3A', '3AA'].includes(sp)) starChk.checked = false;
+  if (starChk && spPreset && !['3A', '3AA'].includes(spPreset)) starChk.checked = false;
   const reeEl = document.getElementById('fRee');
-  if (reeEl) reeEl.placeholder = sp.startsWith('SP') ? 'Check carbon label REE!' : 'Blank on Steel/Alum';
+  if (reeEl) reeEl.placeholder = spPreset.startsWith('SP') ? 'Check carbon label REE!' : 'Blank on Steel/Alum';
   updateAdvSpecsSummary();
   checkIntakeLifespanLive();
 }
@@ -1822,8 +1823,8 @@ async function saveAllSettings() {
 checkAuthAndBoot();
 
 function toggleShopMapCollapse() {
-  const cur = localStorage.getItem('webers_hide_floor_map') === '1';
-  localStorage.setItem('webers_hide_floor_map', cur ? '0' : '1');
+  const curHidden = localStorage.getItem('webers_hide_floor_map') !== '0';
+  localStorage.setItem('webers_hide_floor_map', curHidden ? '0' : '1');
   renderLiveFloorPlanMap();
 }
 
@@ -1831,7 +1832,7 @@ function renderLiveFloorPlanMap() {
   const host = document.getElementById('liveShopFloorMap');
   if (!host || !window.STATE) return;
 
-  const isHidden = localStorage.getItem('webers_hide_floor_map') === '1';
+  const isHidden = localStorage.getItem('webers_hide_floor_map') !== '0';
   const recs = STATE.records || [];
   const postRecs = (STATE.in_shop_post_test || []).filter(r => r.shop_stage !== 'PICKED_UP');
   const drops = (STATE.dropoffs || []).filter(d => (d.status === 'IN_BACKROOM' || d.status === 'CHECKED_IN') && (d.imported_count || 0) < d.bottle_count);
@@ -1986,6 +1987,10 @@ async function refreshOpsDispatchRadar() {
       cntEl.textContent = String(badgeCnt);
     }
 
+    if (truckJobs.length === 0) {
+      box.hidden = true;
+      return;
+    }
     box.hidden = false;
     if (dueTodayOrPast.length === 0 && !RADAR_EXPANDED) {
       box.className = 'ops-dispatch-radar calm';

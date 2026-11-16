@@ -7,14 +7,14 @@
   <link rel="manifest" href="/manifest.json" />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/ops.css?v=13.0" />
+  <link rel="stylesheet" href="/static/ops.css?v=13.1" />
   <title>Weber's Tank Testing — Office, Rolodex, Printouts &amp; Supplies | RIN B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=13.0" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
+      <img src="/static/images/logo-crest.png?v=13.1" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Office &amp; Print Center</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter your Individual PIN (Access resets daily at Midnight)</p>
       <div style="text-align:left;">
@@ -32,7 +32,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=13.0" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=13.1" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>OFFICE &amp; PRINT</h1>
           <small>RIN B386 • Billing, Rolodex &amp; Supply</small>
@@ -85,19 +85,17 @@
             <span>🖨️ DOT &amp; Claim PDFs</span><span class="nav-badge green">PDF</span>
           </button>
           <button class="rail-btn" data-tab="supplies" onclick="switchOfficeTab('supplies')">
-            <span>📦 Reorder Supplies</span><span class="nav-badge" id="navBadgeSupplies">✓</span>
-          </button>
-          <button class="rail-btn" data-owner-only="1" data-tab="rates" onclick="switchOfficeTab('rates')">
-            <span>⚙️ Service Rates</span><span class="nav-badge">$</span>
-          </button>
-          <button class="rail-btn" data-owner-only="1" data-tab="hours" onclick="switchOfficeTab('hours')">
-            <span>🕒 Operating Schedule</span><span class="nav-badge green"> Hrs</span>
+            <span>📦 Stock &amp; Low Limits</span><span class="nav-badge" id="navBadgeSupplies">✓</span>
           </button>
           <button class="rail-btn" data-tab="timeclock" onclick="switchOfficeTab('timeclock')">
             <span>⏱️ Timecards &amp; Hours</span><span class="nav-badge" id="navBadgeClock">⏱️</span>
           </button>
           <button class="rail-btn" data-tab="sms" onclick="switchOfficeTab('sms')">
             <span>📲 iPhone Text Queue</span><span class="nav-badge amber" id="navBadgeSms">0</span>
+          </button>
+          <div class="rail-section-lbl" data-owner-only="1" style="margin-top:6px;">Owner &amp; Admin</div>
+          <button class="rail-btn" data-owner-only="1" data-tab="setup" onclick="switchOfficeTab('setup')">
+            <span>⚙️ Shop Setup &amp; Hours</span><span class="nav-badge green">Setup</span>
           </button>
         </div>
 
@@ -379,7 +377,7 @@
               </div>
             </div>
 
-            <div id="zeroRatesHint" class="notice warn" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;" hidden><span>⚠️ <strong>Master Service Rates are still $0.00</strong> — set standard prices once so invoices calculate automatically.</span><button class="secondary" onclick="switchOfficeTab('rates')">⚙️ Set Service Rates →</button></div>
+            <div id="zeroRatesHint" class="notice warn" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;" hidden><span>⚠️ <strong>Master Service Rates are still $0.00</strong> — set standard prices once so invoices calculate automatically.</span><button class="secondary" onclick="switchOfficeTab('setup');switchSetupPane('rates')">⚙️ Set Service Rates →</button></div>
             <div id="unbilledPillsWrap" style="margin-bottom:10px;"></div>
 
             <div class="grid" style="margin-bottom:10px;">
@@ -658,74 +656,13 @@
         </section>
 
 
-        <!-- TAB 7: OPERATING SCHEDULE, HOLIDAYS / VACATIONS & GOOGLE PROFILE SYNC -->
-        <section id="tab-hours" hidden>
-          <div class="split-2">
-            <div class="card" style="border-top:4px solid var(--green);">
-              <div class="card-hdr">
-                <div>
-                  <h3>🕒 Weekly Staffed Operating Schedule</h3>
-                  <small style="color:var(--muted);">Updates weberstanktesting.com, Turnaround Quotes &amp; Month Calendar automatically</small>
-                </div>
-              </div>
-              <div id="weeklyHoursEditor" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
-              <div class="grid" style="margin-bottom:10px;">
-                <div><label>Google Business Profile Edit Link</label><input id="osGbpUrl" placeholder="https://business.google.com/" /></div>
-                <div><label>Master Google Sheet URL (For Quick-Open)</label><input id="osSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." /></div>
-              </div>
-              <button class="primary" onclick="saveOperatingSchedule()">💾 Save Weekly Hours &amp; Sync Website</button>
-
-              <div class="notice" style="margin-top:14px;background:#eff6ff;border-color:#93c5fd;color:#1e3a8a;">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
-                  <strong>🌐 Sync to Weber's Google Business Listing</strong>
-                  <div style="display:flex;gap:6px;">
-                    <button type="button" class="secondary" style="padding:5px 10px;font-weight:800;" onclick="copyGbpHoursText()">📋 Copy Hours</button>
-                    <a id="osOpenGbpBtn" class="secondary" style="padding:5px 10px;background:#1d4ed8;color:#fff;border:none;font-weight:800;" href="https://business.google.com/" target="_blank" rel="noopener">↗ Open Google Profile</a>
-                  </div>
-                </div>
-                <pre id="osGbpPreview" style="margin:0;font-size:0.75rem;white-space:pre-wrap;font-family:var(--font-mono);color:#1e293b;"></pre>
-              </div>
-            </div>
-
-            <div class="card" style="border-top:4px solid #f59e0b;">
-              <div class="card-hdr">
-                <div>
-                  <h3>🏖️ Set Holiday / Vacation Closures &amp; Special Hours</h3>
-                  <small style="color:var(--muted);">Posts an automatic notice banner on weberstanktesting.com &amp; blocks staffed hydro capacity</small>
-                </div>
-              </div>
-              <div class="grid">
-                <div><label>Start Date *</label><input type="date" id="clStart" /></div>
-                <div><label>End Date (Blank = 1 Day)</label><input type="date" id="clEnd" /></div>
-                <div style="grid-column:1/-1;"><label>Holiday / Vacation Title *</label><input id="clTitle" placeholder="e.g. Thanksgiving Break, Fire Academy Week, Shop Vacation" /></div>
-                <div>
-                  <label>Staffed Shop Status</label>
-                  <select id="clStaffed" onchange="document.getElementById('clSpecHrsWrap').hidden=(this.value!=='1')">
-                    <option value="0">Staffed Counter Closed</option>
-                    <option value="1">Open Special / Reduced Hours</option>
-                  </select>
-                </div>
-                <div id="clSpecHrsWrap" hidden><label>Special Hours</label><input id="clSpecHrs" placeholder="e.g. 9:00 AM – 12:00 PM" /></div>
-                <div style="grid-column:1/-1;">
-                  <label class="inline-check"><input type="checkbox" id="clDockOpen" checked /><span><strong>24/7 Loading Dock Remains Open</strong> for self-serve cylinder drop-off &amp; pickup</span></label>
-                </div>
-                <div style="grid-column:1/-1;"><label>Optional Public Website Note</label><input id="clNote" placeholder="e.g. Normal testing resumes Monday at 9 AM!" /></div>
-              </div>
-              <button class="primary" style="background:#b45309;" onclick="addClosureWindow()">➕ Post Holiday / Vacation Schedule</button>
-
-              <h4 style="margin:16px 0 8px;">Upcoming &amp; Active Schedule Notices</h4>
-              <div id="closuresListArea"></div>
-            </div>
-          </div>
-        </section>
-
         <!-- TAB 8: WORKER TIMECARDS & PAYROLL EXPORT -->
         <section id="tab-timeclock" hidden>
           <div class="card" style="border-top:4px solid #059669;">
             <div class="card-hdr">
               <div>
                 <h3>⏱️ Crew Time Clock &amp; Shift Hours</h3>
-                <small style="color:var(--muted);">Workers punch in/out from the left sidebar or top bar on any page</small>
+                <small style="color:var(--muted);">Workers punch in/out from the left sidebar on any page</small>
               </div>
               <div style="display:flex;gap:6px;flex-wrap:wrap;">
                 <button class="secondary" onclick="loadTimeclockOfficeTab(14)">Last 14 Days</button>
@@ -764,17 +701,149 @@
           </div>
         </section>
 
-        <!-- TAB 6: MASTER SERVICE RATE SCHEDULE -->
-        <section id="tab-rates" hidden>
-          <div class="card">
-            <div class="card-hdr">
-              <h3>⚙️ Master Service Rate Schedule</h3>
-              <span class="sub-badge">Auto-Fills Cylinders &amp; Revalve Add-Ons</span>
+        <!-- UNIFIED SHOP SETUP HUB (HOURS & HOLIDAYS + SERVICE PRICING + FACILITY & ALERTS) -->
+        <section id="tab-setup" hidden>
+          <div class="setup-subtabs" id="setupSubtabBar">
+            <button type="button" class="setup-subtab active" data-spane="hours" onclick="switchSetupPane('hours')">🕒 1. Operating Hours &amp; Holidays</button>
+            <button type="button" class="setup-subtab" data-spane="rates" onclick="switchSetupPane('rates')">💲 2. Service Pricing Rates</button>
+            <button type="button" class="setup-subtab" data-spane="facility" onclick="switchSetupPane('facility')">🛠️ 3. Facility, Email Alerts, PINs &amp; Backups</button>
+          </div>
+
+          <!-- PANE 1: WEEKLY OPERATING HOURS + HOLIDAY / VACATION SCHEDULE -->
+          <div id="setupPane-hours">
+            <div class="split-2">
+              <div class="card" style="border-top:4px solid var(--green);">
+                <div class="card-hdr">
+                  <div>
+                    <h3>🕒 Weekly Shop Days &amp; Open Hours</h3>
+                    <small style="color:var(--muted);">Check/uncheck open days and set exact Open &amp; Close times — updates weberstanktesting.com &amp; Month Calendar automatically</small>
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:108px 92px 1fr 1fr;gap:8px;padding:0 10px 4px;font-size:0.72rem;font-weight:800;color:var(--muted);text-transform:uppercase;">
+                  <span>Day</span><span>Status</span><span>Opens At</span><span>Closes At</span>
+                </div>
+                <div id="weeklyHoursEditor" style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px;"></div>
+                <button class="primary" onclick="saveOperatingSchedule()">💾 Save Weekly Operating Hours</button>
+
+                <div class="notice" style="margin-top:14px;background:#eff6ff;border-color:#93c5fd;color:#1e3a8a;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+                    <strong>🌐 Copy for Weber's Google Business Listing</strong>
+                    <div style="display:flex;gap:6px;">
+                      <button type="button" class="secondary" style="padding:5px 10px;font-weight:800;" onclick="copyGbpHoursText()">📋 Copy Hours</button>
+                      <a id="osOpenGbpBtn" class="secondary" style="padding:5px 10px;background:#1d4ed8;color:#fff;border:none;font-weight:800;" href="https://business.google.com/" target="_blank" rel="noopener">↗ Open Google Profile</a>
+                    </div>
+                  </div>
+                  <pre id="osGbpPreview" style="margin:0;font-size:0.75rem;white-space:pre-wrap;font-family:var(--font-mono);color:#1e293b;"></pre>
+                </div>
+              </div>
+
+              <div class="card" style="border-top:4px solid #f59e0b;">
+                <div class="card-hdr">
+                  <div>
+                    <h3 id="closureFormHdr">🏖️ Holiday, Vacation &amp; Special Hours</h3>
+                    <small style="color:var(--muted);">Close staffed counter OR set reduced/special holiday hours — posts live on weberstanktesting.com</small>
+                  </div>
+                  <button type="button" class="secondary" id="btnCancelClosureEdit" onclick="resetClosureForm()" hidden>Cancel Edit</button>
+                </div>
+                <input type="hidden" id="clEditId" />
+                <div class="grid">
+                  <div><label>Start Date *</label><input type="date" id="clStart" /></div>
+                  <div><label>End Date (Blank = Single Day)</label><input type="date" id="clEnd" /></div>
+                  <div style="grid-column:1/-1;"><label>Holiday / Event Title *</label><input id="clTitle" placeholder="e.g. Thanksgiving Break, Christmas Eve, Shop Vacation" /></div>
+
+                  <div style="grid-column:1/-1;">
+                    <label>Hours Mode During This Date Range</label>
+                    <div class="transport-mode-toggle" style="margin:4px 0 6px;">
+                      <button type="button" class="tmode-btn active" id="clModeClosedBtn" onclick="setClosureHoursMode(false)">🚪 Closed All Day</button>
+                      <button type="button" class="tmode-btn" id="clModeSpecialBtn" onclick="setClosureHoursMode(true)">🕒 Open Special / Reduced Hours</button>
+                    </div>
+                    <input type="hidden" id="clStaffed" value="0" />
+                  </div>
+
+                  <div id="clSpecHrsWrap" style="grid-column:1/-1;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:9px;padding:10px;" hidden>
+                    <div class="grid">
+                      <div><label>Holiday / Special Open Time</label><input type="time" id="clOpenTime" value="09:00" onchange="syncClosureTimePreview()" /></div>
+                      <div><label>Holiday / Special Close Time</label><input type="time" id="clCloseTime" value="12:00" onchange="syncClosureTimePreview()" /></div>
+                      <div style="grid-column:1/-1;"><label>Formatted Special Hours Text (Editable)</label><input id="clSpecHrs" placeholder="9:00 AM – 12:00 PM" /></div>
+                    </div>
+                  </div>
+
+                  <div style="grid-column:1/-1;">
+                    <label class="inline-check"><input type="checkbox" id="clDockOpen" checked /><span><strong>24/7 Loading Dock Remains Open</strong> for self-serve cylinder drop-off &amp; pickup</span></label>
+                  </div>
+                  <div style="grid-column:1/-1;"><label>Optional Customer Banner Note</label><input id="clNote" placeholder="e.g. Normal testing hours resume Monday at 9 AM!" /></div>
+                </div>
+                <button class="primary" id="btnSaveClosure" style="background:#b45309;" onclick="addClosureWindow()">➕ Save Holiday / Special Hours</button>
+
+                <h4 style="margin:16px 0 8px;">Saved Holiday &amp; Special Hour Dates (Click ✎ to Change Hours)</h4>
+                <div id="closuresListArea"></div>
+              </div>
             </div>
-            <div id="pricingList"></div>
-            <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-              <button class="secondary" onclick="addRateScheduleRow()">+ Add Custom Rate Code</button>
-              <button class="primary" style="width:auto;margin:0;padding:10px 20px;" onclick="savePricingRates()">Save Master Pricing Rates</button>
+          </div>
+
+          <!-- PANE 2: MASTER SERVICE PRICING RATES -->
+          <div id="setupPane-rates" hidden>
+            <div class="card" style="border-top:4px solid var(--green);">
+              <div class="card-hdr">
+                <h3>💲 Master Service Rate Schedule</h3>
+                <span class="sub-badge">Auto-Fills Invoices &amp; Parts</span>
+              </div>
+              <div id="pricingList"></div>
+              <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+                <button class="secondary" onclick="addRateScheduleRow()">+ Add Custom Rate Code</button>
+                <button class="primary" style="width:auto;margin:0;padding:10px 20px;" onclick="savePricingRates()">💾 Save Master Pricing Rates</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- PANE 3: FACILITY SETTINGS, EMAIL ALERTS, PINS & BACKUPS -->
+          <div id="setupPane-facility" hidden>
+            <div class="split-2">
+              <div class="card" style="border-top:4px solid #065f46;">
+                <div class="card-hdr">
+                  <h3>📧 Email Alerts, Google Sheet &amp; Integrations</h3>
+                  <button type="button" class="secondary" style="background:#065f46;color:#fff;border:none;font-weight:800;" onclick="sendOfficeTestEmail()">📧 Save &amp; Send Test Email</button>
+                </div>
+                <div class="grid">
+                  <div style="grid-column:1/-1;"><label>Ryan's Alert Email Address (Receives Dock, Truck &amp; Low-Supply Alerts)</label><input type="email" id="ofAlertEmail" placeholder="weberstanktesting@gmail.com or ryan@weberstanktesting.com" /></div>
+                  <div><label>Resend API Key (<span id="ofResendStatus">Not Set</span>)</label><input type="password" id="ofResendKey" placeholder="Paste re_... key (blank = keep)" /></div>
+                  <div><label>Sender From Address</label><input type="email" id="ofResendFrom" value="alerts@weberstanktesting.com" /></div>
+                  <div style="grid-column:1/-1;"><label>Master Google Sheet URL (Powers 'Open Master Sheet' Button)</label><input id="ofMasterSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." /></div>
+                  <div style="grid-column:1/-1;"><label>Google Sheets Sync Webhook URL (Apps Script)</label><input id="ofWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec" /></div>
+                  <div style="grid-column:1/-1;"><label>Google Business Profile Edit URL</label><input id="ofGbpUrl" placeholder="https://business.google.com/" /></div>
+                  <div style="grid-column:1/-1;"><label>Gemini Vision AI Key (<span id="ofGeminiStatus">Not Set</span>)</label><input type="password" id="ofGeminiKey" placeholder="Blank = keep current key" /></div>
+                </div>
+                <button class="primary" onclick="saveFacilitySetupFromOffice()">💾 Save Alert &amp; Integration Settings</button>
+              </div>
+
+              <div class="card" style="border-top:4px solid #1e3a8a;">
+                <div class="card-hdr">
+                  <h3>🛠️ DOT Binder, Capacity, Crew PINs &amp; Backups</h3>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+                  <button type="button" class="secondary" style="flex:1;padding:10px;font-weight:800;" onclick="window.openPinManagerModal&&window.openPinManagerModal()">🔐 Manage Crew PINs</button>
+                  <button type="button" class="secondary" style="flex:1;padding:10px;font-weight:800;" onclick="window.openHolidayThemeModal&&window.openHolidayThemeModal()">🎨 Holiday Themes &amp; Pups</button>
+                  <a class="secondary" style="flex:1;padding:10px;justify-content:center;font-weight:800;" href="/merch">👕 Merch Link</a>
+                </div>
+                <div class="grid">
+                  <div><label>Master Calibrated Cyl Serial #</label><input id="ofCalSerial" value="1SF11904" /></div>
+                  <div><label>Starting Form 393-001 Sheet #</label><input type="number" id="ofSheetNo" value="8095" /></div>
+                  <div><label>Default Daily Hydro Capacity</label><input type="number" id="ofDailyCap" value="24" /></div>
+                  <div><label>Default Retail PA Sales Tax %</label><input type="number" step="0.01" id="ofTaxRate" value="6.0" /></div>
+                  <div><label>DOT RIN B386 Renewal Date</label><input type="date" id="ofRinExp" /></div>
+                  <div><label>Master Gauge Cert Expires</label><input type="date" id="ofGaugeExp" /></div>
+                </div>
+                <label class="inline-check" style="margin-top:12px;">
+                  <input type="checkbox" id="ofTestingMode" />
+                  <span><strong>Pre-Launch Testing Mode</strong> (Uncheck for live production operation)</span>
+                </label>
+                <button class="primary" onclick="saveFacilitySetupFromOffice()">💾 Save Shop Defaults &amp; Cert Dates</button>
+
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-soft);">
+                  <a class="secondary" style="flex:1;padding:10px;justify-content:center;font-weight:800;" href="/api/admin/backup-db">💾 Download .db Backup</a>
+                  <button type="button" class="danger-btn" style="flex:1;" onclick="wipePracticeDataFromOffice()">🗑 Erase Practice Data</button>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -873,7 +942,7 @@
       if (tab === 'dispatch') setTimeout(() => document.getElementById('tdCustomer')?.focus(), 40);
       if (tab === 'timeclock') loadTimeclockOfficeTab(14);
       if (tab === 'sms') loadSmsOutboxTab();
-      if (tab === 'hours') renderOperatingScheduleTab();
+      if (tab === 'setup') renderOperatingScheduleTab();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -899,9 +968,9 @@
       if (initD) document.getElementById('globalDate').value = initD;
       const tabParam = params.get('tab') || params.get('sec');
       if (tabParam) {
-        const mapLegacy = { billing: 'invoice', print: 'print', rates: 'rates' };
+        const mapLegacy = { billing: 'invoice', print: 'print', rates: 'setup', hours: 'setup', settings: 'setup' };
         const cleanTab = mapLegacy[tabParam] || tabParam;
-        if (['quick', 'dispatch', 'invoice', 'saved', 'rolodex', 'print', 'supplies', 'rates', 'hours', 'timeclock', 'sms'].includes(cleanTab)) {
+        if (['quick', 'dispatch', 'invoice', 'saved', 'rolodex', 'print', 'supplies', 'setup', 'timeclock', 'sms'].includes(cleanTab)) {
           switchOfficeTab(cleanTab);
         }
       }
@@ -1280,8 +1349,6 @@
             contact_person: contact,
             scheduled_date: schedDate,
             due_date: dueDate,
-            pickup_time: document.getElementById('tdPickupTime')?.value || '',
-            dropoff_time: document.getElementById('tdDropoffTime')?.value || '',
             customer_name: cust,
             customer_phone: phone,
             bottle_count: cnt,
@@ -1494,6 +1561,8 @@
             contact_person: contact,
             scheduled_date: schedDate,
             due_date: dueDate,
+            pickup_time: document.getElementById('tdPickupTime')?.value || '',
+            dropoff_time: document.getElementById('tdDropoffTime')?.value || '',
             customer_name: cust,
             customer_phone: phone,
             bottle_count: cnt,
@@ -2133,38 +2202,127 @@
       loadOfficeState();
     }
 
-    // --- TAB 7: OPERATING SCHEDULE, HOLIDAYS & GOOGLE PROFILE SYNC ---
+    // --- UNIFIED SHOP SETUP HUB (HOURS & HOLIDAYS + PRICING + FACILITY) ---
     let OS_DATA = null;
 
-    function renderOperatingScheduleTab() {
-      const d = STATE.operating_schedule || OS_DATA;
+    function switchSetupPane(pane) {
+      ['hours', 'rates', 'facility'].forEach(p => {
+        const el = document.getElementById('setupPane-' + p);
+        if (el) el.hidden = (p !== pane);
+      });
+      document.querySelectorAll('#setupSubtabBar .setup-subtab').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-spane') === pane);
+      });
+    }
+
+    function fmt12hJs(hhmm) {
+      const m = String(hhmm || '').match(/^(\d{1,2}):(\d{2})$/);
+      if (!m) return hhmm || '';
+      const h = parseInt(m[1], 10), mn = parseInt(m[2], 10);
+      const ap = h >= 12 ? 'PM' : 'AM';
+      const h12 = h % 12 || 12;
+      return `${h12}:${String(mn).padStart(2, '0')} ${ap}`;
+    }
+
+    function setClosureHoursMode(isSpecialOpen) {
+      document.getElementById('clStaffed').value = isSpecialOpen ? '1' : '0';
+      document.getElementById('clModeClosedBtn')?.classList.toggle('active', !isSpecialOpen);
+      document.getElementById('clModeSpecialBtn')?.classList.toggle('active', isSpecialOpen);
+      const wrap = document.getElementById('clSpecHrsWrap');
+      if (wrap) wrap.hidden = !isSpecialOpen;
+      if (isSpecialOpen) syncClosureTimePreview();
+    }
+
+    function syncClosureTimePreview() {
+      const o = document.getElementById('clOpenTime')?.value || '09:00';
+      const c = document.getElementById('clCloseTime')?.value || '12:00';
+      const inp = document.getElementById('clSpecHrs');
+      if (inp) inp.value = `${fmt12hJs(o)} – ${fmt12hJs(c)}`;
+    }
+
+    function resetClosureForm() {
+      document.getElementById('clEditId').value = '';
+      document.getElementById('closureFormHdr').textContent = '🏖️ Holiday, Vacation & Special Hours';
+      document.getElementById('btnSaveClosure').textContent = '➕ Save Holiday / Special Hours';
+      document.getElementById('btnCancelClosureEdit').hidden = true;
+      ['clStart', 'clEnd', 'clTitle', 'clSpecHrs', 'clNote'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+      });
+      document.getElementById('clDockOpen').checked = true;
+      setClosureHoursMode(false);
+    }
+
+    function editClosureRow(id) {
+      const c = (OS_DATA?.upcoming_closures || []).find(x => x.id === id);
+      if (!c) return;
+      document.getElementById('clEditId').value = c.id;
+      document.getElementById('closureFormHdr').textContent = `✎ Editing: ${c.title}`;
+      document.getElementById('btnSaveClosure').textContent = '💾 Update Holiday / Special Hours';
+      document.getElementById('btnCancelClosureEdit').hidden = false;
+      document.getElementById('clStart').value = c.start_date || '';
+      document.getElementById('clEnd').value = c.end_date || '';
+      document.getElementById('clTitle').value = c.title || '';
+      document.getElementById('clDockOpen').checked = Boolean(c.dock_open);
+      document.getElementById('clNote').value = c.public_note || '';
+      setClosureHoursMode(Boolean(c.staffed_open));
+      if (c.special_hours) document.getElementById('clSpecHrs').value = c.special_hours;
+      document.getElementById('clTitle').focus();
+    }
+
+    async function renderOperatingScheduleTab() {
+      let d = STATE.operating_schedule || OS_DATA;
+      if (!d || !Array.isArray(d.weekly_hours) || !d.weekly_hours.length) {
+        try {
+          const r = await fetch('/api/office/operating-schedule');
+          if (r.ok) { d = await r.json(); STATE.operating_schedule = d; }
+        } catch (_) {}
+      }
       if (!d) return;
       OS_DATA = d;
+
       const msBtn = document.getElementById('railMasterSheetBtn');
       if (msBtn && (STATE.master_sheet_url || d.master_sheet_url)) {
         msBtn.href = STATE.master_sheet_url || d.master_sheet_url;
       }
+
       const ed = document.getElementById('weeklyHoursEditor');
       if (ed && !ed.contains(document.activeElement)) {
         ed.innerHTML = (d.weekly_hours || []).map((h, i) => `
-          <div style="display:grid;grid-template-columns:110px 92px 1fr 1fr;gap:8px;align-items:center;padding:6px 8px;background:#f8fafc;border:1px solid var(--border-soft);border-radius:8px;">
+          <div class="hours-day-row ${h.is_open ? '' : 'closed-day'}" id="ohRow_${i}">
             <strong>${escHtml(h.day_name)}</strong>
             <label class="inline-check" style="margin:0;font-size:0.8rem;">
-              <input type="checkbox" id="ohOpen_${i}" ${h.is_open ? 'checked' : ''} onchange="document.getElementById('ohStart_${i}').disabled=!this.checked;document.getElementById('ohEnd_${i}').disabled=!this.checked" />
-              <span>Open</span>
+              <input type="checkbox" id="ohOpen_${i}" ${h.is_open ? 'checked' : ''}
+                onchange="document.getElementById('ohStart_${i}').disabled=!this.checked;document.getElementById('ohEnd_${i}').disabled=!this.checked;document.getElementById('ohRow_${i}').classList.toggle('closed-day',!this.checked)" />
+              <span>${h.is_open ? 'Open' : 'Closed'}</span>
             </label>
             <input type="time" id="ohStart_${i}" value="${escHtml(h.open_time || '09:00')}" ${h.is_open ? '' : 'disabled'} />
             <input type="time" id="ohEnd_${i}" value="${escHtml(h.close_time || '16:00')}" ${h.is_open ? '' : 'disabled'} />
           </div>`).join('');
       }
-      if (document.getElementById('osGbpUrl') && document.activeElement !== document.getElementById('osGbpUrl')) {
-        document.getElementById('osGbpUrl').value = d.gbp_edit_url || 'https://business.google.com/';
+      if (document.getElementById('osOpenGbpBtn')) {
         document.getElementById('osOpenGbpBtn').href = d.gbp_edit_url || 'https://business.google.com/';
       }
-      if (document.getElementById('osSheetUrl') && document.activeElement !== document.getElementById('osSheetUrl')) {
-        document.getElementById('osSheetUrl').value = d.master_sheet_url || STATE.master_sheet_url || '';
-      }
       if (document.getElementById('osGbpPreview')) document.getElementById('osGbpPreview').textContent = d.gbp_copy_text || '';
+
+      // Populate Facility & Alerts Pane fields
+      const setValIfIdle = (id, v) => {
+        const el = document.getElementById(id);
+        if (el && document.activeElement !== el) el.value = v ?? '';
+      };
+      setValIfIdle('ofAlertEmail', STATE.alert_email || '');
+      setValIfIdle('ofResendFrom', STATE.resend_from_email || 'alerts@weberstanktesting.com');
+      setValIfIdle('ofMasterSheetUrl', STATE.master_sheet_url || d.master_sheet_url || '');
+      setValIfIdle('ofWebhookUrl', STATE.sheets_webhook_url || '');
+      setValIfIdle('ofGbpUrl', d.gbp_edit_url || 'https://business.google.com/');
+      setValIfIdle('ofCalSerial', STATE.calibrated_serial || '1SF11904');
+      setValIfIdle('ofSheetNo', STATE.starting_sheet_no || 8095);
+      setValIfIdle('ofDailyCap', STATE.daily_hydro_capacity || 24);
+      setValIfIdle('ofTaxRate', STATE.default_tax_rate ?? 6.0);
+      setValIfIdle('ofRinExp', STATE.rin_expires_date || '');
+      setValIfIdle('ofGaugeExp', STATE.gauge_cert_expires_date || '');
+      if (document.getElementById('ofTestingMode')) document.getElementById('ofTestingMode').checked = Boolean(STATE.testing_mode);
+      if (document.getElementById('ofResendStatus')) document.getElementById('ofResendStatus').textContent = STATE.has_resend_key ? 'Configured ✓' : 'Not Set';
+      if (document.getElementById('ofGeminiStatus')) document.getElementById('ofGeminiStatus').textContent = STATE.has_gemini_key ? 'Configured ✓' : 'Not Set';
 
       const clEl = document.getElementById('closuresListArea');
       if (clEl) {
@@ -2172,11 +2330,20 @@
         clEl.innerHTML = cls.length ? cls.map(c => `
           <div class="rec-item">
             <div class="rec-main">
-              <div class="rec-title"><span>🏖️ ${escHtml(c.title)}</span><span class="sub-badge">${escHtml(c.start_date)}${c.end_date !== c.start_date ? ' → ' + escHtml(c.end_date) : ''}</span></div>
-              <div class="rec-sub">${c.staffed_open ? 'Special Hrs: ' + escHtml(c.special_hours) : 'Staffed Counter Closed'} • ${c.dock_open ? '✅ 24/7 Dock Open' : '⛔ Dock Closed'}${c.public_note ? ' • ' + escHtml(c.public_note) : ''}</div>
+              <div class="rec-title">
+                <span>🏖️ ${escHtml(c.title)}</span>
+                <span class="sub-badge">${escHtml(c.start_date)}${c.end_date !== c.start_date ? ' → ' + escHtml(c.end_date) : ''}</span>
+              </div>
+              <div class="rec-sub">
+                <strong>${c.staffed_open ? '🕒 Special Hours: ' + escHtml(c.special_hours || 'Open') : '🚪 Staffed Counter Closed'}</strong>
+                • ${c.dock_open ? '✅ 24/7 Dock Open' : '⛔ Dock Closed'}${c.public_note ? ' • ' + escHtml(c.public_note) : ''}
+              </div>
             </div>
-            <button class="secondary" style="color:#b91c1c;" onclick="removeClosureWindow(${c.id})">✕ Remove</button>
-          </div>`).join('') : '<div style="color:var(--muted);font-size:0.84rem;">No upcoming holiday or vacation closures set.</div>';
+            <div class="rec-actions">
+              <button class="secondary" onclick="editClosureRow(${c.id})">✎ Edit Hours</button>
+              <button class="secondary" style="color:#b91c1c;" onclick="removeClosureWindow(${c.id})">✕</button>
+            </div>
+          </div>`).join('') : '<div style="color:var(--muted);font-size:0.84rem;">No upcoming holiday or special-hour dates set yet.</div>';
       }
     }
 
@@ -2194,15 +2361,15 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           weekly_hours: hrs,
-          gbp_edit_url: document.getElementById('osGbpUrl')?.value || '',
-          master_sheet_url: document.getElementById('osSheetUrl')?.value || '',
+          gbp_edit_url: document.getElementById('ofGbpUrl')?.value || undefined,
+          master_sheet_url: document.getElementById('ofMasterSheetUrl')?.value || undefined,
         }),
       });
       if (!res.ok) { alert((await res.json()).detail || 'Save failed.'); return; }
       OS_DATA = await res.json();
       STATE.operating_schedule = OS_DATA;
       renderOperatingScheduleTab();
-      alert('Weekly operating schedule saved & synced to weberstanktesting.com!');
+      alert('Weekly operating days & hours saved and live on weberstanktesting.com!');
     }
 
     function copyGbpHoursText() {
@@ -2214,31 +2381,81 @@
     async function addClosureWindow() {
       const s = document.getElementById('clStart').value;
       const t = document.getElementById('clTitle').value.trim();
-      if (!s || !t) { alert('Enter Start Date and Holiday / Vacation Title.'); return; }
+      if (!s || !t) { alert('Enter Start Date and Holiday / Event Title.'); return; }
+      const editId = parseInt(document.getElementById('clEditId').value || '0', 10) || null;
+      const staffedOpen = document.getElementById('clStaffed').value === '1';
+      let specTxt = (document.getElementById('clSpecHrs')?.value || '').trim();
+      if (staffedOpen && !specTxt) {
+        syncClosureTimePreview();
+        specTxt = (document.getElementById('clSpecHrs')?.value || '').trim();
+      }
       const res = await fetch('/api/office/closures', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id: editId,
           start_date: s,
           end_date: document.getElementById('clEnd').value || s,
           title: t,
-          staffed_open: document.getElementById('clStaffed').value === '1',
-          special_hours: document.getElementById('clSpecHrs').value,
+          staffed_open: staffedOpen,
+          special_hours: staffedOpen ? specTxt : '',
           dock_open: document.getElementById('clDockOpen').checked,
           public_note: document.getElementById('clNote').value,
         }),
       });
-      if (!res.ok) { alert((await res.json()).detail || 'Could not save closure.'); return; }
+      if (!res.ok) { alert((await res.json()).detail || 'Could not save holiday/special hours.'); return; }
       OS_DATA = await res.json();
       STATE.operating_schedule = OS_DATA;
-      ['clStart', 'clEnd', 'clTitle', 'clSpecHrs', 'clNote'].forEach(id => { document.getElementById(id).value = ''; });
+      resetClosureForm();
       renderOperatingScheduleTab();
     }
 
     async function removeClosureWindow(id) {
+      if (!confirm('Remove this holiday / special hours notice?')) return;
       await fetch(`/api/office/closures/${id}`, { method: 'DELETE' });
       loadOfficeState();
     }
 
+    async function saveFacilitySetupFromOffice() {
+      const body = {
+        calibrated_serial: document.getElementById('ofCalSerial')?.value || '1SF11904',
+        starting_sheet_no: parseInt(document.getElementById('ofSheetNo')?.value || '8095', 10),
+        daily_hydro_capacity: parseInt(document.getElementById('ofDailyCap')?.value || '24', 10),
+        default_tax_rate: parseFloat(document.getElementById('ofTaxRate')?.value || '6.0'),
+        rin_expires_date: document.getElementById('ofRinExp')?.value || '',
+        gauge_cert_expires_date: document.getElementById('ofGaugeExp')?.value || '',
+        alert_email: document.getElementById('ofAlertEmail')?.value || '',
+        resend_api_key: document.getElementById('ofResendKey')?.value || null,
+        resend_from_email: document.getElementById('ofResendFrom')?.value || 'alerts@weberstanktesting.com',
+        master_sheet_url: document.getElementById('ofMasterSheetUrl')?.value || '',
+        sheets_webhook_url: document.getElementById('ofWebhookUrl')?.value || '',
+        gbp_edit_url: document.getElementById('ofGbpUrl')?.value || '',
+        gemini_api_key: document.getElementById('ofGeminiKey')?.value || null,
+        testing_mode: Boolean(document.getElementById('ofTestingMode')?.checked),
+      };
+      const res = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (!res.ok) { alert((await res.json()).detail || 'Could not save settings.'); return; }
+      if (document.getElementById('ofResendKey')) document.getElementById('ofResendKey').value = '';
+      if (document.getElementById('ofGeminiKey')) document.getElementById('ofGeminiKey').value = '';
+      alert('Shop setup & alert settings saved!');
+      loadOfficeState();
+    }
+
+    async function sendOfficeTestEmail() {
+      await saveFacilitySetupFromOffice();
+      const res = await fetch('/api/settings/test-email', { method: 'POST' });
+      const d = await res.json();
+      if (!res.ok) { alert(d.detail || 'Could not send test email.'); return; }
+      alert('Test alert email sent!');
+    }
+
+    async function wipePracticeDataFromOffice() {
+      if (!confirm('ERASE ALL PRACTICE / TEST DATA?\n\nWipes practice calibrations, cylinders, drop-offs, schedule jobs, time punches, and invoices while keeping API keys, supplies, crew, hours, and pricing intact.')) return;
+      const wipeCusts = confirm('Also clear current Customer Rolodex profiles?\n\nClick OK to clear Rolodex too, or Cancel to KEEP saved Customer Rolodex profiles.');
+      const res = await fetch('/api/admin/wipe-test-data?wipe_customers=' + wipeCusts, { method: 'POST' });
+      if (!res.ok) { alert((await res.json()).detail || 'Wipe failed.'); return; }
+      alert('Practice data wiped clean!');
+      loadOfficeState();
+    }
     // --- TAB 8: CREW TIMECARDS & PAYROLL ---
     async function loadTimeclockOfficeTab(days = 14) {
       const res = await fetch(`/api/timeclock/report?days=${days}`);
@@ -2376,8 +2593,8 @@
 
     bootOffice();
   </script>
-  <script src="/static/day-flow.js?v=13.0"></script>
-  <script src="/static/theme-engine.js?v=13.0"></script>
-  <script src="/static/help-bot.js?v=13.0"></script>
+  <script src="/static/day-flow.js?v=13.1"></script>
+  <script src="/static/theme-engine.js?v=13.1"></script>
+  <script src="/static/help-bot.js?v=13.1"></script>
 </body>
 </html>

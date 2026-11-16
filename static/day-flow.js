@@ -123,11 +123,9 @@
     const u = window.CURRENT_USER;
     let box = document.getElementById('shiftFlowRailBox');
     if (!box) {
-      box = document.createElement('div');
+      box = document.createElement('details');
       box.id = 'shiftFlowRailBox';
-      box.style.marginTop = '10px';
-      box.style.paddingTop = '8px';
-      box.style.borderTop = '1px solid var(--border-soft)';
+      box.className = 'rail-tools-drawer';
       railNav.appendChild(box);
     }
     const openTasks = (DAY_DATA.tasks || []).filter(t => t.status === 'OPEN').length;
@@ -135,24 +133,31 @@
     const locked = Boolean(DAY_DATA.day_plan?.lineup_locked);
 
     box.innerHTML = `
-      <div class="rail-section-lbl">${esc(u.name)}</div>
-      ${isBoss ? `
-        <button type="button" class="rail-btn" onclick="window.openStartDayModal()">
-          <span>Start Your Day</span>
-          <span class="nav-badge ${locked ? 'green' : 'amber'}">${locked ? 'Locked' : 'Plan'}</span>
-        </button>` : ''}
-      <button type="button" class="rail-btn" onclick="window.openTasksModal()">
-        <span>${isBoss ? 'Crew Tasks' : 'My Tasks'}</span>
-        <span class="nav-badge ${openTasks ? 'amber' : 'green'}">${openTasks}</span>
-      </button>
-      <button type="button" class="rail-btn" onclick="window.openEndDayModal()">
-        <span>${isBoss ? 'End Your Day' : 'Wrap Up Shift'}</span>
-        <span class="nav-badge">EOD</span>
-      </button>
-      <button type="button" class="rail-btn" onclick="location.href='/merch'">
-        <span>👕 Crew Merch</span>
-        <span class="nav-badge">Gear</span>
-      </button>`;
+      <summary>🛠️ Shift &amp; Crew Tools ${openTasks ? `(${openTasks})` : ''} ▾</summary>
+      <div style="display:flex;flex-direction:column;gap:4px;margin-top:4px;">
+        ${isBoss ? `
+          <button type="button" class="rail-btn" onclick="window.openStartDayModal()">
+            <span>☀️ Start Your Day</span>
+            <span class="nav-badge ${locked ? 'green' : 'amber'}">${locked ? 'Locked' : 'Plan'}</span>
+          </button>` : ''}
+        <button type="button" class="rail-btn" onclick="window.openTasksModal()">
+          <span>📋 ${isBoss ? 'Crew Tasks' : 'My Tasks'}</span>
+          <span class="nav-badge ${openTasks ? 'amber' : 'green'}">${openTasks}</span>
+        </button>
+        <button type="button" class="rail-btn" onclick="window.openEndDayModal()">
+          <span>🌙 ${isBoss ? 'End Your Day' : 'Wrap Up Shift'}</span>
+          <span class="nav-badge">EOD</span>
+        </button>
+        <button type="button" class="rail-btn" onclick="location.href='/merch'">
+          <span>👕 Crew Merch</span>
+          <span class="nav-badge">Gear</span>
+        </button>
+        ${isBoss ? `
+          <button type="button" class="rail-btn" onclick="location.href='/office?tab=setup'">
+            <span>⚙️ Shop Setup</span>
+            <span class="nav-badge">Admin</span>
+          </button>` : ''}
+      </div>`;
   }
 
   function renderUncalibratedOpsBanner() {
@@ -241,7 +246,7 @@
           <div class="rail-section-lbl" style="padding:0;">Owner &amp; Admin Settings</div>
           <button type="button" class="secondary" style="padding:10px;justify-content:flex-start;" onclick="document.getElementById('unifiedAccountDrawer').hidden=true;window.openPinManagerModal()">🔐 Manage Individual Crew PINs</button>
           <button type="button" class="secondary" style="padding:10px;justify-content:flex-start;" onclick="document.getElementById('unifiedAccountDrawer').hidden=true;window.openHolidayThemeModal&&window.openHolidayThemeModal()">🎨 Holiday Themes &amp; Shop Pups</button>
-          <button type="button" class="secondary" style="padding:10px;justify-content:flex-start;" onclick="document.getElementById('unifiedAccountDrawer').hidden=true;typeof toggleGuide==='function'?toggleGuide(true):(location.href='/ops?open=settings')">⚙ Facility Settings &amp; Cert Dates</button>
+          <button type="button" class="secondary" style="padding:10px;justify-content:flex-start;" onclick="document.getElementById('unifiedAccountDrawer').hidden=true;location.href='/office?tab=setup'">⚙ Facility Settings &amp; Cert Dates</button>
         </div>` : ''}
 
         <div style="border-top:1px solid var(--border-soft);padding-top:9px;margin-top:auto;display:flex;flex-direction:column;gap:7px;">

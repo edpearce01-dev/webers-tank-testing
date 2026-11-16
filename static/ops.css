@@ -1214,3 +1214,78 @@ html, body {
   text-transform: uppercase; color: var(--muted); margin-bottom: 2px;
 }
 .job-detail-kv div strong { font-size: 0.9rem; color: var(--slate); }
+
+/* =========================================================================
+   v13.1 TOPBAR ANTI-OVERLAP, SIDEBAR DECLUTTER & SHOP SETUP TABS
+   ========================================================================= */
+.app-topbar {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+.ws-switcher {
+  justify-self: center !important;
+  min-width: 0 !important;
+  overflow-x: auto !important;
+  max-width: 100% !important;
+  scrollbar-width: none !important;
+}
+.ws-switcher::-webkit-scrollbar { display: none; }
+.top-controls {
+  justify-self: end !important;
+  flex-shrink: 0 !important;
+  gap: 6px !important;
+}
+#topHolidayToggleBtn, #topTimeClockBtn {
+  display: none !important; /* Eliminates topbar collision; accessible in Sidebar & Shop Setup */
+}
+@media (max-width: 1180px) {
+  .ws-link span:not([id]) { font-size: 0.78rem; }
+  .top-brand-txt small { display: none; }
+}
+.rail-tools-drawer {
+  margin-top: 8px;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 6px;
+}
+.rail-tools-drawer summary {
+  cursor: pointer;
+  font-size: 0.73rem;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 6px 8px;
+  border-radius: 7px;
+  user-select: none;
+}
+.rail-tools-drawer summary:hover { background: #f1f5f9; color: var(--forest); }
+.setup-subtabs {
+  display: flex; gap: 7px; flex-wrap: wrap;
+  padding: 7px; background: #f1f5f9; border: 1px solid var(--border-soft);
+  border-radius: 11px; margin-bottom: 14px;
+}
+.setup-subtab {
+  padding: 9px 15px; border-radius: 8px; border: 1px solid transparent;
+  background: transparent; font-weight: 800; font-size: 0.84rem;
+  color: #475569; cursor: pointer;
+}
+.setup-subtab.active {
+  background: var(--forest); color: #fef3c7; border-color: var(--forest);
+  box-shadow: 0 2px 8px rgba(12, 38, 27, 0.16);
+}
+.hours-day-row {
+  display: grid;
+  grid-template-columns: 108px 92px 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid var(--border-soft);
+  border-radius: 9px;
+}
+.hours-day-row.closed-day { opacity: 0.68; background: #f1f5f9; }
+@media (max-width: 640px) {
+  .hours-day-row { grid-template-columns: 1fr 1fr; }
+}

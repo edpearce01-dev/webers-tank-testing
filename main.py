@@ -629,8 +629,6 @@ def build_month_calendar_grid(conn, year: int, month: int, s_map: dict) -> dict:
         (start_iso, end_iso),
     ).fetchall()
     plans_map = {r["work_date"]: dict(r) for r in plans_rows}
-    hours_map_q = {r["day_of_week"]: dict(r) for r in conn.execute("SELECT * FROM operating_hours;").fetchall()}
-    closures_q = [dict(r) for r in conn.execute("SELECT * FROM holiday_closures WHERE end_date >= ?;", (start_dt.isoformat(),)).fetchall()]
     hours_map = {r["day_of_week"]: dict(r) for r in conn.execute("SELECT * FROM operating_hours;").fetchall()}
     closures = [dict(r) for r in conn.execute("SELECT * FROM holiday_closures WHERE end_date >= ? AND start_date <= ?;", (start_iso, end_iso)).fetchall()]
 
@@ -820,6 +818,8 @@ def calculate_turnaround_quote(conn, requested_bottles: int = 1) -> dict:
         (start_dt.isoformat(),),
     ).fetchall()
     plans_map = {r["work_date"]: dict(r) for r in plans_rows}
+    hours_map_q = {r["day_of_week"]: dict(r) for r in conn.execute("SELECT * FROM operating_hours;").fetchall()}
+    closures_q = [dict(r) for r in conn.execute("SELECT * FROM holiday_closures WHERE end_date >= ?;", (start_dt.isoformat(),)).fetchall()]
 
     queued_total = conn.execute("SELECT COUNT(*) FROM cylinder_records WHERE status='QUEUED';").fetchone()[0]
     queued_rush = conn.execute(
@@ -2570,13 +2570,7 @@ def ping_version():
         "unsynced_count": unsynced,
         "backroom_waiting": backroom_waiting,
         "low_stock_count": low_stock_count,
-        "low_supplies_alert": [dict(r) for r in get_conn().execute("SELECT id, item_name, on_hand_qty, reorder_threshold, unit_label FROM shop_supplies WHERE low_stock=1 ORDER BY sort_order ASC;").fetchall()],
-        "has_resend_key": bool(os.getenv("RESEND_API_KEY") or s_map.get("resend_api_key")),
-        "resend_from_email": s_map.get("resend_from_email", "alerts@weberstanktesting.com"),
-        "master_sheet_url": s_map.get("master_sheet_url", ""),
-        "sms_shortcut_key": s_map.get("sms_shortcut_key", ""),
     }
-
 
 @app.get("/api/tv")
 def get_tv_leaderboard(work_date: Optional[str] = None):
@@ -2917,7 +2911,8 @@ def ops_live_state(work_date: Optional[str] = None):
         if not recommended_cal_psi and targets:
             recommended_cal_psi = int(targets[-1]["pressure_psi"])
 
-    low_stock_count = conn.execute("SELECT COUNT(*) FROM shop_supplies WHERE low_stock=1;").fetchone()[0]
+    low_supplies_rows = [dict(r) for r in conn.execute("SELECT id, item_name, on_hand_qty, reorder_threshold, unit_label FROM shop_supplies WHERE low_stock=1 ORDER BY sort_order ASC;").fetchall()]
+    low_stock_count = len(low_supplies_rows)
     feedback_items = [dict(r) for r in conn.execute("SELECT * FROM crew_feedback ORDER BY id DESC LIMIT 30;").fetchall()]
     unsynced = conn.execute(
         "SELECT (SELECT COUNT(*) FROM daily_verifications WHERE synced=0) + "
@@ -2969,6 +2964,11 @@ def ops_live_state(work_date: Optional[str] = None):
         "dropoffs": dropoffs,
         "customers_summary": customers_summary,
         "low_stock_count": low_stock_count,
+        "low_supplies_alert": low_supplies_rows,
+        "has_resend_key": bool(os.getenv("RESEND_API_KEY") or s_map.get("resend_api_key")),
+        "resend_from_email": s_map.get("resend_from_email", "alerts@weberstanktesting.com"),
+        "master_sheet_url": s_map.get("master_sheet_url", ""),
+        "sms_shortcut_key": s_map.get("sms_shortcut_key", ""),
         "feedback_items": feedback_items,
         "unsynced_count": unsynced,
     }
@@ -3160,6 +3160,7 @@ def bootstrap(work_date: Optional[str] = None, cal_year: Optional[int] = None, c
             recommended_cal_psi = int(targets[-1]["pressure_psi"])
 
     supplies = [dict(r) for r in conn.execute("SELECT * FROM shop_supplies ORDER BY low_stock DESC, sort_order ASC, id ASC;").fetchall()]
+    op_sched_bundle = get_operating_schedule_bundle(conn)
     recalls = compute_recall_list(conn, est_today)
     rates = [dict(r) for r in conn.execute("SELECT * FROM pricing_rates ORDER BY sort_order ASC, code ASC;").fetchall()]
     invoices = [dict(r) for r in conn.execute("SELECT * FROM invoices ORDER BY id DESC LIMIT 60;").fetchall()]
@@ -3225,7 +3226,7 @@ def bootstrap(work_date: Optional[str] = None, cal_year: Optional[int] = None, c
         "shop_supplies": supplies,
         "low_stock_count": sum(1 for s in supplies if s.get("low_stock")),
         "low_supplies_alert": [s for s in supplies if s.get("low_stock")],
-        "operating_schedule": get_operating_schedule_bundle(get_conn()),
+        "operating_schedule": op_sched_bundle,
         "has_resend_key": bool(os.getenv("RESEND_API_KEY") or s_map.get("resend_api_key")),
         "resend_from_email": s_map.get("resend_from_email", "alerts@weberstanktesting.com"),
         "master_sheet_url": s_map.get("master_sheet_url", ""),
@@ -4652,6 +4653,7 @@ class OperatingScheduleSaveInput(BaseModel):
 
 
 class HolidayClosureInput(BaseModel):
+    id: Optional[int] = None
     start_date: str
     end_date: str = ""
     title: str
@@ -4718,16 +4720,28 @@ def add_holiday_or_vacation_closure(payload: HolidayClosureInput, request: Reque
     if not s_dt or not title:
         raise HTTPException(400, "Enter a start date and holiday/vacation title.")
     conn = get_conn()
-    conn.execute(
-        """INSERT INTO holiday_closures
-           (start_date, end_date, title, staffed_open, special_hours, dock_open, public_note, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?);""",
-        (
-            s_dt, e_dt, title, 1 if payload.staffed_open else 0,
-            payload.special_hours.strip()[:60], 1 if payload.dock_open else 0,
-            payload.public_note.strip()[:200], now_eastern().strftime("%Y-%m-%d %I:%M %p"),
-        ),
-    )
+    if payload.id:
+        conn.execute(
+            """UPDATE holiday_closures
+               SET start_date=?, end_date=?, title=?, staffed_open=?, special_hours=?, dock_open=?, public_note=?
+               WHERE id=?;""",
+            (
+                s_dt, e_dt, title, 1 if payload.staffed_open else 0,
+                payload.special_hours.strip()[:60], 1 if payload.dock_open else 0,
+                payload.public_note.strip()[:200], int(payload.id),
+            ),
+        )
+    else:
+        conn.execute(
+            """INSERT INTO holiday_closures
+               (start_date, end_date, title, staffed_open, special_hours, dock_open, public_note, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?);""",
+            (
+                s_dt, e_dt, title, 1 if payload.staffed_open else 0,
+                payload.special_hours.strip()[:60], 1 if payload.dock_open else 0,
+                payload.public_note.strip()[:200], now_eastern().strftime("%Y-%m-%d %I:%M %p"),
+            ),
+        )
     bump_db_version(conn)
     conn.commit()
     updated = get_operating_schedule_bundle(conn)
