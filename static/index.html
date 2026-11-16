@@ -8,14 +8,14 @@
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   
-  <link rel="stylesheet" href="/static/ops.css?v=12.2" />
+  <link rel="stylesheet" href="/static/ops.css?v=13.0" />
   <title>Weber's Tank Testing — Shop Floor Ops | DOT B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=12.2" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
+      <img src="/static/images/logo-crest.png?v=13.0" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Tank Testing</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">
         Shop Floor Operations Workspace<br />
@@ -55,7 +55,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=12.2" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=13.0" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>WEBER'S OPS</h1>
           <small>RIN B386 • Sign-Off: RP</small>
@@ -117,6 +117,7 @@
       <main class="ops-workspace">
         <div id="opsDispatchRadar" class="ops-dispatch-radar calm" hidden></div>
         <div id="complianceAlertBanner" hidden></div>
+        <div id="lowSupplyAlertBanner" hidden></div>
 
         <!-- STATION 1: START-OF-DAY BINDER HUDDLE & MORNING CALIBRATION -->
         <section id="tab-cal">
@@ -699,6 +700,14 @@
         <div><label>Master Gauge Calibration Expires</label><input type="date" id="editGaugeExp" /></div>
         <div style="grid-column:1/-1;"><label>Master Log Google Sheets Webhook URL</label><input id="webhookInput" placeholder="https://script.google.com/macros/s/.../exec" /></div>
         <div style="grid-column:1/-1;"><label>Crew Feedback Sheet Webhook URL (Optional)</label><input id="fbWebhookInput" placeholder="https://script.google.com/macros/s/.../exec" /></div>
+        <div style="grid-column:1/-1;background:#eff6ff;border:1.5px solid #93c5fd;border-radius:10px;padding:11px 12px;margin-top:6px;">
+          <strong style="font-size:0.86rem;color:#1e3a8a;display:block;margin-bottom:6px;">🚀 Resend Free Email Domain (<span id="resendKeyStatusTxt">Not Set</span>) &amp; Master Google Sheet Link</strong>
+          <div class="grid">
+            <div><label>Resend API Key (re_...)</label><input type="password" id="editResendKey" placeholder="Paste re_... key (blank = keep current)" /></div>
+            <div><label>From Address</label><input type="email" id="editResendFrom" value="alerts@weberstanktesting.com" /></div>
+            <div style="grid-column:1/-1;"><label>Master Google Sheet URL (1-Click Button for Ryan in Office)</label><input id="editMasterSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." /></div>
+          </div>
+        </div>
         <div style="grid-column:1/-1;background:#ecfdf5;border:1.5px solid #6ee7b7;border-radius:10px;padding:11px 12px;margin-top:4px;">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
             <strong style="font-size:0.86rem;color:#065f46;">📧 Ryan's Shop Email Alerts (Loading Dock &amp; Truck Check-Ins)</strong>
@@ -724,10 +733,26 @@
     </div>
   </div>
 
-  <script src="/static/ops-camera.js?v=12.2"></script>
-  <script src="/static/ops-app.js?v=12.2"></script>
-  <script src="/static/day-flow.js?v=12.2"></script>
-  <script src="/static/theme-engine.js?v=12.2"></script>
-  <script src="/static/help-bot.js?v=12.2"></script>
+  <!-- /OPS CLICKABLE SCHEDULED RUN & BATCH DETAIL MODAL -->
+  <div id="opsJobDetailModal" class="modal-bg" onclick="if(event.target===this)this.hidden=true" hidden>
+    <div class="modal" style="max-width:640px;border-top:5px solid #d97706;">
+      <div class="card-hdr">
+        <div>
+          <h3 id="ojdTitle" style="margin:0;">Scheduled Job Details</h3>
+          <small id="ojdSub" style="color:var(--muted);font-weight:700;"></small>
+        </div>
+        <button class="secondary" onclick="document.getElementById('opsJobDetailModal').hidden=true">✖ Close</button>
+      </div>
+      <div id="ojdActions" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:11px;"></div>
+      <div id="ojdRouteBox" class="notice" style="background:#eff6ff;border-color:#93c5fd;color:#1e3a8a;margin-bottom:11px;" hidden></div>
+      <div class="job-detail-kv" id="ojdGrid"></div>
+    </div>
+  </div>
+
+  <script src="/static/ops-camera.js?v=13.0"></script>
+  <script src="/static/ops-app.js?v=13.0"></script>
+  <script src="/static/day-flow.js?v=13.0"></script>
+  <script src="/static/theme-engine.js?v=13.0"></script>
+  <script src="/static/help-bot.js?v=13.0"></script>
 </body>
 </html>

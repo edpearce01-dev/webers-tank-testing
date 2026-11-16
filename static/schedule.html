@@ -7,14 +7,14 @@
   <link rel="manifest" href="/manifest.json" />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/ops.css?v=12.2" />
+  <link rel="stylesheet" href="/static/ops.css?v=13.0" />
   <title>Weber's Tank Testing — Month Schedule &amp; Dispatch | DOT B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=12.2" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
+      <img src="/static/images/logo-crest.png?v=13.0" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Schedule &amp; Dispatch</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter your Individual PIN (Access resets daily at Midnight)</p>
       <div style="text-align:left;">
@@ -32,7 +32,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=12.2" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=13.0" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>WALL SCHEDULE</h1>
           <small>RIN B386 • Calendar &amp; Dispatch</small>
@@ -135,14 +135,28 @@
               </div>
             </div>
 
-            <!-- RIGHT INSPECTOR: SELECTED DAY PLAN & RUNS -->
+            <!-- RIGHT INSPECTOR: SELECTED DAY JOBS FIRST + COLLAPSIBLE OPERATING PLAN -->
             <div>
-              <div class="card" style="border-top:4px solid var(--green);">
+              <div class="card" style="border-top:4px solid #d97706;">
                 <div class="card-hdr">
-                  <h3>Selected Day: <span id="planDateLabel">—</span></h3>
-                  <span class="sub-badge" id="planBookedBadge">0 / 24</span>
+                  <div>
+                    <h3>📋 Scheduled on <span id="dayJobsDateLbl">Selected Date</span></h3>
+                    <small style="color:var(--muted);font-weight:600;">Tap any job below (or on the calendar) for full details, cylinders, phone &amp; route ETA</small>
+                  </div>
+                  <div style="display:flex;gap:6px;align-items:center;">
+                    <span class="sub-badge" id="dayJobsCountBadge">0</span>
+                    <button class="secondary" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7;font-weight:800;" onclick="bookForSelectedDate()">➕ Book Here</button>
+                  </div>
                 </div>
-                <div style="display:flex;flex-direction:column;gap:9px;">
+                <div id="selectedDayJobsList"></div>
+              </div>
+
+              <details class="card" style="border-top:3px solid var(--green);" open>
+                <summary style="cursor:pointer;font-weight:800;font-size:0.92rem;color:var(--forest);display:flex;justify-content:space-between;align-items:center;">
+                  <span>⚙️ Day Operating Window: <span id="planDateLabel">—</span></span>
+                  <span class="sub-badge" id="planBookedBadge">0 / 24</span>
+                </summary>
+                <div style="display:flex;flex-direction:column;gap:9px;margin-top:10px;">
                   <div>
                     <label>Operating Window</label>
                     <select id="planShiftMode" onchange="autoFillPlanCap()">
@@ -160,18 +174,9 @@
                     <label>Day Note (Shows on Wall &amp; Live TV)</label>
                     <input id="planNotes" placeholder="e.g. Baden VFD 18x SCBA, afternoon road run..." />
                   </div>
+                  <button class="primary" style="margin-top:4px;" onclick="saveDayPlan()">Save Day Operating Plan</button>
                 </div>
-                <button class="primary" onclick="saveDayPlan()">Save Day Operating Plan</button>
-                <button class="secondary" style="width:100%;margin-top:8px;padding:9px;" onclick="bookForSelectedDate()">➕ Book Pickup or Batch on This Date →</button>
-              </div>
-
-              <div class="card">
-                <div class="card-hdr">
-                  <h3>Jobs on <span id="dayJobsDateLbl">Selected Date</span></h3>
-                  <span class="sub-badge" id="dayJobsCountBadge">0</span>
-                </div>
-                <div id="selectedDayJobsList"></div>
-              </div>
+              </details>
             </div>
           </div>
         </section>
@@ -179,6 +184,16 @@
         <!-- TAB 2: PHONE TURNAROUND CALCULATOR + SHARPENED BOOKING FORM -->
         <section id="tab-book" hidden>
           <datalist id="customerSuggest"></datalist>
+          <datalist id="timeWindowSuggest">
+            <option value="9:00 AM"></option>
+            <option value="10:00 AM"></option>
+            <option value="11:00 AM"></option>
+            <option value="1:00 PM"></option>
+            <option value="2:30 PM"></option>
+            <option value="Morning (9 AM–12 PM)"></option>
+            <option value="Afternoon (12 PM–3 PM)"></option>
+          </datalist>
+          <div id="schedSavedToast" class="notice" style="border:2px solid #10b981;background:#ecfdf5;margin-bottom:12px;" hidden></div>
           <div class="split-2">
             <div class="card" style="border-top:4px solid var(--green);">
               <div class="card-hdr">
@@ -216,8 +231,16 @@
                     <option value="HIGH">⚡ High Priority</option>
                   </select>
                 </div>
-                <div><label>Scheduled Date *</label><input type="date" id="sjDate" /></div>
-                <div><label>Promised Ready Date</label><input type="date" id="sjDueDate" /></div>
+                <div><label id="lblSjDate">Pickup / Drop-Off Date *</label><input type="date" id="sjDate" /></div>
+                <div>
+                  <label id="lblSjPickupTime">Pickup / Arrival Time</label>
+                  <input id="sjPickupTime" list="timeWindowSuggest" placeholder="e.g. 9:30 AM or Morning" />
+                </div>
+                <div><label id="lblSjDueDate">Return Delivery / Ready Date</label><input type="date" id="sjDueDate" /></div>
+                <div id="sjDropoffTimeWrap">
+                  <label>Return Delivery Time</label>
+                  <input id="sjDropoffTime" list="timeWindowSuggest" placeholder="e.g. 1:30 PM or Afternoon" />
+                </div>
                 <div>
                   <label>Customer / Department *</label>
                   <input id="sjCustomer" list="customerSuggest" placeholder="Start typing name or dept..." oninput="prefillBookingFromRolodex()" />
@@ -253,7 +276,8 @@
               </div>
 
               <div class="grid" style="margin-top:10px;">
-                <div><label>Road Pickup / Delivery Address</label><input id="sjLocation" placeholder="Street &amp; Town (for Google Maps)" /></div>
+                <div id="sjLocationWrap"><label id="lblSjLocation">Pickup Street &amp; Town Address *</label><input id="sjLocation" placeholder="e.g. 123 State St, Baden, PA (auto-calculates ETA from shop)" /></div>
+                <div id="sjReturnAddrWrap"><label>Return Delivery Address <small style="font-weight:500;color:var(--muted);">(Blank = same as pickup)</small></label><input id="sjReturnAddress" placeholder="Optional if returning to a different station/shop" /></div>
                 <div><label>Crew Prep / Gate Notes</label><input id="sjNotes" placeholder="Combo code, adapter note, burst disc..." /></div>
               </div>
 
@@ -325,6 +349,56 @@
         <span class="ico">🚪</span><span>4. Door</span><span class="bnav-dot" id="mobBadgeDoor" hidden>0</span>
       </button>
     </nav>
+  </div>
+
+  <!-- FULL JOB / TRUCK DISPATCH INSPECTOR & EDIT MODAL -->
+  <div id="jobDetailModal" class="modal-bg" onclick="if(event.target===this)closeJobDetailModal()" hidden>
+    <div class="modal" style="max-width:680px;border-top:5px solid #d97706;">
+      <div class="card-hdr">
+        <div>
+          <h3 id="jdTitle" style="margin:0;">Scheduled Run Details</h3>
+          <small id="jdSubHdr" style="color:var(--muted);font-weight:700;"></small>
+        </div>
+        <button class="secondary" onclick="closeJobDetailModal()">✖ Close</button>
+      </div>
+
+      <div id="jdQuickActions" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;"></div>
+      <div id="jdRouteBanner" class="notice" style="margin-bottom:12px;background:#eff6ff;border-color:#93c5fd;color:#1e3a8a;" hidden></div>
+
+      <div class="job-detail-kv" id="jdSummaryGrid"></div>
+
+      <details id="jdEditDrawer" style="background:#f8fafc;border:1px solid var(--border-soft);border-radius:10px;padding:10px 12px;">
+        <summary style="cursor:pointer;font-weight:800;color:var(--forest);">✎ Edit Dates, Times, Addresses, Cylinder Count or Notes</summary>
+        <input type="hidden" id="jdEditId" />
+        <div class="grid" style="margin-top:10px;">
+          <div><label>Customer / Fire Dept</label><input id="jdCust" /></div>
+          <div><label>Contact Phone</label><input id="jdPhone" type="tel" oninput="formatPhoneLive(this)" /></div>
+          <div>
+            <label>Dispatch Mode</label>
+            <select id="jdType">
+              <option value="SHOP_BATCH">🚪 Customer Drops Off at Shop</option>
+              <option value="ROAD_ROUNDTRIP">🔄 Round-Trip: Pickup &amp; Deliver Back</option>
+              <option value="ROAD_PICKUP">📥 Truck Pickup Only</option>
+              <option value="ROAD_DELIVERY">📤 Deliver Back Only</option>
+              <option value="ONSITE_VISUAL">🔍 On-Site Visual Inspection</option>
+            </select>
+          </div>
+          <div><label>Cylinder Count</label><input type="number" id="jdCount" min="1" /></div>
+          <div><label>Leg 1: Pickup / Drop Date</label><input type="date" id="jdSchedDate" /></div>
+          <div><label>Leg 1: Pickup / Arrival Time</label><input id="jdPickupTime" list="timeWindowSuggest" placeholder="e.g. 9:30 AM" /></div>
+          <div><label>Leg 2: Return / Ready Date</label><input type="date" id="jdDueDate" /></div>
+          <div><label>Leg 2: Return Delivery Time</label><input id="jdDropoffTime" list="timeWindowSuggest" placeholder="e.g. 1:30 PM" /></div>
+          <div style="grid-column:1/-1;"><label>Cylinder Types / Mix</label><input id="jdSummary" placeholder="e.g. 12x 4500# SCBA, 4x Med O2" /></div>
+          <div style="grid-column:1/-1;"><label>Pickup Street &amp; Town Address (Auto-Recalculates Shop ETA)</label><input id="jdLocation" placeholder="Street, City, PA" /></div>
+          <div style="grid-column:1/-1;"><label>Return Delivery Address (Leave blank if same as pickup)</label><input id="jdReturnAddr" placeholder="Same as pickup address" /></div>
+          <div style="grid-column:1/-1;"><label>Gate / Bay Door / Prep Notes</label><input id="jdNotes" /></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+          <button class="primary" style="flex:2;margin:0;" onclick="saveJobDetailEdits()">💾 Save Job Updates</button>
+          <button class="danger-btn" style="flex:1;" onclick="deleteJobFromModal()">🗑 Delete Run</button>
+        </div>
+      </details>
+    </div>
   </div>
 
   <script>
@@ -525,6 +599,23 @@
       renderBackroomDoorTab(drops);
     }
 
+    function shortTimeBadge(rawT) {
+      if (!rawT) return '';
+      const s = String(rawT).trim();
+      if (/morning/i.test(s)) return 'AM';
+      if (/afternoon/i.test(s)) return 'PM';
+      return s.replace(':00', '').replace(/\s*AM/i, 'a').replace(/\s*PM/i, 'p').slice(0, 7);
+    }
+
+    function etaBadgeHtml(j) {
+      const mins = parseInt(j.drive_eta_mins || '0', 10);
+      const miles = parseFloat(j.drive_miles || '0');
+      const mapUrl = j.maps_route_url || (j.location_notes ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent('3086 Legionville Rd, Baden, PA 15005')}&destination=${encodeURIComponent(j.location_notes)}&travelmode=driving` : '');
+      if (!mapUrl) return '';
+      const txt = mins > 0 ? `🚗 ~${mins} min (${miles} mi from Shop)` : '🗺️ Route from Shop';
+      return `<a class="eta-route-pill" href="${mapUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Pre-planned driving route from 3086 Legionville Rd, Baden">${txt} ↗</a>`;
+    }
+
     function renderMonthGrid() {
       if (!MONTH_DATA) return;
       document.getElementById('monthTitleLbl').textContent = MONTH_DATA.month_label;
@@ -532,17 +623,28 @@
 
       const sel = STATE.selected_date;
       document.getElementById('monthGridCells').innerHTML = (MONTH_DATA.days || []).map(d => {
-        const shortMode = d.shift_mode === 'FULL_HYDRO' ? `🟢 ${d.bottle_capacity} cap`
+        const shortMode = d.is_closure ? '🏖️ Closed'
+          : (d.shift_mode === 'FULL_HYDRO' ? `🟢 ${d.bottle_capacity} cap`
           : (d.shift_mode === 'PREP_ONLY' ? '🔧 Prep'
-          : (d.shift_mode === 'ROAD_RUN' ? `🚚 Road (${d.bottle_capacity})` : '🚪 24/7'));
+          : (d.shift_mode === 'ROAD_RUN' ? `🚚 Road (${d.bottle_capacity})` : '🚪 24/7')));
         const pct = d.bottle_capacity > 0 ? Math.min(100, Math.round(((d.booked_bottles || 0) / d.bottle_capacity) * 100)) : 0;
         const fillCls = pct >= 100 ? 'full' : (pct >= 80 ? 'warn' : '');
-        const jobsHtml = (d.jobs || []).slice(0, 2).map(j => {
+
+        const jobsHtml = (d.jobs || []).slice(0, 3).map(j => {
           const isR = Boolean(j.rush_fee || j.priority === 'RUSH');
-          const ico = j.job_type === 'ROAD_ROUNDTRIP' ? '🔄' : (j.job_type === 'ROAD_PICKUP' ? '🚚' : (j.job_type === 'ROAD_DELIVERY' ? '📦' : '📌'));
-          return `<div class="mday-job-pill ${isR ? 'rush' : ''}">${ico} ${escHtml(j.customer_name)} (${j.bottle_count})</div>`;
+          const leg = j.cal_leg || (j.job_type === 'ROAD_DELIVERY' ? 'RETURN' : (j.job_type.startsWith('ROAD_') ? 'PICKUP' : 'SHOP'));
+          const legCls = leg === 'RETURN' ? 'leg-return' : (leg === 'PICKUP' ? 'leg-pickup' : '');
+          const doneCls = j.cal_done ? 'leg-done' : '';
+          const ico = leg === 'RETURN' ? '📤' : (leg === 'PICKUP' ? '📥' : '📌');
+          const tm = shortTimeBadge(j.cal_time || (leg === 'RETURN' ? j.dropoff_time : j.pickup_time));
+          const eta = (leg !== 'SHOP' && j.drive_eta_mins) ? ` • ${j.drive_eta_mins}m` : '';
+          return `<div class="mday-job-pill ${isR ? 'rush' : legCls} ${doneCls}"
+            onclick="event.stopPropagation(); selectCalendarDay('${d.work_date}', ${!d.in_month}); openJobDetailModal(${j.id}, '${leg}')"
+            title="Click to inspect full details for ${escHtml(j.customer_name)}">
+            ${ico} ${tm ? `<strong>${escHtml(tm)}</strong> ` : ''}${escHtml(j.customer_name)} (${j.bottle_count})${eta}
+          </div>`;
         }).join('');
-        const extra = (d.jobs || []).length > 2 ? `<div style="font-size:0.65rem;color:var(--muted);font-weight:800;">+${d.jobs.length - 2} more</div>` : '';
+        const extra = (d.jobs || []).length > 3 ? `<div style="font-size:0.65rem;color:var(--forest);font-weight:800;">+${d.jobs.length - 3} more (tap day)</div>` : '';
 
         return `
           <div class="mday-cell mode-${d.shift_mode} ${d.in_month ? '' : 'out-month'} ${d.is_today ? 'is-today' : ''} ${d.work_date === sel ? 'is-selected' : ''}"
@@ -550,7 +652,7 @@
             <div>
               <div class="mday-top">
                 <span>${d.day_num}</span>
-                ${d.is_today ? '<span style="background:var(--gold);color:#111;font-size:0.58rem;padding:1px 5px;border-radius:4px;">TODAY</span>' : `<span style="font-size:0.64rem;color:var(--green);font-weight:800;">${shortMode}</span>`}
+                ${d.is_today ? '<span style="background:var(--gold);color:#111;font-size:0.58rem;padding:1px 5px;border-radius:4px;">TODAY</span>' : `<span style="font-size:0.62rem;color:var(--green);font-weight:800;">${escHtml(shortMode)}</span>`}
               </div>
               ${d.bottle_capacity > 0 ? `<div class="cap-bar"><div class="cap-fill ${fillCls}" style="width:${pct}%"></div></div>` : ''}
               ${jobsHtml}${extra}
@@ -565,7 +667,8 @@
 
     function renderSelectedDayInspector(openSched) {
       const sel = STATE.selected_date;
-      const selPlan = (MONTH_DATA?.days || []).find(d => d.work_date === sel) || STATE.huddle?.selected_day_plan || {};
+      const selCell = (MONTH_DATA?.days || []).find(d => d.work_date === sel);
+      const selPlan = selCell || STATE.huddle?.selected_day_plan || {};
       document.getElementById('planDateLabel').textContent = `${selPlan.weekday || ''} ${sel}`;
       document.getElementById('dayJobsDateLbl').textContent = sel;
       document.getElementById('planBookedBadge').textContent = `${selPlan.booked_bottles || 0} / ${selPlan.bottle_capacity || 0} Slots`;
@@ -574,42 +677,188 @@
       if (document.activeElement !== document.getElementById('planCapacity')) document.getElementById('planCapacity').value = selPlan.bottle_capacity ?? 24;
       if (document.activeElement !== document.getElementById('planNotes')) document.getElementById('planNotes').value = selPlan.day_notes || '';
 
-      const dayJobs = openSched.filter(j => j.scheduled_date === sel || j.due_date === sel);
-      document.getElementById('dayJobsCountBadge').textContent = String(dayJobs.length);
+      // Pull exact legs scheduled for selected date (Leg 1 Pickup on scheduled_date + Leg 2 Return on due_date!)
+      let dayJobs = [];
+      if (selCell && Array.isArray(selCell.jobs)) {
+        dayJobs = selCell.jobs;
+      } else {
+        openSched.forEach(j => {
+          if (j.scheduled_date === sel) dayJobs.push({ ...j, cal_leg: j.job_type.startsWith('ROAD_') ? 'PICKUP' : 'SHOP' });
+          else if (j.job_type === 'ROAD_ROUNDTRIP' && j.due_date === sel) dayJobs.push({ ...j, cal_leg: 'RETURN' });
+        });
+      }
+
+      document.getElementById('dayJobsCountBadge').textContent = `${dayJobs.length} Scheduled`;
       document.getElementById('selectedDayJobsList').innerHTML = dayJobs.length
         ? dayJobs.map(j => jobRowHtml(j)).join('')
-        : '<div style="color:var(--muted);font-size:0.84rem;">No pickups or batches scheduled on this date yet.</div>';
+        : '<div style="color:var(--muted);font-size:0.85rem;padding:8px 2px;">No truck runs or scheduled drop-offs on this date yet — click <strong>➕ Book Here</strong> above to add one.</div>';
     }
 
     function jobRowHtml(j) {
-      const ico = j.job_type === 'ROAD_ROUNDTRIP' ? '🔄 Pickup+Deliv' : (j.job_type === 'ROAD_PICKUP' ? '🚚 Pickup' : (j.job_type === 'ROAD_DELIVERY' ? '📦 Delivery' : (j.job_type === 'ONSITE_VISUAL' ? '🔍 On-Site' : '📌 Batch')));
+      const leg = j.cal_leg || (j.job_type === 'ROAD_DELIVERY' ? 'RETURN' : (j.job_type.startsWith('ROAD_') ? 'PICKUP' : 'SHOP'));
+      let typeBadge = '📌 Shop Drop-Off';
+      if (j.job_type === 'ROAD_ROUNDTRIP') {
+        typeBadge = leg === 'RETURN' ? '📤 Round-Trip • Leg 2 Return Delivery' : (j.pickup_leg_done ? '✓ Leg 1 Picked Up (Awaiting Return)' : '📥 Round-Trip • Leg 1 Truck Pickup');
+      } else if (j.job_type === 'ROAD_PICKUP') typeBadge = '📥 Truck Pickup Only';
+      else if (j.job_type === 'ROAD_DELIVERY') typeBadge = '📤 Truck Return Delivery';
+      else if (j.job_type === 'ONSITE_VISUAL') typeBadge = '🔍 On-Site Visual';
+
+      const activeTime = leg === 'RETURN' ? (j.dropoff_time || '') : (j.pickup_time || '');
+      const activeAddr = (leg === 'RETURN' && j.return_address) ? j.return_address : (j.location_notes || '');
       const isPrepped = j.prep_status === 'DEVALVED_TAGGED';
-      const mapUrl = j.location_notes ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.location_notes)}` : '';
+
       return `
-        <div class="rec-item">
+        <div class="rec-item job-card-clickable" onclick="openJobDetailModal(${j.id}, '${leg}')">
           <div class="rec-main">
-            <div class="rec-title">
-              <span>${ico}: ${escHtml(j.customer_name)} (${j.bottle_count})</span>
+            <div class="rec-title" style="gap:6px;flex-wrap:wrap;">
+              <span style="font-size:0.96rem;color:var(--forest);">${escHtml(j.customer_name)} — <strong>${j.bottle_count} Cyl</strong></span>
+              <span class="sub-badge" style="background:${leg === 'RETURN' ? '#dbeafe;color:#1e40af' : '#fef3c7;color:#92400e'};">${typeBadge}</span>
               ${(j.rush_fee || j.priority === 'RUSH') ? '<span class="rush-badge">🔥 RUSH</span>' : ''}
-              
-              ${j.valves_attached === 0 ? '<span class="stage-chip">Bare/No Valves</span>' : ''}
+              ${activeTime ? `<span class="time-window-pill">🕒 ${escHtml(activeTime)}</span>` : ''}
+              ${j.job_type !== 'SHOP_BATCH' ? etaBadgeHtml(j) : ''}
               ${isPrepped ? '<span class="stage-chip ready">✓ Prepped</span>' : ''}
             </div>
-            <div class="rec-sub">
-              Sched: <strong>${escHtml(j.scheduled_date)}</strong>${j.due_date ? ` • Due: <strong>${escHtml(j.due_date)}</strong>` : ''}${j.contact_person ? ` • 👤 ${escHtml(j.contact_person)}` : ''}${j.po_station ? ` • ${escHtml(j.po_station)}` : ''}${j.tank_summary ? ` • ${escHtml(j.tank_summary)}` : ''}${j.location_notes ? ` • 📍 ${escHtml(j.location_notes)}` : ''}
+            <div class="rec-sub" style="margin-top:4px;line-height:1.45;color:#334155;">
+              ${j.tank_summary ? `<strong>Cylinders:</strong> ${escHtml(j.tank_summary)} • ` : ''}
+              ${j.job_type === 'ROAD_ROUNDTRIP'
+                ? `<strong>📥 Pickup:</strong> ${escHtml(j.scheduled_date)}${j.pickup_time ? ' @ ' + escHtml(j.pickup_time) : ''} &nbsp;→&nbsp; <strong>📤 Return:</strong> ${escHtml(j.due_date || 'TBD')}${j.dropoff_time ? ' @ ' + escHtml(j.dropoff_time) : ''}`
+                : `<strong>Date:</strong> ${escHtml(j.scheduled_date)}${j.due_date && j.due_date !== j.scheduled_date ? ` • <strong>Ready/Due:</strong> ${escHtml(j.due_date)}` : ''}`}
             </div>
-            ${j.notes ? `<div style="font-size:0.75rem;color:#92400e;margin-top:2px;">Note: ${escHtml(j.notes)}</div>` : ''}
+            <div class="rec-sub" style="margin-top:2px;color:#475569;">
+              ${activeAddr ? `📍 <strong>Address:</strong> ${escHtml(activeAddr)} • ` : ''}
+              ${j.contact_person ? `👤 ${escHtml(j.contact_person)} • ` : ''}
+              ${j.customer_phone ? `📞 <strong>${escHtml(j.customer_phone)}</strong>` : 'No phone on file'}
+              ${j.notes ? ` • 📝 <em>${escHtml(j.notes)}</em>` : ''}
+            </div>
           </div>
-          <div class="rec-actions">
+          <div class="rec-actions" onclick="event.stopPropagation()">
+            <button type="button" class="secondary" style="background:#f8fafc;font-weight:800;" onclick="openJobDetailModal(${j.id}, '${leg}')">🔍 Details</button>
             <a class="secondary" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7;" href="/ops?job=${j.id}">↳ Scan in Ops</a>
-            ${mapUrl ? `<a class="secondary" href="${mapUrl}" target="_blank">📍 Map</a>` : ''}
-            ${!isPrepped ? `<button class="secondary" onclick="markJobPrepped(${j.id})">🔧 Prepped</button>` : ''}
-            <button class="secondary" onclick="toggleJobRush(${j.id}, ${Boolean(j.rush_fee)})">🔥</button>
-            <button class="secondary" onclick="completeJob(${j.id})">✓ Done</button>
-            <button class="secondary" style="color:#b91c1c;" onclick="deleteJob(${j.id})">✕</button>
+            ${j.job_type === 'ROAD_ROUNDTRIP' && leg === 'PICKUP' && !j.pickup_leg_done
+              ? `<button class="secondary" style="background:#fef3c7;color:#92400e;" onclick="markPickupLegDone(${j.id}, true)">✓ Picked Up</button>`
+              : `<button class="secondary" onclick="completeJob(${j.id})">✓ Done</button>`}
           </div>
         </div>`;
     }
+
+    function findJobById(jobId) {
+      return (RAW_ALL_JOBS || []).find(x => x.id === jobId)
+        || (STATE.schedule_jobs || []).find(x => x.id === jobId);
+    }
+
+    window.openJobDetailModal = function (jobId, focusLeg = '') {
+      const j = findJobById(jobId);
+      if (!j) return;
+      const modal = document.getElementById('jobDetailModal');
+      modal.hidden = false;
+
+      const isRound = j.job_type === 'ROAD_ROUNDTRIP';
+      const isTruck = j.job_type !== 'SHOP_BATCH';
+      document.getElementById('jdTitle').textContent = `${j.customer_name} (${j.bottle_count} Cylinder${j.bottle_count > 1 ? 's' : ''})`;
+      document.getElementById('jdSubHdr').textContent =
+        `${isRound ? 'Round-Trip Truck Pickup & Return Delivery' : (isTruck ? 'Weber\'s Truck Dispatch' : 'Scheduled Shop Drop-Off')} • Status: ${j.status}${j.pickup_leg_done && isRound ? ' (Leg 1 Picked Up)' : ''}`;
+
+      const pickupAddr = (j.location_notes || '').trim();
+      const retAddr = (j.return_address || pickupAddr).trim();
+      const mapUrl = j.maps_route_url || (pickupAddr ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent('3086 Legionville Rd, Baden, PA 15005')}&destination=${encodeURIComponent(focusLeg === 'RETURN' && retAddr ? retAddr : pickupAddr)}&travelmode=driving` : '');
+      const digits = String(j.customer_phone || '').replace(/\D/g, '');
+      const etaTxt = j.drive_eta_mins ? ` (~${j.drive_eta_mins} min drive)` : '';
+      const smsBody = `Weber's Tank Testing: Hi ${j.contact_person || j.customer_name}, confirming our truck ${focusLeg === 'RETURN' ? 'delivery' : 'pickup'} for ${j.bottle_count} cylinder(s)${focusLeg === 'RETURN' ? (j.dropoff_time ? ' around ' + j.dropoff_time : '') : (j.pickup_time ? ' around ' + j.pickup_time : '')}. Call/text 724-266-8008 with any questions.`;
+      const smsSep = /iPad|iPhone|iPod/i.test(navigator.userAgent) ? '&' : '?';
+
+      document.getElementById('jdQuickActions').innerHTML = `
+        ${mapUrl ? `<a class="primary" style="width:auto;margin:0;padding:9px 14px;background:#1d4ed8;" href="${mapUrl}" target="_blank" rel="noopener">🗺️ Navigate from Shop${etaTxt}</a>` : ''}
+        ${digits ? `<a class="secondary" style="padding:9px 13px;font-weight:800;" href="tel:${digits}">📞 Call ${escHtml(j.customer_phone)}</a>` : ''}
+        ${digits ? `<a class="secondary" style="padding:9px 13px;background:#fef3c7;color:#92400e;border-color:#f59e0b;font-weight:800;" href="sms:${digits}${smsSep}body=${encodeURIComponent(smsBody)}">📲 Text Customer (iPhone)</a>` : ''}
+        <a class="secondary" style="padding:9px 13px;background:#ecfdf5;color:#065f46;border-color:#6ee7b7;font-weight:800;" href="/ops?job=${j.id}">↳ Load into Prep &amp; Scan</a>
+        ${isRound ? `<button type="button" class="secondary" style="padding:9px 13px;" onclick="markPickupLegDone(${j.id}, ${!j.pickup_leg_done})">${j.pickup_leg_done ? '↺ Reopen Leg 1 Pickup' : '✓ Mark Leg 1 Picked Up'}</button>` : ''}
+        ${j.status !== 'COMPLETED' ? `<button type="button" class="secondary" style="padding:9px 13px;background:#dcfce7;color:#166534;" onclick="completeJob(${j.id});closeJobDetailModal()">✓ Mark Entire Job Complete</button>` : ''}
+      `;
+
+      const rb = document.getElementById('jdRouteBanner');
+      if (isTruck && pickupAddr) {
+        rb.hidden = false;
+        rb.innerHTML = `<strong>🛣️ Pre-Planned Route from 3086 Legionville Rd, Baden:</strong> ` +
+          (j.drive_eta_mins
+            ? `<strong>~${j.drive_eta_mins} mins one-way</strong> (${j.drive_miles} miles) • Round-trip drive time: ~${j.drive_eta_mins * 2} mins.`
+            : `Click <strong>Navigate from Shop</strong> above to open live turn-by-turn route to <strong>${escHtml(pickupAddr)}</strong>.`);
+      } else {
+        rb.hidden = true;
+      }
+
+      document.getElementById('jdSummaryGrid').innerHTML = `
+        <div><small>Customer / Department</small><strong>${escHtml(j.customer_name)}</strong> (${escHtml(j.account_type || 'WALK_IN')})</div>
+        <div><small>Point of Contact &amp; Phone</small><strong>${escHtml(j.contact_person || '—')}</strong> • ${escHtml(j.customer_phone || 'No phone')}</div>
+        <div><small>Cylinders &amp; Valves</small><strong>${j.bottle_count} Cyl</strong> (${j.valves_attached === 0 ? 'Bare / No Valves' : 'Valves Attached'})</div>
+        <div><small>Cylinder Types / Tank Mix</small><strong>${escHtml(j.tank_summary || 'Standard Hydro / Visual')}</strong></div>
+        <div><small>${isRound ? '📥 Leg 1: Truck Pickup' : 'Scheduled Date & Time'}</small><strong>${escHtml(j.scheduled_date || '—')}</strong> ${j.pickup_time ? `• <span style="color:#b45309;">${escHtml(j.pickup_time)}</span>` : ''}</div>
+        <div><small>${isRound ? '📤 Leg 2: Return Delivery' : 'Promised Ready / Due Date'}</small><strong>${escHtml(j.due_date || '—')}</strong> ${j.dropoff_time ? `• <span style="color:#1d4ed8;">${escHtml(j.dropoff_time)}</span>` : ''}</div>
+        <div style="grid-column:1/-1;"><small>Pickup Address</small><strong>${escHtml(pickupAddr || 'Shop Drop-Off at 3086 Legionville Rd, Baden')}</strong></div>
+        ${isRound ? `<div style="grid-column:1/-1;"><small>Return Delivery Address</small><strong>${escHtml(retAddr || 'Same as Pickup Address')}</strong></div>` : ''}
+        ${(j.po_station || j.notes) ? `<div style="grid-column:1/-1;"><small>Station / PO # &amp; Crew Notes</small><strong>${escHtml([j.po_station, j.notes].filter(Boolean).join(' • '))}</strong></div>` : ''}
+      `;
+
+      // Populate inline edit fields
+      document.getElementById('jdEditId').value = j.id;
+      document.getElementById('jdCust').value = j.customer_name || '';
+      document.getElementById('jdPhone').value = j.customer_phone || '';
+      document.getElementById('jdType').value = j.job_type || 'SHOP_BATCH';
+      document.getElementById('jdCount').value = j.bottle_count || 1;
+      document.getElementById('jdSchedDate').value = j.scheduled_date || '';
+      document.getElementById('jdPickupTime').value = j.pickup_time || '';
+      document.getElementById('jdDueDate').value = j.due_date || '';
+      document.getElementById('jdDropoffTime').value = j.dropoff_time || '';
+      document.getElementById('jdSummary').value = j.tank_summary || '';
+      document.getElementById('jdLocation').value = j.location_notes || '';
+      document.getElementById('jdReturnAddr').value = j.return_address || '';
+      document.getElementById('jdNotes').value = j.notes || '';
+    };
+
+    window.closeJobDetailModal = function () {
+      document.getElementById('jobDetailModal').hidden = true;
+    };
+
+    window.markPickupLegDone = async function (jobId, doneVal) {
+      await fetch(`/api/schedule/jobs/${jobId}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pickup_leg_done: Boolean(doneVal) }),
+      });
+      await loadScheduleState();
+      if (!document.getElementById('jobDetailModal').hidden) openJobDetailModal(jobId, 'PICKUP');
+    };
+
+    window.saveJobDetailEdits = async function () {
+      const id = parseInt(document.getElementById('jdEditId').value || '0', 10);
+      if (!id) return;
+      const res = await fetch(`/api/schedule/jobs/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_name: document.getElementById('jdCust').value,
+          customer_phone: document.getElementById('jdPhone').value,
+          job_type: document.getElementById('jdType').value,
+          bottle_count: parseInt(document.getElementById('jdCount').value || '1', 10),
+          scheduled_date: document.getElementById('jdSchedDate').value,
+          pickup_time: document.getElementById('jdPickupTime').value,
+          due_date: document.getElementById('jdDueDate').value,
+          dropoff_time: document.getElementById('jdDropoffTime').value,
+          tank_summary: document.getElementById('jdSummary').value,
+          location_notes: document.getElementById('jdLocation').value,
+          return_address: document.getElementById('jdReturnAddr').value,
+          notes: document.getElementById('jdNotes').value,
+        }),
+      });
+      if (!res.ok) { alert((await res.json()).detail || 'Could not save updates.'); return; }
+      await loadScheduleState();
+      openJobDetailModal(id);
+    };
+
+    window.deleteJobFromModal = async function () {
+      const id = parseInt(document.getElementById('jdEditId').value || '0', 10);
+      if (!id || !confirm('Delete this scheduled job permanently?')) return;
+      await fetch(`/api/schedule/jobs/${id}`, { method: 'DELETE' });
+      closeJobDetailModal();
+      loadScheduleState();
+    };
 
     function setRunsFilter(f) {
       RUNS_FILTER = f;
@@ -635,10 +884,9 @@
               <div class="dropoff-card ${isPickup ? 'pickup' : ''}">
                 <div>
                   <div style="font-weight:800;font-size:0.9rem;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-                    <span>${isPickup ? '🚚 VERIFIED PICKUP:' : '📥 DROP-OFF:'} ${escHtml(d.customer_name)}</span>
+                    <span>${isPickup ? '🚚 VERIFIED PICKUP:' : '📥 DOCK DROP-OFF:'} ${escHtml(d.customer_name)}</span>
                     <span class="tag-chip">${isPickup ? d.bottle_count + ' Cyl' : rem + ' of ' + d.bottle_count + ' Left'}</span>
                     ${d.rush_requested ? '<span class="rush-badge">🔥 RUSH</span>' : ''}
-                    
                   </div>
                   <div style="font-size:0.79rem;color:var(--muted);margin-top:2px;">
                     ${isPickup ? `Picked up by: <strong>${escHtml(d.picked_up_by || d.customer_name)}</strong>` : `${escHtml(d.service_requested)}${d.tank_summary ? ' • ' + escHtml(d.tank_summary) : ''}`}${d.contact_person ? ' • 👤 ' + escHtml(d.contact_person) : ''}${d.customer_phone ? ' • 📞 ' + escHtml(d.customer_phone) : ''}
@@ -650,10 +898,9 @@
                 </div>
               </div>`;
           }).join('')
-        : '<div style="color:var(--muted);font-size:0.86rem;">No unscanned backroom drop-offs waiting.</div>';
+        : '<div style="color:var(--muted);font-size:0.86rem;">No unscanned Loading Dock drop-offs waiting.</div>';
     }
 
-    // --- SHARPENED BOOKING HELPERS ---
     function setBookingAcct(acct) {
       BOOK_ACCT = acct;
       document.querySelectorAll('#bookAcctBar .tap-pill').forEach(b => {
@@ -671,7 +918,7 @@
         if (m.contact_person) document.getElementById('sjContact').value = m.contact_person;
         if (m.account_type) setBookingAcct(m.account_type);
         if (m.street_address && !document.getElementById('sjLocation').value) {
-          document.getElementById('sjLocation').value = [m.street_address, m.city, m.state].filter(Boolean).join(', ');
+          document.getElementById('sjLocation').value = [m.street_address, m.city, m.state, m.zip_code].filter(Boolean).join(', ');
         }
       }
     }
@@ -741,37 +988,56 @@
     async function submitScheduleJob() {
       const cust = document.getElementById('sjCustomer').value.trim();
       if (!cust) { alert('Enter Customer / Fire Dept name first.'); return; }
+      const jtype = document.getElementById('sjType').value;
       const pri = document.getElementById('sjPriority').value;
       const bCntCheck = parseInt(document.getElementById('sjCount').value || '1', 10);
       if (pri === 'RUSH' && bCntCheck > 12 && !confirm('Paid Rush has a 12-cylinder limit (' + bCntCheck + ' entered). Override limit for this booking?')) return;
+
       const schedD = document.getElementById('sjDate').value || STATE.selected_date;
+      let dueD = document.getElementById('sjDueDate').value || '';
+      if (jtype === 'ROAD_ROUNDTRIP' && !dueD) {
+        // Default return delivery to +2 days if left blank so Round-Trip plots both legs!
+        const [y, m, d] = schedD.split('-').map(Number);
+        const rdt = new Date(y, m - 1, d + 2);
+        dueD = `${rdt.getFullYear()}-${String(rdt.getMonth() + 1).padStart(2, '0')}-${String(rdt.getDate()).padStart(2, '0')}`;
+      }
+
       const res = await fetch('/api/schedule/jobs', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          job_type: document.getElementById('sjType').value,
+          job_type: jtype,
           account_type: BOOK_ACCT,
           po_station: document.getElementById('sjPoStation').value,
           contact_person: document.getElementById('sjContact').value,
           scheduled_date: schedD,
-          due_date: document.getElementById('sjDueDate').value || '',
+          due_date: dueD,
+          pickup_time: document.getElementById('sjPickupTime')?.value || '',
+          dropoff_time: document.getElementById('sjDropoffTime')?.value || '',
           customer_name: cust,
           customer_phone: document.getElementById('sjPhone').value,
-          bottle_count: parseInt(document.getElementById('sjCount').value || '1', 10),
+          bottle_count: bCntCheck,
           priority: pri,
           rush_fee: pri === 'RUSH',
-          holding_zone: document.getElementById('sjZone').value,
+          holding_zone: jtype === 'SHOP_BATCH' ? 'ZONE_A_BACKROOM' : 'OUTBOUND_TRUCK',
           tank_summary: document.getElementById('sjSummary').value,
           valves_attached: document.getElementById('sjValvesOn').checked,
           needs_air_fill: false,
           location_notes: document.getElementById('sjLocation').value,
+          return_address: document.getElementById('sjReturnAddress')?.value || '',
           notes: document.getElementById('sjNotes').value,
         }),
       });
-      if (!res.ok) { alert((await res.json()).detail || 'Could not save entry.'); return; }
-      ['sjCustomer', 'sjContact', 'sjPhone', 'sjPoStation', 'sjSummary', 'sjLocation', 'sjNotes'].forEach(id => { document.getElementById(id).value = ''; });
-            TANK_COUNTS = {};
-      selectCalendarDay(schedD, true);
+      const saved = await res.json();
+      if (!res.ok) { alert(saved.detail || 'Could not save entry.'); return; }
+
+      ['sjCustomer', 'sjContact', 'sjPhone', 'sjPoStation', 'sjSummary', 'sjLocation', 'sjReturnAddress', 'sjPickupTime', 'sjDropoffTime', 'sjNotes'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      TANK_COUNTS = {};
+      await selectCalendarDay(schedD, true);
       switchSchedTab('cal');
+      openJobDetailModal(saved.id, 'PICKUP');
     }
 
     async function markJobPrepped(id) {
@@ -823,8 +1089,7 @@
     }, 4000);
 
     bootSchedule();
-  
-    // v11.3 Calendar Filter, Sort & Clean Booking Transport Toggle (Wired to Real STATE.schedule_jobs & #sjLocation)
+
     let CAL_FILTER = 'ALL';
     let RAW_ALL_JOBS = [];
     let RAW_MONTH_DAYS = [];
@@ -892,33 +1157,37 @@
     window.syncBookingAddressVisibility = function () {
       const sel = document.getElementById('sjType');
       if (!sel) return;
-      const isTruck = sel.value !== 'SHOP_BATCH';
+      const val = sel.value;
+      const isTruck = val !== 'SHOP_BATCH';
+      const isRound = val === 'ROAD_ROUNDTRIP';
       document.getElementById('tmodeWalkinBtn')?.classList.toggle('active', !isTruck);
       document.getElementById('tmodeTruckBtn')?.classList.toggle('active', isTruck);
       sel.style.display = isTruck ? '' : 'none';
 
-      const locInput = document.getElementById('sjLocation');
-      if (locInput && locInput.parentElement) {
-        locInput.parentElement.style.display = isTruck ? '' : 'none';
-        const lbl = locInput.parentElement.querySelector('label');
-        if (lbl) lbl.textContent = isTruck ? 'Station / Pickup & Delivery Address *' : 'Road Pickup / Delivery Address';
-      }
+      const locWrap = document.getElementById('sjLocationWrap') || document.getElementById('sjLocation')?.parentElement;
+      if (locWrap) locWrap.style.display = isTruck ? '' : 'none';
+      const retWrap = document.getElementById('sjReturnAddrWrap');
+      if (retWrap) retWrap.style.display = isRound ? '' : 'none';
+      const dropTimeWrap = document.getElementById('sjDropoffTimeWrap');
+      if (dropTimeWrap) dropTimeWrap.style.display = (isRound || val === 'ROAD_DELIVERY') ? '' : 'none';
+
+      const dLbl = document.getElementById('lblSjDate');
+      if (dLbl) dLbl.textContent = isRound ? '📥 Leg 1: Truck Pickup Date *' : (val === 'ROAD_DELIVERY' ? '📤 Truck Delivery Date *' : (isTruck ? '📥 Truck Pickup Date *' : 'Expected Shop Drop-Off Date *'));
+      const dueLbl = document.getElementById('lblSjDueDate');
+      if (dueLbl) dueLbl.textContent = isRound ? '📤 Leg 2: Return Delivery Date *' : 'Promised Ready Date';
     };
 
     window.setBookingTransportType = function (kind) {
       const sel = document.getElementById('sjType');
       if (!sel) return;
-      if (kind === 'WALKIN') {
-        sel.value = 'SHOP_BATCH';
-      } else if (sel.value === 'SHOP_BATCH') {
-        sel.value = 'ROAD_ROUNDTRIP';
-      }
+      if (kind === 'WALKIN') sel.value = 'SHOP_BATCH';
+      else if (sel.value === 'SHOP_BATCH') sel.value = 'ROAD_ROUNDTRIP';
       window.syncBookingAddressVisibility();
     };
     setTimeout(() => window.syncBookingAddressVisibility && window.syncBookingAddressVisibility(), 80);
   </script>
-  <script src="/static/day-flow.js?v=12.2"></script>
-  <script src="/static/theme-engine.js?v=12.2"></script>
-  <script src="/static/help-bot.js?v=12.2"></script>
+  <script src="/static/day-flow.js?v=13.0"></script>
+  <script src="/static/theme-engine.js?v=13.0"></script>
+  <script src="/static/help-bot.js?v=13.0"></script>
 </body>
 </html>

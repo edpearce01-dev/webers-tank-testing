@@ -381,9 +381,9 @@
   <div class="tv-brand-bg" id="tvBrandBg" aria-hidden="true">
     <div class="tv-crest-wrap">
       <img id="tvBgArchImg" class="tv-arch-img" alt="" hidden />
-      <img src="/static/images/logo-crest.jpg?v=12.2" alt="" class="tv-crest-img" onerror="this.src='/icon.svg'" />
+      <img src="/static/images/logo-crest.jpg?v=13.0" alt="" class="tv-crest-img" onerror="this.src='/icon.svg'" />
     </div>
-    <img id="tvBgDogsImg" src="/static/images/dogs-thanksgiving.png?v=12.2" alt="" class="tv-dogs-img" onerror="this.onerror=null;this.src='/static/images/dogs-classic.png?v=12.2';" />
+    <img id="tvBgDogsImg" src="/static/images/dogs-thanksgiving.png?v=13.0" alt="" class="tv-dogs-img" onerror="this.onerror=null;this.src='/static/images/dogs-classic.png?v=13.0';" />
   </div>
 <!-- SCREENSAVER CLOCK & DATE OVERLAY (SHOWS WHEN SHOP IS IDLE OR SAVER CLICKED) -->
   <div class="tv-screensaver-hud" id="tvScreensaverHud" aria-hidden="true">
@@ -400,7 +400,7 @@
   <!-- TV PAIRING PIN GATE -->
   <div id="tvPinGate" class="pin-gate" hidden>
     <div class="pin-box">
-      <img src="/static/images/logo-crest.png?v=12.2" alt="B386" style="width:62px;height:62px;border-radius:50%;border:2px solid var(--gold-bright);margin-bottom:8px;" />
+      <img src="/static/images/logo-crest.png?v=13.0" alt="B386" style="width:62px;height:62px;border-radius:50%;border:2px solid var(--gold-bright);margin-bottom:8px;" />
       <h3 style="margin:0;font-family:var(--font-display);font-size:1.5rem;color:var(--forest);">Testing Room TV Display</h3>
       <p style="font-size:0.83rem;color:var(--muted);margin:5px 0 0;">Enter any valid Shop PIN once to pair this TV</p>
       <input type="password" inputmode="numeric" id="tvPinInput" placeholder="••••" onkeydown="if(event.key==='Enter')unlockTv()" />
@@ -411,7 +411,7 @@
   <!-- FROSTED 1080P BROADCAST HEADER -->
   <header class="tv-hdr">
     <div class="hdr-brand">
-      <img src="/static/images/logo-crest.png?v=12.2" alt="B386" onerror="this.src='/icon.svg'" />
+      <img src="/static/images/logo-crest.png?v=13.0" alt="B386" onerror="this.src='/icon.svg'" />
       <div>
         <span class="hdr-title">Weber's Tank Testing</span>
         <span class="hdr-sub" id="hdrShiftTxt">DOT RIN B386</span>
@@ -716,7 +716,7 @@
         } else {
           if (ssBadge) ssBadge.hidden = true;
           if (archImg) archImg.hidden = true;
-          if (dogsImg) { dogsImg.src = '/static/images/dogs-classic.png?v=12.2'; dogsImg.classList.remove('photo-fallback'); }
+          if (dogsImg) { dogsImg.src = '/static/images/dogs-classic.png?v=13.0'; dogsImg.classList.remove('photo-fallback'); }
         }
       } catch (_) {}
     }
@@ -864,10 +864,10 @@ function playChime() {
         document.getElementById('schedCnt').textContent = `${sched.length} Open`;
         document.getElementById('schedList').innerHTML = sched.length
           ? sched.map(j => {
-              const kind = j.job_type === 'ROAD_PICKUP' ? 'Truck Pickup:' : (j.job_type === 'ROAD_DELIVERY' ? 'Truck Delivery:' : (j.job_type === 'ROAD_ROUNDTRIP' ? 'Round-Trip:' : 'Batch:'));
+              const kind = j.job_type === 'ROAD_PICKUP' ? '📥 Pickup:' : (j.job_type === 'ROAD_DELIVERY' ? '📤 Delivery:' : (j.job_type === 'ROAD_ROUNDTRIP' ? '🔄 Round-Trip:' : '📌 Batch:')); const tm = j.pickup_time ? ' @ ' + j.pickup_time : ''; const eta = j.drive_eta_mins ? ` • 🚗 ~${j.drive_eta_mins}m` : '';
               return `
                 <div class="row-it">
-                  <div><strong style="color:var(--forest);">${kind} ${esc(j.customer_name)} (${j.bottle_count})</strong> ${j.rush_fee ? '<span class="b-rush">RUSH</span>' : ''}<div style="font-size:0.74rem;color:var(--muted);"><span class="mono">${esc(j.scheduled_date)}</span>${j.tank_summary ? ' • ' + esc(j.tank_summary) : ''}</div></div>
+                  <div><strong style="color:var(--forest);">${kind} ${esc(j.customer_name)} (${j.bottle_count})</strong> ${j.rush_fee ? '<span class="b-rush">RUSH</span>' : ''}<div style="font-size:0.74rem;color:var(--muted);"><span class="mono">${esc(j.scheduled_date)}${esc(tm)}</span>${j.job_type === 'ROAD_ROUNDTRIP' && j.due_date ? ` → Return ${esc(j.due_date)}` : ''}${eta}${j.tank_summary ? ' • ' + esc(j.tank_summary) : ''}</div></div>
                   <span class="pill ${j.prep_status === 'DEVALVED_TAGGED' ? 'ok' : ''}" style="font-size:0.66rem;padding:3px 7px;">${j.prep_status === 'DEVALVED_TAGGED' ? 'Prepped' : 'Scheduled'}</span>
                 </div>`;
             }).join('')
@@ -910,7 +910,7 @@ function playChime() {
                 ${day.bottle_capacity > 0 ? `<div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:${pct >= 90 ? 'var(--red)' : 'var(--emerald)'};"></div></div>` : ''}
               </div>
               <div class="cal-jobs">
-                ${(day.jobs || []).map(j => `<div class="cal-job-chip ${(j.rush_fee || j.priority === 'RUSH') ? 'rush' : ''}">${esc(j.customer_name)} <span class="mono">(${j.bottle_count})</span></div>`).join('')}
+                ${(day.jobs || []).map(j => { const lg = j.cal_leg === 'RETURN' ? '📤 ' : (j.cal_leg === 'PICKUP' ? '📥 ' : '📌 '); const tm = j.cal_time ? j.cal_time + ' ' : ''; return `<div class="cal-job-chip ${(j.rush_fee || j.priority === 'RUSH') ? 'rush' : ''}">${lg}${esc(tm)}${esc(j.customer_name)} <span class="mono">(${j.bottle_count})</span></div>`; }).join('')}
                 ${day.day_notes ? `<div style="font-size:0.7rem;color:#92400e;font-weight:700;">Note: ${esc(day.day_notes)}</div>` : ''}
               </div>
               <div class="mono" style="font-size:0.66rem;color:var(--muted);">${day.bottle_capacity > 0 ? `${day.booked_bottles || 0}/${day.bottle_capacity} booked` : 'Self-Drop Active'}</div>
@@ -934,6 +934,6 @@ function playChime() {
     setInterval(pollTv, 3500);
     setInterval(syncTvBackgroundArtwork, 20000);
   </script>
-  <script src="/static/theme-engine.js?v=12.2"></script>
+  <script src="/static/theme-engine.js?v=13.0"></script>
 </body>
 </html>

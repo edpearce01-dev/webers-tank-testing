@@ -7,14 +7,14 @@
   <link rel="manifest" href="/manifest.json" />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/ops.css?v=12.2" />
+  <link rel="stylesheet" href="/static/ops.css?v=13.0" />
   <title>Weber's Tank Testing — Office, Rolodex, Printouts &amp; Supplies | RIN B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=12.2" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
+      <img src="/static/images/logo-crest.png?v=13.0" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Office &amp; Print Center</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter your Individual PIN (Access resets daily at Midnight)</p>
       <div style="text-align:left;">
@@ -32,7 +32,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=12.2" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=13.0" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>OFFICE &amp; PRINT</h1>
           <small>RIN B386 • Billing, Rolodex &amp; Supply</small>
@@ -90,9 +90,19 @@
           <button class="rail-btn" data-owner-only="1" data-tab="rates" onclick="switchOfficeTab('rates')">
             <span>⚙️ Service Rates</span><span class="nav-badge">$</span>
           </button>
+          <button class="rail-btn" data-owner-only="1" data-tab="hours" onclick="switchOfficeTab('hours')">
+            <span>🕒 Operating Schedule</span><span class="nav-badge green"> Hrs</span>
+          </button>
+          <button class="rail-btn" data-tab="timeclock" onclick="switchOfficeTab('timeclock')">
+            <span>⏱️ Timecards &amp; Hours</span><span class="nav-badge" id="navBadgeClock">⏱️</span>
+          </button>
+          <button class="rail-btn" data-tab="sms" onclick="switchOfficeTab('sms')">
+            <span>📲 iPhone Text Queue</span><span class="nav-badge amber" id="navBadgeSms">0</span>
+          </button>
         </div>
 
         <div class="rail-footer">
+          <a class="secondary" id="railMasterSheetBtn" href="https://drive.google.com" target="_blank" rel="noopener" style="width:100%;background:#ecfdf5;color:#065f46;border-color:#6ee7b7;font-weight:800;">📊 Open Master Google Sheet ↗</a>
           <a class="secondary" href="/api/customers/export.csv" style="width:100%;">📥 Export Mailing CSV</a>
           <button class="secondary" onclick="window.openAccountSwitchDrawer&&window.openAccountSwitchDrawer()" style="width:100%;">Account &amp; Switch PIN ☰</button>
         </div>
@@ -319,9 +329,12 @@
                   </div>
                   <input type="date" id="tdDate" onchange="updateTdScript()" />
                 </div>
+                <div><label>Pickup Time Window</label><input id="tdPickupTime" placeholder="e.g. 9:30 AM or Morning" onchange="updateTdScript()" /></div>
                 <div>
                   <label>Est. Return / Ready Date</label>
                   <input type="date" id="tdDueDate" onchange="updateTdScript()" />
+                </div>
+                <div><label>Return Delivery Time</label><input id="tdDropoffTime" placeholder="e.g. 1:30 PM" />
                 </div>
               </div>
 
@@ -644,6 +657,113 @@
           </div>
         </section>
 
+
+        <!-- TAB 7: OPERATING SCHEDULE, HOLIDAYS / VACATIONS & GOOGLE PROFILE SYNC -->
+        <section id="tab-hours" hidden>
+          <div class="split-2">
+            <div class="card" style="border-top:4px solid var(--green);">
+              <div class="card-hdr">
+                <div>
+                  <h3>🕒 Weekly Staffed Operating Schedule</h3>
+                  <small style="color:var(--muted);">Updates weberstanktesting.com, Turnaround Quotes &amp; Month Calendar automatically</small>
+                </div>
+              </div>
+              <div id="weeklyHoursEditor" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+              <div class="grid" style="margin-bottom:10px;">
+                <div><label>Google Business Profile Edit Link</label><input id="osGbpUrl" placeholder="https://business.google.com/" /></div>
+                <div><label>Master Google Sheet URL (For Quick-Open)</label><input id="osSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." /></div>
+              </div>
+              <button class="primary" onclick="saveOperatingSchedule()">💾 Save Weekly Hours &amp; Sync Website</button>
+
+              <div class="notice" style="margin-top:14px;background:#eff6ff;border-color:#93c5fd;color:#1e3a8a;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+                  <strong>🌐 Sync to Weber's Google Business Listing</strong>
+                  <div style="display:flex;gap:6px;">
+                    <button type="button" class="secondary" style="padding:5px 10px;font-weight:800;" onclick="copyGbpHoursText()">📋 Copy Hours</button>
+                    <a id="osOpenGbpBtn" class="secondary" style="padding:5px 10px;background:#1d4ed8;color:#fff;border:none;font-weight:800;" href="https://business.google.com/" target="_blank" rel="noopener">↗ Open Google Profile</a>
+                  </div>
+                </div>
+                <pre id="osGbpPreview" style="margin:0;font-size:0.75rem;white-space:pre-wrap;font-family:var(--font-mono);color:#1e293b;"></pre>
+              </div>
+            </div>
+
+            <div class="card" style="border-top:4px solid #f59e0b;">
+              <div class="card-hdr">
+                <div>
+                  <h3>🏖️ Set Holiday / Vacation Closures &amp; Special Hours</h3>
+                  <small style="color:var(--muted);">Posts an automatic notice banner on weberstanktesting.com &amp; blocks staffed hydro capacity</small>
+                </div>
+              </div>
+              <div class="grid">
+                <div><label>Start Date *</label><input type="date" id="clStart" /></div>
+                <div><label>End Date (Blank = 1 Day)</label><input type="date" id="clEnd" /></div>
+                <div style="grid-column:1/-1;"><label>Holiday / Vacation Title *</label><input id="clTitle" placeholder="e.g. Thanksgiving Break, Fire Academy Week, Shop Vacation" /></div>
+                <div>
+                  <label>Staffed Shop Status</label>
+                  <select id="clStaffed" onchange="document.getElementById('clSpecHrsWrap').hidden=(this.value!=='1')">
+                    <option value="0">Staffed Counter Closed</option>
+                    <option value="1">Open Special / Reduced Hours</option>
+                  </select>
+                </div>
+                <div id="clSpecHrsWrap" hidden><label>Special Hours</label><input id="clSpecHrs" placeholder="e.g. 9:00 AM – 12:00 PM" /></div>
+                <div style="grid-column:1/-1;">
+                  <label class="inline-check"><input type="checkbox" id="clDockOpen" checked /><span><strong>24/7 Loading Dock Remains Open</strong> for self-serve cylinder drop-off &amp; pickup</span></label>
+                </div>
+                <div style="grid-column:1/-1;"><label>Optional Public Website Note</label><input id="clNote" placeholder="e.g. Normal testing resumes Monday at 9 AM!" /></div>
+              </div>
+              <button class="primary" style="background:#b45309;" onclick="addClosureWindow()">➕ Post Holiday / Vacation Schedule</button>
+
+              <h4 style="margin:16px 0 8px;">Upcoming &amp; Active Schedule Notices</h4>
+              <div id="closuresListArea"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 8: WORKER TIMECARDS & PAYROLL EXPORT -->
+        <section id="tab-timeclock" hidden>
+          <div class="card" style="border-top:4px solid #059669;">
+            <div class="card-hdr">
+              <div>
+                <h3>⏱️ Crew Time Clock &amp; Shift Hours</h3>
+                <small style="color:var(--muted);">Workers punch in/out from the left sidebar or top bar on any page</small>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button class="secondary" onclick="loadTimeclockOfficeTab(14)">Last 14 Days</button>
+                <button class="secondary" onclick="loadTimeclockOfficeTab(30)">Last 30 Days</button>
+                <a class="secondary" data-owner-only="1" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7;font-weight:800;" href="/api/timeclock/export.csv?days=30">📥 Export Payroll CSV</a>
+              </div>
+            </div>
+            <div id="tcSummaryCards" class="huddle-kpis" style="margin-bottom:12px;"></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Date</th><th>Worker</th><th>Clock In</th><th>Clock Out</th><th>Total</th><th>Notes</th><th>Actions</th></tr></thead>
+                <tbody id="tcReportTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 9: DEDICATED SHOP IPHONE CUSTOMER SMS QUEUE & SHORTCUT -->
+        <section id="tab-sms" hidden>
+          <div class="card" style="border-top:4px solid #0284c7;">
+            <div class="card-hdr">
+              <div>
+                <h3>📲 Dedicated Shop iPhone — Customer Text Queue ($0/Mo)</h3>
+                <small style="color:var(--muted);">Tap 'Send on iPhone' to open iOS Messages pre-filled, or connect a 3-step Apple Shortcut on the shop iPhone</small>
+              </div>
+              <button class="secondary" onclick="loadSmsOutboxTab()">↻ Refresh</button>
+            </div>
+            <div id="smsOutboxList" style="margin-bottom:14px;"></div>
+            <details style="background:#f8fafc;border:1px solid var(--border-soft);border-radius:10px;padding:10px 12px;">
+              <summary style="cursor:pointer;font-weight:800;color:var(--forest);">🤖 Optional: Auto-Send from Ryan's Shop iPhone via Apple Shortcuts</summary>
+              <p style="font-size:0.82rem;color:#334155;line-height:1.5;margin:8px 0;">
+                In the Apple <strong>Shortcuts</strong> app on the shop iPhone: 1) Add <strong>Get Contents of URL</strong> → paste the Bridge URL below → 2) <strong>Get Dictionary Value</strong> (<code>messages</code>) → <strong>Repeat with Each</strong> → 3) <strong>Send Message</strong> (<code>Repeat Item[message]</code> to <code>Repeat Item[phone]</code>, Turn OFF <em>Show When Run</em>).
+              </p>
+              <input id="iphoneBridgeUrlInput" readonly onclick="this.select()" style="font-family:var(--font-mono);font-size:0.78rem;background:#fff;" />
+            </details>
+          </div>
+        </section>
+
         <!-- TAB 6: MASTER SERVICE RATE SCHEDULE -->
         <section id="tab-rates" hidden>
           <div class="card">
@@ -701,7 +821,10 @@
         <div><label>Vendor Name</label><input id="supVendor" placeholder="Amazon / McMaster-Carr / Hydro-Test" /></div>
         <div style="grid-column:1/-1;"><label>Item Name *</label><input id="supName" placeholder="e.g. Kano AeroKroil 10 oz Can" /></div>
         <div style="grid-column:1/-1;"><label>Part # / Size / Spec Note</label><input id="supNote" placeholder="e.g. Avery 5160 or Viton -112 O-Ring" /></div>
-        <div style="grid-column:1/-1;"><label>Direct 1-Click Reorder URL (Paste Exact Product Page)</label><input id="supUrl" placeholder="https://www.amazon.com/..." /></div>
+        <div><label>Current On-Hand Qty</label><input type="number" id="supQty" min="0" value="5" /></div>
+        <div><label>Notify Ryan At ≤ (Limit)</label><input type="number" id="supThresh" min="0" value="2" /></div>
+        <div><label>Unit Label</label><input id="supUnit" placeholder="packs / cans / rolls" value="units" /></div>
+        <div style="grid-column:1/-1;"><label>Optional Reorder Link</label><input id="supUrl" placeholder="Optional vendor link" /></div>
       </div>
       <label class="inline-check" style="margin-top:11px;">
         <input type="checkbox" id="supLow" />
@@ -748,6 +871,9 @@
       });
       if (tab === 'quick') setTimeout(() => document.getElementById('qsCustomer')?.focus(), 40);
       if (tab === 'dispatch') setTimeout(() => document.getElementById('tdCustomer')?.focus(), 40);
+      if (tab === 'timeclock') loadTimeclockOfficeTab(14);
+      if (tab === 'sms') loadSmsOutboxTab();
+      if (tab === 'hours') renderOperatingScheduleTab();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -775,7 +901,7 @@
       if (tabParam) {
         const mapLegacy = { billing: 'invoice', print: 'print', rates: 'rates' };
         const cleanTab = mapLegacy[tabParam] || tabParam;
-        if (['quick', 'dispatch', 'invoice', 'saved', 'rolodex', 'print', 'supplies', 'rates'].includes(cleanTab)) {
+        if (['quick', 'dispatch', 'invoice', 'saved', 'rolodex', 'print', 'supplies', 'rates', 'hours', 'timeclock', 'sms'].includes(cleanTab)) {
           switchOfficeTab(cleanTab);
         }
       }
@@ -914,6 +1040,9 @@
       renderRolodexDirectory();
       renderRecallsList();
       renderSuppliesGrid();
+      renderOperatingScheduleTab();
+      loadSmsOutboxTab();
+      if (CURRENT_TAB === 'timeclock') loadTimeclockOfficeTab(14);
       renderQuickScheduleJobs();
       renderTruckDispatchList();
 
@@ -1151,6 +1280,8 @@
             contact_person: contact,
             scheduled_date: schedDate,
             due_date: dueDate,
+            pickup_time: document.getElementById('tdPickupTime')?.value || '',
+            dropoff_time: document.getElementById('tdDropoffTime')?.value || '',
             customer_name: cust,
             customer_phone: phone,
             bottle_count: cnt,
@@ -1870,7 +2001,7 @@
       window.open(url, '_blank');
     }
 
-    // --- TAB 5: 1-CLICK REORDER SHOP SUPPLIES HUB ---
+    // --- TAB 5: RYAN'S SUPPLY THRESHOLD LIMITS & LOW-STOCK NOTIFICATIONS ---
     function setSupplyCat(cat) {
       SUPPLY_CAT = cat;
       document.querySelectorAll('#supplyCatBar .tap-pill').forEach(b => {
@@ -1886,30 +2017,59 @@
 
       document.getElementById('suppliesGrid').innerHTML = items.length
         ? items.map(s => {
-            const href = (s.reorder_url && s.reorder_url.trim())
-              ? s.reorder_url
-              : `https://www.amazon.com/s?k=${encodeURIComponent(s.item_name)}`;
+            const qty = s.on_hand_qty ?? 5;
+            const lim = s.reorder_threshold ?? 2;
+            const unit = s.unit_label || 'units';
             return `
               <div class="supply-card ${s.low_stock ? 'is-low' : ''}">
                 <div>
                   <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px;">
                     <span class="sub-badge" style="font-size:0.67rem;">${escHtml(s.category)}</span>
-                    ${s.low_stock ? '<span class="rush-badge">⚠️ RUNNING LOW</span>' : `<span style="font-size:0.7rem;color:var(--muted);font-weight:700;">${escHtml(s.vendor_name || 'Vendor')}</span>`}
+                    ${s.low_stock ? '<span class="rush-badge">⚠️ NEEDS REPLACEMENT</span>' : '<span class="sub-badge" style="background:#ecfdf5;color:#065f46;">✓ Stock OK</span>'}
                   </div>
                   <strong style="font-size:0.94rem;display:block;margin-bottom:3px;">${escHtml(s.item_name)}</strong>
-                  <div style="font-size:0.78rem;color:var(--muted);">${escHtml(s.spec_note || '')}</div>
-                  ${s.last_ordered_date ? `<div style="font-size:0.71rem;color:#15803d;font-weight:700;margin-top:4px;">✓ Last Ordered: ${escHtml(s.last_ordered_date)}</div>` : ''}
+                  <div style="font-size:0.77rem;color:var(--muted);margin-bottom:8px;">${escHtml(s.spec_note || '')}</div>
+
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;padding:7px 9px;border-radius:8px;">
+                    <div>
+                      <small style="display:block;font-size:0.66rem;font-weight:800;color:var(--muted);text-transform:uppercase;">On Hand (${escHtml(unit)})</small>
+                      <div style="display:inline-flex;align-items:center;gap:6px;margin-top:2px;">
+                        <button type="button" class="secondary" style="padding:2px 9px;font-weight:900;" onclick="stepSupplyQty(${s.id}, -1)">−</button>
+                        <strong class="mono" style="font-size:1.05rem;min-width:24px;text-align:center;color:${s.low_stock ? '#b91c1c' : '#0f172a'};">${qty}</strong>
+                        <button type="button" class="secondary" style="padding:2px 9px;font-weight:900;" onclick="stepSupplyQty(${s.id}, 1)">+</button>
+                      </div>
+                    </div>
+                    <div style="text-align:right;">
+                      <small style="display:block;font-size:0.66rem;font-weight:800;color:#92400e;text-transform:uppercase;">Alert Me At ≤</small>
+                      <input type="number" min="0" value="${lim}" style="width:64px;padding:4px 6px;font-weight:800;text-align:center;margin-top:2px;"
+                        onchange="setSupplyThreshold(${s.id}, this.value)" title="Email &amp; banner alert fires when On-Hand hits this number" />
+                    </div>
+                  </div>
                 </div>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-                  <a class="order-link-btn" style="flex:1;" href="${escHtml(href)}" target="_blank" rel="noopener">🛒 Order Now ↗</a>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px;">
                   ${s.low_stock
-                    ? `<button class="secondary" style="background:#dcfce7;color:#166534;border-color:#86efac;" onclick="toggleSupplyStock(${s.id}, false, true)">✓ Ordered</button>`
-                    : `<button class="secondary" onclick="toggleSupplyStock(${s.id}, true, false)" title="Flag Running Low">⚠️ Low</button>`}
-                  <button class="secondary" onclick="openSupplyModal(${s.id})" title="Edit Link / Details">✎</button>
+                    ? `<button class="secondary" style="flex:1;background:#dcfce7;color:#166534;border-color:#86efac;font-weight:800;" onclick="toggleSupplyStock(${s.id}, false, true)">✓ Restocked</button>`
+                    : `<button class="secondary" style="flex:1;" onclick="toggleSupplyStock(${s.id}, true, false)">🔔 Trigger Low Alert</button>`}
+                  <button class="secondary" onclick="openSupplyModal(${s.id})" title="Edit Item &amp; Limit">✎ Edit</button>
                 </div>
               </div>`;
           }).join('')
         : '<div style="color:var(--muted);font-size:0.86rem;">No supply items in this filter.</div>';
+    }
+
+    async function stepSupplyQty(id, delta) {
+      await fetch(`/api/supplies/${id}/qty`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ delta }),
+      });
+      loadOfficeState();
+    }
+
+    async function setSupplyThreshold(id, val) {
+      await fetch(`/api/supplies/${id}/qty`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reorder_threshold: Math.max(0, parseInt(val || '0', 10)) }),
+      });
+      loadOfficeState();
     }
 
     async function toggleSupplyStock(id, lowStock, markOrderedToday) {
@@ -1922,13 +2082,16 @@
 
     function openSupplyModal(id) {
       const s = id ? (STATE.shop_supplies || []).find(x => x.id === id) : null;
-      document.getElementById('supplyModalTitle').textContent = s ? '✎ Edit Supply Item & Link' : '➕ Add Shop Supply Item';
+      document.getElementById('supplyModalTitle').textContent = s ? '✎ Edit Supply & Alert Limit' : '➕ Add Tracked Shop Supply';
       document.getElementById('supId').value = s ? s.id : '';
       document.getElementById('supCat').value = s ? s.category : 'Marking & Labels';
-      document.getElementById('supVendor').value = s ? (s.vendor_name || 'Amazon') : 'Amazon';
+      document.getElementById('supVendor').value = s ? (s.vendor_name || 'Shop') : 'Shop';
       document.getElementById('supName').value = s ? s.item_name : '';
       document.getElementById('supNote').value = s ? (s.spec_note || '') : '';
       document.getElementById('supUrl').value = s ? (s.reorder_url || '') : '';
+      if (document.getElementById('supQty')) document.getElementById('supQty').value = s ? (s.on_hand_qty ?? 5) : 5;
+      if (document.getElementById('supThresh')) document.getElementById('supThresh').value = s ? (s.reorder_threshold ?? 2) : 2;
+      if (document.getElementById('supUnit')) document.getElementById('supUnit').value = s ? (s.unit_label || 'units') : 'units';
       document.getElementById('supLow').checked = Boolean(s && s.low_stock);
       document.getElementById('btnDelSupply').hidden = !s;
       document.getElementById('supplyModal').hidden = false;
@@ -1940,6 +2103,8 @@
       const name = document.getElementById('supName').value.trim();
       if (!name) { alert('Enter item name first.'); return; }
       const idVal = document.getElementById('supId').value;
+      const qty = parseInt(document.getElementById('supQty')?.value || '5', 10);
+      const thresh = parseInt(document.getElementById('supThresh')?.value || '2', 10);
       const res = await fetch('/api/supplies', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1949,7 +2114,10 @@
           item_name: name,
           spec_note: document.getElementById('supNote').value,
           reorder_url: document.getElementById('supUrl').value,
-          low_stock: document.getElementById('supLow').checked,
+          on_hand_qty: qty,
+          reorder_threshold: thresh,
+          unit_label: document.getElementById('supUnit')?.value || 'units',
+          low_stock: document.getElementById('supLow').checked || qty <= thresh,
         }),
       });
       if (!res.ok) { alert((await res.json()).detail || 'Save failed.'); return; }
@@ -1959,12 +2127,192 @@
 
     async function deleteSupplyItem() {
       const idVal = document.getElementById('supId').value;
-      if (!idVal || !confirm('Remove this supply item from the Reorder Hub?')) return;
+      if (!idVal || !confirm('Remove this supply item?')) return;
       await fetch(`/api/supplies/${idVal}`, { method: 'DELETE' });
       closeSupplyModal();
       loadOfficeState();
     }
 
+    // --- TAB 7: OPERATING SCHEDULE, HOLIDAYS & GOOGLE PROFILE SYNC ---
+    let OS_DATA = null;
+
+    function renderOperatingScheduleTab() {
+      const d = STATE.operating_schedule || OS_DATA;
+      if (!d) return;
+      OS_DATA = d;
+      const msBtn = document.getElementById('railMasterSheetBtn');
+      if (msBtn && (STATE.master_sheet_url || d.master_sheet_url)) {
+        msBtn.href = STATE.master_sheet_url || d.master_sheet_url;
+      }
+      const ed = document.getElementById('weeklyHoursEditor');
+      if (ed && !ed.contains(document.activeElement)) {
+        ed.innerHTML = (d.weekly_hours || []).map((h, i) => `
+          <div style="display:grid;grid-template-columns:110px 92px 1fr 1fr;gap:8px;align-items:center;padding:6px 8px;background:#f8fafc;border:1px solid var(--border-soft);border-radius:8px;">
+            <strong>${escHtml(h.day_name)}</strong>
+            <label class="inline-check" style="margin:0;font-size:0.8rem;">
+              <input type="checkbox" id="ohOpen_${i}" ${h.is_open ? 'checked' : ''} onchange="document.getElementById('ohStart_${i}').disabled=!this.checked;document.getElementById('ohEnd_${i}').disabled=!this.checked" />
+              <span>Open</span>
+            </label>
+            <input type="time" id="ohStart_${i}" value="${escHtml(h.open_time || '09:00')}" ${h.is_open ? '' : 'disabled'} />
+            <input type="time" id="ohEnd_${i}" value="${escHtml(h.close_time || '16:00')}" ${h.is_open ? '' : 'disabled'} />
+          </div>`).join('');
+      }
+      if (document.getElementById('osGbpUrl') && document.activeElement !== document.getElementById('osGbpUrl')) {
+        document.getElementById('osGbpUrl').value = d.gbp_edit_url || 'https://business.google.com/';
+        document.getElementById('osOpenGbpBtn').href = d.gbp_edit_url || 'https://business.google.com/';
+      }
+      if (document.getElementById('osSheetUrl') && document.activeElement !== document.getElementById('osSheetUrl')) {
+        document.getElementById('osSheetUrl').value = d.master_sheet_url || STATE.master_sheet_url || '';
+      }
+      if (document.getElementById('osGbpPreview')) document.getElementById('osGbpPreview').textContent = d.gbp_copy_text || '';
+
+      const clEl = document.getElementById('closuresListArea');
+      if (clEl) {
+        const cls = d.upcoming_closures || [];
+        clEl.innerHTML = cls.length ? cls.map(c => `
+          <div class="rec-item">
+            <div class="rec-main">
+              <div class="rec-title"><span>🏖️ ${escHtml(c.title)}</span><span class="sub-badge">${escHtml(c.start_date)}${c.end_date !== c.start_date ? ' → ' + escHtml(c.end_date) : ''}</span></div>
+              <div class="rec-sub">${c.staffed_open ? 'Special Hrs: ' + escHtml(c.special_hours) : 'Staffed Counter Closed'} • ${c.dock_open ? '✅ 24/7 Dock Open' : '⛔ Dock Closed'}${c.public_note ? ' • ' + escHtml(c.public_note) : ''}</div>
+            </div>
+            <button class="secondary" style="color:#b91c1c;" onclick="removeClosureWindow(${c.id})">✕ Remove</button>
+          </div>`).join('') : '<div style="color:var(--muted);font-size:0.84rem;">No upcoming holiday or vacation closures set.</div>';
+      }
+    }
+
+    async function saveOperatingSchedule() {
+      const hrs = (OS_DATA?.weekly_hours || []).map((h, i) => ({
+        day_of_week: h.day_of_week,
+        day_name: h.day_name,
+        is_open: Boolean(document.getElementById('ohOpen_' + i)?.checked),
+        open_time: document.getElementById('ohStart_' + i)?.value || '09:00',
+        close_time: document.getElementById('ohEnd_' + i)?.value || '16:00',
+        dock_24_7: true,
+        note: h.note || '',
+      }));
+      const res = await fetch('/api/office/operating-hours', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          weekly_hours: hrs,
+          gbp_edit_url: document.getElementById('osGbpUrl')?.value || '',
+          master_sheet_url: document.getElementById('osSheetUrl')?.value || '',
+        }),
+      });
+      if (!res.ok) { alert((await res.json()).detail || 'Save failed.'); return; }
+      OS_DATA = await res.json();
+      STATE.operating_schedule = OS_DATA;
+      renderOperatingScheduleTab();
+      alert('Weekly operating schedule saved & synced to weberstanktesting.com!');
+    }
+
+    function copyGbpHoursText() {
+      const txt = document.getElementById('osGbpPreview')?.textContent || '';
+      if (navigator.clipboard) navigator.clipboard.writeText(txt);
+      alert('Formatted hours copied! Paste into your Google Business Profile.');
+    }
+
+    async function addClosureWindow() {
+      const s = document.getElementById('clStart').value;
+      const t = document.getElementById('clTitle').value.trim();
+      if (!s || !t) { alert('Enter Start Date and Holiday / Vacation Title.'); return; }
+      const res = await fetch('/api/office/closures', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          start_date: s,
+          end_date: document.getElementById('clEnd').value || s,
+          title: t,
+          staffed_open: document.getElementById('clStaffed').value === '1',
+          special_hours: document.getElementById('clSpecHrs').value,
+          dock_open: document.getElementById('clDockOpen').checked,
+          public_note: document.getElementById('clNote').value,
+        }),
+      });
+      if (!res.ok) { alert((await res.json()).detail || 'Could not save closure.'); return; }
+      OS_DATA = await res.json();
+      STATE.operating_schedule = OS_DATA;
+      ['clStart', 'clEnd', 'clTitle', 'clSpecHrs', 'clNote'].forEach(id => { document.getElementById(id).value = ''; });
+      renderOperatingScheduleTab();
+    }
+
+    async function removeClosureWindow(id) {
+      await fetch(`/api/office/closures/${id}`, { method: 'DELETE' });
+      loadOfficeState();
+    }
+
+    // --- TAB 8: CREW TIMECARDS & PAYROLL ---
+    async function loadTimeclockOfficeTab(days = 14) {
+      const res = await fetch(`/api/timeclock/report?days=${days}`);
+      if (!res.ok) return;
+      const d = await res.json();
+      document.getElementById('tcSummaryCards').innerHTML = (d.summary || []).length
+        ? d.summary.map(s => `<div class="huddle-kpi"><small>${escHtml(s.name)} (${escHtml(s.initials)})</small><strong>${s.hours} hrs (${s.shifts} shifts)</strong></div>`).join('')
+        : '<div style="color:var(--muted);font-size:0.84rem;">No worker shifts logged in this window yet.</div>';
+
+      document.getElementById('tcReportTable').innerHTML = (d.punches || []).length
+        ? d.punches.map(p => {
+            const hrs = (Number(p.duration_minutes || 0) / 60).toFixed(2);
+            return `<tr>
+              <td><strong>${escHtml(p.work_date)}</strong></td>
+              <td>${escHtml(p.crew_name)} (${escHtml(p.crew_initials)})</td>
+              <td>${escHtml(p.clock_in_at)}</td>
+              <td>${p.status === 'OPEN' ? '<span class="pass">🟢 CLOCKED IN</span>' : escHtml(p.clock_out_at)}</td>
+              <td><strong>${p.status === 'OPEN' ? 'Active' : hrs + ' hr'}</strong></td>
+              <td><small>${escHtml(p.notes || '')}</small></td>
+              <td>${d.is_boss ? `<button class="secondary" onclick="bossAdjustPunch(${p.id}, ${p.duration_minutes || 0})">✎ Mins</button> <button class="secondary" style="color:#b91c1c;" onclick="bossDeletePunch(${p.id})">✕</button>` : ''}</td>
+            </tr>`;
+          }).join('')
+        : '<tr><td colspan="7">No punches recorded yet.</td></tr>';
+    }
+
+    async function bossAdjustPunch(id, curMins) {
+      const v = prompt('Enter corrected total shift duration in minutes (e.g. 420 = 7.0 hrs):', String(curMins || 60));
+      if (v === null) return;
+      await fetch(`/api/timeclock/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ duration_minutes: Math.max(0, parseInt(v || '0', 10)) }),
+      });
+      loadTimeclockOfficeTab(14);
+    }
+
+    async function bossDeletePunch(id) {
+      if (!confirm('Delete this time punch?')) return;
+      await fetch(`/api/timeclock/${id}`, { method: 'DELETE' });
+      loadTimeclockOfficeTab(14);
+    }
+
+    // --- TAB 9: DEDICATED SHOP IPHONE CUSTOMER SMS QUEUE ---
+    async function loadSmsOutboxTab() {
+      const bridgeInput = document.getElementById('iphoneBridgeUrlInput');
+      if (bridgeInput && STATE.sms_shortcut_key) {
+        bridgeInput.value = `${location.origin}/api/public/iphone-sms-bridge?key=${STATE.sms_shortcut_key}`;
+      }
+      const res = await fetch('/api/sms-outbox');
+      if (!res.ok) return;
+      const rows = await res.json();
+      const badge = document.getElementById('navBadgeSms');
+      if (badge) badge.textContent = String(rows.length);
+      const sep = /iPad|iPhone|iPod/i.test(navigator.userAgent) ? '&' : '?';
+      document.getElementById('smsOutboxList').innerHTML = rows.length
+        ? rows.map(r => {
+            const digits = String(r.phone || '').replace(/\D/g, '');
+            return `<div class="rec-item">
+              <div class="rec-main">
+                <div class="rec-title"><span>📲 ${escHtml(r.customer_name)} — ${escHtml(r.phone)}</span><span class="sub-badge">${escHtml(r.created_at)}</span></div>
+                <div class="rec-sub">${escHtml(r.message)}</div>
+              </div>
+              <div class="rec-actions">
+                <a class="primary" style="width:auto;margin:0;padding:7px 12px;" href="sms:${digits}${sep}body=${encodeURIComponent(r.message)}" onclick="ackSmsSent(${r.id})">📲 Send on iPhone</a>
+                <button class="secondary" onclick="ackSmsSent(${r.id})">✓ Clear</button>
+              </div>
+            </div>`;
+          }).join('')
+        : '<div style="color:var(--muted);font-size:0.85rem;">No unsent customer text notifications in queue.</div>';
+    }
+
+    async function ackSmsSent(id) {
+      await fetch(`/api/sms-outbox/${id}/ack`, { method: 'POST' });
+      setTimeout(loadSmsOutboxTab, 350);
+    }
     // --- TAB 6: MASTER SERVICE RATES ---
     function renderRateScheduleTable() {
       document.getElementById('pricingList').innerHTML = EDITABLE_RATES.map((p, i) => `
@@ -2028,8 +2376,8 @@
 
     bootOffice();
   </script>
-  <script src="/static/day-flow.js?v=12.2"></script>
-  <script src="/static/theme-engine.js?v=12.2"></script>
-  <script src="/static/help-bot.js?v=12.2"></script>
+  <script src="/static/day-flow.js?v=13.0"></script>
+  <script src="/static/theme-engine.js?v=13.0"></script>
+  <script src="/static/help-bot.js?v=13.0"></script>
 </body>
 </html>

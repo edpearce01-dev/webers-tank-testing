@@ -594,3 +594,149 @@
     if (shell && !shell.hidden) refreshDayOverview();
   }, 30000);
 })();
+
+// =========================================================================
+// v13.0 KENNY'S WORKER TIME CLOCK WIDGET (SIDEBAR + TOPBAR + MY TIMECARD)
+// =========================================================================
+if (!window._WEBER_TIMECLOCK_V13) {
+  window._WEBER_TIMECLOCK_V13 = true;
+  window.TC_STATE = { clocked_in: false, open_punch: null, today_total_minutes: 0, active_workers: [] };
+
+  function fmtHrsMins(mins) {
+    const m = Math.max(0, parseInt(mins || 0, 10));
+    return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`;
+  }
+
+  window.refreshWorkerTimeClock = async function () {
+    const shell = document.getElementById('appShell');
+    if (!shell || shell.hidden) return;
+    try {
+      const res = await fetch('/api/timeclock/status');
+      if (!res.ok) return;
+      window.TC_STATE = await res.json();
+      renderTimeClockUI();
+    } catch (_) {}
+  };
+
+  function renderTimeClockUI() {
+    const st = window.TC_STATE || {};
+    const rail = document.querySelector('.side-rail .rail-nav');
+    if (rail && !document.getElementById('railTimeClockBox')) {
+      const box = document.createElement('div');
+      box.id = 'railTimeClockBox';
+      box.style.cssText = 'margin-top:8px;padding:9px 10px;border-radius:10px;border:1.5px solid #cbd5e1;background:#f8fafc;';
+      rail.appendChild(box);
+    }
+    const box = document.getElementById('railTimeClockBox');
+    if (box) {
+      box.style.borderColor = st.clocked_in ? '#10b981' : '#cbd5e1';
+      box.style.background = st.clocked_in ? '#ecfdf5' : '#f8fafc';
+      box.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+          <strong style="font-size:0.76rem;color:#0c261b;">⏱️ TIME CLOCK</strong>
+          <span style="font-size:0.7rem;font-weight:800;color:${st.clocked_in ? '#047857' : '#64748b'};">
+            ${st.clocked_in ? '🟢 IN ' + (st.open_punch?.clock_in_at || '') : '⚪ OUT'}
+          </span>
+        </div>
+        <div style="font-size:0.73rem;color:#334155;margin-bottom:6px;">
+          Today: <strong>${fmtHrsMins(st.today_total_minutes)}</strong>
+        </div>
+        <div style="display:flex;gap:5px;">
+          <button type="button" onclick="toggleWorkerPunch()" style="flex:1;padding:7px 8px;border-radius:7px;border:none;font-weight:800;font-size:0.76rem;cursor:pointer;background:${st.clocked_in ? '#dc2626' : '#059669'};color:#fff;">
+            ${st.clocked_in ? '🔴 Punch Out' : '🟢 Punch In'}
+          </button>
+          <button type="button" class="secondary" style="padding:7px 8px;font-size:0.73rem;" onclick="openMyTimecardModal()" title="View Timecard">🕒</button>
+        </div>`;
+    }
+
+    // Also add compact mobile-accessible pill in .top-controls
+    const topCtrl = document.querySelector('.top-controls');
+    if (topCtrl && !document.getElementById('topTimeClockBtn')) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.id = 'topTimeClockBtn';
+      btn.className = 'menu-pill';
+      btn.onclick = () => window.openMyTimecardModal();
+      topCtrl.insertBefore(btn, topCtrl.firstChild);
+    }
+    const topBtn = document.getElementById('topTimeClockBtn');
+    if (topBtn) {
+      topBtn.style.background = st.clocked_in ? '#dcfce7' : '';
+      topBtn.style.color = st.clocked_in ? '#166534' : '';
+      topBtn.style.borderColor = st.clocked_in ? '#4ade80' : '';
+      topBtn.textContent = st.clocked_in ? `🟢 ${fmtHrsMins(st.today_total_minutes)}` : '⏱️ Clock In';
+    }
+  }
+
+  window.toggleWorkerPunch = async function () {
+    const st = window.TC_STATE || {};
+    let note = '';
+    if (st.clocked_in) {
+      const ask = prompt('Optional shift wrap-up note (or leave blank to Punch Out now):', '');
+      if (ask === null) return;
+      note = ask;
+    }
+    const res = await fetch('/api/timeclock/punch', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: st.clocked_in ? 'OUT' : 'IN', notes: note }),
+    });
+    if (!res.ok) { alert((await res.json()).detail || 'Punch failed.'); return; }
+    await window.refreshWorkerTimeClock();
+    if (document.getElementById('myTimecardModal') && !document.getElementById('myTimecardModal').hidden) {
+      window.openMyTimecardModal();
+    }
+  };
+
+  window.openMyTimecardModal = async function () {
+    let m = document.getElementById('myTimecardModal');
+    if (!m) {
+      m = document.createElement('div');
+      m.id = 'myTimecardModal';
+      m.className = 'modal-bg';
+      m.onclick = e => { if (e.target === m) m.hidden = true; };
+      document.body.appendChild(m);
+    }
+    m.hidden = false;
+    await window.refreshWorkerTimeClock();
+    const repRes = await fetch('/api/timeclock/report?days=14');
+    const rep = repRes.ok ? await repRes.json() : { punches: [] };
+    const st = window.TC_STATE || {};
+    const myInit = window.CURRENT_USER?.initials || '';
+    const myRows = (rep.punches || []).filter(p => !myInit || p.crew_initials === myInit).slice(0, 14);
+
+    m.innerHTML = `
+      <div class="modal" style="max-width:560px;border-top:5px solid ${st.clocked_in ? '#10b981' : '#0c261b'};">
+        <div class="card-hdr">
+          <div>
+            <h3 style="margin:0;">⏱️ Worker Time Clock</h3>
+            <small style="color:var(--muted);font-weight:700;">${st.clocked_in ? '🟢 Currently Clocked In since ' + (st.open_punch?.clock_in_at || '') : '⚪ Currently Clocked Out'} • Today: ${fmtHrsMins(st.today_total_minutes)}</small>
+          </div>
+          <button type="button" class="secondary" onclick="document.getElementById('myTimecardModal').hidden=true">✖</button>
+        </div>
+        <button type="button" class="primary" style="margin-top:0;margin-bottom:14px;background:${st.clocked_in ? '#dc2626' : '#059669'};" onclick="toggleWorkerPunch()">
+          ${st.clocked_in ? '🔴 Punch Out Now' : '🟢 Punch In Now'}
+        </button>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <strong style="font-size:0.84rem;">Recent Shifts (Last 14 Days)</strong>
+          ${rep.is_boss ? '<a class="secondary" style="font-size:0.75rem;padding:4px 9px;" href="/office?tab=timeclock">All Crew Timecards &amp; CSV →</a>' : ''}
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>In</th><th>Out</th><th>Hours</th><th>Note</th></tr></thead>
+            <tbody>
+              ${myRows.length ? myRows.map(r => `<tr>
+                <td><strong>${r.work_date}</strong></td>
+                <td>${r.clock_in_at}</td>
+                <td>${r.status === 'OPEN' ? '<span class="pass">ACTIVE</span>' : r.clock_out_at}</td>
+                <td>${r.status === 'OPEN' ? 'Running' : fmtHrsMins(r.duration_minutes)}</td>
+                <td><small>${r.notes || ''}</small></td>
+              </tr>`).join('') : '<tr><td colspan="5">No shifts punched yet.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  };
+
+  setTimeout(() => window.refreshWorkerTimeClock(), 600);
+  setInterval(() => window.refreshWorkerTimeClock(), 30000);
+}

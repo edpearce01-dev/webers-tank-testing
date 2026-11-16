@@ -334,6 +334,58 @@ def init_db() -> None:
             updated_at TEXT DEFAULT ''
         );
 
+
+        CREATE TABLE IF NOT EXISTS time_punches (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            crew_initials TEXT NOT NULL,
+            crew_name TEXT NOT NULL,
+            work_date TEXT NOT NULL,
+            clock_in_at TEXT NOT NULL,
+            clock_in_iso TEXT NOT NULL,
+            clock_out_at TEXT DEFAULT '',
+            clock_out_iso TEXT DEFAULT '',
+            duration_minutes INTEGER DEFAULT 0,
+            notes TEXT DEFAULT '',
+            status TEXT DEFAULT 'OPEN',
+            edited_by TEXT DEFAULT '',
+            synced INTEGER DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS operating_hours (
+            day_of_week INTEGER PRIMARY KEY,
+            day_name TEXT NOT NULL,
+            is_open INTEGER DEFAULT 1,
+            open_time TEXT DEFAULT '09:00',
+            close_time TEXT DEFAULT '16:00',
+            dock_24_7 INTEGER DEFAULT 1,
+            note TEXT DEFAULT ''
+        );
+
+        CREATE TABLE IF NOT EXISTS holiday_closures (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            start_date TEXT NOT NULL,
+            end_date TEXT NOT NULL,
+            title TEXT NOT NULL,
+            staffed_open INTEGER DEFAULT 0,
+            special_hours TEXT DEFAULT '',
+            dock_open INTEGER DEFAULT 1,
+            public_note TEXT DEFAULT '',
+            created_at TEXT DEFAULT ''
+        );
+
+        CREATE TABLE IF NOT EXISTS sms_outbox (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at TEXT NOT NULL,
+            customer_name TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            message TEXT NOT NULL,
+            kind TEXT DEFAULT 'READY',
+            ref_id TEXT DEFAULT '',
+            status TEXT DEFAULT 'PENDING',
+            sent_at TEXT DEFAULT ''
+        );
+
         CREATE TABLE IF NOT EXISTS shop_supplies (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             category TEXT NOT NULL,
@@ -439,6 +491,33 @@ def init_db() -> None:
     ]:
         _ensure_column(conn, "invoices", col, cdef)
 
+
+    for col, cdef in [
+        ("pickup_time", "TEXT DEFAULT ''"),
+        ("dropoff_time", "TEXT DEFAULT ''"),
+        ("return_address", "TEXT DEFAULT ''"),
+        ("customer_email", "TEXT DEFAULT ''"),
+        ("drive_miles", "REAL DEFAULT 0.0"),
+        ("drive_eta_mins", "INTEGER DEFAULT 0"),
+        ("pickup_leg_done", "INTEGER DEFAULT 0"),
+    ]:
+        _ensure_column(conn, "schedule_jobs", col, cdef)
+
+    for col, cdef in [
+        ("preferred_time", "TEXT DEFAULT ''"),
+        ("drive_miles", "REAL DEFAULT 0.0"),
+        ("drive_eta_mins", "INTEGER DEFAULT 0"),
+    ]:
+        _ensure_column(conn, "dropoffs", col, cdef)
+
+    for col, cdef in [
+        ("on_hand_qty", "INTEGER DEFAULT 5"),
+        ("reorder_threshold", "INTEGER DEFAULT 2"),
+        ("unit_label", "TEXT DEFAULT 'units'"),
+        ("alert_sent", "INTEGER DEFAULT 0"),
+    ]:
+        _ensure_column(conn, "shop_supplies", col, cdef)
+
     # 2. Seed Core Settings
     default_settings = [
         ("dot_rin", "B386"),
@@ -461,6 +540,11 @@ def init_db() -> None:
         ("testing_mode", "1"),
         ("rin_expires_date", ""),
         ("gauge_cert_expires_date", ""),
+        ("resend_api_key", ""),
+        ("resend_from_email", "alerts@weberstanktesting.com"),
+        ("master_sheet_url", ""),
+        ("gbp_edit_url", "https://business.google.com/"),
+        ("sms_shortcut_key", secrets.token_hex(8)),
         ("db_version", "1"),
     ]
     cur.executemany("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?);", default_settings)
@@ -603,6 +687,21 @@ def init_db() -> None:
                 (uname, uinit, upin, urole, usign),
             )
 
+
+    if cur.execute("SELECT COUNT(*) FROM operating_hours;").fetchone()[0] == 0:
+        cur.executemany(
+            "INSERT INTO operating_hours (day_of_week, day_name, is_open, open_time, close_time, dock_24_7, note) VALUES (?, ?, ?, ?, ?, 1, ?);",
+            [
+                (0, "Monday", 1, "09:00", "16:00", ""),
+                (1, "Tuesday", 1, "09:00", "14:00", ""),
+                (2, "Wednesday", 1, "09:00", "14:00", ""),
+                (3, "Thursday", 1, "09:00", "14:00", ""),
+                (4, "Friday", 1, "09:00", "16:00", ""),
+                (5, "Saturday", 0, "09:00", "14:00", "24/7 Loading Dock Open"),
+                (6, "Sunday", 0, "09:00", "14:00", "24/7 Loading Dock Open"),
+            ],
+        )
+
     conn.commit()
     conn.close()
 
@@ -615,6 +714,8 @@ def wipe_all_operational_data(conn: sqlite3.Connection, wipe_customers: bool = F
         "schedule_jobs",
         "shop_day_plans",
         "crew_tasks",
+        "time_punches",
+        "sms_outbox",
         "invoice_items",
         "invoices",
         "crew_feedback",

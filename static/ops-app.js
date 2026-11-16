@@ -305,6 +305,21 @@ async function loadState(rebuildLadder = false) {
   } else {
     certBanner.hidden = true;
   }
+  const lowSups = STATE.low_supplies_alert || [];
+  const supBanner = document.getElementById('lowSupplyAlertBanner');
+  const isBossView = !window.CURRENT_USER || ['OWNER', 'SYSTEM_ADMIN'].includes(window.CURRENT_USER.role);
+  if (supBanner) {
+    if (lowSups.length && isBossView) {
+      supBanner.hidden = false;
+      const itemsTxt = lowSups.map(s => `${escHtml(s.item_name)} (${s.on_hand_qty ?? 0} ${escHtml(s.unit_label || 'left')} • limit ≤${s.reorder_threshold ?? 2})`).join('  •  ');
+      supBanner.innerHTML = `<div class="notice warn" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;border-left:5px solid #d97706;">
+        <span>📦 <strong>Supply Replacement Alert (${lowSups.length}):</strong> ${itemsTxt}</span>
+        <a class="secondary" style="font-weight:800;" href="/office?tab=supplies">Manage Limits &amp; Stock →</a>
+      </div>`;
+    } else {
+      supBanner.hidden = true;
+    }
+  }
 
   const supLink = document.getElementById('railSupplyLink');
   if (supLink) {
@@ -338,6 +353,9 @@ async function loadState(rebuildLadder = false) {
   if (document.getElementById('editSmtpSender')) document.getElementById('editSmtpSender').value = STATE.smtp_sender_email || '';
   if (document.getElementById('smtpPassStatusTxt')) document.getElementById('smtpPassStatusTxt').textContent = STATE.has_smtp_password ? 'Configured ✓' : 'Optional';
   document.getElementById('keyStatusText').textContent = STATE.has_gemini_key ? 'Configured & Ready' : 'Not Set';
+  if (document.getElementById('resendKeyStatusTxt')) document.getElementById('resendKeyStatusTxt').textContent = STATE.has_resend_key ? 'Configured ✓' : 'Not Set';
+  if (document.getElementById('editResendFrom') && STATE.resend_from_email) document.getElementById('editResendFrom').value = STATE.resend_from_email;
+  if (document.getElementById('editMasterSheetUrl')) document.getElementById('editMasterSheetUrl').value = STATE.master_sheet_url || '';
 
   const syncTxt = STATE.has_sheets_webhook
     ? (STATE.unsynced_count ? `↻ Syncing (${STATE.unsynced_count})` : '☁ Sheets Synced')
@@ -459,12 +477,13 @@ function renderStartOfDayHuddle(queued, openSched, waitingDrops) {
       todayRuns.slice(0, 4).map(j => {
         const ico = j.job_type === 'ROAD_ROUNDTRIP' ? '🔄 Pickup+Deliv' : (j.job_type === 'ROAD_PICKUP' ? '🚚 Pickup' : (j.job_type === 'ROAD_DELIVERY' ? '🚚 Delivery' : '📌 Batch'));
         return `
-          <div class="rec-item">
+          <div class="rec-item job-card-clickable" onclick="openOpsJobModal(${j.id})">
             <div class="rec-main">
-              <div class="rec-title"><span>${ico}: ${escHtml(j.customer_name)} (${j.bottle_count})</span>${j.rush_fee ? '<span class="rush-badge">🔥 RUSH</span>' : ''}</div>
+              <div class="rec-title"><span>${ico}: ${escHtml(j.customer_name)} (${j.bottle_count} Cyl)</span>${j.pickup_time ? `<span class="time-window-pill">🕒 ${escHtml(j.pickup_time)}</span>` : ""}${j.drive_eta_mins ? `<span class="eta-route-pill">🚗 ~${j.drive_eta_mins}m (${j.drive_miles} mi)</span>` : ""}${j.rush_fee ? '<span class="rush-badge">🔥 RUSH</span>' : ''}</div>
               <div class="rec-sub">${escHtml(j.scheduled_date)}${j.location_notes ? ' • 📍 ' + escHtml(j.location_notes) : ''}${j.tank_summary ? ' • ' + escHtml(j.tank_summary) : ''}</div>
             </div>
-            <div class="rec-actions">
+            <div class="rec-actions" onclick="event.stopPropagation()">
+              <button class="secondary" onclick="openOpsJobModal(${j.id})">🔍 Details</button>
               <button class="secondary" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7;" onclick="importScheduleJobToIntake(${j.id})">↳ Lock &amp; Prep</button>
               <a class="secondary" href="/schedule">📅 Calendar</a>
             </div>
@@ -1782,6 +1801,9 @@ async function saveAllSettings() {
     gemini_api_key: document.getElementById('apiKeyInput').value || null,
     sheets_webhook_url: document.getElementById('webhookInput').value,
     feedback_webhook_url: document.getElementById('fbWebhookInput').value,
+    resend_api_key: document.getElementById('editResendKey')?.value || null,
+    resend_from_email: document.getElementById('editResendFrom')?.value || 'alerts@weberstanktesting.com',
+    master_sheet_url: document.getElementById('editMasterSheetUrl')?.value || '',
     alert_email: document.getElementById('editAlertEmail')?.value || '',
     smtp_sender_email: document.getElementById('editSmtpSender')?.value || '',
     smtp_app_password: document.getElementById('editSmtpPass')?.value || null,
@@ -1790,6 +1812,7 @@ async function saveAllSettings() {
   };
   await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   document.getElementById('apiKeyInput').value = '';
+  if (document.getElementById('editResendKey')) document.getElementById('editResendKey').value = '';
   if (document.getElementById('editSmtpPass')) document.getElementById('editSmtpPass').value = '';
   document.getElementById('editShopPin').value = '';
   alert('Facility settings & compliance dates saved!');
@@ -1872,6 +1895,52 @@ function renderLiveFloorPlanMap() {
 }
 
 
+let RADAR_JOBS_CACHE = [];
+
+window.openOpsJobModal = function (jobId) {
+  const j = RADAR_JOBS_CACHE.find(x => x.id === jobId) || (STATE.schedule_jobs || []).find(x => x.id === jobId);
+  if (!j) return;
+  const m = document.getElementById('opsJobDetailModal');
+  if (!m) return;
+  m.hidden = false;
+  const isRound = j.job_type === 'ROAD_ROUNDTRIP';
+  const addr = (j.location_notes || '').trim();
+  const retAddr = (j.return_address || addr).trim();
+  const mapsUrl = j.maps_route_url || (addr ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent('3086 Legionville Rd, Baden, PA 15005')}&destination=${encodeURIComponent(addr)}&travelmode=driving` : '');
+  const digits = String(j.customer_phone || '').replace(/\D/g, '');
+  const sep = /iPad|iPhone|iPod/i.test(navigator.userAgent) ? '&' : '?';
+  const smsTxt = `Weber's Tank Testing: Hi ${j.contact_person || j.customer_name}, confirming our truck run for ${j.bottle_count} cylinder(s)${j.pickup_time ? ' around ' + j.pickup_time : ''}. Questions? 724-266-8008.`;
+
+  document.getElementById('ojdTitle').textContent = `${j.customer_name} (${j.bottle_count} Cylinders)`;
+  document.getElementById('ojdSub').textContent = isRound ? 'Round-Trip: Pickup & Return Delivery' : j.job_type.replace('_', ' ');
+  document.getElementById('ojdActions').innerHTML = `
+    <button class="primary" style="width:auto;margin:0;padding:8px 13px;" onclick="document.getElementById('opsJobDetailModal').hidden=true;importScheduleJobToIntake(${j.id})">📥 Load into Prep &amp; Scan</button>
+    ${mapsUrl ? `<a class="secondary" style="padding:8px 12px;background:#eff6ff;color:#1d4ed8;border-color:#93c5fd;font-weight:800;" href="${mapsUrl}" target="_blank" rel="noopener">🗺️ Route from Shop${j.drive_eta_mins ? ` (~${j.drive_eta_mins}m)` : ''}</a>` : ''}
+    ${digits ? `<a class="secondary" style="padding:8px 12px;font-weight:800;" href="tel:${digits}">📞 ${escHtml(j.customer_phone)}</a>` : ''}
+    ${digits ? `<a class="secondary" style="padding:8px 12px;background:#fef3c7;color:#92400e;border-color:#f59e0b;font-weight:800;" href="sms:${digits}${sep}body=${encodeURIComponent(smsTxt)}">📲 Text (iPhone)</a>` : ''}
+    <a class="secondary" style="padding:8px 12px;" href="/schedule">📅 Edit in Schedule →</a>
+  `;
+  const rb = document.getElementById('ojdRouteBox');
+  if (addr) {
+    rb.hidden = false;
+    rb.innerHTML = j.drive_eta_mins
+      ? `🛣️ <strong>Pre-Planned Route from 3086 Legionville Rd:</strong> ~<strong>${j.drive_eta_mins} min</strong> one-way (${j.drive_miles} mi) • ~${j.drive_eta_mins * 2} min round-trip.`
+      : `🛣️ <strong>Destination:</strong> ${escHtml(addr)}`;
+  } else rb.hidden = true;
+
+  document.getElementById('ojdGrid').innerHTML = `
+    <div><small>Customer / Dept</small><strong>${escHtml(j.customer_name)}</strong></div>
+    <div><small>Contact &amp; Phone</small><strong>${escHtml(j.contact_person || '—')}</strong> • ${escHtml(j.customer_phone || 'No phone')}</div>
+    <div><small>Cylinder Types</small><strong>${j.bottle_count} Cyl • ${escHtml(j.tank_summary || 'Standard Hydro/Visual')}</strong></div>
+    <div><small>Valves</small><strong>${j.valves_attached === 0 ? 'Bare / No Valves' : 'Valves Attached'}</strong></div>
+    <div><small>📥 Pickup Date &amp; Time</small><strong>${escHtml(j.scheduled_date || '—')}</strong> ${j.pickup_time ? `• ${escHtml(j.pickup_time)}` : ''}</div>
+    <div><small>📤 Return / Ready Date &amp; Time</small><strong>${escHtml(j.due_date || '—')}</strong> ${j.dropoff_time ? `• ${escHtml(j.dropoff_time)}` : ''}</div>
+    <div style="grid-column:1/-1;"><small>Pickup Address</small><strong>${escHtml(addr || 'Shop Drop-Off at 3086 Legionville Rd')}</strong></div>
+    ${isRound ? `<div style="grid-column:1/-1;"><small>Return Delivery Address</small><strong>${escHtml(retAddr || 'Same as Pickup')}</strong></div>` : ''}
+    ${(j.po_station || j.notes) ? `<div style="grid-column:1/-1;"><small>PO / Station &amp; Notes</small><strong>${escHtml([j.po_station, j.notes].filter(Boolean).join(' • '))}</strong></div>` : ''}
+  `;
+};
+
 let RADAR_EXPANDED = false;
 
 function formatTruckBadge(modeStr) {
@@ -1891,6 +1960,7 @@ async function refreshOpsDispatchRadar() {
     const data = await res.json();
     const today = data.today || '';
     const allJobs = data.jobs || [];
+    RADAR_JOBS_CACHE = allJobs;
 
     const isTruckJob = j => {
       const dm = String(j.delivery_mode || j.truck_mode || j.job_type || '').toUpperCase();
@@ -1951,12 +2021,12 @@ async function refreshOpsDispatchRadar() {
           const b = formatTruckBadge(j.delivery_mode || j.truck_mode || j.job_type);
           const addr = (j.location_notes || j.address || j.street_address || '').trim();
           const ph = (j.customer_phone || '').trim();
-          const mapsUrl = addr ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}` : '';
+          const mapsUrl = j.maps_route_url || (addr ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent('3086 Legionville Rd, Baden, PA 15005')}&destination=${encodeURIComponent(addr)}&travelmode=driving` : '');
           return `
-            <div class="radar-card">
+            <div class="radar-card" style="cursor:pointer;" onclick="openOpsJobModal(${j.id})">
               <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;">
                 <span class="radar-badge ${b.cls}">${b.lbl}</span>
-                <span class="mono" style="font-size:0.74rem;font-weight:800;color:${(j.scheduled_date||'') < today ? '#b91c1c' : '#0c261b'};">
+                ${j.pickup_time ? `<span class="time-window-pill">🕒 ${escHtml(j.pickup_time)}</span>` : ""}${j.drive_eta_mins ? `<span class="eta-route-pill">🚗 ~${j.drive_eta_mins}m (${j.drive_miles} mi)</span>` : ""}<span class="mono" style="font-size:0.74rem;font-weight:800;color:${(j.scheduled_date||'') < today ? '#b91c1c' : '#0c261b'};">
                   ${(j.scheduled_date||'') < today ? '⚠️ OVERDUE ' : ''}${escHtml(j.scheduled_date || today)}
                 </span>
               </div>
@@ -1968,7 +2038,8 @@ async function refreshOpsDispatchRadar() {
                 ${addr ? `📍 ${escHtml(addr)}` : '📍 Address pending'}${j.contact_person ? ` • 👤 ${escHtml(j.contact_person)}` : ''}${j.tank_summary ? ` • ${escHtml(j.tank_summary)}` : ''}
                 ${j.notes ? ` • <em>${escHtml(j.notes)}</em>` : ''}
               </div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;" onclick="event.stopPropagation()">
+                <button type="button" class="secondary" style="padding:5px 9px;font-size:0.74rem;font-weight:800;" onclick="openOpsJobModal(${j.id})">🔍 Details</button>
                 <button type="button" class="secondary" style="padding:5px 9px;font-size:0.74rem;background:#ecfdf5;color:#065f46;border-color:#6ee7b7;font-weight:800;" onclick="importScheduleJobToIntake(${j.id});jumpToTab('intake')">📥 Load to Prep</button>
                 ${mapsUrl ? `<a class="secondary" style="padding:5px 9px;font-size:0.74rem;" href="${mapsUrl}" target="_blank" rel="noopener">🗺️ Maps</a>` : ''}
                 ${ph ? `<a class="secondary" style="padding:5px 9px;font-size:0.74rem;" href="tel:${escHtml(ph)}">📞 ${escHtml(ph)}</a>` : ''}

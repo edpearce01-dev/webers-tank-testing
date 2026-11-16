@@ -1151,3 +1151,66 @@ html, body {
     align-items: center !important;
   }
 }
+
+/* =========================================================================
+   v13.0 PART 2: DUAL ROUND-TRIP LEGS, ROUTE ETA PILLS & JOB DETAIL MODAL
+   ========================================================================= */
+.mday-job-pill {
+  cursor: pointer !important;
+  transition: transform 0.1s ease, box-shadow 0.12s ease;
+}
+.mday-job-pill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.16);
+}
+.mday-job-pill.leg-pickup {
+  background: #fffbeb;
+  border-left: 3px solid #d97706;
+  color: #78350f;
+}
+.mday-job-pill.leg-return {
+  background: #eff6ff;
+  border-left: 3px solid #2563eb;
+  color: #1e3a8a;
+}
+.mday-job-pill.leg-done {
+  opacity: 0.62;
+  text-decoration: line-through;
+}
+.eta-route-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 999px;
+  background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8;
+  font-family: var(--font-mono); font-size: 0.71rem; font-weight: 800;
+  text-decoration: none;
+}
+.eta-route-pill:hover { background: #dbeafe; }
+.time-window-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 999px;
+  background: #fef3c7; border: 1px solid #fcd34d; color: #92400e;
+  font-family: var(--font-mono); font-size: 0.71rem; font-weight: 800;
+}
+.job-card-clickable {
+  cursor: pointer;
+  border: 1.5px solid #dbe3ec !important;
+  border-radius: 10px !important;
+  padding: 11px 12px !important;
+  margin-bottom: 8px !important;
+  background: #ffffff;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+.job-card-clickable:hover {
+  border-color: var(--forest) !important;
+  box-shadow: 0 6px 16px rgba(12, 38, 27, 0.08);
+}
+.job-detail-kv {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px; background: #f8fafc; border: 1px solid var(--border-soft);
+  border-radius: 10px; padding: 12px; margin-bottom: 12px;
+}
+.job-detail-kv div small {
+  display: block; font-size: 0.69rem; font-weight: 800;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 2px;
+}
+.job-detail-kv div strong { font-size: 0.9rem; color: var(--slate); }

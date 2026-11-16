@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
     <meta property="og:title" content="Weber's Tank Testing | Certified Cylinder Testing — Baden, PA" />
   <meta property="og:description" content="Certified hydrostatic cylinder testing up to 7,500+ PSI, propane visual inspections &amp; 24/7 Loading Dock drop-off in Baden, PA." />
-  <meta property="og:image" content="https://weberstanktesting.com/static/images/logo-crest.jpg?v=12.2" />
+  <meta property="og:image" content="https://weberstanktesting.com/static/images/logo-crest.jpg?v=13.0" />
   <meta property="og:type" content="website" />
   <script type="application/ld+json">
   {
@@ -615,7 +615,7 @@
         </div>
         <div class="util-right">
           <span id="pubHolidayBanner" class="util-holiday-chip" hidden></span>
-          <span>Mon &amp; Fri 9–4 | Tue–Thu 9–2 | <strong>24/7 Dock</strong></span>
+          <span id="pubTopHoursTxt">Mon &amp; Fri 9–4 | Tue–Thu 9–2 | <strong>24/7 Dock</strong></span>
           <span class="sep-dot">•</span>
           <a href="tel:7242668008" class="mono">724-266-8008</a>
           <span class="sep-dot">•</span>
@@ -629,7 +629,7 @@
   <header class="site-nav" id="stickySiteNav">
     <div class="wrap nav-inner">
       <a href="#" class="brand">
-        <img src="/static/images/logo-crest.png?v=12.2" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=13.0" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" />
         <div>
           <span class="brand-title">Weber's Tank Testing</span>
           <span class="brand-sub">HIGH-PRESSURE CYLINDER TESTING • BADEN, PA</span>
@@ -654,9 +654,9 @@
   <div class="fixed-brand-stage" id="fixedBrandStage" aria-hidden="true">
     <div class="crest-arch-wrap" id="heroCrestWrap">
       <img id="heroHolidayArchImg" class="stage-holiday-arch-img" alt="" hidden />
-      <img src="/static/images/logo-crest.jpg?v=12.2" alt="Weber's Tank Testing Crest" class="stage-crest-logo" onerror="this.src='/icon.svg'" />
+      <img src="/static/images/logo-crest.jpg?v=13.0" alt="Weber's Tank Testing Crest" class="stage-crest-logo" onerror="this.src='/icon.svg'" />
     </div>
-    <img id="heroDogsImg" src="/static/images/dogs-thanksgiving.png?v=12.2" alt="Pongo, Zeke & Pierce" class="stage-dogs-cutout" onerror="this.onerror=null;this.src='/static/images/dogs-classic.png?v=12.2';" />
+    <img id="heroDogsImg" src="/static/images/dogs-thanksgiving.png?v=13.0" alt="Pongo, Zeke & Pierce" class="stage-dogs-cutout" onerror="this.onerror=null;this.src='/static/images/dogs-classic.png?v=13.0';" />
   </div>
 
   <!-- SCROLLING FOREGROUND LAYER -->
@@ -690,6 +690,7 @@
 
     <!-- LIVE TURNAROUND & TICKET TRACKER -->
     <section class="sec" id="tracker" style="padding-top:14px;">
+      <div class="wrap" id="pubClosureBannerWrap" style="margin-bottom:16px;" hidden></div>
       <div class="wrap top-action-grid">
         <div class="glass-card" style="display:flex;flex-direction:column;justify-content:space-between;gap:14px;">
           <div>
@@ -934,6 +935,15 @@
                   <div><label>ZIP Code *</label><input id="trkZip" class="mono" inputmode="numeric" maxlength="10" placeholder="15005" autocomplete="postal-code" /></div>
                 </div>
                 <div><label>Preferred Pickup Date</label><input type="date" id="trkPrefDate" class="mono" /></div>
+                <div>
+                  <label>Preferred Time Window</label>
+                  <select id="trkPrefTime">
+                    <option value="Morning (9 AM–12 PM)">Morning (9 AM–12 PM)</option>
+                    <option value="Afternoon (12 PM–3 PM)">Afternoon (12 PM–3 PM)</option>
+                    <option value="Flexible / Anytime">Flexible / Station Staffed 24/7</option>
+                  </select>
+                </div>
+                <div><label>Preferred Return Date <span class="opt">(Optional)</span></label><input type="date" id="trkRetDate" class="mono" /></div>
                 <div><label>Approx. Cylinder Count *</label><input type="number" id="trkCount" class="mono" min="1" max="250" value="6" oninput="syncPublicRushCaps()" /></div>
                 <div style="grid-column:1/-1;"><label>Cylinder Types / PO # / Access Notes</label><input id="trkSummary" placeholder="e.g. 12x 4500# SCBA, 4x Med O2 • Call 15 min prior" /></div>
                 <div class="rush-toggle-box">
@@ -1037,7 +1047,7 @@
             </a>
           </div>
           <div class="fleet-showcase-single">
-            <img loading="lazy" decoding="async" src="/static/images/shop-yard-color.jpg?v=12.2"
+            <img loading="lazy" decoding="async" src="/static/images/shop-yard-color.jpg?v=13.0"
                  onerror="this.onerror=null;this.src='/static/images/merch/merch-shop-scene.jpg'"
                  alt="Weber's Tank Testing 3086 Legionville Rd Shop, 1956 American LaFrance Ladder Truck & Shop Dogs" />
           </div>
@@ -1081,7 +1091,7 @@
             <span class="sec-eyebrow">04 / Baden Facility &amp; Directions</span>
             <h2 style="margin:6px 0 8px;font-family:var(--font-display);font-size:1.95rem;font-weight:800;color:var(--forest);">3086 Legionville Rd, Baden, PA 15005</h2>
             <p style="margin:0;color:var(--ink-soft);font-size:0.91rem;">
-              Minutes off Route 65 &amp; I-79 serving Beaver, Butler, and Allegheny County. Staffed <strong>Mon &amp; Fri 9–4</strong> and <strong>Tue–Thu 9–2</strong>, with <strong>24/7 Loading Dock Drop-Off &amp; Pickup</strong> anytime.
+              Minutes off Route 65 &amp; I-79 serving Beaver, Butler, and Allegheny County. <span id="pubFacilityHoursSpan">Staffed <strong>Mon &amp; Fri 9–4</strong> and <strong>Tue–Thu 9–2</strong>, with <strong>24/7 Loading Dock Drop-Off &amp; Pickup</strong> anytime.</span>
             </p>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -1176,6 +1186,40 @@
       else if (d.length >= 4) el.value = `${d.slice(0,3)}-${d.slice(3)}`;
     }
 
+    async function loadPublicOperatingSchedule() {
+      try {
+        const res = await fetch('/api/public/hours');
+        if (!res.ok) return;
+        const d = await res.json();
+        const topEl = document.getElementById('pubTopHoursTxt');
+        if (topEl && d.summary_line) {
+          topEl.innerHTML = esc(d.summary_line).replace('24/7 Dock', '<strong>24/7 Dock</strong>');
+        }
+        const facEl = document.getElementById('pubFacilityHoursSpan');
+        if (facEl && d.summary_line) {
+          const cleanStaffed = d.summary_line.replace(/\s*\|\s*24\/7 Dock/i, '');
+          facEl.innerHTML = `Staffed Hours: <strong>${esc(cleanStaffed)}</strong> — plus <strong>24/7 Loading Dock Drop-Off &amp; Pickup</strong> anytime.`;
+        }
+        const cWrap = document.getElementById('pubClosureBannerWrap');
+        if (cWrap && d.active_banner) {
+          const b = d.active_banner;
+          const spanTxt = b.start_date === b.end_date ? b.start_date : `${b.start_date} through ${b.end_date}`;
+          const dockMsg = b.dock_open ? '✅ Our <strong>24/7 Loading Dock</strong> remains OPEN for self-serve cylinder drop-off &amp; pickup!' : '⚠️ Both staffed shop and Loading Dock are closed during this window.';
+          const hrsMsg = (b.staffed_open && b.special_hours) ? `Special Staffed Hours: <strong>${esc(b.special_hours)}</strong>` : 'Staffed Test Counter Closed';
+          cWrap.hidden = false;
+          cWrap.innerHTML = `
+            <div class="glass-card" style="padding:14px 18px;border-left:5px solid #f59e0b;background:rgba(255,251,235,0.94);">
+              <div style="font-weight:800;color:#78350f;font-size:0.95rem;">
+                📅 ${b.banner_state === 'ACTIVE' ? 'Holiday / Schedule Notice' : 'Upcoming Holiday / Schedule Notice'}: ${esc(b.title)} (${esc(spanTxt)})
+              </div>
+              <div style="font-size:0.86rem;color:#92400e;margin-top:3px;">
+                ${hrsMsg} • ${dockMsg}${b.public_note ? ' • ' + esc(b.public_note) : ''}
+              </div>
+            </div>`;
+        }
+      } catch (_) {}
+    }
+
     async function loadHolidayStorefrontTheme() {
       try {
         const res = await fetch('/api/public/theme');
@@ -1219,14 +1263,14 @@
                 img.src = jpgUrl;
                 img.classList.toggle('photo-fallback', t.dog_image === 'shop-dogs.jpg');
               };
-              probeJpg.onerror = () => { img.src = '/static/images/dogs-classic.png?v=12.2'; img.classList.remove('photo-fallback'); };
+              probeJpg.onerror = () => { img.src = '/static/images/dogs-classic.png?v=13.0'; img.classList.remove('photo-fallback'); };
               probeJpg.src = jpgUrl;
             };
             probePng.src = pngUrl;
           }
         } else if (img) {
           if (archImg) archImg.hidden = true;
-          img.src = '/static/images/dogs-classic.png?v=12.2';
+          img.src = '/static/images/dogs-classic.png?v=13.0';
           img.classList.remove('photo-fallback');
         }
       } catch (_) {}
@@ -1541,6 +1585,8 @@
             entry_type: 'TRUCK_REQUEST', account_type: guessAcct, contact_person: contact,
             customer_name: name, customer_phone: phone, customer_email: email, pickup_address: address,
             street_address: street, city: city, state: state, zip_code: zip, preferred_date: prefDate,
+            preferred_time: document.getElementById('trkPrefTime')?.value || '',
+            return_date: document.getElementById('trkRetDate')?.value || '',
             truck_mode: trkMode, bottle_count: cnt, service_requested: modeLabel, tank_summary: summary,
             rush_requested: document.getElementById('trkRush').checked, website_hp: document.getElementById('hpField').value,
           }),
@@ -1588,6 +1634,7 @@
       document.getElementById('trkPrefDate').value = new Date().toISOString().slice(0, 10);
       updateHeroScrollEffect();
       loadHolidayStorefrontTheme();
+      loadPublicOperatingSchedule();
       const params = new URLSearchParams(location.search);
       const savedT = localStorage.getItem('webers_last_ticket') || '';
       const savedP = localStorage.getItem('webers_last_phone4') || '';

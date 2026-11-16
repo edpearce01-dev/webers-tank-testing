@@ -362,7 +362,181 @@ def enrich_record_meta(r: dict, ref_today: str) -> dict:
     return r
 
 
-def resolve_day_plan(d: date, plans_map: dict, default_cap: int = 24) -> dict:
+SHOP_LAT = 40.6429
+SHOP_LON = -80.2255
+SHOP_ORIGIN_ADDR = "3086 Legionville Rd, Baden, PA 15005"
+
+# Instant Western PA coordinate lookup (fast zero-latency fallback if OSRM/Nominatim times out)
+LOCAL_PA_COORDS = {
+    "BADEN": (40.6353, -80.2317), "AMBRIDGE": (40.5870, -80.2259), "ECONOMY": (40.6501, -80.1931),
+    "CONWAY": (40.6606, -80.2406), "FREEDOM": (40.6845, -80.2548), "ROCHESTER": (40.7023, -80.2867),
+    "MONACA": (40.6867, -80.2764), "BEAVER FALLS": (40.7584, -80.3192), "CHIPPEWA": (40.7795, -80.3542),
+    "BEAVER": (40.6953, -80.3048), "ALIQUIPPA": (40.6151, -80.2542), "HOPEWELL": (40.5698, -80.2584),
+    "CENTER": (40.6531, -80.3031), "NEW BRIGHTON": (40.7306, -80.3106), "CRANBERRY": (40.6848, -80.1070),
+    "MARS": (40.6959, -80.0117), "ZELIENOPLE": (40.7945, -80.1398), "HARMONY": (40.8031, -80.1289),
+    "SEWICKLEY": (40.5365, -80.1845), "CORAOPOLIS": (40.5184, -80.1667), "MOON": (40.5170, -80.2070),
+    "ROBINSON": (40.4534, -80.1328), "WEXFORD": (40.6256, -80.0562), "MCCANDLESS": (40.5798, -80.0259),
+    "ROSS": (40.5256, -80.0089), "PITTSBURGH": (40.4406, -79.9959), "BUTLER": (40.8612, -79.8953),
+    "ELLWOOD CITY": (40.8584, -80.2887), "MIDLAND": (40.6326, -80.4465), "NEW CASTLE": (40.9998, -80.3470),
+    "IMPERIAL": (40.4517, -80.2451), "OAKDALE": (40.3987, -80.1859), "CARNEGIE": (40.4087, -80.0834),
+}
+
+
+def build_shop_maps_url(dest_addr: str) -> str:
+    clean = (dest_addr or "").strip()
+    if not clean:
+        return ""
+    return (
+        "https://www.google.com/maps/dir/?api=1"
+        f"&origin={urllib.parse.quote(SHOP_ORIGIN_ADDR)}"
+        f"&destination={urllib.parse.quote(clean)}&travelmode=driving"
+    )
+
+
+def estimate_route_from_shop(raw_addr: str) -> tuple[float, int]:
+    """Calculates driving miles & ETA minutes from 3086 Legionville Rd, Baden, PA to customer address."""
+    import math as _math
+    clean = (raw_addr or "").strip()
+    if len(clean) < 4:
+        return (0.0, 0)
+
+    # 1. Try live Nominatim + OSRM road routing (free, accurate, 3s cap)
+    try:
+        q = clean if ("PA" in clean.upper() or "OH" in clean.upper() or "WV" in clean.upper()) else f"{clean}, PA"
+        g_url = f"https://nominatim.openstreetmap.org/search?format=json&limit=1&q={urllib.parse.quote(q)}"
+        req = urllib.request.Request(g_url, headers={"User-Agent": "WebersTankTestingOps/13.0"})
+        ctx = ssl.create_default_context()
+        with urllib.request.urlopen(req, timeout=2.8, context=ctx) as r:
+            hits = json.loads(r.read().decode("utf-8"))
+        if hits:
+            d_lat, d_lon = float(hits[0]["lat"]), float(hits[0]["lon"])
+            osrm_url = f"https://router.project-osrm.org/route/v1/driving/{SHOP_LON},{SHOP_LAT};{d_lon},{d_lat}?overview=false"
+            r_req = urllib.request.Request(osrm_url, headers={"User-Agent": "WebersTankTestingOps/13.0"})
+            with urllib.request.urlopen(r_req, timeout=2.8, context=ctx) as rr:
+                rdata = json.loads(rr.read().decode("utf-8"))
+            if rdata.get("routes"):
+                meters = float(rdata["routes"][0]["distance"])
+                secs = float(rdata["routes"][0]["duration"])
+                miles = round(max(0.8, meters / 1609.344), 1)
+                mins = max(4, int(round((secs / 60.0) + 3)))
+                return (miles, mins)
+    except Exception:
+        pass
+
+    # 2. Instant Western PA Haversine + 1.28x road-winding fallback
+    up = clean.upper()
+    for town, (t_lat, t_lon) in sorted(LOCAL_PA_COORDS.items(), key=lambda kv: -len(kv[0])):
+        if town in up:
+            dlat = _math.radians(t_lat - SHOP_LAT)
+            dlon = _math.radians(t_lon - SHOP_LON)
+            a = _math.sin(dlat / 2) ** 2 + _math.cos(_math.radians(SHOP_LAT)) * _math.cos(_math.radians(t_lat)) * _math.sin(dlon / 2) ** 2
+            straight_mi = 3958.8 * 2 * _math.atan2(_math.sqrt(a), _math.sqrt(1 - a))
+            road_mi = round(max(1.5, straight_mi * 1.28), 1)
+            eta_m = max(5, int(round((road_mi / 34.0) * 60 + 3)))
+            return (road_mi, eta_m)
+    return (0.0, 0)
+
+
+def _fmt_12h(hhmm: str) -> str:
+    m_t = re.match(r"^(\d{1,2}):(\d{2})$", (hhmm or "").strip())
+    if not m_t:
+        return hhmm or ""
+    h, m_val = int(m_t.group(1)), int(m_t.group(2))
+    ampm = "PM" if h >= 12 else "AM"
+    h12 = h % 12 or 12
+    return f"{h12}:{m_val:02d} {ampm}" if m_val else f"{h12} {ampm}"
+
+
+def get_operating_schedule_bundle(conn) -> dict:
+    today_iso = today_eastern()
+    hours = [dict(r) for r in conn.execute("SELECT * FROM operating_hours ORDER BY day_of_week ASC;").fetchall()]
+    closures = [dict(r) for r in conn.execute("SELECT * FROM holiday_closures WHERE end_date >= ? ORDER BY start_date ASC;", (today_iso,)).fetchall()]
+    s_map = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings WHERE key IN ('gbp_edit_url', 'master_sheet_url');").fetchall()}
+
+    # Build concise summary line for website top bar & footer
+    open_days = [h for h in hours if h["is_open"]]
+    grouped = []
+    for h in open_days:
+        rng = f"{_fmt_12h(h['open_time'])}–{_fmt_12h(h['close_time'])}"
+        sh = h["day_name"][:3]
+        if grouped and grouped[-1][1] == rng:
+            grouped[-1][0].append(sh)
+        else:
+            grouped.append(([sh], rng))
+    parts = []
+    for d_list, rng in grouped:
+        lbl = f"{d_list[0]}–{d_list[-1]}" if len(d_list) >= 3 else " & ".join(d_list)
+        parts.append(f"{lbl} {rng}")
+    summary_line = (" | ".join(parts) if parts else "By Appointment") + " | 24/7 Dock"
+
+    # Check if a holiday/vacation closure is active right now or upcoming within 10 days
+    active_closure = None
+    for cl in closures:
+        rem = days_until(cl["start_date"], today_iso)
+        if cl["start_date"] <= today_iso <= cl["end_date"]:
+            active_closure = {**cl, "banner_state": "ACTIVE"}
+            break
+        if rem is not None and 0 <= rem <= 10 and not active_closure:
+            active_closure = {**cl, "banner_state": "UPCOMING", "days_until": rem}
+
+    # Pre-formatted Google Business Profile hours copy block
+    gbp_lines = ["WEBER'S TANK TESTING — GOOGLE BUSINESS PROFILE HOURS:"]
+    for h in hours:
+        st = f"{_fmt_12h(h['open_time'])} – {_fmt_12h(h['close_time'])}" if h["is_open"] else "Closed (24/7 Loading Dock Open)"
+        gbp_lines.append(f"{h['day_name']}: {st}")
+    if closures:
+        gbp_lines.append("\nSPECIAL HOLIDAY / VACATION HOURS:")
+        for cl in closures:
+            span = cl["start_date"] if cl["start_date"] == cl["end_date"] else f"{cl['start_date']} to {cl['end_date']}"
+            hrs = cl["special_hours"] if (cl["staffed_open"] and cl["special_hours"]) else "Closed"
+            dock_n = " (24/7 Loading Dock Open)" if cl["dock_open"] else " (Facility & Dock Closed)"
+            gbp_lines.append(f"- {span} ({cl['title']}): {hrs}{dock_n}")
+
+    return {
+        "weekly_hours": hours,
+        "upcoming_closures": closures,
+        "summary_line": summary_line,
+        "active_banner": active_closure,
+        "gbp_copy_text": "\n".join(gbp_lines),
+        "gbp_edit_url": s_map.get("gbp_edit_url") or "https://business.google.com/",
+        "master_sheet_url": s_map.get("master_sheet_url") or "",
+    }
+
+
+def enrich_schedule_job_view(j: dict, leg: str = "PRIMARY") -> dict:
+    out = dict(j)
+    addr = (out.get("return_address") if leg == "RETURN" and out.get("return_address") else out.get("location_notes")) or ""
+    out["maps_route_url"] = build_shop_maps_url(addr)
+    jt = (out.get("job_type") or "SHOP_BATCH").upper()
+    if leg == "RETURN":
+        out["cal_leg"] = "RETURN"
+        out["cal_leg_label"] = "📤 Return Delivery"
+        out["cal_time"] = out.get("dropoff_time") or ""
+        out["cal_done"] = out.get("status") == "COMPLETED"
+    elif jt == "ROAD_ROUNDTRIP":
+        out["cal_leg"] = "PICKUP"
+        out["cal_leg_label"] = "📥 Leg 1 Pickup"
+        out["cal_time"] = out.get("pickup_time") or ""
+        out["cal_done"] = bool(out.get("pickup_leg_done")) or out.get("status") == "COMPLETED"
+    elif jt == "ROAD_PICKUP":
+        out["cal_leg"] = "PICKUP"
+        out["cal_leg_label"] = "🚚 Truck Pickup"
+        out["cal_time"] = out.get("pickup_time") or ""
+        out["cal_done"] = out.get("status") == "COMPLETED"
+    elif jt == "ROAD_DELIVERY":
+        out["cal_leg"] = "RETURN"
+        out["cal_leg_label"] = "📤 Truck Delivery"
+        out["cal_time"] = out.get("dropoff_time") or out.get("pickup_time") or ""
+        out["cal_done"] = out.get("status") == "COMPLETED"
+    else:
+        out["cal_leg"] = "SHOP"
+        out["cal_leg_label"] = "📌 Shop Drop-Off"
+        out["cal_time"] = out.get("pickup_time") or ""
+        out["cal_done"] = out.get("status") == "COMPLETED"
+    return out
+
+
+def resolve_day_plan(d: date, plans_map: dict, default_cap: int = 24, hours_map: Optional[dict] = None, closures: Optional[list] = None) -> dict:
     iso = d.isoformat()
     saved = plans_map.get(iso)
     if saved:
@@ -377,7 +551,53 @@ def resolve_day_plan(d: date, plans_map: dict, default_cap: int = 24) -> dict:
             "bottle_capacity": cap,
             "day_notes": saved.get("day_notes") or "",
             "is_custom": True,
+            "is_closure": False,
         }
+
+    # Honor Holiday / Vacation closures automatically!
+    if closures:
+        for cl in closures:
+            if cl["start_date"] <= iso <= cl["end_date"]:
+                if not cl.get("staffed_open"):
+                    return {
+                        "work_date": iso,
+                        "weekday": d.strftime("%a"),
+                        "month_day": d.strftime("%b %d"),
+                        "shift_mode": "BACKROOM_ONLY",
+                        "shift_label": f"🏖️ Closed: {cl['title']}" + (" (24/7 Dock)" if cl.get("dock_open", 1) else ""),
+                        "bottle_capacity": 0,
+                        "day_notes": cl["title"],
+                        "is_custom": False,
+                        "is_closure": True,
+                    }
+
+    # Honor Ryan's Weekly Operating Schedule automatically!
+    if hours_map and d.weekday() in hours_map:
+        wh = hours_map[d.weekday()]
+        if not wh["is_open"]:
+            return {
+                "work_date": iso,
+                "weekday": d.strftime("%a"),
+                "month_day": d.strftime("%b %d"),
+                "shift_mode": "BACKROOM_ONLY",
+                "shift_label": SHIFT_MODES["BACKROOM_ONLY"]["label"],
+                "bottle_capacity": 0,
+                "day_notes": wh.get("note") or "",
+                "is_custom": False,
+                "is_closure": False,
+            }
+        return {
+            "work_date": iso,
+            "weekday": d.strftime("%a"),
+            "month_day": d.strftime("%b %d"),
+            "shift_mode": "FULL_HYDRO",
+            "shift_label": f"🟢 Open {_fmt_12h(wh['open_time'])}–{_fmt_12h(wh['close_time'])}",
+            "bottle_capacity": default_cap,
+            "day_notes": wh.get("note") or "",
+            "is_custom": False,
+            "is_closure": False,
+        }
+
     is_weekend = d.weekday() >= 5
     mode = "BACKROOM_ONLY" if is_weekend else "FULL_HYDRO"
     cap = 0 if is_weekend else default_cap
@@ -390,14 +610,15 @@ def resolve_day_plan(d: date, plans_map: dict, default_cap: int = 24) -> dict:
         "bottle_capacity": cap,
         "day_notes": "",
         "is_custom": False,
+        "is_closure": False,
     }
 
 
 def build_month_calendar_grid(conn, year: int, month: int, s_map: dict) -> dict:
-    """Builds a full Sunday-Saturday month calendar grid for any past or future month."""
+    """Builds a full Sunday-Saturday month grid with Dual Round-Trip Legs (Pickup + Return), Times & Route ETAs."""
     default_cap = int(s_map.get("daily_hydro_capacity") or 24)
     est_today = today_eastern()
-    cal = calendar.Calendar(firstweekday=6)  # Sunday = column 0
+    cal = calendar.Calendar(firstweekday=6)
     weeks = cal.monthdatescalendar(year, month)
     flat_dates = [d for wk in weeks for d in wk]
     start_iso = flat_dates[0].isoformat()
@@ -408,6 +629,10 @@ def build_month_calendar_grid(conn, year: int, month: int, s_map: dict) -> dict:
         (start_iso, end_iso),
     ).fetchall()
     plans_map = {r["work_date"]: dict(r) for r in plans_rows}
+    hours_map_q = {r["day_of_week"]: dict(r) for r in conn.execute("SELECT * FROM operating_hours;").fetchall()}
+    closures_q = [dict(r) for r in conn.execute("SELECT * FROM holiday_closures WHERE end_date >= ?;", (start_dt.isoformat(),)).fetchall()]
+    hours_map = {r["day_of_week"]: dict(r) for r in conn.execute("SELECT * FROM operating_hours;").fetchall()}
+    closures = [dict(r) for r in conn.execute("SELECT * FROM holiday_closures WHERE end_date >= ? AND start_date <= ?;", (start_iso, end_iso)).fetchall()]
 
     jobs_rows = [
         dict(r)
@@ -430,12 +655,26 @@ def build_month_calendar_grid(conn, year: int, month: int, s_map: dict) -> dict:
 
     days_out = []
     for d in flat_dates:
-        p = resolve_day_plan(d, plans_map, default_cap)
+        p = resolve_day_plan(d, plans_map, default_cap, hours_map, closures)
         iso = p["work_date"]
-        day_jobs = [j for j in jobs_rows if j["scheduled_date"] == iso and j["status"] != "COMPLETED"]
+
+        # Place Leg 1 (scheduled_date) AND Round-Trip Leg 2 Return (due_date) directly onto the calendar!
+        day_jobs = []
+        for j in jobs_rows:
+            if j["status"] == "COMPLETED":
+                continue
+            if j["scheduled_date"] == iso:
+                day_jobs.append(enrich_schedule_job_view(j, "PRIMARY"))
+            elif j["job_type"] == "ROAD_ROUNDTRIP" and j.get("due_date") == iso and j["due_date"] != j["scheduled_date"]:
+                day_jobs.append(enrich_schedule_job_view(j, "RETURN"))
+
         done_jobs = [j for j in jobs_rows if j["scheduled_date"] == iso and j["status"] == "COMPLETED"]
-        due_jobs = [j for j in jobs_rows if j.get("due_date") == iso and j["scheduled_date"] != iso and j["status"] != "COMPLETED"]
-        booked = sum(int(j["bottle_count"] or 0) for j in day_jobs if j["job_type"] in ("SHOP_BATCH", "ROAD_PICKUP", "ROAD_ROUNDTRIP"))
+        due_jobs = [
+            enrich_schedule_job_view(j, "RETURN")
+            for j in jobs_rows
+            if j.get("due_date") == iso and j["scheduled_date"] != iso and j["job_type"] != "ROAD_ROUNDTRIP" and j["status"] != "COMPLETED"
+        ]
+        booked = sum(int(j["bottle_count"] or 0) for j in day_jobs if j.get("cal_leg") != "RETURN" and j["job_type"] in ("SHOP_BATCH", "ROAD_PICKUP", "ROAD_ROUNDTRIP"))
         p.update({
             "day_num": d.day,
             "in_month": d.month == month,
@@ -461,7 +700,6 @@ def build_month_calendar_grid(conn, year: int, month: int, s_map: dict) -> dict:
         "today": est_today,
         "days": days_out,
     }
-
 
 def compute_recall_list(conn, ref_today: str) -> list[dict]:
     """Calculates 5-Year Hydro, 10-Year Star, and 1-Year Visual retest recall dates for repeat business."""
@@ -615,7 +853,7 @@ def calculate_turnaround_quote(conn, requested_bottles: int = 1) -> dict:
 
     for offset in range(0, 35):
         d = start_dt + timedelta(days=offset)
-        plan = resolve_day_plan(d, plans_map, default_cap)
+        plan = resolve_day_plan(d, plans_map, default_cap, hours_map_q, closures_q)
         cap = plan["bottle_capacity"]
         if offset == 0 and est.hour >= 13:
             cap = cap // 2
@@ -820,6 +1058,91 @@ async def run_guarded_sheets_sync() -> dict:
 
 
 
+
+def queue_customer_sms_outbox(conn, customer_name: str, phone: str, message: str, kind: str = "INFO", ref_id: str = "") -> None:
+    ph = clean_phone(phone)
+    digits = re.sub(r"\D", "", ph)
+    if len(digits) < 10 or not message.strip():
+        return
+    ts = now_eastern().strftime("%Y-%m-%d %I:%M %p")
+    conn.execute(
+        """INSERT INTO sms_outbox (created_at, customer_name, phone, message, kind, ref_id, status)
+           VALUES (?, ?, ?, ?, ?, ?, 'PENDING');""",
+        (ts, customer_name[:80], ph, message.strip()[:320], kind, str(ref_id)),
+    )
+
+
+def send_raw_email_resend_or_smtp(to_email: str, subject: str, body_txt: str, reply_to: str = "") -> dict:
+    """Sends email via Resend HTTPS API ($0/mo, port 443) first, falling back to Gmail SMTP."""
+    import smtplib
+    from email.message import EmailMessage
+
+    conn = get_conn()
+    s_map = {
+        r["key"]: r["value"]
+        for r in conn.execute(
+            "SELECT key, value FROM settings WHERE key IN ('resend_api_key', 'resend_from_email', 'alert_email', 'smtp_sender_email', 'smtp_app_password');"
+        ).fetchall()
+    }
+    conn.close()
+
+    resend_key = (os.getenv("RESEND_API_KEY") or s_map.get("resend_api_key") or "").strip()
+    from_addr = (os.getenv("RESEND_FROM_EMAIL") or s_map.get("resend_from_email") or "alerts@weberstanktesting.com").strip()
+    eff_reply = reply_to or (s_map.get("alert_email") or "ryan@weberstanktesting.com").strip()
+    out = {"sent_resend": False, "sent_smtp": False, "detail": ""}
+
+    if resend_key and to_email and "@" in to_email:
+        try:
+            payload = {
+                "from": f"Weber's Tank Testing <{from_addr}>",
+                "to": [e.strip() for e in to_email.split(",") if "@" in e],
+                "subject": subject,
+                "text": body_txt,
+            }
+            if eff_reply and "@" in eff_reply:
+                payload["reply_to"] = eff_reply
+            req = urllib.request.Request(
+                "https://api.resend.com/emails",
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "Authorization": f"Bearer {resend_key}",
+                    "Content-Type": "application/json",
+                    "User-Agent": "WebersTankTestingOps/13.0",
+                },
+                method="POST",
+            )
+            ctx = ssl.create_default_context()
+            with urllib.request.urlopen(req, timeout=14, context=ctx) as resp:
+                _ = resp.read()
+            out["sent_resend"] = True
+            return out
+        except urllib.error.HTTPError as he:
+            err_b = he.read().decode("utf-8", errors="ignore")
+            out["detail"] = f"Resend HTTP {he.code}: {err_b[:180]}"
+        except Exception as exc:
+            out["detail"] = f"Resend error: {exc}"
+
+    smtp_user = (os.getenv("WEBER_SMTP_USER") or s_map.get("smtp_sender_email") or "").strip()
+    smtp_pass = (os.getenv("WEBER_SMTP_PASS") or s_map.get("smtp_app_password") or "").replace(" ", "").strip()
+    if smtp_user and smtp_pass and to_email and "@" in to_email:
+        try:
+            msg = EmailMessage()
+            msg["Subject"] = subject
+            msg["From"] = f"Weber's Tank Testing <{smtp_user}>"
+            msg["To"] = to_email
+            if eff_reply and "@" in eff_reply:
+                msg["Reply-To"] = eff_reply
+            msg.set_content(body_txt)
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=14) as s:
+                s.login(smtp_user, smtp_pass)
+                s.send_message(msg)
+            out["sent_smtp"] = True
+        except Exception as exc:
+            if not out["detail"]:
+                out["detail"] = f"SMTP error: {exc}"
+    return out
+
+
 def send_ticket_email_via_webhook(ticket_info: dict, force_test: bool = False) -> dict:
     """Sends shop email notification to Ryan (via Gmail SMTP and/or Google Apps Script webhook) + customer receipt."""
     import smtplib
@@ -887,6 +1210,27 @@ def send_ticket_email_via_webhook(ticket_info: dict, force_test: bool = False) -
         body_txt = "\n".join(lines)
 
     res_info = {"sent_smtp": False, "sent_webhook": False, "detail": ""}
+
+    # Channel 0: Resend HTTPS API (alerts@weberstanktesting.com)
+    if alert_to:
+        r0 = send_raw_email_resend_or_smtp(alert_to, subj, body_txt)
+        if r0.get("sent_resend"):
+            res_info["sent_smtp"] = True
+            cust_em = (ticket_info.get("customer_email") or "").strip()
+            if not force_test and cust_em and "@" in cust_em:
+                send_raw_email_resend_or_smtp(
+                    cust_em,
+                    f"Weber's Tank Testing Ticket {t_no} ({cnt} Cyl)",
+                    f"Thank you for checking in with Weber's Tank Testing (3086 Legionville Rd, Baden, PA).\n\n"
+                    f"Ticket #: {t_no}\nCylinders: {cnt} ({svc})\n"
+                    f"Estimated Ready: {ticket_info.get('estimated_ready') or 'Pending Schedule'}\n\n"
+                    f"Track Status: {ticket_info.get('track_url', 'https://weberstanktesting.com/#tracker')}\n"
+                    f"Ticket PDF: {ticket_info.get('pdf_url', '')}\n"
+                    f"Questions? Call or text 724-266-8008.",
+                )
+            return res_info
+        elif r0.get("detail"):
+            res_info["detail"] = r0["detail"]
 
     # Channel 1: Direct Gmail SMTP (allows dedicated sender account for custom phone notification rules!)
     if smtp_user and smtp_pass and alert_to:
@@ -1085,7 +1429,7 @@ def is_tv_authorized(request: Request) -> bool:
 
 @app.middleware("http")
 async def auth_gate_middleware(request: Request, call_next):
-    if request.url.path == "/merch-go":
+    if request.url.path in ("/merch-go", "/api/public/hours", "/api/public/iphone-sms-bridge", "/api/public/iphone-sms-bridge/ack"):
         return await call_next(request)
     host = (request.headers.get("host") or "").split(":")[0].lower()
     path = request.url.path
@@ -1131,6 +1475,9 @@ class PublicDropoffInput(BaseModel):
     state: str = "PA"
     zip_code: str = ""
     preferred_date: str = ""
+    preferred_time: str = ""
+    return_date: str = ""
+    return_time: str = ""
     truck_mode: str = "ROAD_ROUNDTRIP"
     bottle_count: int = 1
     tank_summary: str = ""
@@ -1165,6 +1512,10 @@ class DayPlanInput(BaseModel):
 class ScheduleJobInput(BaseModel):
     scheduled_date: str
     due_date: str = ""
+    pickup_time: str = ""
+    dropoff_time: str = ""
+    return_address: str = ""
+    customer_email: str = ""
     job_type: str = "SHOP_BATCH"
     account_type: str = "WALK_IN"
     po_station: str = ""
@@ -1191,6 +1542,10 @@ class ScheduleJobInput(BaseModel):
 class ScheduleJobPatchInput(BaseModel):
     scheduled_date: Optional[str] = None
     due_date: Optional[str] = None
+    pickup_time: Optional[str] = None
+    dropoff_time: Optional[str] = None
+    return_address: Optional[str] = None
+    pickup_leg_done: Optional[bool] = None
     job_type: Optional[str] = None
     account_type: Optional[str] = None
     po_station: Optional[str] = None
@@ -1237,6 +1592,10 @@ class SettingsInput(BaseModel):
     alert_email: Optional[str] = None
     smtp_sender_email: Optional[str] = None
     smtp_app_password: Optional[str] = None
+    resend_api_key: Optional[str] = None
+    resend_from_email: Optional[str] = None
+    master_sheet_url: Optional[str] = None
+    gbp_edit_url: Optional[str] = None
     shop_pin: Optional[str] = None
     testing_mode: Optional[bool] = None
 
@@ -1433,6 +1792,9 @@ class SupplyUpsertInput(BaseModel):
     spec_note: str = ""
     vendor_name: str = "Amazon"
     reorder_url: str = ""
+    on_hand_qty: int = 5
+    reorder_threshold: int = 2
+    unit_label: str = "units"
     low_stock: bool = False
     last_ordered_date: str = ""
     sort_order: int = 100
@@ -1841,6 +2203,7 @@ def submit_public_dropoff(payload: PublicDropoffInput):
     quote = calculate_turnaround_quote(conn, cnt)
     promised = quote["rush_promise_date"] if is_rush else quote["standard_promise_date"]
     zone = "OUTBOUND_TRUCK" if etype == "TRUCK_REQUEST" else "ZONE_A_BACKROOM"
+    d_miles, d_eta = estimate_route_from_shop(addr_clean) if etype == "TRUCK_REQUEST" else (0.0, 0)
 
     cur = conn.cursor()
     cur.execute(
@@ -1867,14 +2230,16 @@ def submit_public_dropoff(payload: PublicDropoffInput):
         jtype = payload.truck_mode.strip().upper() if payload.truck_mode else "ROAD_ROUNDTRIP"
         if jtype not in ("ROAD_ROUNDTRIP", "ROAD_PICKUP", "ROAD_DELIVERY"):
             jtype = "ROAD_ROUNDTRIP"
+        ret_d = payload.return_date.strip()[:10] if re.match(r"^\d{4}-\d{2}-\d{2}$", payload.return_date.strip()) else promised
         cur.execute(
             """INSERT INTO schedule_jobs
-               (created_at, scheduled_date, due_date, job_type, account_type, po_station, contact_person,
+               (created_at, scheduled_date, due_date, pickup_time, dropoff_time, customer_email,
+                drive_miles, drive_eta_mins, job_type, account_type, po_station, contact_person,
                 customer_name, customer_phone, location_notes, bottle_count, tank_summary,
                 valves_attached, needs_air_fill, priority, rush_fee, holding_zone, prep_status, status, notes, synced)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?, 'OUTBOUND_TRUCK', 'WAITING', 'OPEN', ?, 0);""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?, 'OUTBOUND_TRUCK', 'WAITING', 'OPEN', ?, 0);""",
             (
-                ts, sched_date, promised, jtype, acct, po_st, contact_p,
+                ts, sched_date, ret_d, payload.preferred_time.strip()[:24], payload.return_time.strip()[:24], em_clean, d_miles, d_eta, jtype, acct, po_st, contact_p,
                 cust, ph_clean, addr_clean, cnt, payload.tank_summary.strip()[:140],
                 "RUSH" if is_rush else "STANDARD", is_rush,
                 f"Web Request BR-{did:04d}" + (f" | {payload.notes.strip()[:160]}" if payload.notes.strip() else ""),
@@ -1909,12 +2274,17 @@ def submit_public_dropoff(payload: PublicDropoffInput):
             )
             released_bottles += res_cust.rowcount
 
+    ticket_code = f"BR-{did:04d}"
+    if etype in ("DROPOFF", "TRUCK_REQUEST") and len(ph_digits) >= 10:
+        sms_msg = (
+            f"Weber's Tank Testing: Ticket {ticket_code} logged ({cnt} cyl). "
+            f"Est. ready: ~{promised}. Track status: https://weberstanktesting.com/?ticket={ticket_code}&p={ph_digits[-4:]}#tracker"
+        )
+        queue_customer_sms_outbox(conn, cust, ph_clean, sms_msg, kind="TICKET", ref_id=ticket_code)
     bump_db_version(conn)
     conn.commit()
     conn.close()
     trigger_sheets_sync_bg()
-
-    ticket_code = f"BR-{did:04d}"
     last4 = ph_digits[-4:] if len(ph_digits) >= 4 else ""
     receipt_pdf_path = f"/api/public/receipt/{ticket_code}.pdf?p={last4}"
     if em_clean or etype in ("DROPOFF", "TRUCK_REQUEST", "PICKUP_NOTICE"):
@@ -2055,33 +2425,46 @@ def create_schedule_job(payload: ScheduleJobInput):
     acct = (payload.account_type or "WALK_IN").strip().upper()
     ts = now_eastern().strftime("%Y-%m-%d %I:%M %p")
     pri = "RUSH" if payload.rush_fee else payload.priority.strip().upper()
+    jtype = payload.job_type.strip().upper()
+    loc = (payload.location_notes.strip() or payload.street_address.strip())[:140]
+    ret_addr = payload.return_address.strip()[:140]
+    d_miles, d_eta = estimate_route_from_shop(loc) if (loc and jtype != "SHOP_BATCH") else (0.0, 0)
 
     contact_p = payload.contact_person.strip()[:60]
     conn = get_conn()
-    upsert_rolodex_from_activity(conn, cust, ph, acct, contact_p, '', payload.street_address.strip() or payload.location_notes.strip()[:120], payload.city.strip(), payload.state.strip(), payload.zip_code.strip())
+    upsert_rolodex_from_activity(
+        conn, cust, ph, acct, contact_p, payload.customer_email.strip(),
+        payload.street_address.strip() or loc[:120], payload.city.strip(), payload.state.strip(), payload.zip_code.strip(),
+    )
     cur = conn.cursor()
     cur.execute(
         """INSERT INTO schedule_jobs
-           (created_at, scheduled_date, due_date, job_type, account_type, po_station, contact_person,
+           (created_at, scheduled_date, due_date, pickup_time, dropoff_time, return_address, customer_email,
+            drive_miles, drive_eta_mins, job_type, account_type, po_station, contact_person,
             customer_name, customer_phone, location_notes, bottle_count, tank_summary,
             valves_attached, needs_air_fill, priority, rush_fee, holding_zone,
             prep_status, status, notes, synced)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0);""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, 0);""",
         (
             ts,
             payload.scheduled_date.strip(),
             payload.due_date.strip() or payload.scheduled_date.strip(),
-            payload.job_type.strip().upper(),
+            payload.pickup_time.strip()[:24],
+            payload.dropoff_time.strip()[:24],
+            ret_addr,
+            payload.customer_email.strip()[:100],
+            d_miles,
+            d_eta,
+            jtype,
             acct,
             payload.po_station.strip()[:60],
             contact_p,
             cust,
             ph,
-            payload.location_notes.strip()[:140],
+            loc,
             max(1, int(payload.bottle_count or 1)),
             payload.tank_summary.strip()[:160],
             1 if payload.valves_attached else 0,
-            0,
             pri,
             1 if (payload.rush_fee or pri == "RUSH") else 0,
             payload.holding_zone.strip() or "ZONE_A_BACKROOM",
@@ -2093,7 +2476,7 @@ def create_schedule_job(payload: ScheduleJobInput):
     jid = cur.lastrowid
     bump_db_version(conn)
     conn.commit()
-    row = dict(conn.execute("SELECT * FROM schedule_jobs WHERE id=?;", (jid,)).fetchone())
+    row = enrich_schedule_job_view(dict(conn.execute("SELECT * FROM schedule_jobs WHERE id=?;", (jid,)).fetchone()))
     conn.close()
     return row
 
@@ -2111,19 +2494,35 @@ def update_schedule_job(job_id: int, payload: ScheduleJobPatchInput):
     if pri == "RUSH":
         rfee = 1
 
+    new_jtype = payload.job_type if payload.job_type is not None else rec["job_type"]
+    new_loc = payload.location_notes.strip()[:140] if payload.location_notes is not None else (rec["location_notes"] or "")
+    d_miles, d_eta = rec["drive_miles"] or 0.0, rec["drive_eta_mins"] or 0
+    if (payload.location_notes is not None and new_loc != (rec["location_notes"] or "")) or (new_loc and not d_eta and new_jtype != "SHOP_BATCH"):
+        d_miles, d_eta = estimate_route_from_shop(new_loc) if new_loc else (0.0, 0)
+
+    leg1_done = (1 if payload.pickup_leg_done else 0) if payload.pickup_leg_done is not None else int(rec["pickup_leg_done"] or 0)
+
     conn.execute(
         """UPDATE schedule_jobs SET
-           scheduled_date=?, due_date=?, job_type=?, customer_name=?, customer_phone=?,
+           scheduled_date=?, due_date=?, pickup_time=?, dropoff_time=?, return_address=?,
+           drive_miles=?, drive_eta_mins=?, pickup_leg_done=?,
+           job_type=?, customer_name=?, customer_phone=?,
            location_notes=?, bottle_count=?, tank_summary=?, priority=?, rush_fee=?,
            holding_zone=?, prep_status=?, status=?, notes=?, synced=0
            WHERE id=?;""",
         (
             payload.scheduled_date if payload.scheduled_date is not None else rec["scheduled_date"],
             payload.due_date if payload.due_date is not None else rec["due_date"],
-            payload.job_type if payload.job_type is not None else rec["job_type"],
+            payload.pickup_time.strip()[:24] if payload.pickup_time is not None else (rec["pickup_time"] or ""),
+            payload.dropoff_time.strip()[:24] if payload.dropoff_time is not None else (rec["dropoff_time"] or ""),
+            payload.return_address.strip()[:140] if payload.return_address is not None else (rec["return_address"] or ""),
+            d_miles,
+            d_eta,
+            leg1_done,
+            new_jtype,
             payload.customer_name.strip() if payload.customer_name is not None else rec["customer_name"],
             clean_phone(payload.customer_phone) if payload.customer_phone is not None else rec["customer_phone"],
-            payload.location_notes if payload.location_notes is not None else rec["location_notes"],
+            new_loc,
             payload.bottle_count if payload.bottle_count is not None else rec["bottle_count"],
             payload.tank_summary if payload.tank_summary is not None else rec["tank_summary"],
             pri,
@@ -2137,10 +2536,9 @@ def update_schedule_job(job_id: int, payload: ScheduleJobPatchInput):
     )
     bump_db_version(conn)
     conn.commit()
-    updated = dict(conn.execute("SELECT * FROM schedule_jobs WHERE id=?;", (job_id,)).fetchone())
+    updated = enrich_schedule_job_view(dict(conn.execute("SELECT * FROM schedule_jobs WHERE id=?;", (job_id,)).fetchone()))
     conn.close()
     return updated
-
 
 @app.delete("/api/schedule/jobs/{job_id}")
 def delete_schedule_job(job_id: int):
@@ -2172,6 +2570,11 @@ def ping_version():
         "unsynced_count": unsynced,
         "backroom_waiting": backroom_waiting,
         "low_stock_count": low_stock_count,
+        "low_supplies_alert": [dict(r) for r in get_conn().execute("SELECT id, item_name, on_hand_qty, reorder_threshold, unit_label FROM shop_supplies WHERE low_stock=1 ORDER BY sort_order ASC;").fetchall()],
+        "has_resend_key": bool(os.getenv("RESEND_API_KEY") or s_map.get("resend_api_key")),
+        "resend_from_email": s_map.get("resend_from_email", "alerts@weberstanktesting.com"),
+        "master_sheet_url": s_map.get("master_sheet_url", ""),
+        "sms_shortcut_key": s_map.get("sms_shortcut_key", ""),
     }
 
 
@@ -2207,7 +2610,7 @@ def get_tv_leaderboard(work_date: Optional[str] = None):
     for i in range(14):
         d_cur = cal_start + timedelta(days=i)
         p = resolve_day_plan(d_cur, plans_map, default_cap)
-        day_jobs = [j for j in upcoming_jobs if j["scheduled_date"] == p["work_date"]]
+        day_jobs = [enrich_schedule_job_view(j, "PRIMARY") for j in upcoming_jobs if j["scheduled_date"] == p["work_date"]] + [enrich_schedule_job_view(j, "RETURN") for j in upcoming_jobs if j["job_type"] == "ROAD_ROUNDTRIP" and j.get("due_date") == p["work_date"] and j["due_date"] != j["scheduled_date"]]
         due_jobs = [j for j in upcoming_jobs if j.get("due_date") == p["work_date"] and j["scheduled_date"] != p["work_date"]]
         booked_bottles = sum(j["bottle_count"] for j in day_jobs if j["job_type"] in ("SHOP_BATCH", "ROAD_PICKUP", "ROAD_ROUNDTRIP"))
         p["jobs"] = day_jobs
@@ -2406,6 +2809,7 @@ def ops_live_state(work_date: Optional[str] = None):
     for sj in schedule_jobs:
         sj["dwell_days"] = days_since(sj.get("created_at"), est_today)
         sj["holding_zone_label"] = HOLDING_ZONES.get(sj.get("holding_zone") or "", sj.get("holding_zone") or "")
+        sj["maps_route_url"] = build_shop_maps_url(sj.get("location_notes") or "")
 
     selected_day_plan = resolve_day_plan(cal_anchor, plans_map, default_cap)
     selected_day_open = [j for j in schedule_jobs if j["scheduled_date"] == selected_day_plan["work_date"]]
@@ -2610,6 +3014,7 @@ def bootstrap(work_date: Optional[str] = None, cal_year: Optional[int] = None, c
     for sj in schedule_jobs:
         sj["dwell_days"] = days_since(sj.get("created_at"), est_today)
         sj["holding_zone_label"] = HOLDING_ZONES.get(sj.get("holding_zone") or "", sj.get("holding_zone") or "")
+        sj["maps_route_url"] = build_shop_maps_url(sj.get("location_notes") or "")
 
     day_plans = []
     for i in range(14):
@@ -2819,6 +3224,12 @@ def bootstrap(work_date: Optional[str] = None, cal_year: Optional[int] = None, c
         "recalls": recalls,
         "shop_supplies": supplies,
         "low_stock_count": sum(1 for s in supplies if s.get("low_stock")),
+        "low_supplies_alert": [s for s in supplies if s.get("low_stock")],
+        "operating_schedule": get_operating_schedule_bundle(get_conn()),
+        "has_resend_key": bool(os.getenv("RESEND_API_KEY") or s_map.get("resend_api_key")),
+        "resend_from_email": s_map.get("resend_from_email", "alerts@weberstanktesting.com"),
+        "master_sheet_url": s_map.get("master_sheet_url", ""),
+        "sms_shortcut_key": s_map.get("sms_shortcut_key", ""),
         "pricing_rates": rates,
         "invoices": invoices,
         "feedback_items": feedback_items,
@@ -2889,6 +3300,14 @@ def update_settings(payload: SettingsInput, request: Request):
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('smtp_sender_email', ?);", (payload.smtp_sender_email.strip(),))
     if payload.smtp_app_password is not None and payload.smtp_app_password.strip():
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('smtp_app_password', ?);", (payload.smtp_app_password.strip(),))
+    if payload.resend_api_key is not None and payload.resend_api_key.strip():
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('resend_api_key', ?);", (payload.resend_api_key.strip(),))
+    if payload.resend_from_email is not None and payload.resend_from_email.strip():
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('resend_from_email', ?);", (payload.resend_from_email.strip(),))
+    if payload.master_sheet_url is not None:
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('master_sheet_url', ?);", (payload.master_sheet_url.strip(),))
+    if payload.gbp_edit_url is not None and payload.gbp_edit_url.strip():
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('gbp_edit_url', ?);", (payload.gbp_edit_url.strip(),))
     if payload.testing_mode is not None:
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('testing_mode', ?);", ("1" if payload.testing_mode else "0",))
     return JSONResponse({"saved": True})
@@ -4067,33 +4486,74 @@ def list_shop_supplies():
     return rows
 
 
+def _notify_ryan_low_supply_bg(item_row: dict) -> None:
+    def _send():
+        conn = get_conn()
+        r = conn.execute("SELECT value FROM settings WHERE key='alert_email';").fetchone()
+        conn.close()
+        to_em = (os.getenv("WEBER_ALERT_EMAIL") or (r["value"] if r else "") or "").strip()
+        if not to_em:
+            return
+        subj = f"[WEBER'S LOW SUPPLY] {item_row['item_name']} is down to {item_row['on_hand_qty']} {item_row.get('unit_label') or 'left'}"
+        body = (
+            f"Shop Supply Replacement Alert — Weber's Tank Testing\n"
+            f"----------------------------------------------------\n"
+            f"Item:             {item_row['item_name']}\n"
+            f"Category:         {item_row.get('category', '')}\n"
+            f"Current On-Hand:  {item_row['on_hand_qty']} {item_row.get('unit_label') or 'units'}\n"
+            f"Alert Limit:      <= {item_row['reorder_threshold']} {item_row.get('unit_label') or 'units'}\n"
+            f"Spec / Note:      {item_row.get('spec_note') or '—'}\n\n"
+            f"View Supplies in Office: https://ops.weberstanktesting.com/office?tab=supplies"
+        )
+        send_raw_email_resend_or_smtp(to_em, subj, body)
+
+    try:
+        asyncio.get_running_loop().create_task(asyncio.to_thread(_send))
+    except RuntimeError:
+        pass
+
+
+class SupplyQtyPatchInput(BaseModel):
+    delta: Optional[int] = None
+    on_hand_qty: Optional[int] = None
+    reorder_threshold: Optional[int] = None
+    unit_label: Optional[str] = None
+
+
 @app.post("/api/supplies")
 def save_shop_supply(payload: SupplyUpsertInput):
     name = payload.item_name.strip()
     if not name:
         raise HTTPException(400, "Supply item name is required.")
+    qty = max(0, int(payload.on_hand_qty))
+    thresh = max(0, int(payload.reorder_threshold))
+    unit = (payload.unit_label or "units").strip()[:20] or "units"
+    is_low = 1 if (payload.low_stock or qty <= thresh) else 0
+
     conn = get_conn()
     if payload.id:
         conn.execute(
             """UPDATE shop_supplies SET
                category=?, item_name=?, spec_note=?, vendor_name=?, reorder_url=?,
+               on_hand_qty=?, reorder_threshold=?, unit_label=?,
                low_stock=?, last_ordered_date=?, sort_order=?
                WHERE id=?;""",
             (
                 payload.category.strip() or "Shop Supplies", name, payload.spec_note.strip(),
                 payload.vendor_name.strip(), payload.reorder_url.strip(),
-                1 if payload.low_stock else 0, payload.last_ordered_date.strip(), payload.sort_order, payload.id,
+                qty, thresh, unit, is_low, payload.last_ordered_date.strip(), payload.sort_order, payload.id,
             ),
         )
     else:
         conn.execute(
             """INSERT INTO shop_supplies
-               (category, item_name, spec_note, vendor_name, reorder_url, low_stock, last_ordered_date, sort_order)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?);""",
+               (category, item_name, spec_note, vendor_name, reorder_url,
+                on_hand_qty, reorder_threshold, unit_label, low_stock, last_ordered_date, sort_order)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);""",
             (
                 payload.category.strip() or "Shop Supplies", name, payload.spec_note.strip(),
                 payload.vendor_name.strip(), payload.reorder_url.strip(),
-                1 if payload.low_stock else 0, payload.last_ordered_date.strip(), payload.sort_order,
+                qty, thresh, unit, is_low, payload.last_ordered_date.strip(), payload.sort_order,
             ),
         )
     bump_db_version(conn)
@@ -4102,22 +4562,65 @@ def save_shop_supply(payload: SupplyUpsertInput):
     return {"saved": True}
 
 
+@app.post("/api/supplies/{supply_id}/qty")
+def adjust_supply_qty_or_threshold(supply_id: int, payload: SupplyQtyPatchInput):
+    conn = get_conn()
+    row = conn.execute("SELECT * FROM shop_supplies WHERE id=?;", (supply_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "Supply item not found.")
+
+    cur_qty = int(row["on_hand_qty"] if row["on_hand_qty"] is not None else 5)
+    thresh = int(payload.reorder_threshold) if payload.reorder_threshold is not None else int(row["reorder_threshold"] if row["reorder_threshold"] is not None else 2)
+    thresh = max(0, thresh)
+    if payload.on_hand_qty is not None:
+        new_qty = max(0, int(payload.on_hand_qty))
+    elif payload.delta is not None:
+        new_qty = max(0, cur_qty + int(payload.delta))
+    else:
+        new_qty = cur_qty
+
+    unit = payload.unit_label.strip()[:20] if payload.unit_label is not None else (row["unit_label"] or "units")
+    is_low = 1 if new_qty <= thresh else 0
+    was_alerted = int(row["alert_sent"] or 0)
+    fire_alert = bool(is_low and not was_alerted)
+    next_alert_sent = 1 if is_low else 0
+
+    conn.execute(
+        "UPDATE shop_supplies SET on_hand_qty=?, reorder_threshold=?, unit_label=?, low_stock=?, alert_sent=? WHERE id=?;",
+        (new_qty, thresh, unit, is_low, next_alert_sent, supply_id),
+    )
+    bump_db_version(conn)
+    conn.commit()
+    updated = dict(conn.execute("SELECT * FROM shop_supplies WHERE id=?;", (supply_id,)).fetchone())
+    conn.close()
+    if fire_alert:
+        _notify_ryan_low_supply_bg(updated)
+    return updated
+
+
 @app.post("/api/supplies/{supply_id}/stock")
 def toggle_supply_stock(supply_id: int, payload: SupplyLowStockInput):
     conn = get_conn()
+    row = conn.execute("SELECT * FROM shop_supplies WHERE id=?;", (supply_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "Supply item not found.")
     if payload.mark_ordered_today:
+        restored_qty = max(int(row["on_hand_qty"] or 0), int(row["reorder_threshold"] or 2) + 3)
         conn.execute(
-            "UPDATE shop_supplies SET low_stock=0, last_ordered_date=? WHERE id=?;",
-            (today_eastern(), supply_id),
+            "UPDATE shop_supplies SET low_stock=0, alert_sent=0, on_hand_qty=?, last_ordered_date=? WHERE id=?;",
+            (restored_qty, today_eastern(), supply_id),
         )
     else:
-        conn.execute(
-            "UPDATE shop_supplies SET low_stock=? WHERE id=?;",
-            (1 if payload.low_stock else 0, supply_id),
-        )
+        is_low = 1 if payload.low_stock else 0
+        conn.execute("UPDATE shop_supplies SET low_stock=?, alert_sent=? WHERE id=?;", (is_low, is_low, supply_id))
     bump_db_version(conn)
     conn.commit()
+    updated = dict(conn.execute("SELECT * FROM shop_supplies WHERE id=?;", (supply_id,)).fetchone())
     conn.close()
+    if payload.low_stock and not payload.mark_ordered_today:
+        _notify_ryan_low_supply_bg(updated)
     return {"updated": supply_id}
 
 
@@ -4130,6 +4633,336 @@ def delete_shop_supply(supply_id: int):
     conn.close()
     return {"deleted": supply_id}
 
+
+# --- OPERATING SCHEDULE, HOLIDAYS/VACATIONS, WORKER TIME CLOCK & IPHONE SMS BRIDGE ---
+class DayHoursRowInput(BaseModel):
+    day_of_week: int
+    day_name: str
+    is_open: bool = True
+    open_time: str = "09:00"
+    close_time: str = "16:00"
+    dock_24_7: bool = True
+    note: str = ""
+
+
+class OperatingScheduleSaveInput(BaseModel):
+    weekly_hours: list[DayHoursRowInput]
+    gbp_edit_url: Optional[str] = None
+    master_sheet_url: Optional[str] = None
+
+
+class HolidayClosureInput(BaseModel):
+    start_date: str
+    end_date: str = ""
+    title: str
+    staffed_open: bool = False
+    special_hours: str = ""
+    dock_open: bool = True
+    public_note: str = ""
+
+
+@app.get("/api/public/hours")
+def get_public_operating_hours():
+    conn = get_conn()
+    data = get_operating_schedule_bundle(conn)
+    conn.close()
+    return {
+        "weekly_hours": data["weekly_hours"],
+        "upcoming_closures": data["upcoming_closures"],
+        "summary_line": data["summary_line"],
+        "active_banner": data["active_banner"],
+    }
+
+
+@app.get("/api/office/operating-schedule")
+def get_office_operating_schedule():
+    conn = get_conn()
+    data = get_operating_schedule_bundle(conn)
+    conn.close()
+    return data
+
+
+@app.post("/api/office/operating-hours")
+def save_office_operating_hours(payload: OperatingScheduleSaveInput, request: Request):
+    require_owner_or_admin(request)
+    conn = get_conn()
+    for h in payload.weekly_hours:
+        conn.execute(
+            """INSERT OR REPLACE INTO operating_hours
+               (day_of_week, day_name, is_open, open_time, close_time, dock_24_7, note)
+               VALUES (?, ?, ?, ?, ?, ?, ?);""",
+            (
+                int(h.day_of_week), h.day_name.strip()[:16], 1 if h.is_open else 0,
+                h.open_time.strip()[:8], h.close_time.strip()[:8], 1 if h.dock_24_7 else 0, h.note.strip()[:80],
+            ),
+        )
+    if payload.gbp_edit_url is not None:
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('gbp_edit_url', ?);", (payload.gbp_edit_url.strip(),))
+    if payload.master_sheet_url is not None:
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('master_sheet_url', ?);", (payload.master_sheet_url.strip(),))
+    bump_db_version(conn)
+    conn.commit()
+    updated = get_operating_schedule_bundle(conn)
+    conn.close()
+    return updated
+
+
+@app.post("/api/office/closures")
+def add_holiday_or_vacation_closure(payload: HolidayClosureInput, request: Request):
+    require_owner_or_admin(request)
+    s_dt = payload.start_date.strip()[:10]
+    e_dt = (payload.end_date.strip()[:10] or s_dt)
+    if e_dt < s_dt:
+        e_dt = s_dt
+    title = payload.title.strip()[:80]
+    if not s_dt or not title:
+        raise HTTPException(400, "Enter a start date and holiday/vacation title.")
+    conn = get_conn()
+    conn.execute(
+        """INSERT INTO holiday_closures
+           (start_date, end_date, title, staffed_open, special_hours, dock_open, public_note, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?);""",
+        (
+            s_dt, e_dt, title, 1 if payload.staffed_open else 0,
+            payload.special_hours.strip()[:60], 1 if payload.dock_open else 0,
+            payload.public_note.strip()[:200], now_eastern().strftime("%Y-%m-%d %I:%M %p"),
+        ),
+    )
+    bump_db_version(conn)
+    conn.commit()
+    updated = get_operating_schedule_bundle(conn)
+    conn.close()
+    return updated
+
+
+@app.delete("/api/office/closures/{closure_id}")
+def delete_holiday_or_vacation_closure(closure_id: int, request: Request):
+    require_owner_or_admin(request)
+    conn = get_conn()
+    conn.execute("DELETE FROM holiday_closures WHERE id=?;", (closure_id,))
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"deleted": closure_id}
+
+
+class TimePunchActionInput(BaseModel):
+    action: str = "TOGGLE"  # IN | OUT | TOGGLE
+    notes: str = ""
+
+
+class ManualPunchEditInput(BaseModel):
+    duration_minutes: int
+    clock_in_at: Optional[str] = None
+    clock_out_at: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@app.get("/api/timeclock/status")
+def get_worker_timeclock_status(request: Request):
+    u = getattr(request.state, "user", None) or get_current_session_user(request)
+    if not u:
+        raise HTTPException(401, "Not authenticated.")
+    now_e = now_eastern()
+    today_iso = now_e.date().isoformat()
+    conn = get_conn()
+    open_p = conn.execute(
+        "SELECT * FROM time_punches WHERE crew_initials=? AND status='OPEN' ORDER BY id DESC LIMIT 1;",
+        (u["initials"],),
+    ).fetchone()
+    open_dict = dict(open_p) if open_p else None
+    if open_dict:
+        try:
+            dt_in = datetime.fromisoformat(open_dict["clock_in_iso"])
+            open_dict["elapsed_minutes"] = max(0, int((now_e - dt_in).total_seconds() // 60))
+        except Exception:
+            open_dict["elapsed_minutes"] = 0
+
+    today_mins = conn.execute(
+        "SELECT COALESCE(SUM(duration_minutes), 0) FROM time_punches WHERE crew_initials=? AND work_date=? AND status='CLOSED';",
+        (u["initials"], today_iso),
+    ).fetchone()[0]
+    active_shop = [
+        dict(r) for r in conn.execute("SELECT crew_initials, crew_name, clock_in_at, work_date FROM time_punches WHERE status='OPEN' ORDER BY id ASC;").fetchall()
+    ]
+    conn.close()
+    return {
+        "clocked_in": bool(open_dict),
+        "open_punch": open_dict,
+        "today_total_minutes": int(today_mins) + (open_dict["elapsed_minutes"] if open_dict else 0),
+        "active_workers": active_shop,
+    }
+
+
+@app.post("/api/timeclock/punch")
+def punch_worker_timeclock(payload: TimePunchActionInput, request: Request):
+    u = getattr(request.state, "user", None) or get_current_session_user(request)
+    if not u:
+        raise HTTPException(401, "Not authenticated.")
+    now_e = now_eastern()
+    today_iso = now_e.date().isoformat()
+    ts_lbl = now_e.strftime("%I:%M %p")
+    iso_full = now_e.isoformat()
+    act = payload.action.strip().upper()
+
+    conn = get_conn()
+    open_p = conn.execute(
+        "SELECT * FROM time_punches WHERE crew_initials=? AND status='OPEN' ORDER BY id DESC LIMIT 1;",
+        (u["initials"],),
+    ).fetchone()
+
+    if act == "IN" or (act == "TOGGLE" and not open_p):
+        if open_p:
+            conn.close()
+            return {"status": "ALREADY_IN", "punch": dict(open_p)}
+        cur = conn.cursor()
+        cur.execute(
+            """INSERT INTO time_punches
+               (user_id, crew_initials, crew_name, work_date, clock_in_at, clock_in_iso, notes, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 'OPEN');""",
+            (u["id"], u["initials"], u["name"], today_iso, ts_lbl, iso_full, payload.notes.strip()[:160]),
+        )
+        pid = cur.lastrowid
+        bump_db_version(conn)
+        conn.commit()
+        row = dict(conn.execute("SELECT * FROM time_punches WHERE id=?;", (pid,)).fetchone())
+        conn.close()
+        return {"status": "CLOCKED_IN", "punch": row}
+
+    if not open_p:
+        conn.close()
+        raise HTTPException(400, "You are not currently clocked in.")
+
+    try:
+        dt_in = datetime.fromisoformat(open_p["clock_in_iso"])
+        mins = max(1, int(round((now_e - dt_in).total_seconds() / 60.0)))
+    except Exception:
+        mins = 1
+    merged_note = " | ".join(filter(None, [open_p["notes"], payload.notes.strip()[:160]]))[:220]
+    conn.execute(
+        """UPDATE time_punches
+           SET clock_out_at=?, clock_out_iso=?, duration_minutes=?, notes=?, status='CLOSED', synced=0
+           WHERE id=?;""",
+        (ts_lbl, iso_full, mins, merged_note, open_p["id"]),
+    )
+    bump_db_version(conn)
+    conn.commit()
+    closed_row = dict(conn.execute("SELECT * FROM time_punches WHERE id=?;", (open_p["id"],)).fetchone())
+    conn.close()
+    trigger_sheets_sync_bg()
+    return {"status": "CLOCKED_OUT", "punch": closed_row}
+
+
+@app.get("/api/timeclock/report")
+def get_timeclock_report(request: Request, days: int = 14):
+    u = getattr(request.state, "user", None) or get_current_session_user(request)
+    if not u:
+        raise HTTPException(401, "Not authenticated.")
+    cutoff = (now_eastern().date() - timedelta(days=max(1, min(90, days)))).isoformat()
+    is_boss = u["role"] in ("OWNER", "SYSTEM_ADMIN")
+    conn = get_conn()
+    if is_boss:
+        rows = [dict(r) for r in conn.execute("SELECT * FROM time_punches WHERE work_date >= ? ORDER BY id DESC LIMIT 250;", (cutoff,)).fetchall()]
+    else:
+        rows = [dict(r) for r in conn.execute("SELECT * FROM time_punches WHERE crew_initials=? AND work_date >= ? ORDER BY id DESC LIMIT 100;", (u["initials"], cutoff)).fetchall()]
+    conn.close()
+
+    totals: dict[str, dict] = {}
+    for r in rows:
+        k = r["crew_initials"]
+        totals.setdefault(k, {"initials": k, "name": r["crew_name"], "minutes": 0, "shifts": 0})
+        totals[k]["minutes"] += int(r["duration_minutes"] or 0)
+        if r["status"] == "CLOSED":
+            totals[k]["shifts"] += 1
+    for v in totals.values():
+        v["hours"] = round(v["minutes"] / 60.0, 2)
+    return {"punches": rows, "summary": list(totals.values()), "is_boss": is_boss}
+
+
+@app.put("/api/timeclock/{punch_id}")
+def edit_timeclock_punch(punch_id: int, payload: ManualPunchEditInput, request: Request):
+    u = require_owner_or_admin(request)
+    conn = get_conn()
+    row = conn.execute("SELECT * FROM time_punches WHERE id=?;", (punch_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "Time punch not found.")
+    conn.execute(
+        """UPDATE time_punches
+           SET duration_minutes=?, clock_in_at=COALESCE(?, clock_in_at),
+               clock_out_at=COALESCE(?, clock_out_at), notes=COALESCE(?, notes),
+               status='CLOSED', edited_by=?
+           WHERE id=?;""",
+        (max(0, int(payload.duration_minutes)), payload.clock_in_at, payload.clock_out_at, payload.notes, u["initials"], punch_id),
+    )
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"updated": punch_id}
+
+
+@app.delete("/api/timeclock/{punch_id}")
+def delete_timeclock_punch(punch_id: int, request: Request):
+    require_owner_or_admin(request)
+    conn = get_conn()
+    conn.execute("DELETE FROM time_punches WHERE id=?;", (punch_id,))
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"deleted": punch_id}
+
+
+@app.get("/api/timeclock/export.csv")
+def export_timeclock_csv(request: Request, days: int = 30):
+    require_owner_or_admin(request)
+    cutoff = (now_eastern().date() - timedelta(days=max(1, min(365, days)))).isoformat()
+    conn = get_conn()
+    rows = conn.execute("SELECT * FROM time_punches WHERE work_date >= ? ORDER BY work_date DESC, id DESC;", (cutoff,)).fetchall()
+    conn.close()
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["Date", "Worker", "Initials", "Clock In", "Clock Out", "Minutes", "Hours", "Status", "Notes"])
+    for r in rows:
+        mins = int(r["duration_minutes"] or 0)
+        w.writerow([r["work_date"], r["crew_name"], r["crew_initials"], r["clock_in_at"], r["clock_out_at"], mins, round(mins / 60.0, 2), r["status"], r["notes"]])
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="Webers_Timecards_{today_eastern()}.csv"'},
+    )
+
+
+@app.get("/api/sms-outbox")
+def list_pending_sms_outbox():
+    conn = get_conn()
+    rows = [dict(r) for r in conn.execute("SELECT * FROM sms_outbox WHERE status='PENDING' ORDER BY id DESC LIMIT 30;").fetchall()]
+    conn.close()
+    return rows
+
+
+@app.post("/api/sms-outbox/{sms_id}/ack")
+def ack_sms_outbox_item(sms_id: int):
+    conn = get_conn()
+    conn.execute("UPDATE sms_outbox SET status='SENT', sent_at=? WHERE id=?;", (now_eastern().strftime("%I:%M %p"), sms_id))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+@app.get("/api/public/iphone-sms-bridge")
+def iphone_shortcut_pull_sms(key: str = ""):
+    conn = get_conn()
+    saved_k = conn.execute("SELECT value FROM settings WHERE key='sms_shortcut_key';").fetchone()
+    if not saved_k or not key or key.strip() != saved_k["value"]:
+        conn.close()
+        raise HTTPException(403, "Invalid Shop iPhone Shortcut key.")
+    rows = [dict(r) for r in conn.execute("SELECT id, customer_name, phone, message FROM sms_outbox WHERE status='PENDING' ORDER BY id ASC LIMIT 10;").fetchall()]
+    if rows:
+        ts = now_eastern().strftime("%I:%M %p")
+        conn.executemany("UPDATE sms_outbox SET status='SENT', sent_at=? WHERE id=?;", [(ts, r["id"]) for r in rows])
+        conn.commit()
+    conn.close()
+    return {"messages": rows}
 
 # --- PRICING & BILLING ---
 @app.post("/api/pricing")
@@ -5495,7 +6328,7 @@ def get_ops_dispatch_radar():
         ).fetchall()
     ]
     conn.close()
-    return {"today": today, "jobs": jobs, "truck_requests": truck_reqs}
+    return {"today": today, "jobs": [enrich_schedule_job_view(j) for j in jobs], "truck_requests": truck_reqs}
 
 
 @app.get("/api/public/theme")
