@@ -78,7 +78,7 @@ function dwellBadgeHtml(days, prefix = '⏳') {
 function stageBadgeHtml(r) {
   if (r.status === 'QUEUED') return '<span class="stage-chip">Queued</span>';
   const st = r.shop_stage || 'IN_SHOP';
-  if (st === 'READY_BACKROOM') return '<span class="stage-chip ready">Back Room Ready</span>';
+  if (st === 'READY_BACKROOM') return '<span class="stage-chip ready">Dock Ready</span>';
   if (st === 'PICKED_UP') return `<span class="stage-chip">✓ Picked Up${r.picked_up_by ? ' (' + escHtml(r.picked_up_by) + ')' : ''}</span>`;
   if (st === 'CONDEMNED_HOLD' || r.hydro_disposition === 'D') return '<span class="stage-chip" style="background:#fee2e2;color:#991b1b;">⛔ Condemned</span>';
   if (st === 'STAMPED_STICKERED' || r.rin_marked) {
@@ -334,6 +334,9 @@ async function loadState(rebuildLadder = false) {
   document.getElementById('editCalSerial').value = STATE.calibrated_serial;
   document.getElementById('webhookInput').value = STATE.sheets_webhook_url || '';
   document.getElementById('fbWebhookInput').value = STATE.feedback_webhook_url || '';
+  if (document.getElementById('editAlertEmail')) document.getElementById('editAlertEmail').value = STATE.alert_email || '';
+  if (document.getElementById('editSmtpSender')) document.getElementById('editSmtpSender').value = STATE.smtp_sender_email || '';
+  if (document.getElementById('smtpPassStatusTxt')) document.getElementById('smtpPassStatusTxt').textContent = STATE.has_smtp_password ? 'Configured ✓' : 'Optional';
   document.getElementById('keyStatusText').textContent = STATE.has_gemini_key ? 'Configured & Ready' : 'Not Set';
 
   const syncTxt = STATE.has_sheets_webhook
@@ -448,7 +451,7 @@ function renderStartOfDayHuddle(queued, openSched, waitingDrops) {
     <div class="huddle-kpi"><small>Queued Ready</small><strong>${queued.length} Cyl${hud.rush_queued_count ? ` (${hud.rush_queued_count} 🔥)` : ''}</strong></div>
     <div class="huddle-kpi"><small>Backroom Door</small><strong>${waitingDrops.length} Waiting</strong></div>
     <div class="huddle-kpi"><small>Needs B386 Mark</small><strong>${hud.needs_stamp_count || 0} Dried</strong></div>
-    <div class="huddle-kpi"><small>Back Room Ready</small><strong>${hud.ready_shelf_count || 0} Ready</strong></div>`;
+    <div class="huddle-kpi"><small>Dock Ready</small><strong>${hud.ready_shelf_count || 0} Ready</strong></div>`;
 
   const todayRuns = openSched.filter(j => j.scheduled_date <= STATE.selected_date);
   document.getElementById('huddleLineupList').innerHTML = todayRuns.length
@@ -715,8 +718,11 @@ function importDropoffToIntake(id) {
   document.getElementById('fPhone').value = d.customer_phone || '';
   document.getElementById('fPriority').value = d.rush_requested ? 'RUSH' : 'STANDARD';
   document.getElementById('fPromisedDate').value = d.promised_date || '';
-  if ((d.service_requested || '').toLowerCase().includes('visual inspection only')) {
+  const svcLow = ((d.service_requested || '') + ' ' + (d.tank_summary || '')).toLowerCase();
+  if (svcLow.includes('visual') || svcLow.includes('propane')) {
     document.getElementById('inMode').value = 'VISUAL_ONLY';
+    if (svcLow.includes('propane')) document.getElementById('fGas').value = 'LPG';
+    updateAdvSpecsSummary();
   }
   setBatchLockState(true);
   renderBackroomInbox();
@@ -885,6 +891,10 @@ function applyPreset() {
   document.getElementById('fDia').value = s.outside_dia;
   document.getElementById('fLen').value = s.length_in;
   document.getElementById('fRee').value = s.ree_limit ?? '';
+  if (s.category === 'Propane') {
+    document.getElementById('inMode').value = 'VISUAL_ONLY';
+    document.getElementById('fGas').value = 'LPG';
+  }
   if (BATCH_LOCKED) captureBatchSnapshot();
   const starChk = document.getElementById('fStar10Yr');
   if (starChk && sp && !['3A', '3AA'].includes(sp)) starChk.checked = false;
@@ -1188,7 +1198,7 @@ function renderBenchForm() {
       <div>
         <label>RIN Mark (If Done Now)</label>
         <select id="bRinType">
-          <option value="">Mark After Hot-Air Dry</option>
+          <option value="">Mark After Drying</option>
           <option value="STAMPED">🔨 Neck Stamped B386</option>
           <option value="STICKERED">🏷️ B386 Sticker Applied</option>
         </select>
@@ -1444,7 +1454,7 @@ function sendPickupSms(custName, phone, count, invExtra) {
     if (!ph.trim()) return;
   }
   const cleanDigits = ph.replace(/\D/g, '');
-  const msg = `Weber's Tank Testing (RIN B386): Hi ${custName}, your ${count} cylinder(s) are tested, stamped/labeled, and ready in our 24/7 Back Room pickup area (Loading Dock door) at 3086 Legionville Rd${invExtra ? ' (' + invExtra + ')' : ''}. Questions? Call/text ${STATE.shop_phone || '724-266-8008'}.`;
+  const msg = `Weber's Tank Testing: Hi ${custName}, your ${count} cylinder(s) are certified and staged for pickup at our 24/7 Loading Dock at 3086 Legionville Rd${invExtra ? ' (' + invExtra + ')' : ''}. Questions? Call/text ${STATE.shop_phone || '724-266-8008'}.`;
   const sep = /iPad|iPhone|iPod/i.test(navigator.userAgent) ? '&' : '?';
   window.location.href = `sms:${cleanDigits}${sep}body=${encodeURIComponent(msg)}`;
 }
@@ -1459,7 +1469,7 @@ function toggleFinishBatchGroup(custKey) {
 function renderFinishValvesAndCustomers() {
   const postRows = (STATE.in_shop_post_test || []).filter(r => r.shop_stage !== 'PICKED_UP');
   const needsWork = postRows.filter(r => r.shop_stage !== 'READY_BACKROOM');
-  document.getElementById('finishCountBadge').textContent = `${needsWork.length} Need Finish • ${postRows.length - needsWork.length} Back Room Ready`;
+  document.getElementById('finishCountBadge').textContent = `${needsWork.length} Need Finish • ${postRows.length - needsWork.length} Dock Ready`;
 
   if (!postRows.length) {
     document.getElementById('finishBenchList').innerHTML =
@@ -1499,7 +1509,7 @@ function renderFinishValvesAndCustomers() {
               <span class="sub-badge">${rows.length} Cyl</span>
               ${hasRush ? '<span class="rush-badge">RUSH</span>' : ''}
               ${unmarked ? `<span class="stage-chip drying">${unmarked} Need B386 Mark</span>` : ''}
-              ${onShelf ? `<span class="stage-chip ready">${onShelf} Back Room Ready</span>` : ''}
+              ${onShelf ? `<span class="stage-chip ready">${onShelf} Dock Ready</span>` : ''}
             </div>
             <div class="rec-actions" onclick="event.stopPropagation()">
               ${unmarked ? `<button class="secondary" style="background:#ede9fe;color:#5b21b6;border-color:#c4b5fd;" onclick="stageCustomerBatch('${safeC}', 'STAMPED_STICKERED', 'MARKED', true)">Mark Batch B386</button>` : ''}
@@ -1524,7 +1534,7 @@ function renderFinishValvesAndCustomers() {
         </div>
         <button class="secondary" style="background:#dcfce7;color:#166534;border-color:#86efac;" onclick="releaseValveTag(${r.id})">✓ Reinstall &amp; Free #${escHtml(r.valve_tag)}</button>
       </div>`).join('')
-    : '<div style="color:var(--muted);font-size:0.86rem;">All reusable valve &amp; HPA regulator tags are clear.</div>';
+    : '<div style="color:var(--muted);font-size:0.86rem;">All reusable valve tags are clear.</div>';
 
   const activeCusts = STATE.customers_summary.filter(c => c.ready_backroom_count || c.needs_stamp_count || c.unbilled_count);
   const shownCusts = SHOW_ALL_SHELF_CUSTS ? STATE.customers_summary : activeCusts;
@@ -1541,7 +1551,7 @@ function renderFinishValvesAndCustomers() {
                 <span>${escHtml(c.customer_name)}</span>
                 ${c.tax_exempt ? '<span class="tax-exempt-pill">Tax-Exempt</span>' : ''}
                 ${c.needs_stamp_count ? `<span class="stage-chip drying">${c.needs_stamp_count} Need B386</span>` : ''}
-                ${c.ready_backroom_count ? `<span class="stage-chip ready">${c.ready_backroom_count} Back Room Ready</span>` : ''}
+                ${c.ready_backroom_count ? `<span class="stage-chip ready">${c.ready_backroom_count} Dock Ready</span>` : ''}
                 ${c.shelf_dwell_days >= 2 ? dwellBadgeHtml(c.shelf_dwell_days, '📦') : ''}
               </div>
               <div class="rec-sub">${c.total_bottles} total • ${c.unbilled_count} unbilled • Last: ${escHtml(c.last_date)}</div>
@@ -1772,11 +1782,15 @@ async function saveAllSettings() {
     gemini_api_key: document.getElementById('apiKeyInput').value || null,
     sheets_webhook_url: document.getElementById('webhookInput').value,
     feedback_webhook_url: document.getElementById('fbWebhookInput').value,
+    alert_email: document.getElementById('editAlertEmail')?.value || '',
+    smtp_sender_email: document.getElementById('editSmtpSender')?.value || '',
+    smtp_app_password: document.getElementById('editSmtpPass')?.value || null,
     shop_pin: document.getElementById('editShopPin').value || null,
     testing_mode: document.getElementById('testingModeChk').checked,
   };
   await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   document.getElementById('apiKeyInput').value = '';
+  if (document.getElementById('editSmtpPass')) document.getElementById('editSmtpPass').value = '';
   document.getElementById('editShopPin').value = '';
   alert('Facility settings & compliance dates saved!');
   loadState(true);
@@ -1820,7 +1834,7 @@ function renderLiveFloorPlanMap() {
     ${isHidden ? '' : `
     <div class="shop-flow-grid">
       <div class="flow-zone">
-        <div class="flow-zone-hdr"><span>01 • 24/7 Back Room</span><span>Dock Door</span></div>
+        <div class="flow-zone-hdr"><span>01 • 24/7 Loading Dock</span><span>Dock Door</span></div>
         <div class="flow-spot ${dropBottles ? 'warn-load' : ''}" onclick="jumpToTab('intake')">
           <span>Incoming Drop-Offs</span>
           <span class="flow-cnt">${dropBottles} Waiting</span>
@@ -1838,7 +1852,7 @@ function renderLiveFloorPlanMap() {
           <span class="flow-cnt">${atJackets} Queued</span>
         </div>
         <div class="flow-spot ${viceTags ? 'warn-load' : ''}" onclick="jumpToTab('logs')">
-          <span>Valve &amp; Reg Tags Out</span>
+          <span>Active Valve Tags</span>
           <span class="flow-cnt">${viceTags} Active</span>
         </div>
       </div>
@@ -1972,5 +1986,23 @@ async function completeTruckRunFromOps(jobId) {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'COMPLETED' }),
   });
   refreshOpsDispatchRadar();
+  loadState(false);
+}
+
+
+async function sendTestEmailAlert() {
+  const body = {
+    sheets_webhook_url: document.getElementById('webhookInput')?.value || '',
+    alert_email: document.getElementById('editAlertEmail')?.value || '',
+    smtp_sender_email: document.getElementById('editSmtpSender')?.value || '',
+    smtp_app_password: document.getElementById('editSmtpPass')?.value || null,
+  };
+  await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (document.getElementById('editSmtpPass')) document.getElementById('editSmtpPass').value = '';
+  const res = await fetch('/api/settings/test-email', { method: 'POST' });
+  const data = await res.json();
+  if (!res.ok) { alert(data.detail || 'Test email failed.'); return; }
+  const via = data.sent_smtp ? 'Direct Gmail SMTP' : 'Google Sheets Webhook';
+  alert('Test alert email sent via ' + via + '!');
   loadState(false);
 }

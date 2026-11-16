@@ -452,6 +452,9 @@ def init_db() -> None:
         ("gemini_api_key", ""),
         ("sheets_webhook_url", ""),
         ("feedback_webhook_url", ""),
+        ("alert_email", ""),
+        ("smtp_sender_email", ""),
+        ("smtp_app_password", ""),
         ("shop_pin", "0386"),
         ("crew_pin", "0386"),
         ("session_secret", secrets.token_hex(24)),
@@ -506,6 +509,17 @@ def init_db() -> None:
             ],
         )
 
+
+    if cur.execute("SELECT COUNT(*) FROM cga_specs WHERE category='Propane';").fetchone()[0] == 0:
+        cur.executemany(
+            """INSERT INTO cga_specs (category, label, dot_spec, service_psi, test_psi, outside_dia, length_in, ree_limit)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?);""",
+            [
+                ("Propane", "20 lb–40 lb Grill / RV Propane (Visual)", "4BA", 240, 480, "12.0", "18.0", None),
+                ("Propane", "33 lb Forklift / 100 lb Propane (Visual)", "4BW", 240, 480, "14.5", "48.0", None),
+            ],
+        )
+
     cur.executemany(
         "INSERT OR IGNORE INTO pricing_rates (code, description, unit_price, notes, sort_order) VALUES (?, ?, ?, ?, ?);",
         [
@@ -513,11 +527,12 @@ def init_db() -> None:
             ("HYDRO_SCBA", "Carbon / Composite SCBA Cylinder Hydro + Visual", 0.0, "", 20),
             ("HYDRO_PAINTBALL", "Paintball / Airsoft HPA Tank Hydro + Visual", 0.0, "", 30),
             ("VISUAL_ONLY", "Annual Visual Inspection Only (No Hydro)", 0.0, "", 40),
+            ("PROPANE_VISUAL", "Propane Cylinder Visual Inspection / Requalification", 0.0, "", 42),
             ("RUSH_FEE", "Priority / Rush Turnaround Service Fee", 0.0, "", 50),
             ("NECK_ORING", "Cylinder Neck / Valve O-Ring Replacement", 0.0, "", 60),
             ("VALVE_RELIEF", "Relief / Burst Disc Assembly Replacement", 0.0, "", 70),
             ("INTERNAL_CLEAN", "Internal Cylinder Tumble / Cleaning", 0.0, "", 80),
-            ("REG_SERVICE", "Paintball HPA Regulator Removal / Reinstall", 0.0, "", 85),
+            ("REG_SERVICE", "Valve Removal / Reinstall Service", 0.0, "", 85),
             ("CONDEMNED_FEE", "Condemned / Rejected Cylinder Handling", 0.0, "", 90),
             ("TRUCK_RUN", "Regional Truck Pickup / Delivery Stop", 0.0, "", 95),
         ],
@@ -537,8 +552,8 @@ def init_db() -> None:
                 ("Valves, O-Rings & Lube", "Christo-Lube MCG 111 Oxygen-Safe Lubricant", "O2/SCBA/Scuba safe thread & O-ring grease (never petroleum)", "Amazon", "https://www.amazon.com/s?k=Christo-Lube+MCG+111+oxygen+grease", 60),
                 ("Valves, O-Rings & Lube", "Oxygen-Safe Green PTFE Thread Sealant Tape", "High-density taper thread tape for 3A/3AA steel valves", "Amazon", "https://www.amazon.com/s?k=oxygen+safe+green+ptfe+thread+tape", 70),
                 ("Valves, O-Rings & Lube", "Viton & Buna-N Cylinder Neck O-Ring Assortment", "SCBA, AL80 Scuba (-112/-210/-214) & Paintball HPA tank O-rings", "Amazon", "https://www.amazon.com/s?k=scuba+paintball+viton+neck+oring+kit", 80),
-                ("Valves, O-Rings & Lube", "HPA & CO2 Burst Disc Assortment (1.8K / 3K / 5K / 7.5K)", "Unified Paintball HPA regulator & CO2 safety relief discs", "Amazon", "https://www.amazon.com/s?k=paintball+burst+disc+1.8k+3k+5k+7.5k", 90),
-                ("Stand & Inspection", "Numbered Brass / Plastic Valve Tags (1-100) + Rings", "Reusable devalve & HPA regulator matching tags", "Amazon", "https://www.amazon.com/s?k=numbered+brass+valve+tags+with+hooks", 100),
+                ("Valves, O-Rings & Lube", "HPA & CO2 Burst Disc Assortment (1.8K / 3K / 5K / 7.5K)", "High-pressure & CO2 safety relief burst discs", "Amazon", "https://www.amazon.com/s?k=paintball+burst+disc+1.8k+3k+5k+7.5k", 90),
+                ("Stand & Inspection", "Numbered Brass / Plastic Valve Tags (1-100) + Rings", "Reusable numbered brass/plastic valve tags", "Amazon", "https://www.amazon.com/s?k=numbered+brass+valve+tags+with+hooks", 100),
                 ("Stand & Inspection", "Flexible LED Cylinder Bore Inspection Light Wand", "Slim internal corrosion/pitting inspection wand for 3AL/3AA/HPA", "Amazon", "https://www.amazon.com/s?k=cylinder+bore+inspection+light+wand+scuba", 110),
                 ("Office & Printer", "Laser Printer Toner & Sheet Protectors (3-Ring DOT Binder)", "Form 393-001 5-year DOT compliance binder archival supplies", "Amazon", "https://www.amazon.com/s?k=heavy+duty+sheet+protectors+laser+toner", 120),
             ],

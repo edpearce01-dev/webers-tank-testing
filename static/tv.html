@@ -381,9 +381,9 @@
   <div class="tv-brand-bg" id="tvBrandBg" aria-hidden="true">
     <div class="tv-crest-wrap">
       <img id="tvBgArchImg" class="tv-arch-img" alt="" hidden />
-      <img src="/static/images/logo-crest.jpg?v=12.1" alt="" class="tv-crest-img" onerror="this.src='/icon.svg'" />
+      <img src="/static/images/logo-crest.jpg?v=12.2" alt="" class="tv-crest-img" onerror="this.src='/icon.svg'" />
     </div>
-    <img id="tvBgDogsImg" src="/static/images/dogs-thanksgiving.png?v=12.1" alt="" class="tv-dogs-img" onerror="this.onerror=null;this.src='/static/images/dogs-classic.png?v=12.1';" />
+    <img id="tvBgDogsImg" src="/static/images/dogs-thanksgiving.png?v=12.2" alt="" class="tv-dogs-img" onerror="this.onerror=null;this.src='/static/images/dogs-classic.png?v=12.2';" />
   </div>
 <!-- SCREENSAVER CLOCK & DATE OVERLAY (SHOWS WHEN SHOP IS IDLE OR SAVER CLICKED) -->
   <div class="tv-screensaver-hud" id="tvScreensaverHud" aria-hidden="true">
@@ -400,7 +400,7 @@
   <!-- TV PAIRING PIN GATE -->
   <div id="tvPinGate" class="pin-gate" hidden>
     <div class="pin-box">
-      <img src="/static/images/logo-crest.png?v=12.1" alt="B386" style="width:62px;height:62px;border-radius:50%;border:2px solid var(--gold-bright);margin-bottom:8px;" />
+      <img src="/static/images/logo-crest.png?v=12.2" alt="B386" style="width:62px;height:62px;border-radius:50%;border:2px solid var(--gold-bright);margin-bottom:8px;" />
       <h3 style="margin:0;font-family:var(--font-display);font-size:1.5rem;color:var(--forest);">Testing Room TV Display</h3>
       <p style="font-size:0.83rem;color:var(--muted);margin:5px 0 0;">Enter any valid Shop PIN once to pair this TV</p>
       <input type="password" inputmode="numeric" id="tvPinInput" placeholder="••••" onkeydown="if(event.key==='Enter')unlockTv()" />
@@ -411,7 +411,7 @@
   <!-- FROSTED 1080P BROADCAST HEADER -->
   <header class="tv-hdr">
     <div class="hdr-brand">
-      <img src="/static/images/logo-crest.png?v=12.1" alt="B386" onerror="this.src='/icon.svg'" />
+      <img src="/static/images/logo-crest.png?v=12.2" alt="B386" onerror="this.src='/icon.svg'" />
       <div>
         <span class="hdr-title">Weber's Tank Testing</span>
         <span class="hdr-sub" id="hdrShiftTxt">DOT RIN B386</span>
@@ -455,7 +455,7 @@
   <main class="tv-stage" id="tvStage">
     <div class="score-row">
       <div class="s-tile" id="tileDoor">
-        <div><small>Back Room • Door</small><strong id="scDoor">0</strong></div>
+        <div><small>Loading Dock • Drop</small><strong id="scDoor">0</strong></div>
         <div class="s-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg></div>
       </div>
       <div class="s-tile" id="tileQueue">
@@ -475,7 +475,7 @@
         <div class="s-ico" style="color:var(--gold);"><svg class="ico" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><circle cx="7" cy="7" r="1.5"/></svg></div>
       </div>
       <div class="s-tile">
-        <div><small>Back Room Pickup</small><strong id="scShelf" style="color:var(--blue);">0</strong></div>
+        <div><small>Loading Dock Pickup</small><strong id="scShelf" style="color:var(--blue);">0</strong></div>
         <div class="s-ico" style="color:var(--blue);"><svg class="ico" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div>
       </div>
     </div>
@@ -503,11 +503,11 @@
 
       <div class="col-stack">
         <div class="panel" id="doorPanel" style="flex:0.8;border-color:rgba(217,119,6,0.45);" hidden>
-          <div class="panel-hdr" style="color:#92400e;"><span>24/7 Back Room Check-Ins Waiting</span><span id="doorCnt">0</span></div>
+          <div class="panel-hdr" style="color:#92400e;"><span>24/7 Loading Dock Check-Ins</span><span id="doorCnt">0</span></div>
           <div class="panel-body" id="doorList"></div>
         </div>
         <div class="panel" style="flex:1;">
-          <div class="panel-hdr"><span>Active Valve &amp; Regulator Tags</span><span id="tagCnt">0 Out</span></div>
+          <div class="panel-hdr"><span>Active Valve Tags</span><span id="tagCnt">0 Out</span></div>
           <div class="panel-body"><div class="tags-wrap" id="tagsGrid"></div></div>
         </div>
         <div class="panel" style="flex:0.9;">
@@ -716,7 +716,7 @@
         } else {
           if (ssBadge) ssBadge.hidden = true;
           if (archImg) archImg.hidden = true;
-          if (dogsImg) { dogsImg.src = '/static/images/dogs-classic.png?v=12.1'; dogsImg.classList.remove('photo-fallback'); }
+          if (dogsImg) { dogsImg.src = '/static/images/dogs-classic.png?v=12.2'; dogsImg.classList.remove('photo-fallback'); }
         }
       } catch (_) {}
     }
@@ -934,6 +934,6 @@ function playChime() {
     setInterval(pollTv, 3500);
     setInterval(syncTvBackgroundArtwork, 20000);
   </script>
-  <script src="/static/theme-engine.js?v=12.1"></script>
+  <script src="/static/theme-engine.js?v=12.2"></script>
 </body>
 </html>

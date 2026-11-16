@@ -7,14 +7,14 @@
   <link rel="manifest" href="/manifest.json" />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/ops.css?v=12.1" />
+  <link rel="stylesheet" href="/static/ops.css?v=12.2" />
   <title>Weber's Tank Testing — Office, Rolodex, Printouts &amp; Supplies | RIN B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=12.1" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
+      <img src="/static/images/logo-crest.png?v=12.2" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Office &amp; Print Center</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter your Individual PIN (Access resets daily at Midnight)</p>
       <div style="text-align:left;">
@@ -32,7 +32,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=12.1" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=12.2" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>OFFICE &amp; PRINT</h1>
           <small>RIN B386 • Billing, Rolodex &amp; Supply</small>
@@ -155,6 +155,7 @@
                   <button type="button" class="tank-chip" onclick="bumpQsTank('4500# SCBA', 5)">+5 SCBA</button>
                   <button type="button" class="tank-chip" onclick="bumpQsTank('Paintball HPA', 1)">+1 HPA</button>
                   <button type="button" class="tank-chip" onclick="bumpQsTank('Scuba', 1)">+1 Scuba</button>
+                  <button type="button" class="tank-chip" onclick="bumpQsTank('Propane Visual', 1)">+1 Propane</button>
                   <button type="button" class="tank-chip" onclick="bumpQsTank('CO2', 1)">+1 CO2</button>
                   <button type="button" class="tank-chip" onclick="bumpQsTank('Medical O2', 1)">+1 Med O2</button>
                   <button type="button" class="tank-chip" onclick="bumpQsTank('Welding/Ind', 1)">+1 Weld/Ind</button>
@@ -174,7 +175,7 @@
               <div style="margin-top:12px;">
                 <label>3. Drop-Off or Pickup Method</label>
                 <div class="pill-selector-bar" id="qsArriveBar" style="margin-bottom:8px;">
-                  <button type="button" class="tap-pill active" data-mode="BACKROOM" onclick="setQsArrive('BACKROOM')">🚪 24/7 Backroom Drop</button>
+                  <button type="button" class="tap-pill active" data-mode="BACKROOM" onclick="setQsArrive('BACKROOM')">🚪 24/7 Loading Dock Drop</button>
                   <button type="button" class="tap-pill" data-mode="SHOP_BATCH" onclick="setQsArrive('SHOP_BATCH')">📌 Scheduled Shop Drop</button>
                   <button type="button" class="tap-pill" style="background:#fffbeb;border-color:#f59e0b;color:#92400e;" onclick="switchOfficeTab('dispatch')">🚚 Switch to Truck Run →</button>
                 </div>
@@ -205,7 +206,7 @@
                 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:10px;padding:9px 12px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;">
                   <label class="inline-check" style="color:#991b1b;margin:0;">
                     <input type="checkbox" id="qsRush" onchange="applyQsQuoteDates()" />
-                    <span>🔥 <strong>Paid Rush Turnaround</strong> <small id="qsRushDateHint"></small></span>
+                    <span>🔥 <strong>Paid Rush Turnaround (Max 12 Cyl)</strong> <small id="qsRushDateHint"></small></span>
                   </label>
                   <small style="font-weight:800;color:#166534;" id="qsStdDateHint">Std Ready: —</small>
                 </div>
@@ -327,7 +328,7 @@
               <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:10px;padding:9px 12px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;">
                 <label class="inline-check" style="color:#991b1b;margin:0;">
                   <input type="checkbox" id="tdRush" onchange="applyTdQuoteDates()" />
-                  <span>🔥 <strong>Priority / Paid Rush Turnaround</strong> <small id="tdRushHint"></small></span>
+                  <span>🔥 <strong>Priority / Paid Rush Turnaround (Max 12 Cyl)</strong> <small id="tdRushHint"></small></span>
                 </label>
                 <small style="font-weight:800;color:#166534;" id="tdStdHint">Std Return: —</small>
               </div>
@@ -577,7 +578,7 @@
 
               <div class="card" style="border-left:4px solid #10b981;">
                 <div class="card-hdr">
-                  <h3>🏷️ Back Room Pickup Slip (Loading Dock)</h3>
+                  <h3>🏷️ Loading Dock Pickup Slip</h3>
                   <span class="sub-badge">Tape to Lead Tank</span>
                 </div>
                 <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
@@ -1045,11 +1046,11 @@
 
       let msg = '';
       if (QS_ARRIVE === 'BACKROOM') {
-        msg = `Got you on the board for ${escHtml(tankPhrase)}, ${escHtml(cust)}. Drop them in our 24/7 backroom at 3086 Legionville Rd anytime — just scan the door QR and tap Backroom Drop-Off. Estimated${isRush ? ' RUSH' : ''} ready date is ~${escHtml(readyLbl)} (testing only — returned clean, dry & empty). We will text ${escHtml(ph)} the second they hit the pickup shelf!`;
+        msg = `Got you on the board for ${escHtml(tankPhrase)}, ${escHtml(cust)}. Drop them at our 24/7 Loading Dock at 3086 Legionville Rd anytime — just scan the dock QR sign and tap Loading Dock Drop-Off. Estimated${isRush ? ' RUSH' : ''} ready date is ~${escHtml(readyLbl)} (testing only — returned clean, dry & empty). We will text ${escHtml(ph)} the second they hit the pickup shelf!`;
       } else if (QS_ARRIVE === 'ROAD_PICKUP') {
         msg = `Got you scheduled for a pickup of ${escHtml(tankPhrase)} on ${escHtml(dVal)} at ${escHtml(addr)}. Estimated${isRush ? ' RUSH' : ''} ready date is ~${escHtml(readyLbl)} (testing only, returned dry & empty). We will text ${escHtml(ph)} when complete!`;
       } else {
-        msg = `Got you down to drop off ${escHtml(tankPhrase)} on ${escHtml(dVal)} at 3086 Legionville Rd (Mon/Fri 9–4, Tue–Thu 9–2, or 24/7 backroom anytime). Estimated${isRush ? ' RUSH' : ''} ready date is ~${escHtml(readyLbl)} (testing only, no refills). We will text ${escHtml(ph)} as soon as they are ready!`;
+        msg = `Got you down to drop off ${escHtml(tankPhrase)} on ${escHtml(dVal)} at 3086 Legionville Rd (Mon/Fri 9–4, Tue–Thu 9–2, or 24/7 Loading Dock anytime). Estimated${isRush ? ' RUSH' : ''} ready date is ~${escHtml(readyLbl)} (testing only, no refills). We will text ${escHtml(ph)} as soon as they are ready!`;
       }
       const box = document.getElementById('qsScriptBox');
       if (box) box.innerHTML = msg;
@@ -1118,6 +1119,7 @@
       const summary = document.getElementById('qsSummary').value.trim();
       const addr = document.getElementById('qsAddress').value.trim();
 
+      if (isRush && cnt > 12 && !confirm('Paid Rush has a 12-cylinder limit (' + cnt + ' entered). Override limit for this call?')) return;
       if (!cust || phone.replace(/\D/g, '').length < 10) {
         alert('Enter Caller/Dept Name and a 10-digit Phone Number so Ready texts work.');
         return;
@@ -1173,7 +1175,7 @@
 
         if (sendSmsAfter) {
           const digits = phone.replace(/\D/g, '');
-          const smsTxt = `Weber's Tank Testing (RIN B386): Got you down for ${cnt} cylinder(s)${summary ? ' (' + summary + ')' : ''}. ${QS_ARRIVE === 'ROAD_PICKUP' ? 'Scheduled pickup: ' + schedDate + '.' : 'Drop off anytime in our 24/7 backroom at 3086 Legionville Rd, Baden PA 15005.'} Est ready: ~${dueDate} (testing only - returned clean, dry & empty). Questions? 724-266-8008.`;
+          const smsTxt = `Weber's Tank Testing: Got you down for ${cnt} cylinder(s)${summary ? ' (' + summary + ')' : ''}. ${QS_ARRIVE === 'ROAD_PICKUP' ? 'Scheduled pickup: ' + schedDate + '.' : 'Drop off anytime at our 24/7 Loading Dock at 3086 Legionville Rd, Baden PA 15005.'} Est ready: ~${dueDate} (testing only - returned clean, dry & empty). Questions? 724-266-8008.`;
           const sep = /iPad|iPhone|iPod/i.test(navigator.userAgent) ? '&' : '?';
           window.location.href = `sms:${digits}${sep}body=${encodeURIComponent(smsTxt)}`;
         }
@@ -1341,6 +1343,7 @@
       const dueDate = document.getElementById('tdDueDate').value || schedDate;
       const summary = document.getElementById('tdSummary').value.trim();
 
+      if (isRush && cnt > 12 && !confirm('Paid Rush has a 12-cylinder limit (' + cnt + ' entered). Override limit for this truck run?')) return;
       if (!cust || !contact || phone.replace(/\D/g, '').length < 10 || addr.length < 5) {
         alert('Enter Dept/Company Name, Contact Name, 10-Digit Phone, and Street Address.');
         return;
@@ -1383,7 +1386,7 @@
 
         if (sendSmsAfter) {
           const digits = phone.replace(/\D/g, '');
-          const smsTxt = `Weber's Tank Testing (RIN B386): Confirmed truck ${TD_MODE === 'ROAD_DELIVERY' ? 'delivery' : 'pickup'} for ${cust} (${cnt} cyl) at ${addr} on ${schedDate}. Est return/ready: ~${dueDate} (testing only - returned clean, dry & empty). Questions? 724-266-8008.`;
+          const smsTxt = `Weber's Tank Testing: Confirmed truck ${TD_MODE === 'ROAD_DELIVERY' ? 'delivery' : 'pickup'} for ${cust} (${cnt} cyl) at ${addr} on ${schedDate}. Est return/ready: ~${dueDate} (testing only - returned clean, dry & empty). Questions? 724-266-8008.`;
           const sep = /iPad|iPhone|iPod/i.test(navigator.userAgent) ? '&' : '?';
           window.location.href = `sms:${digits}${sep}body=${encodeURIComponent(smsTxt)}`;
         }
@@ -1410,6 +1413,7 @@
       HYDRO_SCBA: 'Carbon SCBA Hydro',
       HYDRO_PAINTBALL: 'Paintball HPA Hydro',
       VISUAL_ONLY: 'Visual Insp Only',
+      PROPANE_VISUAL: 'Propane Visual',
       RUSH_FEE: 'Rush Service Fee',
       NECK_ORING: 'Neck O-Ring',
       VALVE_RELIEF: 'Burst Disc / Relief',
@@ -1532,7 +1536,8 @@
         const isPb = isPaintballCylinder(r);
         const isSp = (r.dot_spec || '').startsWith('SP') || (r.dot_spec || '').startsWith('E-');
         const pbRate = getRate('HYDRO_PAINTBALL');
-        const code = r.service_mode === 'VISUAL_ONLY' ? 'VISUAL_ONLY' : (isPb && pbRate > 0 ? 'HYDRO_PAINTBALL' : (isSp ? 'HYDRO_SCBA' : 'HYDRO_STD'));
+        const isProp = r.gas_service === 'LPG' || (r.dot_spec || '').startsWith('4B');
+        const code = r.service_mode === 'VISUAL_ONLY' ? (isProp && getRate('PROPANE_VISUAL') > 0 ? 'PROPANE_VISUAL' : 'VISUAL_ONLY') : (isPb && pbRate > 0 ? 'HYDRO_PAINTBALL' : (isSp ? 'HYDRO_SCBA' : 'HYDRO_STD'));
         DRAFT_ITEMS.push({
           record_id: r.id,
           description: `SN ${r.serial_number} (${r.dot_spec}-${r.service_psi} ${r.gas_service}) - ${r.service_mode === 'VISUAL_ONLY' ? 'Visual Insp' : (isPb ? 'HPA Hydro' : 'Hydro + Visual')} [${r.hydro_disposition}]`,
@@ -1636,7 +1641,7 @@
       let ph = (phone || '').trim() || prompt(`Enter cell phone number for ${custName}:`, '') || '';
       if (!ph.trim()) return;
       const cleanDigits = ph.replace(/\D/g, '');
-      const msg = `Weber's Tank Testing (RIN B386): Hi ${custName}, your ${count} cylinder(s) are tested, stamped/labeled, and ready in our 24/7 Back Room pickup area (Loading Dock door) at 3086 Legionville Rd${invExtra ? ' (' + invExtra + ')' : ''}. Questions? Call/text ${STATE.shop_phone || '724-266-8008'}.`;
+      const msg = `Weber's Tank Testing: Hi ${custName}, your ${count} cylinder(s) are tested, stamped/labeled, and staged for pickup at our 24/7 Loading Dock at 3086 Legionville Rd${invExtra ? ' (' + invExtra + ')' : ''}. Questions? Call/text ${STATE.shop_phone || '724-266-8008'}.`;
       const sep = /iPad|iPhone|iPod/i.test(navigator.userAgent) ? '&' : '?';
       window.location.href = `sms:${cleanDigits}${sep}body=${encodeURIComponent(msg)}`;
     }
@@ -1810,7 +1815,7 @@
       let ph = (phone || '').trim() || prompt(`Enter cell phone for ${custName}:`, '') || '';
       if (!ph.trim()) return;
       const digits = ph.replace(/\D/g, '');
-      const msg = `Weber's Tank Testing (RIN B386): Friendly reminder for ${custName} — cylinder SN ${sn} (${spec}) is due for its ${cycleLbl} around ${dueLbl}. Drop off 24/7 at 3086 Legionville Rd, Baden or call/text ${STATE.shop_phone || '724-266-8008'}.`;
+      const msg = `Weber's Tank Testing: Friendly reminder for ${custName} — cylinder SN ${sn} (${spec}) is due for its ${cycleLbl} around ${dueLbl}. Drop off 24/7 at 3086 Legionville Rd, Baden or call/text ${STATE.shop_phone || '724-266-8008'}.`;
       const sep = /iPad|iPhone|iPod/i.test(navigator.userAgent) ? '&' : '?';
       window.location.href = `sms:${digits}${sep}body=${encodeURIComponent(msg)}`;
     }
@@ -2023,8 +2028,8 @@
 
     bootOffice();
   </script>
-  <script src="/static/day-flow.js?v=12.1"></script>
-  <script src="/static/theme-engine.js?v=12.1"></script>
-  <script src="/static/help-bot.js?v=12.1"></script>
+  <script src="/static/day-flow.js?v=12.2"></script>
+  <script src="/static/theme-engine.js?v=12.2"></script>
+  <script src="/static/help-bot.js?v=12.2"></script>
 </body>
 </html>

@@ -52,15 +52,15 @@ SHIFT_MODES = {
     "FULL_HYDRO": {"label": "🟢 Full Hydro & Prep Window", "default_cap": 24},
     "PREP_ONLY": {"label": "🔧 Prep, Devalve & Drop-Off Only", "default_cap": 0},
     "ROAD_RUN": {"label": "🚚 Road Pickup / Delivery & Partial Hydro", "default_cap": 10},
-    "BACKROOM_ONLY": {"label": "🚪 24/7 Backroom Self-Drop Only", "default_cap": 0},
+    "BACKROOM_ONLY": {"label": "🚪 24/7 Loading Dock Self-Drop Only", "default_cap": 0},
 }
 
 HOLDING_ZONES = {
-    "ZONE_A_BACKROOM": "24/7 Back Room • Drop-Off",
+    "ZONE_A_BACKROOM": "Loading Dock • Drop-Off",
     "ZONE_B_DEVALVE": "Stamp & Valve Bench",
     "ZONE_C_READY_RACK": "Test Room • Ready Rack",
     "ZONE_D_DRY_STAMP": "Main Bay • Drying Rack",
-    "ZONE_E_PICKUP_SHELF": "24/7 Back Room • Pickup",
+    "ZONE_E_PICKUP_SHELF": "Loading Dock • Pickup",
     "OUTBOUND_TRUCK": "🚚 Staged for Truck Delivery",
     "PICKED_UP": "✓ Released / Delivered",
 }
@@ -78,6 +78,11 @@ GAS_CODE_MAP = {
     "MEDICAL OXYGEN": "O2",
     "UN1013": "CO2",
     "CARBON DIOXIDE": "CO2",
+    "PROPANE": "LPG",
+    "LPG": "LPG",
+    "LP GAS": "LPG",
+    "UN1075": "LPG",
+    "UN1978": "LPG",
     "UN1066": "N2",
     "NITROGEN": "N2",
     "UN1006": "AR",
@@ -89,6 +94,7 @@ GAS_CODE_MAP = {
     "75/25": "AR/CO2",
 }
 
+MAX_RUSH_BOTTLES = 12
 DEPT_KEYWORDS = ("VFD", " FD", "FIRE", "EMS", "AMBULANCE", "RESCUE", "BORO", "TOWNSHIP", "TWP", "MUNICIPAL")
 
 
@@ -645,6 +651,8 @@ def calculate_turnaround_quote(conn, requested_bottles: int = 1) -> dict:
         "rush_backlog_bottles": rush_backlog,
         "rush_promise_date": rush_ready.isoformat(),
         "rush_promise_label": rush_ready.strftime("%a, %b %d"),
+        "rush_max_bottles": MAX_RUSH_BOTTLES,
+        "rush_eligible": req <= MAX_RUSH_BOTTLES,
         "standard_promise_date": std_ready.isoformat(),
         "standard_promise_label": std_ready.strftime("%a, %b %d"),
         "next_hydro_windows": upcoming_hydro_days[:5],
@@ -812,28 +820,132 @@ async def run_guarded_sheets_sync() -> dict:
 
 
 
-def send_ticket_email_via_webhook(ticket_info: dict) -> None:
-    """Sends instant customer email receipt + shop alert via the Google Apps Script webhook."""
-    try:
-        conn = get_conn()
-        row = conn.execute("SELECT value FROM settings WHERE key='sheets_webhook_url';").fetchone()
-        conn.close()
-        webhook_url = (row["value"] if row else "").strip()
-        if not webhook_url:
-            return
-        payload_bytes = json.dumps({"action": "dropoff_receipt_email", "ticket": ticket_info}).encode("utf-8")
-        req = urllib.request.Request(
-            webhook_url,
-            data=payload_bytes,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        ctx = ssl.create_default_context()
-        with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
-            _ = resp.read()
-    except Exception:
-        pass
+def send_ticket_email_via_webhook(ticket_info: dict, force_test: bool = False) -> dict:
+    """Sends shop email notification to Ryan (via Gmail SMTP and/or Google Apps Script webhook) + customer receipt."""
+    import smtplib
+    from email.message import EmailMessage
 
+    conn = get_conn()
+    s_map = {
+        r["key"]: r["value"]
+        for r in conn.execute(
+            "SELECT key, value FROM settings WHERE key IN ('sheets_webhook_url', 'alert_email', 'smtp_sender_email', 'smtp_app_password');"
+        ).fetchall()
+    }
+    conn.close()
+
+    webhook_url = (s_map.get("sheets_webhook_url") or "").strip()
+    alert_to = (os.getenv("WEBER_ALERT_EMAIL") or s_map.get("alert_email") or "").strip()
+    smtp_user = (os.getenv("WEBER_SMTP_USER") or s_map.get("smtp_sender_email") or "").strip()
+    smtp_pass = (os.getenv("WEBER_SMTP_PASS") or s_map.get("smtp_app_password") or "").replace(" ", "").strip()
+
+    etype = (ticket_info.get("entry_type") or "DROPOFF").upper()
+    t_no = ticket_info.get("ticket_no") or "BR-TEST"
+    cust = ticket_info.get("customer_name") or "Test Customer"
+    cnt = ticket_info.get("bottle_count") or 4
+    ph = ticket_info.get("customer_phone") or "724-266-8008"
+    rush_flag = "🔥 RUSH " if ticket_info.get("rush_requested") else ""
+    svc = ticket_info.get("service_requested") or "Hydro + Visual"
+    summary = ticket_info.get("tank_summary") or ""
+    addr = ticket_info.get("pickup_address") or ""
+
+    if force_test:
+        subj = "[WEBER'S ALERT TEST] Loading Dock & Truck Email Alerts Active"
+        body_txt = (
+            "Weber's Tank Testing — Shop Email Alerts Connected!\n\n"
+            "Whenever a customer submits a 24/7 Loading Dock Drop-Off, Loading Dock Pick-Up, or Truck Request "
+            "on weberstanktesting.com, an instant summary email will arrive at this address.\n\n"
+            "Tip: In Gmail/Apple Mail on your phone, you can set a custom notification chime or VIP filter "
+            "for '[WEBER'S' if you want audible alerts during shop hours.\n\n"
+            "Open Shop Ops: https://ops.weberstanktesting.com/ops"
+        )
+    else:
+        kind_lbl = "TRUCK REQUEST" if etype == "TRUCK_REQUEST" else ("DOCK PICK-UP" if etype == "PICKUP_NOTICE" else "DOCK DROP-OFF")
+        subj = f"[WEBER'S {kind_lbl}] {rush_flag}{t_no} — {cust} ({cnt} Cyl)"
+        lines = [
+            f"New {kind_lbl} logged on weberstanktesting.com:",
+            f"--------------------------------------------------",
+            f"Ticket #:        {t_no}" + ("  [PAID RUSH]" if ticket_info.get("rush_requested") else ""),
+            f"Customer / Dept: {cust}",
+        ]
+        if ticket_info.get("contact_person"):
+            lines.append(f"Contact / By:    {ticket_info['contact_person']}")
+        lines.append(f"Phone:           {ph}")
+        if ticket_info.get("customer_email"):
+            lines.append(f"Customer Email:  {ticket_info['customer_email']}")
+        if addr:
+            lines.append(f"Address:         {addr}")
+        if ticket_info.get("preferred_date"):
+            lines.append(f"Preferred Date:  {ticket_info['preferred_date']}")
+        lines.append(f"Cylinders:       {cnt} cylinder(s) — {svc}")
+        if summary:
+            lines.append(f"Tank Notes:      {summary}")
+        if ticket_info.get("estimated_ready"):
+            lines.append(f"Est. Ready:      {ticket_info['estimated_ready']}")
+        lines.append("")
+        lines.append("Open Shop Ops:   https://ops.weberstanktesting.com/ops")
+        body_txt = "\n".join(lines)
+
+    res_info = {"sent_smtp": False, "sent_webhook": False, "detail": ""}
+
+    # Channel 1: Direct Gmail SMTP (allows dedicated sender account for custom phone notification rules!)
+    if smtp_user and smtp_pass and alert_to:
+        try:
+            msg = EmailMessage()
+            msg["Subject"] = subj
+            msg["From"] = f"Weber's Dock Alerts <{smtp_user}>"
+            msg["To"] = alert_to
+            msg.set_content(body_txt)
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=14) as s:
+                s.login(smtp_user, smtp_pass)
+                s.send_message(msg)
+                cust_em = (ticket_info.get("customer_email") or "").strip()
+                if not force_test and cust_em and "@" in cust_em:
+                    cmsg = EmailMessage()
+                    cmsg["Subject"] = f"Weber's Tank Testing Ticket {t_no} ({cnt} Cyl)"
+                    cmsg["From"] = f"Weber's Tank Testing <{smtp_user}>"
+                    cmsg["To"] = cust_em
+                    cmsg.set_content(
+                        f"Thank you for checking in with Weber's Tank Testing (3086 Legionville Rd, Baden, PA).\n\n"
+                        f"Ticket #: {t_no}\nCylinders: {cnt} ({svc})\n"
+                        f"Estimated Ready: {ticket_info.get('estimated_ready') or 'Pending Schedule'}\n\n"
+                        f"Track Status: {ticket_info.get('track_url', 'https://weberstanktesting.com/#tracker')}\n"
+                        f"Ticket PDF: {ticket_info.get('pdf_url', '')}\n"
+                        f"Questions? Call or text 724-266-8008."
+                    )
+                    s.send_message(cmsg)
+            res_info["sent_smtp"] = True
+        except Exception as exc:
+            res_info["detail"] = f"Gmail SMTP error: {exc}"
+
+    # Channel 2: Google Sheets Apps Script Webhook
+    if webhook_url:
+        try:
+            enriched_ticket = {**ticket_info, "shop_alert_email": alert_to, "alert_subject": subj, "alert_body": body_txt}
+            payload_bytes = json.dumps({
+                "action": "test_alert_email" if force_test else "dropoff_receipt_email",
+                "shop_alert_email": alert_to,
+                "subject": subj,
+                "body": body_txt,
+                "ticket": enriched_ticket,
+            }).encode("utf-8")
+            req = urllib.request.Request(
+                webhook_url,
+                data=payload_bytes,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            ctx = ssl.create_default_context()
+            with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
+                _ = resp.read()
+            res_info["sent_webhook"] = True
+        except Exception as exc:
+            if not res_info["detail"]:
+                res_info["detail"] = f"Webhook error: {exc}"
+
+    if not res_info["sent_smtp"] and not res_info["sent_webhook"] and not res_info["detail"]:
+        res_info["detail"] = "Enter Ryan's Alert Email + either a Google Sheets Webhook URL or Sender Gmail + App Password first."
+    return res_info
 
 def trigger_ticket_email_bg(ticket_info: dict) -> None:
     try:
@@ -1122,6 +1234,9 @@ class SettingsInput(BaseModel):
     gemini_api_key: Optional[str] = None
     sheets_webhook_url: Optional[str] = None
     feedback_webhook_url: Optional[str] = None
+    alert_email: Optional[str] = None
+    smtp_sender_email: Optional[str] = None
+    smtp_app_password: Optional[str] = None
     shop_pin: Optional[str] = None
     testing_mode: Optional[bool] = None
 
@@ -1545,6 +1660,8 @@ def get_public_turnaround(bottles: int = 4):
     return {
         "standard_ready_label": q["standard_promise_label"],
         "rush_ready_label": q["rush_promise_label"],
+        "rush_max_bottles": MAX_RUSH_BOTTLES,
+        "rush_eligible": bottles <= MAX_RUSH_BOTTLES,
     }
 
 
@@ -1592,16 +1709,16 @@ def track_public_ticket(ticket: str = "", phone_last4: str = ""):
         stage_label = "Picked Up / Completed"
         step_num = 5
     elif ready_shelf >= expected and expected > 0:
-        stage_label = "Certified & Ready in 24/7 Back Room (Loading Dock)"
+        stage_label = "Certified & Ready for 24/7 Loading Dock Pickup"
         step_num = 4
     elif tested > 0:
-        stage_label = f"Hydro Testing & B386 Marking ({tested}/{expected} Tested)"
+        stage_label = f"Hydro Testing & Certification ({tested}/{expected} Tested)"
         step_num = 3
     elif scanned > 0:
         stage_label = f"Checked In & Prepped for Stand ({scanned}/{expected} Logged)"
         step_num = 2
     else:
-        stage_label = "Logged in Backroom Drop-Off Queue"
+        stage_label = "Logged in Loading Dock Drop-Off Queue"
         step_num = 1
 
     return {
@@ -1677,6 +1794,8 @@ def submit_public_dropoff(payload: PublicDropoffInput):
 
     svc_txt = payload.service_requested.strip()[:60] or "Hydro + Visual"
     is_rush = 1 if (payload.rush_requested or "RUSH" in svc_txt.upper()) else 0
+    if is_rush and cnt > MAX_RUSH_BOTTLES:
+        raise HTTPException(400, f"Paid Rush Service is limited to {MAX_RUSH_BOTTLES} cylinders maximum. Uncheck Paid Rush for batches over {MAX_RUSH_BOTTLES} cylinders or call 724-266-8008.")
     acct = (payload.account_type or "WALK_IN").strip().upper()
     po_st = payload.po_station.strip()[:60]
     contact_p = payload.contact_person.strip()[:60]
@@ -1798,12 +1917,13 @@ def submit_public_dropoff(payload: PublicDropoffInput):
     ticket_code = f"BR-{did:04d}"
     last4 = ph_digits[-4:] if len(ph_digits) >= 4 else ""
     receipt_pdf_path = f"/api/public/receipt/{ticket_code}.pdf?p={last4}"
-    if em_clean or etype in ("DROPOFF", "TRUCK_REQUEST"):
+    if em_clean or etype in ("DROPOFF", "TRUCK_REQUEST", "PICKUP_NOTICE"):
         trigger_ticket_email_bg({
             "ticket_no": ticket_code,
             "entry_type": etype,
             "customer_name": cust,
-            "contact_person": contact_p,
+            "contact_person": picked_by or contact_p,
+            "service_requested": svc_txt,
             "customer_phone": ph_clean,
             "customer_email": em_clean,
             "pickup_address": addr_clean,
@@ -2422,6 +2542,9 @@ def ops_live_state(work_date: Optional[str] = None):
         "has_sheets_webhook": has_webhook,
         "sheets_webhook_url": s_map.get("sheets_webhook_url", ""),
         "feedback_webhook_url": s_map.get("feedback_webhook_url", ""),
+        "alert_email": s_map.get("alert_email", ""),
+        "smtp_sender_email": s_map.get("smtp_sender_email", ""),
+        "has_smtp_password": bool(os.getenv("WEBER_SMTP_PASS") or s_map.get("smtp_app_password")),
         "binder_state": binder_state,
         "huddle": {
             "selected_day_plan": selected_day_plan,
@@ -2663,6 +2786,9 @@ def bootstrap(work_date: Optional[str] = None, cal_year: Optional[int] = None, c
         "has_sheets_webhook": has_webhook,
         "sheets_webhook_url": s_map.get("sheets_webhook_url", ""),
         "feedback_webhook_url": s_map.get("feedback_webhook_url", ""),
+        "alert_email": s_map.get("alert_email", ""),
+        "smtp_sender_email": s_map.get("smtp_sender_email", ""),
+        "has_smtp_password": bool(os.getenv("WEBER_SMTP_PASS") or s_map.get("smtp_app_password")),
         "binder_state": binder_state,
         "huddle": {
             "selected_day_plan": selected_day_plan,
@@ -2719,6 +2845,16 @@ async def admin_wipe_test_data(request: Request, wipe_customers: bool = False):
     return {"wiped": True, "sheets_wiped": sheets_wiped}
 
 
+
+@app.post("/api/settings/test-email")
+async def trigger_test_shop_email(request: Request):
+    require_owner_or_admin(request)
+    res = await asyncio.to_thread(send_ticket_email_via_webhook, {}, True)
+    if not res.get("sent_smtp") and not res.get("sent_webhook"):
+        raise HTTPException(400, res.get("detail") or "Could not send test email.")
+    return res
+
+
 @app.post("/api/settings")
 def update_settings(payload: SettingsInput, request: Request):
     require_owner_or_admin(request)
@@ -2747,6 +2883,12 @@ def update_settings(payload: SettingsInput, request: Request):
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('sheets_webhook_url', ?);", (payload.sheets_webhook_url.strip(),))
     if payload.feedback_webhook_url is not None:
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('feedback_webhook_url', ?);", (payload.feedback_webhook_url.strip(),))
+    if payload.alert_email is not None:
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('alert_email', ?);", (payload.alert_email.strip(),))
+    if payload.smtp_sender_email is not None:
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('smtp_sender_email', ?);", (payload.smtp_sender_email.strip(),))
+    if payload.smtp_app_password is not None and payload.smtp_app_password.strip():
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('smtp_app_password', ?);", (payload.smtp_app_password.strip(),))
     if payload.testing_mode is not None:
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('testing_mode', ?);", ("1" if payload.testing_mode else "0",))
     return JSONResponse({"saved": True})
@@ -4154,7 +4296,7 @@ EXACT SYSTEM MAP & RULES:
 1. PUBLIC SITE (weberstanktesting.com):
    - Has 3 buttons under #dropoff: '📥 BACKROOM DROP-OFF' (captures Name, Contact, Phone, Email, Billing/Mailing Address, Bottle Count & Types), '✅ BACKROOM PICK-UP', and '🚚 TRUCK PICKUP & DELIVERY'.
    - Issues a digital BR-XXXX ticket card + downloadable PDF receipt + live 5-step tracker. Every address & email auto-saves to the Customer Rolodex for billing, newsletters, and 5-year re-cert notices.
-   - TESTING FACILITY ONLY: Weber's NEVER refills cylinders. Passing tanks return clean, heated-air dried, revalved, and depressurized.
+   - TESTING FACILITY ONLY: Weber's NEVER refills cylinders. Passing tanks return clean, thoroughly dried, revalved, and depressurized.
 2. SHOP OPS (/ops — 4 Stations on Left Menu):
    - '1. Start & Cal': Shows active 12-row Form 393-001 Retest Sheet # (assigns ONLY when a hydro test completes, never when queued). Calibrates Short Jacket (usually 3000 PSI -> covers test PSI up to 3500#) and Tall Jacket (Method B +-1.0% with Master Cyl 1SF11904). Official DOT PDFs always sign off under Ryan Pearce (RP).
    - '2. Prep & Scan': Import waiting 24/7 Backroom Door batches or Scheduled jobs via 'Lock & Scan Batch'. Turn ON 'Lock Batch Specs' for multi-bottle batches so specs stay locked while Serial # and random Valve Tag # reset blank after each bottle.
@@ -4892,7 +5034,7 @@ HOLIDAY_CATALOG = {
         "garland": "gold_lights",
         "dog_image": "dogs-newyear.jpg",
         "accent": "#d97706",
-        "dog_msg": "🐾 Happy New Year from Pongo, Zeke & Pierce! Starting the year fresh — drop off 24/7 in our Back Room via the Loading Dock!",
+        "dog_msg": "🐾 Happy New Year from Pongo, Zeke & Pierce! Starting the year fresh — drop off 24/7 at our 24/7 Loading Dock!",
     },
     "VALENTINES": {
         "name": "Valentine's Day",
@@ -4901,7 +5043,7 @@ HOLIDAY_CATALOG = {
         "garland": "warm_pink_lights",
         "dog_image": "dogs-valentines.jpg",
         "accent": "#e11d48",
-        "dog_msg": "🐾 Sending puppy love from Pongo, Zeke & Pierce! Show your cylinders some love — 24/7 Back Room drop-off is always open!",
+        "dog_msg": "🐾 Sending puppy love from Pongo, Zeke & Pierce! Show your cylinders some love — 24/7 Loading Dock drop-off is always open!",
     },
     "ST_PATRICKS": {
         "name": "St. Patrick's Day",
@@ -4910,7 +5052,7 @@ HOLIDAY_CATALOG = {
         "garland": "emerald_lights",
         "dog_image": "dogs-stpatricks.jpg",
         "accent": "#16a34a",
-        "dog_msg": "🐾 Don't rely on luck with high-pressure tanks! Pongo, Zeke & Pierce have our 24/7 Baden Back Room ready for your drop-offs!",
+        "dog_msg": "🐾 Don't rely on luck with high-pressure tanks! Pongo, Zeke & Pierce have our 24/7 Baden Loading Dock ready for your drop-offs!",
     },
     "EASTER": {
         "name": "Easter",
@@ -4928,7 +5070,7 @@ HOLIDAY_CATALOG = {
         "garland": "patriotic_lights",
         "dog_image": "dogs-patriotic.jpg",
         "accent": "#dc2626",
-        "dog_msg": "🐾 Remembering & honoring those who served. From Pongo, Zeke, Pierce & the Weber's crew — 24/7 Back Room drop-off stays open all weekend!",
+        "dog_msg": "🐾 Remembering & honoring those who served. From Pongo, Zeke, Pierce & the Weber's crew — 24/7 Loading Dock drop-off stays open all weekend!",
     },
     "JULY_4TH": {
         "name": "4th of July",
@@ -4946,7 +5088,7 @@ HOLIDAY_CATALOG = {
         "garland": "patriotic_lights",
         "dog_image": "dogs-laborday.jpg",
         "accent": "#0284c7",
-        "dog_msg": "🐾 Happy Labor Day to our hard-working Beaver County crews & first responders! Pongo, Zeke & Pierce are holding down the 24/7 Back Room!",
+        "dog_msg": "🐾 Happy Labor Day to our hard-working Beaver County crews & first responders! Pongo, Zeke & Pierce are holding down our 24/7 Loading Dock!",
     },
     "HALLOWEEN": {
         "name": "Halloween",
@@ -4955,7 +5097,7 @@ HOLIDAY_CATALOG = {
         "garland": "spooky_lights",
         "dog_image": "dogs-halloween.jpg",
         "accent": "#ea580c",
-        "dog_msg": "🐾 No tricks, just certified treats (especially for us)! Pongo, Zeke & Pierce welcome your 24/7 Back Room drop-offs!",
+        "dog_msg": "🐾 No tricks, just certified treats (especially for us)! Pongo, Zeke & Pierce welcome your 24/7 Loading Dock drop-offs!",
     },
     "VETERANS_DAY": {
         "name": "Veterans Day",
@@ -4973,7 +5115,7 @@ HOLIDAY_CATALOG = {
         "garland": "autumn_lights",
         "dog_image": "dogs-thanksgiving.jpg",
         "accent": "#d97706",
-        "dog_msg": "🐾 Grateful for all our customers & local departments! Pongo, Zeke & Pierce say save us some turkey — 24/7 Back Room drop-off is open all weekend!",
+        "dog_msg": "🐾 Grateful for all our customers & local departments! Pongo, Zeke & Pierce say save us some turkey — 24/7 Loading Dock drop-off is open all weekend!",
     },
     "CHRISTMAS": {
         "name": "Christmas",
@@ -4982,7 +5124,7 @@ HOLIDAY_CATALOG = {
         "garland": "christmas_lights",
         "dog_image": "dogs-christmas.jpg",
         "accent": "#dc2626",
-        "dog_msg": "🐾 Merry Christmas & Happy Holidays from Pongo, Zeke, and Pierce! Drop off 24/7 at our Loading Dock Back Room — we'll get your tanks ready in a jiffy!",
+        "dog_msg": "🐾 Merry Christmas & Happy Holidays from Pongo, Zeke, and Pierce! Drop off 24/7 at our 24/7 Loading Dock — we'll get your tanks ready in a jiffy!",
     },
 }
 
@@ -5037,7 +5179,7 @@ def compute_active_theme(conn) -> dict:
             candidates.sort(key=lambda x: (x[0], x[1]))
             _, _, chosen_key, chosen_date = candidates[0]
 
-    default_dog_msg = "🐾 Welcome to Weber's Tank Testing from Pongo, Zeke & Pierce! Pull up to our Loading Dock for 24/7 Back Room drop-off & pickup anytime!"
+    default_dog_msg = "🐾 Welcome to Weber's Tank Testing from Pongo, Zeke & Pierce! Pull up to our Loading Dock for 24/7 Loading Dock drop-off & pickup anytime!"
     if not chosen_key:
         return {
             "active": False,

@@ -7,14 +7,14 @@
   <link rel="manifest" href="/manifest.json" />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/ops.css?v=12.1" />
+  <link rel="stylesheet" href="/static/ops.css?v=12.2" />
   <title>Weber's Tank Testing — Month Schedule &amp; Dispatch | DOT B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=12.1" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
+      <img src="/static/images/logo-crest.png?v=12.2" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Schedule &amp; Dispatch</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter your Individual PIN (Access resets daily at Midnight)</p>
       <div style="text-align:left;">
@@ -32,7 +32,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=12.1" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=12.2" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>WALL SCHEDULE</h1>
           <small>RIN B386 • Calendar &amp; Dispatch</small>
@@ -75,7 +75,7 @@
             <span>3. Active Runs &amp; Prep</span><span class="nav-badge" id="navBadgeRuns">0</span>
           </button>
           <button class="rail-btn" data-tab="door" onclick="switchSchedTab('door')">
-            <span>4. Backroom Door</span><span class="nav-badge amber" id="navBadgeDoor">0</span>
+            <span>4. Loading Dock</span><span class="nav-badge amber" id="navBadgeDoor">0</span>
           </button>
         </div>
 
@@ -149,7 +149,7 @@
                       <option value="FULL_HYDRO">🟢 Full Hydro &amp; Prep Window</option>
                       <option value="PREP_ONLY">🔧 Prep, Devalve &amp; Drop-Off Only</option>
                       <option value="ROAD_RUN">🚚 Road Pickup / Delivery &amp; Partial Hydro</option>
-                      <option value="BACKROOM_ONLY">🚪 24/7 Backroom Self-Drop Only</option>
+                      <option value="BACKROOM_ONLY">🚪 24/7 Loading Dock Self-Drop Only</option>
                     </select>
                   </div>
                   <div>
@@ -212,7 +212,7 @@
                   <label>Priority / Rush</label>
                   <select id="sjPriority">
                     <option value="STANDARD">Standard Turnaround</option>
-                    <option value="RUSH">🔥 Paid Rush Service (Fee)</option>
+                    <option value="RUSH">🔥 Paid Rush Service (Max 12 Cyl)</option>
                     <option value="HIGH">⚡ High Priority</option>
                   </select>
                 </div>
@@ -244,6 +244,7 @@
                   <button type="button" class="tank-chip" onclick="bumpTankType('4500# SCBA')">+ SCBA 4500#</button>
                   <button type="button" class="tank-chip" onclick="bumpTankType('Paintball HPA')">+ Paintball HPA</button>
                   <button type="button" class="tank-chip" onclick="bumpTankType('Scuba')">+ Scuba</button>
+                  <button type="button" class="tank-chip" onclick="bumpTankType('Propane Visual')">+ Propane Visual</button>
                   <button type="button" class="tank-chip" onclick="bumpTankType('Beverage CO2')">+ CO2</button>
                   <button type="button" class="tank-chip" onclick="bumpTankType('Medical O2')">+ Medical O2</button>
                   <button type="button" class="tank-chip" onclick="bumpTankType('Welding/Ind')">+ Welding/Ind</button>
@@ -257,7 +258,7 @@
               </div>
 
               <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:11px;padding:9px 11px;background:#f8fafc;border-radius:8px;border:1px solid var(--border-soft);">
-                <label class="inline-check"><input type="checkbox" id="sjValvesOn" checked /><span>Valves / HPA Regulators Attached</span></label>
+                <label class="inline-check"><input type="checkbox" id="sjValvesOn" checked /><span>Valves Attached</span></label>
                 
               </div>
 
@@ -304,7 +305,7 @@
         <section id="tab-door" hidden>
           <div class="card" style="border-left:4px solid #f59e0b;">
             <div class="card-hdr">
-              <h3>🚪 Unscanned 24/7 Backroom Drop-Offs &amp; Verified Pickups</h3>
+              <h3>🚪 Unscanned 24/7 Loading Dock Drop-Offs &amp; Pickups</h3>
               <span class="sub-badge" id="doorCountBadge">0 Waiting</span>
             </div>
             <div id="backroomDoorList"></div>
@@ -722,9 +723,9 @@
           <button class="secondary" style="width:100%;margin-top:7px;" onclick="prefillFromQuote(false, '${q.standard_promise_date}', ${q.requested_bottles})">➕ Use Standard Date</button>
         </div>
         <div class="quote-card rush">
-          <div style="font-size:0.74rem;font-weight:900;color:#991b1b;">🔥 PAID RUSH SERVICE</div>
+          <div style="font-size:0.74rem;font-weight:900;color:#991b1b;">🔥 PAID RUSH (MAX 12 CYL)</div>
           <div style="font-size:1.15rem;font-weight:900;margin:3px 0;">Ready: ${escHtml(q.rush_promise_label)}</div>
-          <div style="font-size:0.75rem;color:var(--muted);">Ahead of standard (${q.rush_backlog_bottles} rush ahead)</div>
+          <div style="font-size:0.75rem;color:${q.requested_bottles > 12 ? '#b91c1c;font-weight:800' : 'var(--muted)'};">${q.requested_bottles > 12 ? '⚠️ Over 12-cyl Paid Rush limit (Std recommended)' : `Ahead of standard (${q.rush_backlog_bottles} rush ahead)`}</div>
           <button class="secondary" style="width:100%;margin-top:7px;background:#fee2e2;color:#991b1b;border-color:#fca5a5;" onclick="prefillFromQuote(true, '${q.rush_promise_date}', ${q.requested_bottles})">➕ Use Rush Date</button>
         </div>`;
     }
@@ -741,6 +742,8 @@
       const cust = document.getElementById('sjCustomer').value.trim();
       if (!cust) { alert('Enter Customer / Fire Dept name first.'); return; }
       const pri = document.getElementById('sjPriority').value;
+      const bCntCheck = parseInt(document.getElementById('sjCount').value || '1', 10);
+      if (pri === 'RUSH' && bCntCheck > 12 && !confirm('Paid Rush has a 12-cylinder limit (' + bCntCheck + ' entered). Override limit for this booking?')) return;
       const schedD = document.getElementById('sjDate').value || STATE.selected_date;
       const res = await fetch('/api/schedule/jobs', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -914,8 +917,8 @@
     };
     setTimeout(() => window.syncBookingAddressVisibility && window.syncBookingAddressVisibility(), 80);
   </script>
-  <script src="/static/day-flow.js?v=12.1"></script>
-  <script src="/static/theme-engine.js?v=12.1"></script>
-  <script src="/static/help-bot.js?v=12.1"></script>
+  <script src="/static/day-flow.js?v=12.2"></script>
+  <script src="/static/theme-engine.js?v=12.2"></script>
+  <script src="/static/help-bot.js?v=12.2"></script>
 </body>
 </html>

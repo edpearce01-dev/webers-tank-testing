@@ -8,14 +8,14 @@
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   
-  <link rel="stylesheet" href="/static/ops.css?v=12.1" />
+  <link rel="stylesheet" href="/static/ops.css?v=12.2" />
   <title>Weber's Tank Testing — Shop Floor Ops | DOT B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=12.1" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
+      <img src="/static/images/logo-crest.png?v=12.2" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Tank Testing</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">
         Shop Floor Operations Workspace<br />
@@ -55,7 +55,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=12.1" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=12.2" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>WEBER'S OPS</h1>
           <small>RIN B386 • Sign-Off: RP</small>
@@ -206,7 +206,7 @@
         <section id="tab-intake" hidden>
           <div class="card" id="backroomInboxCard" style="border-left:4px solid #f59e0b;" hidden>
             <div class="card-hdr">
-              <h3>24/7 Back Room Check-Ins &amp; Pickup Notices</h3>
+              <h3>24/7 Loading Dock Check-Ins &amp; Pickup Notices</h3>
               <span class="sub-badge" id="backroomCountBadge">0 Waiting</span>
             </div>
             <div id="backroomInboxList"></div>
@@ -331,7 +331,7 @@
                 <!-- 3. Complete DOT Form 393-001 Shoulder/Label Stamps (Exact Order Read Off Bottle) -->
                 <div class="grid" id="intakeFieldsGrid">
                   <div><label>Serial # *</label><input id="fSerial" placeholder="e.g. GTS-0291277" onkeydown="if(event.key==='Enter')document.getElementById('fValveTag').focus()" /></div>
-                  <div><label>Valve / Reg Tag #</label><input id="fValveTag" placeholder="Tag # (e.g. 47)" onkeydown="if(event.key==='Enter')submitIntake(false)" /></div>
+                  <div><label>Valve Tag #</label><input id="fValveTag" placeholder="Tag # (e.g. 47)" onkeydown="if(event.key==='Enter')submitIntake(false)" /></div>
                   <div><label>DOT / Permit Spec *</label><input id="fSpec" placeholder="3AA / 3AL / SP10915" oninput="autoMatchSpecDimensions();updateAdvSpecsSummary()" /></div>
                   <div><label>Service PSI *</label><input type="number" id="fSvcPsi" placeholder="2015 / 3000 / 4500" oninput="autoMatchSpecDimensions();updateAdvSpecsSummary()" /></div>
                   <div><label>Target Test PSI</label><input type="number" id="fTestPsi" placeholder="Auto 5/3×" /></div>
@@ -345,7 +345,7 @@
                     <label>Priority</label>
                     <select id="fPriority">
                       <option value="STANDARD">Standard</option>
-                      <option value="RUSH">Paid Rush (Fee)</option>
+                      <option value="RUSH">Paid Rush (Max 12 Cyl)</option>
                       <option value="HIGH">High Priority</option>
                     </select>
                   </div>
@@ -378,7 +378,7 @@
                         <select id="fHoldingZone">
                           <option value="ZONE_C_READY_RACK">Test Jackets &amp; Pump Desk</option>
                           <option value="ZONE_B_DEVALVE">Vice &amp; Stamp/Valve Bench</option>
-                          <option value="ZONE_A_BACKROOM">24/7 Back Room (Loading Dock)</option>
+                          <option value="ZONE_A_BACKROOM">24/7 Loading Dock</option>
                         </select>
                       </div>
                     </div>
@@ -395,7 +395,7 @@
             <!-- RIGHT: QUICK TAG + AUTO-RANKED QUEUE -->
             <div>
               <div class="card" style="border-left:4px solid var(--amber);">
-                <div class="card-hdr"><h3>🏷️ Quick Valve / HPA Regulator Tag</h3></div>
+                <div class="card-hdr"><h3>🏷️ Quick Valve Tag</h3></div>
                 <datalist id="serialSuggest"></datalist>
                 <div class="grid" style="align-items:end;">
                   <div><label>Serial #</label><input id="quickTagSerial" list="serialSuggest" placeholder="Select Serial #" /></div>
@@ -443,7 +443,7 @@
         <section id="tab-logs" hidden>
           <div class="card" style="border-left:4px solid #7c3aed;">
             <div class="card-hdr">
-              <h3>Post-Test Finish: Drying Rack → Stamp/Sticker → Revalve → Back Room</h3>
+              <h3>Post-Test Finish: Drying Rack → Stamp/Sticker → Revalve → Loading Dock</h3>
               <div style="display:flex;gap:6px;align-items:center;">
                 <span class="sub-badge" id="finishCountBadge">0 In Post-Test</span>
                 <a class="secondary" href="/office?tab=print">🖨️ Print Stickers →</a>
@@ -456,14 +456,14 @@
           <div class="split-2">
             <div class="card" style="border-left:4px solid var(--amber);">
               <div class="card-hdr">
-                <h3>Active Valve &amp; Regulator Tags</h3>
+                <h3>Active Valve Tags</h3>
                 <span class="sub-badge" id="valveCountBadge">0 Out</span>
               </div>
               <div id="valveTrackerList"></div>
             </div>
 
             <div class="card">
-              <div class="card-hdr"><h3>Back Room Pickup, Claim Slips &amp; Ready SMS</h3></div>
+              <div class="card-hdr"><h3>Loading Dock Pickup, Claim Slips &amp; Ready SMS</h3></div>
               <div id="customersListArea"></div>
             </div>
           </div>
@@ -554,7 +554,7 @@
         <div><label>Customer / Owner</label><input id="erCustomer" list="customerSuggest" /></div>
         <div><label>Customer Cell #</label><input id="erPhone" type="tel" /></div>
         <div><label>Serial #</label><input id="erSerial" /></div>
-        <div><label>Valve / Reg Tag #</label><input id="erValveTag" /></div>
+        <div><label>Valve Tag #</label><input id="erValveTag" /></div>
         <div><label>Priority</label>
           <select id="erPriority">
             <option value="STANDARD">Standard</option>
@@ -565,11 +565,11 @@
         <div><label>Promised Date</label><input type="date" id="erPromisedDate" /></div>
         <div><label>Holding Zone</label>
           <select id="erZone">
-            <option value="ZONE_A_BACKROOM">24/7 Back Room (Loading Dock)</option>
+            <option value="ZONE_A_BACKROOM">24/7 Loading Dock</option>
             <option value="ZONE_B_DEVALVE">Vice &amp; Stamp/Valve Bench</option>
             <option value="ZONE_C_READY_RACK">Test Jackets &amp; Pump Desk</option>
             <option value="ZONE_D_DRY_STAMP">Main Bay Drying Rack</option>
-            <option value="ZONE_E_PICKUP_SHELF">Back Room Pickup (Loading Dock)</option>
+            <option value="ZONE_E_PICKUP_SHELF">Loading Dock Pickup</option>
             <option value="OUTBOUND_TRUCK">🚚 Road Delivery</option>
             <option value="PICKED_UP">✓ Picked Up</option>
           </select>
@@ -699,6 +699,17 @@
         <div><label>Master Gauge Calibration Expires</label><input type="date" id="editGaugeExp" /></div>
         <div style="grid-column:1/-1;"><label>Master Log Google Sheets Webhook URL</label><input id="webhookInput" placeholder="https://script.google.com/macros/s/.../exec" /></div>
         <div style="grid-column:1/-1;"><label>Crew Feedback Sheet Webhook URL (Optional)</label><input id="fbWebhookInput" placeholder="https://script.google.com/macros/s/.../exec" /></div>
+        <div style="grid-column:1/-1;background:#ecfdf5;border:1.5px solid #6ee7b7;border-radius:10px;padding:11px 12px;margin-top:4px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+            <strong style="font-size:0.86rem;color:#065f46;">📧 Ryan's Shop Email Alerts (Loading Dock &amp; Truck Check-Ins)</strong>
+            <button type="button" class="secondary" style="padding:5px 10px;font-size:0.75rem;background:#065f46;color:#fff;border:none;" onclick="sendTestEmailAlert()">📧 Save &amp; Send Test Email</button>
+          </div>
+          <div class="grid">
+            <div style="grid-column:1/-1;"><label>Ryan's Alert Email Address</label><input type="email" id="editAlertEmail" placeholder="e.g. ryan@weberstanktesting.com" /></div>
+            <div><label>Optional Dedicated Gmail Sender</label><input type="email" id="editSmtpSender" placeholder="Optional e.g. alerts@gmail.com" /></div>
+            <div><label>Gmail 16-Char App Password (<span id="smtpPassStatusTxt">Optional</span>)</label><input type="password" id="editSmtpPass" placeholder="Blank = use Sheets Webhook / keep current" /></div>
+          </div>
+        </div>
       </div>
       <p style="font-size:0.82rem;margin:4px 0 8px;">Gemini Vision Key: <strong id="keyStatusText"></strong></p>
       <div class="grid">
@@ -713,10 +724,10 @@
     </div>
   </div>
 
-  <script src="/static/ops-camera.js?v=12.1"></script>
-  <script src="/static/ops-app.js?v=12.1"></script>
-  <script src="/static/day-flow.js?v=12.1"></script>
-  <script src="/static/theme-engine.js?v=12.1"></script>
-  <script src="/static/help-bot.js?v=12.1"></script>
+  <script src="/static/ops-camera.js?v=12.2"></script>
+  <script src="/static/ops-app.js?v=12.2"></script>
+  <script src="/static/day-flow.js?v=12.2"></script>
+  <script src="/static/theme-engine.js?v=12.2"></script>
+  <script src="/static/help-bot.js?v=12.2"></script>
 </body>
 </html>

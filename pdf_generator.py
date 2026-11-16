@@ -13,7 +13,7 @@ PRIMARY_MANAGER = "Ryan Pearce"
 PRIMARY_INITIALS = "RP"
 PDF_AUTHOR = "Weber's Tank Testing (DOT RIN B386)"
 SHOP_ADDRESS = "3086 Legionville Rd, Baden, PA 15005"
-SHOP_HOURS = "Mon & Fri 9AM-4PM  |  Tue-Thu 9AM-2PM  |  24/7 Backroom Drop-Off"
+SHOP_HOURS = "Mon & Fri 9AM-4PM  |  Tue-Thu 9AM-2PM  |  24/7 Loading Dock Drop-Off"
 
 CONDEMN_LABELS = {
     "STAMPED_CONDEMNED": "CONDEMNED stamped over DOT marks",
@@ -741,7 +741,7 @@ def build_valve_tags_pdf(work_date: str, records: list[dict], dot_rin: str = "B3
             c.showPage()
 
         c.setFont("Helvetica-Bold", 14.0)
-        c.drawString(x0, H - 40, "WEBER'S TANK TESTING - ACTIVE VALVE & REGULATOR TAG SHEET")
+        c.drawString(x0, H - 40, "WEBER'S TANK TESTING - ACTIVE VALVE TAG SHEET")
         c.setFont("Helvetica", 9.0)
         c.drawString(
             x0, H - 55,
@@ -790,7 +790,7 @@ def build_valve_tags_pdf(work_date: str, records: list[dict], dot_rin: str = "B3
         c.setFont("Helvetica-Oblique", 7.8)
         c.drawString(
             x0, cy - 14,
-            "Mark [ X ] when the matching valve or HPA regulator is reinstalled onto its cylinder so the tag returns to the bench pool.",
+            "Mark [ X ] when the matching valve is reinstalled onto its cylinder so the tag returns to the bench pool.",
         )
 
     c.save()
@@ -806,7 +806,7 @@ def build_backroom_poster_pdf(
     buf = io.BytesIO()
     W, H = letter
     c = canvas.Canvas(buf, pagesize=letter)
-    _set_pdf_meta(c, "Weber's Tank Testing - 24/7 Backroom Drop-Off & Pickup QR Sign")
+    _set_pdf_meta(c, "Weber's Tank Testing - 24/7 Loading Dock Drop-Off & Pickup QR Sign")
 
     c.setFillColor(colors.HexColor("#0f291e"))
     c.rect(0, H - 126, W, 126, fill=1, stroke=0)
@@ -820,16 +820,16 @@ def build_backroom_poster_pdf(
     c.drawCentredString(hdr_cx, H - 46, "WEBER'S TANK TESTING")
     c.setFont("Helvetica-Bold", 10.6)
     c.setFillColor(colors.HexColor("#fde68a"))
-    c.drawCentredString(hdr_cx, H - 67, f"{SHOP_ADDRESS.upper()}  |  U.S. D.O.T. RIN {dot_rin}")
+    c.drawCentredString(hdr_cx, H - 67, f"{SHOP_ADDRESS.upper()}  |  U.S. D.O.T. CERTIFIED FACILITY")
     c.setFillColor(colors.HexColor("#e2e8f0"))
     c.setFont("Helvetica-Bold", 8.8)
     c.drawCentredString(hdr_cx, H - 86, f"Hours: {SHOP_HOURS}")
     c.setFont("Helvetica", 9.0)
-    c.drawCentredString(hdr_cx, H - 105, "SCBA  |  EMS Oxygen  |  Paintball HPA  |  Industrial Gas  |  CO2  |  Scuba")
+    c.drawCentredString(hdr_cx, H - 105, "SCBA  |  EMS Oxygen  |  Propane Visual  |  Paintball HPA  |  Industrial Gas  |  CO2  |  Scuba")
 
     c.setFillColor(colors.HexColor("#0f172a"))
     c.setFont("Helvetica-Bold", 21)
-    c.drawCentredString(W / 2, H - 166, "BACKROOM DROP-OFF & PICKUP CHECK-IN")
+    c.drawCentredString(W / 2, H - 166, "24/7 LOADING DOCK DROP-OFF & PICKUP")
     c.setFont("Helvetica", 11.5)
     c.setFillColor(colors.HexColor("#475569"))
     c.drawCentredString(W / 2, H - 186, "Dropping off tanks or picking up a completed batch? Scan below in 20 seconds:")
@@ -866,8 +866,8 @@ def build_backroom_poster_pdf(
 
     steps = [
         ("1. SCAN QR CODE WITH YOUR PHONE CAMERA", "Opens our instant check-in & verified pickup form - no app download needed."),
-        ("2. ENTER NAME / DEPT, CELL #, & TANK DETAILS", "Receive a live Ticket # (BR-XXXX) and get texted when your batch is staged in our Back Room."),
-        ("3. GROUP TANKS NEATLY IN DESIGNATED ZONE", "Every removed valve & paintball HPA regulator is numbered & matched to its serial #."),
+        ("2. ENTER NAME / DEPT, CELL #, & TANK DETAILS", "Receive a live Ticket # (BR-XXXX) and get texted when your batch is staged at our Loading Dock."),
+        ("3. PLACE CYLINDERS NEATLY ON LOADING DOCK", "Every removed valve is numbered & matched back to its cylinder serial #."),
     ]
     sy = box_y + box_h - 32
     for title_txt, sub_txt in steps:
@@ -884,7 +884,7 @@ def build_backroom_poster_pdf(
     c.roundRect(box_x, 66, box_w, 48, 8, fill=1, stroke=1)
     c.setFillColor(colors.HexColor("#92400e"))
     c.setFont("Helvetica-Bold", 10.2)
-    c.drawCentredString(W / 2, 93, "SAFETY NOTE: Never leave actively leaking cylinders inside the enclosed room.")
+    c.drawCentredString(W / 2, 93, "SAFETY NOTE: Never leave actively leaking cylinders on the Loading Dock.")
     c.setFont("Helvetica", 9.8)
     c.drawCentredString(W / 2, 77, f"Questions, department batches, or payment info? Call or Text Shop: {phone}")
 
@@ -921,7 +921,7 @@ def build_invoice_pdf(invoice: dict, items: list[dict], phone: str = "724-266-80
     c.setFont("Helvetica-Bold", 9.2)
     c.drawString(106, H - 63, f"{SHOP_ADDRESS}  |  Phone: {phone}")
     c.setFont("Helvetica", 8.8)
-    c.drawString(106, H - 76, f"U.S. D.O.T. Certified Testing (RIN {dot_rin})  |  Manager: {PRIMARY_MANAGER}")
+    c.drawString(106, H - 76, f"U.S. D.O.T. Certified Cylinder Testing  |  Manager: {PRIMARY_MANAGER}")
     c.setFillColor(colors.HexColor("#475569"))
     c.setFont("Helvetica", 8.1)
     c.drawString(106, H - 89, f"Hours: {SHOP_HOURS}")
@@ -1025,7 +1025,7 @@ def build_shelf_claim_slip_pdf(
     buf = io.BytesIO()
     W, H = letter
     c = canvas.Canvas(buf, pagesize=letter)
-    _set_pdf_meta(c, f"Back Room Pickup Claim Slip - {customer_name}")
+    _set_pdf_meta(c, f"Loading Dock Pickup Claim Slip - {customer_name}")
 
     total_cnt = len(records)
     pass_cnt = sum(1 for r in records if r.get("hydro_disposition") == "A")
@@ -1037,7 +1037,7 @@ def build_shelf_claim_slip_pdf(
     _stamp_pdf_crest(c, W - 104, H - 103, 60)
     c.setFillColor(colors.HexColor("#fbbf24"))
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(50, H - 54, f"24/7 BACK ROOM PICKUP  •  WEBER'S TANK TESTING (RIN {dot_rin})")
+    c.drawString(50, H - 54, "24/7 LOADING DOCK PICKUP  •  WEBER'S TANK TESTING")
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 22)
     c.drawString(50, H - 80, (customer_name or "CUSTOMER BATCH")[:32].upper())
@@ -1105,7 +1105,7 @@ def build_shelf_claim_slip_pdf(
         is_pass = r.get("hydro_disposition") == "A"
         c.setFillColor(colors.HexColor("#15803d") if is_pass else colors.HexColor("#b91c1c"))
         c.setFont("Helvetica-Bold", 8.5)
-        mark_txt = ("PASS (B386 ★ 10Y)" if r.get("star_10yr") else "PASS (B386)") if is_pass else f"CONDEMN ({r.get('hydro_disposition')})"
+        mark_txt = ("PASS (★ 10-YR)" if r.get("star_10yr") else "PASSED") if is_pass else f"CONDEMN ({r.get('hydro_disposition')})"
         c.drawString(340, cy + 5, mark_txt)
         c.setFillColor(colors.HexColor("#334155"))
         c.setFont("Helvetica", 7.8)
@@ -1144,8 +1144,8 @@ def build_shelf_claim_slip_pdf(
     c.drawString(128, foot_y + 62, "SELF-SERVE 24/7 PICKUP CHECK-OUT (TAKES 10 SECONDS)")
     c.setFillColor(colors.HexColor("#334155"))
     c.setFont("Helvetica", 9.0)
-    c.drawString(128, foot_y + 45, "1. Verify cylinder count above matches your group inside our 24/7 Back Room pickup area.")
-    c.drawString(128, foot_y + 30, "2. Scan QR code -> tap 'BACKROOM PICK-UP' -> enter your name to confirm pickup.")
+    c.drawString(128, foot_y + 45, "1. Verify cylinder count above matches your batch staged at our 24/7 Loading Dock.")
+    c.drawString(128, foot_y + 30, "2. Scan QR code -> tap 'LOADING DOCK PICK-UP' -> enter your name to confirm pickup.")
     c.setFont("Helvetica-Bold", 8.5)
     c.drawString(128, foot_y + 13, f"NOTE: Testing facility only - cylinders are returned clean, dry & depressurized.  |  {phone}")
 
@@ -1174,7 +1174,7 @@ def build_dropoff_receipt_pdf(
     _stamp_pdf_crest(c, W - 116, H - 115, 72)
     c.setFillColorRGB(0.98, 0.75, 0.14)
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(54, H - 62, f"U.S. D.O.T. CERTIFIED FACILITY  •  RIN {dot_rin}")
+    c.drawString(54, H - 62, "U.S. D.O.T. CERTIFIED TESTING FACILITY")
     c.setFillColorRGB(1, 1, 1)
     c.setFont("Helvetica-Bold", 21)
     c.drawString(54, H - 88, "WEBER'S TANK TESTING")
@@ -1191,7 +1191,7 @@ def build_dropoff_receipt_pdf(
     lbl = (
         "TRUCK PICKUP & DELIVERY REQUEST TICKET #"
         if is_truck
-        else ("BACKROOM PICK-UP CONFIRMATION #" if is_pickup else "24/7 BACKROOM DROP-OFF TICKET #")
+        else ("LOADING DOCK PICK-UP CONFIRMATION #" if is_pickup else "24/7 LOADING DOCK DROP-OFF TICKET #")
     )
     c.drawCentredString(W / 2, H - 164, lbl)
 
