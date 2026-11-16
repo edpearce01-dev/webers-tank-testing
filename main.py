@@ -3367,6 +3367,14 @@ def update_settings(payload: SettingsInput, request: Request):
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('gbp_edit_url', ?);", (payload.gbp_edit_url.strip(),))
     if payload.testing_mode is not None:
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('testing_mode', ?);", ("1" if payload.testing_mode else "0",))
+    if payload.shop_pin is not None and payload.shop_pin.strip():
+        new_p = payload.shop_pin.strip()
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('shop_pin', ?);", (new_p,))
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('crew_pin', ?);", (new_p,))
+        conn.execute("UPDATE crew_users SET pin=? WHERE role='OWNER' AND initials='RP';", (new_p,))
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
     return JSONResponse({"saved": True})
 
 

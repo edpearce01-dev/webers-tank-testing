@@ -702,6 +702,8 @@ def init_db() -> None:
             ],
         )
 
+    cur.execute("UPDATE settings SET value='weberstanktesting@gmail.com' WHERE key='alert_email' AND TRIM(value)='';")
+    cur.execute("UPDATE settings SET value='https://docs.google.com/spreadsheets/d/1ILp9FZv6ZSKHf_tuSjjfOhWzE8oWgRYoSuDdNIfW_Qo/edit' WHERE key='master_sheet_url' AND TRIM(value)='';")
     conn.commit()
     conn.close()
 

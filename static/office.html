@@ -7,14 +7,14 @@
   <link rel="manifest" href="/manifest.json" />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/ops.css?v=13.3" />
+  <link rel="stylesheet" href="/static/ops.css?v=13.4" />
   <title>Weber's Tank Testing — Office, Rolodex, Printouts &amp; Supplies | RIN B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=13.3" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
+      <img src="/static/images/logo-crest.png?v=13.4" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Office &amp; Print Center</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">Enter your Individual PIN (Access resets daily at Midnight)</p>
       <div style="text-align:left;">
@@ -32,7 +32,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=13.3" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=13.4" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>OFFICE &amp; PRINT</h1>
           <small>RIN B386 • Billing, Rolodex &amp; Supply</small>
@@ -2459,7 +2459,7 @@
       loadOfficeState();
     }
 
-    async function saveFacilitySetupFromOffice() {
+    async function saveFacilitySetupFromOffice(silent = false) {
       const body = {
         calibrated_serial: document.getElementById('ofCalSerial')?.value || '1SF11904',
         starting_sheet_no: parseInt(document.getElementById('ofSheetNo')?.value || '8095', 10),
@@ -2480,12 +2480,12 @@
       if (!res.ok) { alert((await res.json()).detail || 'Could not save settings.'); return; }
       if (document.getElementById('ofResendKey')) document.getElementById('ofResendKey').value = '';
       if (document.getElementById('ofGeminiKey')) document.getElementById('ofGeminiKey').value = '';
-      alert('Shop setup & alert settings saved!');
-      loadOfficeState();
+      await loadOfficeState();
+      if (!silent) alert('Shop setup & alert settings saved!');
     }
 
     async function sendOfficeTestEmail() {
-      await saveFacilitySetupFromOffice();
+      await saveFacilitySetupFromOffice(true);
       const res = await fetch('/api/settings/test-email', { method: 'POST' });
       const d = await res.json();
       if (!res.ok) { alert(d.detail || 'Could not send test email.'); return; }
@@ -2835,8 +2835,8 @@
 
     bootOffice();
   </script>
-  <script src="/static/day-flow.js?v=13.3"></script>
-  <script src="/static/theme-engine.js?v=13.3"></script>
-  <script src="/static/help-bot.js?v=13.3"></script>
+  <script src="/static/day-flow.js?v=13.4"></script>
+  <script src="/static/theme-engine.js?v=13.4"></script>
+  <script src="/static/help-bot.js?v=13.4"></script>
 </body>
 </html>
