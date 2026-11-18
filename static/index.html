@@ -8,8 +8,8 @@
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   
-  <link rel="stylesheet" href="/static/ops.css?v=15.4" />
-  <link rel="stylesheet" href="/static/css/modern-ui.css?v=15.4" />
+  <link rel="stylesheet" href="/static/ops.css?v=16.0" />
+  <link rel="stylesheet" href="/static/css/modern-ui.css?v=16.0" />
   <title>Weber's Tank Testing — Shop Floor Ops | DOT B386</title>
 </head>
 <body>
@@ -106,6 +106,9 @@
           <button class="rail-btn" data-tab="search" onclick="jumpToTab('search')">
             <span>5. Lookup</span><span class="nav-badge" id="navBadgeSearch">🔍</span>
           </button>
+          <button class="rail-btn" data-tab="todo" onclick="jumpToTab('todo')">
+            <span>6. Shop To-Do</span><span class="nav-badge amber" id="navBadgeTodo">0</span>
+          </button>
         </div>
 
         <div class="rail-footer">
@@ -152,6 +155,7 @@
 
             <div class="huddle-kpis" id="huddleKpiRow"></div>
             <div id="huddleLineupList"></div>
+            <div id="liveDotSheetStartHost" style="margin-top:12px;"></div>
           </div>
 
           <div id="calCollapsedBanner" class="card" style="background:#f0fdf4;border:2px solid #86efac;" hidden>
@@ -427,6 +431,7 @@
               </div>
             </div>
           </div>
+          <div id="liveDotSheetIntakeHost" style="margin-top:14px;"></div>
         </section>
 
         <!-- STATION 3: HYDRO TEST STAND -->
@@ -451,6 +456,7 @@
               <div id="doneList"></div>
             </div>
           </div>
+          <div id="liveDotSheetBenchHost" style="margin-top:14px;"></div>
         </section>
 
         <!-- STATION 4: POST-TEST FINISH BENCH, ADD-ON PARTS, TAGS & ZONE E SHELF -->
@@ -506,6 +512,65 @@
             <div id="searchResultsList"></div>
           </div>
         </section>
+
+        <!-- STATION 6: PERSISTENT SHOP & PROPERTY TO-DO BOARD (SYNCED TO CREW + LIVE TV) -->
+        <section id="tab-todo" hidden>
+          <div class="card" style="border-top:4px solid var(--ui-accent);">
+            <div class="card-hdr">
+              <div>
+                <h3>🛠️ Shop &amp; Property To-Do Board</h3>
+                <small style="color:var(--muted);font-weight:600;">Shared across Ryan &amp; all Crew — open items stay active across days &amp; broadcast live onto the Testing Room TV</small>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <span class="sub-badge" id="todoOpenCountBadge">0 Open</span>
+                <a class="secondary" href="/tv" target="_blank">📺 View on Live TV ↗</a>
+              </div>
+            </div>
+
+            <div class="todo-composer-box">
+              <div class="todo-composer-grid">
+                <div>
+                  <label>New Shop or Property Task *</label>
+                  <input id="shopTodoTitle" placeholder="e.g. Service Kubota/ATV for winter plowing, Firewood, Clean shop garage..." onkeydown="if(event.key==='Enter'){event.preventDefault();addShopTodoItem();}" />
+                </div>
+                <div>
+                  <label>Area</label>
+                  <select id="shopTodoCat">
+                    <option value="PROPERTY">🚜 Property &amp; Grounds</option>
+                    <option value="SHOP" selected>🔧 Shop &amp; Garage</option>
+                    <option value="CYLINDERS">🧪 Cylinders &amp; Stand</option>
+                  </select>
+                </div>
+                <div>
+                  <label>Priority</label>
+                  <select id="shopTodoPrio">
+                    <option value="NORMAL" selected>Normal</option>
+                    <option value="HIGH">⚡ High Priority</option>
+                  </select>
+                </div>
+                <div>
+                  <label>Assign To</label>
+                  <select id="shopTodoAssign">
+                    <option value="ALL">All Crew</option>
+                  </select>
+                </div>
+                <div>
+                  <button type="button" class="primary" style="width:100%;margin:0;white-space:nowrap;" onclick="addShopTodoItem()">+ Add To-Do</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="pill-selector-bar" id="shopTodoFilterBar" style="margin:12px 0 10px;">
+              <button type="button" class="tap-pill active" data-tfilter="OPEN" onclick="setShopTodoFilter('OPEN')">📋 Open Tasks</button>
+              <button type="button" class="tap-pill" data-tfilter="PROPERTY" onclick="setShopTodoFilter('PROPERTY')">🚜 Property / Grounds</button>
+              <button type="button" class="tap-pill" data-tfilter="SHOP" onclick="setShopTodoFilter('SHOP')">🔧 Shop &amp; Garage</button>
+              <button type="button" class="tap-pill" data-tfilter="DONE" onclick="setShopTodoFilter('DONE')">✓ Completed</button>
+              <button type="button" class="tap-pill" data-tfilter="ALL" onclick="setShopTodoFilter('ALL')">All</button>
+            </div>
+
+            <div id="shopTodoListArea"></div>
+          </div>
+        </section>
       </main>
     </div>
 
@@ -523,6 +588,9 @@
       </button>
       <button class="bnav-btn" data-tab="search" onclick="jumpToTab('search')">
         <span class="ico">05</span><span>Lookup</span>
+      </button>
+      <button class="bnav-btn" data-tab="todo" onclick="jumpToTab('todo')">
+        <span class="ico">06</span><span>To-Do</span><span class="bnav-dot" id="mobBadgeTodo" hidden>0</span>
       </button>
     </nav>
   </div>
@@ -764,13 +832,13 @@
     </div>
   </div>
 
-  <script src="/static/ops-camera.js?v=15.4"></script>
-  <script src="/static/js/ops-core-cal.js?v=15.4"></script>
-  <script src="/static/js/ops-intake-stand.js?v=15.4"></script>
-  <script src="/static/js/ops-finish-radar.js?v=15.4"></script>
-  <script src="/static/day-flow.js?v=15.4"></script>
-  <script src="/static/theme-engine.js?v=15.4"></script>
-  <script src="/static/js/app-switcher.js?v=15.4"></script>
-  <script src="/static/help-bot.js?v=15.4"></script>
+  <script src="/static/ops-camera.js?v=16.0"></script>
+  <script src="/static/js/ops-core-cal.js?v=16.0"></script>
+  <script src="/static/js/ops-intake-stand.js?v=16.0"></script>
+  <script src="/static/js/ops-finish-radar.js?v=16.0"></script>
+  <script src="/static/day-flow.js?v=16.0"></script>
+  <script src="/static/theme-engine.js?v=16.0"></script>
+  <script src="/static/js/app-switcher.js?v=16.0"></script>
+  <script src="/static/help-bot.js?v=16.0"></script>
 </body>
 </html>

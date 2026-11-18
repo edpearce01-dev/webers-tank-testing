@@ -281,6 +281,12 @@ function playChime() {
 
         const b = d.binder_state || {};
         document.getElementById('tvBinderPill').textContent = `SHEET #${b.active_sheet_no || 8095} • ROW #${b.next_row_number || 1}/12`;
+        const openTaskCnt = sb.open_tasks_count ?? (d.shop_tasks || []).filter(t => t.status === 'OPEN').length;
+        const todoPill = document.getElementById('tvTodoCountPill');
+        if (todoPill) {
+          todoPill.className = 'pill ' + (openTaskCnt ? 'wait' : 'ok');
+          todoPill.textContent = `🛠️ ${openTaskCnt} TO-DO`;
+        }
 
         document.getElementById('scDoor').textContent = sb.backroom_waiting_count || 0;
         document.getElementById('tileDoor').classList.toggle('alert-door', (sb.backroom_waiting_count || 0) > 0);
@@ -374,27 +380,76 @@ function playChime() {
 
         document.getElementById('tvCalGrid').innerHTML = (d.calendar_days || []).map(day => {
           const isToday = day.work_date === d.work_date;
-          const shortMode = day.shift_mode === 'FULL_HYDRO' ? `Hydro (${day.bottle_capacity})`
-            : (day.shift_mode === 'PREP_ONLY' ? 'Prep & Drop-Off'
-            : (day.shift_mode === 'ROAD_RUN' ? `Truck Run (${day.bottle_capacity})` : '24/7 Back Room'));
+          const modeDot = day.shift_mode === 'FULL_HYDRO' ? 'hydro'
+            : (day.shift_mode === 'ROAD_RUN' ? 'road'
+            : (day.shift_mode === 'PREP_ONLY' ? 'prep' : 'dock'));
+          const shortMode = day.shift_mode === 'FULL_HYDRO' ? `${day.booked_bottles || 0}/${day.bottle_capacity}`
+            : (day.shift_mode === 'PREP_ONLY' ? 'Prep'
+            : (day.shift_mode === 'ROAD_RUN' ? `Truck • ${day.booked_bottles || 0}/${day.bottle_capacity}` : '24/7 Dock'));
           const pct = day.bottle_capacity > 0 ? Math.min(100, Math.round(((day.booked_bottles || 0) / day.bottle_capacity) * 100)) : 0;
+          const dayNumOnly = (day.work_date || '').split('-')[2]?.replace(/^0/, '') || day.month_day;
+          const monShort = (day.month_day || '').split(' ')[0] || '';
           return `
-            <div class="cal-cell mode-${day.shift_mode} ${isToday ? 'today' : ''}">
+            <div class="cal-cell ${isToday ? 'today' : ''}">
               <div>
-                <div style="display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:0.86rem;color:var(--forest);">
-                  <span>${esc(day.weekday)} <span class="mono">${esc(day.month_day)}</span></span>
-                  ${isToday ? '<span class="mono" style="background:var(--gold-bright);color:#0f172a;font-size:0.6rem;padding:2px 5px;border-radius:4px;font-weight:800;">TODAY</span>' : ''}
+                <div class="tv-cal-cell-top">
+                  <div class="tv-cal-daybadge">
+                    <span class="tv-cal-dow">${esc(day.weekday)}</span>
+                    <span class="tv-cal-dom ${isToday ? 'is-today-ring' : ''}">${esc(dayNumOnly)}</span>
+                    <small class="tv-cal-mon">${esc(monShort)}</small>
+                  </div>
+                  <span class="tv-cal-cap"><i class="tv-dot ${modeDot}"></i>${esc(shortMode)}</span>
                 </div>
-                <div class="mono" style="font-size:0.7rem;color:var(--emerald);font-weight:700;margin-top:2px;">${shortMode}</div>
-                ${day.bottle_capacity > 0 ? `<div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:${pct >= 90 ? 'var(--red)' : 'var(--emerald)'};"></div></div>` : ''}
               </div>
               <div class="cal-jobs">
-                ${(day.jobs || []).map(j => { const lg = j.cal_leg === 'RETURN' ? '📤 ' : (j.cal_leg === 'PICKUP' ? '📥 ' : '📌 '); const tm = j.cal_time ? j.cal_time + ' ' : ''; return `<div class="cal-job-chip ${(j.rush_fee || j.priority === 'RUSH') ? 'rush' : ''}">${lg}${esc(tm)}${esc(j.customer_name)} <span class="mono">(${j.bottle_count})</span></div>`; }).join('')}
-                ${day.day_notes ? `<div style="font-size:0.7rem;color:#92400e;font-weight:700;">Note: ${esc(day.day_notes)}</div>` : ''}
+                ${day.day_notes ? `<div class="tv-cal-note">📝 ${esc(day.day_notes)}</div>` : ''}
+                ${(day.jobs || []).map(j => {
+                  const lg = j.cal_leg === 'RETURN' ? '↗' : (j.cal_leg === 'PICKUP' ? '🚚' : '●');
+                  const tm = j.cal_time ? j.cal_time + ' ' : '';
+                  const cls = (j.rush_fee || j.priority === 'RUSH') ? 'rush' : (j.cal_leg === 'RETURN' ? 'ret' : (j.cal_leg === 'PICKUP' ? 'trk' : ''));
+                  return `<div class="cal-job-chip ${cls}"><span>${lg} ${esc(tm)}${esc(j.customer_name)}</span><strong class="mono">${j.bottle_count}</strong></div>`;
+                }).join('')}
               </div>
-              <div class="mono" style="font-size:0.66rem;color:var(--muted);">${day.bottle_capacity > 0 ? `${day.booked_bottles || 0}/${day.bottle_capacity} booked` : 'Self-Drop Active'}</div>
+              ${day.bottle_capacity > 0
+                ? `<div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:${pct >= 90 ? 'var(--red)' : 'var(--emerald)'};"></div></div>`
+                : '<div style="height:6px;"></div>'}
             </div>`;
         }).join('');
+
+        const tasks = d.shop_tasks || [];
+        const openTasks = tasks.filter(t => t.status === 'OPEN');
+        const doneTasks = tasks.filter(t => t.status === 'DONE').slice(0, 4);
+        const todoBadge = document.getElementById('tvTodoHdrBadge');
+        if (todoBadge) todoBadge.textContent = `${openTasks.length} Open`;
+        const todoEl = document.getElementById('tvTodoList');
+        if (todoEl) {
+          todoEl.innerHTML = (openTasks.length || doneTasks.length)
+            ? openTasks.map(t => {
+                const ico = t.category === 'PROPERTY' ? '🚜' : (t.category === 'CYLINDERS' ? '🧪' : '🔧');
+                const catTxt = t.category === 'PROPERTY' ? 'Property' : (t.category === 'CYLINDERS' ? 'Cylinders' : 'Shop');
+                return `
+                  <div class="tv-todo-row ${t.priority === 'HIGH' ? 'high' : ''}">
+                    <span class="tv-todo-box"></span>
+                    <div style="min-width:0;flex:1;">
+                      <div class="tv-todo-title">${ico} ${esc(t.title)}</div>
+                      <div class="tv-todo-sub">
+                        <span>${catTxt}</span>
+                        ${t.assigned_to && t.assigned_to !== 'ALL' ? `<span>• 👤 ${esc(t.assigned_name || t.assigned_to)}</span>` : ''}
+                        ${t.priority === 'HIGH' ? '<span class="b-rush">HIGH</span>' : ''}
+                      </div>
+                    </div>
+                  </div>`;
+              }).join('') +
+              (doneTasks.length ? `<div class="tv-todo-done-sep">Checked Off Today</div>` + doneTasks.map(t => `
+                <div class="tv-todo-row done">
+                  <span class="tv-todo-box done">✓</span>
+                  <div style="min-width:0;flex:1;">
+                    <div class="tv-todo-title">${esc(t.title)}</div>
+                    <div class="tv-todo-sub">✓ ${esc(t.completed_by || 'Crew')}${t.completed_at ? ' • ' + esc(t.completed_at) : ''}</div>
+                  </div>
+                </div>`).join('') : '')
+            : '<div style="color:var(--muted);font-size:0.84rem;padding:12px 4px;">🎉 All shop &amp; property tasks checked off!</div>';
+        }
       } catch (_) {}
     }
 

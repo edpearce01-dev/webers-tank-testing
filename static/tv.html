@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@500;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
   <title>Weber's Tank Testing — Live Shop TV &amp; Screensaver | RIN B386</title>
-  <link rel="stylesheet" href="/static/css/tv.css?v=15.2" />
+  <link rel="stylesheet" href="/static/css/tv.css?v=16.0" />
 </head>
 <body>
   <!-- LOCKED CENTERPIECE BACKGROUND (CREST + WREATH ARCH + SHOP DOGS OUT IN FRONT) -->
@@ -57,16 +57,17 @@
       <span class="pill wait" id="tvShortPill">SHORT: UNCAL</span>
       <span class="pill wait" id="tvTallPill">TALL: UNCAL</span>
       <span class="pill binder" id="tvBinderPill">SHEET #8095 • ROW 1/12</span>
+      <span class="pill ok" id="tvTodoCountPill" onclick="manualFlipView()" style="cursor:pointer;" title="Click to view Calendar &amp; Shop To-Do Board">🛠️ 0 TO-DO</span>
     </div>
 
     <div class="hdr-right">
       <select class="tv-sel" id="rotPresetSel" onchange="changeRotationPreset()" title="View Cycle Timing">
-        <option value="75_25" selected>75s / 25s</option>
-        <option value="120_30">2m / 30s</option>
-        <option value="180_35">3m / 35s</option>
-        <option value="45_20">45s / 20s</option>
+        <option value="75_25" selected>75s Dash / 25s Cal+To-Do</option>
+        <option value="120_30">2m Dash / 30s Cal+To-Do</option>
+        <option value="180_35">3m Dash / 35s Cal+To-Do</option>
+        <option value="45_20">45s Dash / 20s Cal+To-Do</option>
         <option value="dash_only">Pin Dash</option>
-        <option value="cal_only">Pin Cal</option>
+        <option value="cal_only">Pin Cal + To-Do</option>
       </select>
       <select class="tv-sel" id="idlePresetSel" onchange="changeIdlePreset()" title="Auto-Screensaver When Shop Is Idle">
         <option value="5">Idle: 5m</option>
@@ -153,20 +154,33 @@
       </div>
     </section>
 
-    <!-- VIEW 2: 14-DAY WALL CALENDAR -->
+    <!-- VIEW 2: 2027 ARCHITECTURAL 14-DAY WALL CALENDAR + LIVE SHOP & PROPERTY TO-DO BOARD -->
     <section id="viewCalendar" class="cal-wall-wrap" hidden>
       <div class="cal-wall-hdr">
         <div>
-          <strong style="font-family:var(--font-display);font-size:1.25rem;color:var(--forest);letter-spacing:0.02em;">14-DAY SHOP OPERATING SCHEDULE, CAPACITY &amp; TRUCK DISPATCH</strong>
-          <span style="font-size:0.8rem;color:var(--muted);margin-left:10px;">Smoothly cycles back to Live Stand Dashboard or wakes immediately on shop activity</span>
+          <strong style="font-family:var(--font-display);font-size:1.22rem;color:var(--forest);letter-spacing:0.02em;">14-DAY DISPATCH CALENDAR &amp; SHOP / PROPERTY TO-DO BOARD</strong>
+          <span style="font-size:0.79rem;color:var(--muted);margin-left:10px;">Flashes automatically on cycle • Add or check off tasks anytime in Shop Ops → 6. Shop To-Do</span>
         </div>
         <span class="pill ok" id="calBacklogNote">Live Sync</span>
       </div>
-      <div class="cal-wall-grid" id="tvCalGrid"></div>
+
+      <div class="tv-cal-todo-split">
+        <div class="tv-cal-2027-frame">
+          <div class="tv-cal-grid" id="tvCalGrid"></div>
+        </div>
+
+        <aside class="panel tv-todo-panel">
+          <div class="panel-hdr">
+            <span>🛠️ Shop &amp; Property To-Do List</span>
+            <span id="tvTodoHdrBadge">0 Open</span>
+          </div>
+          <div class="panel-body" id="tvTodoList"></div>
+        </aside>
+      </div>
     </section>
   </main>
 
-  <script src="/static/js/tv-app.js?v=15.2"></script>
-  <script src="/static/theme-engine.js?v=15.2"></script>
+  <script src="/static/js/tv-app.js?v=16.0"></script>
+  <script src="/static/theme-engine.js?v=16.0"></script>
 </body>
 </html>

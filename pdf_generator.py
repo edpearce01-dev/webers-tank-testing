@@ -432,79 +432,151 @@ def build_verification_pdf(work_date: str, verifications: list[dict], cal_serial
                     c.drawCentredString((xs[i] + xs[i + 1]) / 2, cur_y - 14, val)
             cur_y -= row_h
 
-        c.setFont("Times-Roman", 8)
+        c.setFont("Times-Roman", 7.8)
+        c.drawString(40, cur_y - 16, "Example (Method B):   Pressure: 3000 PSI  |  Expected (A): 54.0  |  Actual (B): 53.8  |  Perm: 0  |  Elastic: 53.8  |  % Dev: 0.37%")
+        c.setFont("Times-Bold", 7.6)
         c.drawString(
-            40, cur_y - 18,
-            "CFR Title 49 §180.215(b)(1): Verification must demonstrate ±1.0% accuracy and permanent expansion returning to zero prior to daily testing.",
+            40, cur_y - 27,
+            "Formula for percentage:  (A - B) ÷ A × 100 = % Deviation (±1.0% max)    |    Formula for elastic expansion:  Actual (B) - Permanent = Elastic",
         )
         all_v_adm = bool(chunk) and all("ADMIN" in str(v.get("operator_initials", "")) or "ADMIN" in str(v.get("logged_by", "")) for v in chunk if v)
         c.setFont("Times-Italic", 10)
-        c.drawString(48, cur_y - 38, "ADMIN DIAGNOSTIC (NOT DOT SIGNED)" if all_v_adm else PRIMARY_MANAGER)
-        c.line(40, cur_y - 41, 215, cur_y - 41)
-        c.setFont("Times-Roman", 7.8)
-        c.drawString(220, cur_y - 40, "(Verified By - Facility Manager)")
-        c.drawRightString(xs[-1], cur_y - 40, f"Weber's Tank Testing  |  {SHOP_ADDRESS}")
+        c.drawString(48, cur_y - 45, "ADMIN DIAGNOSTIC (NOT DOT SIGNED)" if all_v_adm else PRIMARY_MANAGER)
+        c.line(40, cur_y - 48, 215, cur_y - 48)
+        c.setFont("Times-Roman", 7.6)
+        c.drawString(220, cur_y - 47, "(Verified By - Facility Manager)")
+        c.drawRightString(xs[-1], cur_y - 40, "CFR Title 49 §180.215  |  Form 393-001")
+        c.drawRightString(xs[-1], cur_y - 49, f"Weber's Tank Testing  |  {SHOP_ADDRESS}")
 
     c.save()
     return buf.getvalue()
 
 
-def build_visual_log_pdf(work_date: str, records: list[dict], dot_rin: str = "B386") -> bytes:
-    """D.O.T./I.C.C. Cylinder Visual Inspection and Requalification Log."""
+def build_visual_log_pdf(
+    work_date: str,
+    records: list[dict],
+    dot_rin: str = "B386",
+    visual_rin: str = "V143159",
+) -> bytes:
+    """D.O.T./I.C.C. Cylinder Visual Inspection and Requalification Log (Exact replica of physical shop log)."""
     buf = io.BytesIO()
     W, H = landscape(letter)
     c = canvas.Canvas(buf, pagesize=(W, H))
-    _set_pdf_meta(c, f"DOT 7-Point Visual Log - {work_date} (RIN {dot_rin})")
+    _set_pdf_meta(c, f"DOT Cylinder Visual Inspection & Requalification Log - {work_date} ({dot_rin} / {visual_rin})")
 
-    chunks = [records[i : i + 15] for i in range(0, max(1, len(records)), 15)]
+    chunks = [records[i : i + 14] for i in range(0, max(1, len(records)), 14)]
     headers = [
-        "Serial No.", "Mfg Date", "ICC/DOT Spec", "Mfg ID", "Owner / Client", "Size",
-        "Coating", "Corrosion", "Dents", "Cuts/Gouges", "Leaks", "Fire", "Bulges", "Neck",
-        "Disp", "Relief Chg", "Init",
+        "Serial No.", "Date of Mfg.", "ICC/DOT Spec.", "Name of Mfg.", "Owner / Symbol", "Size",
+        "Type", "Condition",
+        "Corrosion", "Dents/Dings", "Cuts/Gouges", "Leaks", "Fire Dmg", "Bulges", "Neck Def",
+        "Disp.", "Date Insp.", "Relief Chg", "Init.",
     ]
-    widths = [64, 40, 58, 40, 86, 44, 44, 40, 36, 46, 34, 32, 34, 34, 32, 42, 28]
-    x0 = 28
+    widths = [62, 38, 52, 38, 76, 36, 34, 40, 36, 38, 42, 30, 32, 30, 32, 28, 40, 36, 26]
+    x0 = 23
     xs = [x0]
     for w in widths:
         xs.append(xs[-1] + w)
 
+    try:
+        dt_vis = datetime.strptime(work_date, "%Y-%m-%d")
+        insp_my = f"{dt_vis.month:02d}/{str(dt_vis.year)[-2:]}"
+    except Exception:
+        insp_my = work_date[:7]
+
     for p_idx, chunk in enumerate(chunks):
         if p_idx > 0:
             c.showPage()
-        c.setFont("Times-Bold", 14)
-        c.drawCentredString(W / 2, H - 34, "D.O.T./I.C.C. CYLINDER VISUAL INSPECTION AND REQUALIFICATION LOG")
-        c.setFont("Times-Bold", 8.6)
-        c.drawString(
-            x0, H - 52,
-            f"Company: Weber's Tank Testing ({SHOP_ADDRESS})  |  Date: {work_date}  |  RIN: {dot_rin}  |  Manager: {PRIMARY_MANAGER}",
-        )
+        c.setFont("Times-Bold", 13.5)
+        c.drawCentredString(W / 2, H - 30, "D.O.T./I.C.C. CYLINDER VISUAL INSPECTION AND REQUALIFICATION LOG")
 
-        y = H - 64
-        c.setFillColor(colors.Color(0.94, 0.94, 0.94))
-        c.rect(x0, y - 20, xs[-1] - x0, 20, fill=1, stroke=1)
+        c.setFont("Times-Roman", 8.5)
+        c.drawString(x0, H - 46, "Company:")
+        c.setFont("Helvetica-Bold", 8.8)
+        c.drawString(x0 + 44, H - 46, "Weber's Tank Testing")
+        c.line(x0 + 42, H - 48, x0 + 195, H - 48)
+
+        c.setFont("Times-Roman", 8.5)
+        c.drawString(x0 + 235, H - 46, "Service Unit #:")
+        c.setFont("Helvetica", 8.5)
+        c.drawString(x0 + 296, H - 46, "Baden Shop")
+        c.line(x0 + 294, H - 48, x0 + 410, H - 48)
+
+        has_propane = any("PROPANE" in str(r.get("notes", "")).upper() or str(r.get("dot_spec", "")).upper().startswith("4B") or str(r.get("gas_service", "")).upper() == "LPG" for r in chunk if r)
+        rin_display = f"{visual_rin} (Propane/Visual) / {dot_rin}" if has_propane else f"{dot_rin}  |  Visual ID: {visual_rin}"
+        c.setFont("Times-Roman", 8.5)
+        c.drawString(x0 + 445, H - 46, "RIN:")
+        c.setFont("Helvetica-Bold", 8.8)
+        c.drawString(x0 + 468, H - 46, rin_display)
+        c.line(x0 + 466, H - 48, xs[-1], H - 48)
+
+        c.setFont("Times-Roman", 8.5)
+        c.drawString(x0, H - 61, "Plant or City/State:")
+        c.setFont("Helvetica", 8.5)
+        c.drawString(x0 + 76, H - 61, SHOP_ADDRESS)
+        c.line(x0 + 74, H - 63, x0 + 280, H - 63)
+
+        all_adm = bool(chunk) and all("ADMIN" in str(r.get("operator_initials", "")) or "ADMIN" in str(r.get("tested_by", "")) for r in chunk if r)
+        mgr_txt = "ADMIN DIAGNOSTIC" if all_adm else PRIMARY_MANAGER
+        c.setFont("Times-Roman", 8.5)
+        c.drawString(x0 + 400, H - 61, "Responsible Manager:")
+        c.setFont("Times-Italic", 9.5)
+        c.drawString(x0 + 488, H - 61, mgr_txt)
+        c.line(x0 + 484, H - 63, xs[-1], H - 63)
+
+        grp_top = H - 72
+        hdr_top = grp_top - 13
+        hdr_bot = hdr_top - 22
+
+        c.setLineWidth(0.65)
+        c.setFillColor(colors.Color(0.95, 0.95, 0.95))
+        c.rect(xs[0], grp_top - 13, xs[15] - xs[0], 13, fill=1, stroke=1)
+        c.rect(xs[0], hdr_bot, xs[-1] - xs[0], hdr_top - hdr_bot, fill=1, stroke=1)
         c.setFillColor(colors.black)
-        c.setFont("Times-Bold", 6.5)
-        for i, h_txt in enumerate(headers):
-            c.drawCentredString((xs[i] + xs[i + 1]) / 2, y - 13, h_txt)
-            c.line(xs[i], y, xs[i], y - 20)
-        c.line(xs[-1], y, xs[-1], y - 20)
 
-        cy = y - 20
-        rh = 26
-        for r_i in range(15):
+        c.line(xs[6], grp_top, xs[6], hdr_top)
+        c.line(xs[8], grp_top, xs[8], hdr_top)
+        c.line(xs[15], grp_top, xs[15], hdr_top)
+        c.setFont("Times-Bold", 6.8)
+        c.drawCentredString((xs[0] + xs[6]) / 2, hdr_top + 3.5, "CYLINDER IDENTIFICATION")
+        c.drawCentredString((xs[6] + xs[8]) / 2, hdr_top + 3.5, "PROTECTIVE COATING")
+        c.drawCentredString((xs[8] + xs[15]) / 2, hdr_top + 3.5, "CYLINDER CHECKED FOR")
+
+        c.setFont("Times-Bold", 5.8)
+        for i, h_txt in enumerate(headers):
+            cx = (xs[i] + xs[i + 1]) / 2
+            parts = h_txt.split(" ")
+            if len(parts) >= 2 and len(h_txt) > 7:
+                mid = len(parts) // 2
+                c.drawCentredString(cx, hdr_bot + 12, " ".join(parts[:mid]))
+                c.drawCentredString(cx, hdr_bot + 4.5, " ".join(parts[mid:]))
+            else:
+                c.drawCentredString(cx, hdr_bot + 8, h_txt)
+            c.line(xs[i], hdr_top, xs[i], hdr_bot)
+        c.line(xs[-1], hdr_top, xs[-1], hdr_bot)
+
+        cy = hdr_bot
+        rh = 23.5
+        for r_i in range(14):
             r = chunk[r_i] if r_i < len(chunk) else None
+            c.setLineWidth(0.5)
             c.rect(x0, cy - rh, xs[-1] - x0, rh, fill=0, stroke=1)
             for xl in xs[1:-1]:
                 c.line(xl, cy, xl, cy - rh)
             if r:
-                c.setFont("Helvetica", 7.3)
+                c.setFont("Helvetica", 6.9)
+                r_my = insp_my
+                if r.get("work_date") and "-" in str(r.get("work_date")):
+                    wp = str(r["work_date"]).split("-")
+                    if len(wp) == 3:
+                        r_my = f"{wp[1]}/{wp[0][-2:]}"
                 vals = [
                     (r.get("serial_number") or "")[:12],
                     (r.get("mfg_date") or "").lstrip("'")[:7],
-                    _fmt_spec_psi(r.get("dot_spec", ""), int(r.get("service_psi") or 0))[:11],
+                    _fmt_spec_psi(r.get("dot_spec", ""), int(r.get("service_psi") or 0))[:10],
                     (r.get("mfg_id") or "")[:7],
-                    (r.get("customer_name") or "")[:16],
+                    (r.get("customer_name") or "")[:15],
                     (r.get("physical_size") or "")[:8],
+                    (r.get("coating_type") or "Painted")[:7],
                     (r.get("coating_condition") or "Good")[:8],
                     r.get("chk_corrosion", "OK"),
                     r.get("chk_dents_dings", "OK"),
@@ -514,17 +586,18 @@ def build_visual_log_pdf(work_date: str, records: list[dict], dot_rin: str = "B3
                     r.get("chk_bulges", "OK"),
                     r.get("chk_neck_defects", "OK"),
                     "SC" if r.get("hydro_disposition") == "D" else r.get("visual_disposition", "OK"),
+                    r_my,
                     "Yes" if (r.get("relief_valve_changed") == "Yes" or r.get("addon_burst_disc")) else "No",
-                    PRIMARY_INITIALS,
+                    "ADM*" if "ADMIN" in str(r.get("operator_initials", "")) else PRIMARY_INITIALS,
                 ]
                 for i, v in enumerate(vals):
-                    c.drawCentredString((xs[i] + xs[i + 1]) / 2, cy - 16, str(v))
+                    c.drawCentredString((xs[i] + xs[i + 1]) / 2, cy - 15, str(v))
             cy -= rh
 
-        c.setFont("Times-Bold", 7.5)
+        c.setFont("Times-Bold", 7.2)
         c.drawString(
-            x0, cy - 16,
-            "Disposition Codes:  OK - Return to Service   |   SC - Scrap (Condemned)   |   RM - Removed from Service   (Retain in files 5 years)",
+            x0, cy - 13,
+            "Original - Retain in Service Unit files for five years after last inspection date listed     Disposition Code:   OK - Return to Service     SC - Scrap (Condemned)     RM - Removed from Service",
         )
 
     c.save()
@@ -579,44 +652,165 @@ def _draw_mini_rin_badge(
     c.drawCentredString(cx_rin, by + 5.0, "RIN / LIC.")
 
 
+def _draw_webers_shop_sticker(
+    c: canvas.Canvas,
+    lx: float,
+    ly: float,
+    lw: float,
+    lh: float,
+    month_str: str,
+    year_str: str,
+    license_code: str,
+    is_propane_visual: bool = False,
+) -> None:
+    """
+    Draws Ryan Pearce's exact physical shop retest sticker layout:
+      - Hydro Retest ('B386' + LICENSE NUMBER + MM  YY + REQUALIFICATION DATE)
+      - Propane Visual ('V143159' + MM  YY  E + REQUALIFICATION DATE)
+    Scales cleanly to 15-up (3x5, 2.0" tall), 18-up (3x6, 1.67" tall), or 30-up (3x10, 1.0" tall).
+    """
+    cx = lx + lw / 2.0
+    # Reference height is 2.0" (144 pt) for 15-up; clamp font scaling gently so 30-up stays super crisp
+    sy = lh / 144.0
+    fs = max(0.54, min(1.05, sy ** 0.88))
+
+    c.setFillColor(colors.black)
+    c.setStrokeColor(colors.black)
+
+    # Vertical anchor positions (from top of label downward, proportional to label height lh)
+    top_y = ly + lh
+    c.setFont("Helvetica-Bold", 9.8 * fs)
+    c.drawCentredString(cx, top_y - 17.5 * sy, "WEBER'S TANK TESTING")
+
+    c.setFont("Helvetica-Bold", 6.8 * fs)
+    c.drawCentredString(cx, top_y - 28.5 * sy, "3086 LEGIONVILLE ROAD BADEN, PA")
+    c.drawCentredString(cx, top_y - 37.5 * sy, "15005")
+    c.setFont("Helvetica-Bold", 7.3 * fs)
+    c.drawCentredString(cx, top_y - 47.0 * sy, "(724)-266-8008")
+
+    if is_propane_visual:
+        # Propane Visual Requalification Sticker: V143159 + MM  YY  E
+        c.setFont("Helvetica-Bold", 15.8 * fs)
+        c.drawCentredString(cx, top_y - 67.5 * sy, license_code or "V143159")
+
+        m_cx = cx - lw * 0.21
+        y_cx = cx + lw * 0.03
+        e_cx = cx + lw * 0.26
+
+        c.setFont("Helvetica-Bold", 13.5 * fs)
+        c.drawCentredString(m_cx, top_y - 90.0 * sy, month_str)
+        c.drawCentredString(y_cx, top_y - 90.0 * sy, year_str)
+
+        c.setFont("Helvetica-Bold", 5.2 * fs)
+        c.drawCentredString(m_cx, top_y - 101.5 * sy, "MONTH")
+        c.drawCentredString(y_cx, top_y - 101.5 * sy, "YEAR")
+
+        c.setFont("Helvetica-Bold", 23.0 * fs)
+        c.drawCentredString(e_cx, top_y - 99.5 * sy, "E")
+
+        rule_y = top_y - 106.5 * sy
+        c.setLineWidth(max(0.8, 1.15 * fs))
+        c.line(lx + lw * 0.11, rule_y, lx + lw * 0.89, rule_y)
+
+        c.setFont("Helvetica-Bold", 7.2 * fs)
+        c.drawCentredString(cx, top_y - 118.5 * sy, "REQUALIFICATION DATE")
+    else:
+        # Hydrostatic Retest Sticker: B386 + LICENSE NUMBER + MM  YY
+        c.setFont("Helvetica-Bold", 17.5 * fs)
+        c.drawCentredString(cx, top_y - 66.5 * sy, license_code or "B386")
+
+        c.setFont("Helvetica-Bold", 5.3 * fs)
+        c.drawCentredString(cx, top_y - 74.5 * sy, "LICENSE NUMBER")
+
+        m_cx = cx - lw * 0.165
+        y_cx = cx + lw * 0.165
+
+        c.setFont("Helvetica-Bold", 14.2 * fs)
+        c.drawCentredString(m_cx, top_y - 93.0 * sy, month_str)
+        c.drawCentredString(y_cx, top_y - 93.0 * sy, year_str)
+
+        c.setFont("Helvetica-Bold", 5.3 * fs)
+        c.drawCentredString(m_cx, top_y - 103.5 * sy, "MONTH")
+        c.drawCentredString(y_cx, top_y - 103.5 * sy, "YEAR")
+
+        rule_y = top_y - 108.5 * sy
+        c.setLineWidth(max(0.8, 1.15 * fs))
+        c.line(lx + lw * 0.11, rule_y, lx + lw * 0.89, rule_y)
+
+        c.setFont("Helvetica-Bold", 7.3 * fs)
+        c.drawCentredString(cx, top_y - 120.5 * sy, "REQUALIFICATION DATE")
+
+
 def build_rin_stickers_pdf(
     work_date: str,
-    count: int = 30,
+    count: int = 15,
     dot_rin: str = "B386",
+    visual_rin: str = "V143159",
     cols: int = 3,
-    rows: int = 10,
+    rows: int = 5,
     skip_slots: int = 0,
     compact: bool = False,
+    sticker_type: str = "",
+    layout: str = "15_up",
+    month_override: str = "",
+    year_override: str = "",
 ) -> bytes:
-    """Laser Label Sheet (3x10 Avery 5160) - Standard full-width OR 2-up Compact Paintball HPA Mini-Stickers."""
+    """
+    Printable Retest & Visual Requalification Sticker Sheets:
+      - sticker_type='hydro': Weber's B386 Hydro Retest Stickers (matches Ryan's sample hydro sheet)
+      - sticker_type='propane': Weber's V143159 + 'E' Propane Visual Stickers (matches Ryan's sample propane sheet)
+      - sticker_type='mini_hpa' (or compact=True): 2-up Mini Paintball HPA Collar Badges on Avery 5160
+      - layout: '15_up' (3x5, 2" tall), '18_up' (3x6, 1.67" tall), or '30_up' (3x10 Avery 5160, 1" tall)
+    """
+    eff_type = (sticker_type or ("mini_hpa" if compact else "hydro")).strip().lower()
+    eff_layout = (layout or "15_up").strip().lower()
+    if eff_type == "mini_hpa":
+        cols, rows = 3, 10
+    elif eff_layout == "30_up":
+        cols, rows = 3, 10
+    elif eff_layout == "18_up":
+        cols, rows = 3, 6
+    elif eff_layout == "10_up":
+        cols, rows = 2, 5
+    else:
+        cols, rows = 3, 5
+
     buf = io.BytesIO()
     W, H = letter
     c = canvas.Canvas(buf, pagesize=letter)
-    mode_lbl = "Compact Paintball HPA (2-Up)" if compact else "Standard"
-    _set_pdf_meta(c, f"DOT RIN {dot_rin} Retest Stickers ({mode_lbl}) - {work_date}")
+    title_kind = (
+        f"Propane Visual ({visual_rin} E)"
+        if eff_type == "propane"
+        else ("Mini Paintball HPA (2-Up)" if eff_type == "mini_hpa" else f"Hydro Retest ({dot_rin})")
+    )
+    _set_pdf_meta(c, f"Weber's Tank Testing {title_kind} Stickers - {work_date}")
 
     try:
         dt = datetime.strptime(work_date, "%Y-%m-%d")
-        month_str = str(dt.month)
+        month_str = f"{dt.month:02d}"
         year_str = dt.strftime("%y")
     except Exception:
         month_str, year_str = "11", "26"
 
+    if month_override.strip():
+        m_raw = month_override.strip()
+        month_str = f"{int(m_raw):02d}" if m_raw.isdigit() and 1 <= int(m_raw) <= 12 else m_raw[:2]
+    if year_override.strip():
+        y_raw = year_override.strip()
+        year_str = y_raw[-2:] if len(y_raw) >= 2 else y_raw
+
     rin = (dot_rin or "B386").ljust(4)
     rin_chars = (rin[0], rin[1], rin[2], rin[3])
-    r_tl, r_tr, r_br, r_bl = rin_chars
 
-    margin_x = 0.1875 * inch
-    margin_y = 0.5 * inch
-    pitch_x = 2.75 * inch
-    label_w = 2.625 * inch
-    label_h = (H - 2 * margin_y) / max(1, rows)
-    per_page = cols * rows
-
-    needed = max(1, count)
-    skipped = max(0, skip_slots)
-
-    if compact:
+    if eff_type == "mini_hpa":
+        margin_x = 0.1875 * inch
+        margin_y = 0.5 * inch
+        pitch_x = 2.75 * inch
+        label_w = 2.625 * inch
+        label_h = (H - 2 * margin_y) / 10.0
+        per_page = 30
+        needed = max(1, count)
+        skipped = max(0, skip_slots)
         physical_slots_needed = (needed + 1) // 2
         total_slots = skipped + physical_slots_needed
         drawn = 0
@@ -626,30 +820,24 @@ def build_rin_stickers_pdf(
                 c.showPage()
             if slot < skipped:
                 continue
-
             local = slot % per_page
-            r_idx = local // cols
-            c_idx = local % cols
+            r_idx = local // 3
+            c_idx = local % 3
             lx = margin_x + c_idx * pitch_x
             ly = H - margin_y - (r_idx + 1) * label_h
-
             half_w = label_w / 2.0
-            pad_x = 3.5
-            pad_y = 4.5
-            bw = half_w - 2 * pad_x
-            bh = label_h - 2 * pad_y
+            pad_x, pad_y = 3.5, 4.5
+            bw, bh = half_w - 2 * pad_x, label_h - 2 * pad_y
 
             if drawn < needed:
                 _draw_mini_rin_badge(c, lx + pad_x, ly + pad_y, bw, bh, month_str, year_str, rin_chars)
                 drawn += 1
-
             c.saveState()
             c.setDash(2, 2)
             c.setStrokeColor(colors.Color(0.65, 0.65, 0.65))
             c.setLineWidth(0.5)
             c.line(lx + half_w, ly + 3, lx + half_w, ly + label_h - 3)
             c.restoreState()
-
             if drawn < needed:
                 _draw_mini_rin_badge(c, lx + half_w + pad_x, ly + pad_y, bw, bh, month_str, year_str, rin_chars)
                 drawn += 1
@@ -657,61 +845,43 @@ def build_rin_stickers_pdf(
         c.save()
         return buf.getvalue()
 
+    # Sheet geometry for 10-up (2x5), 15-up (3x5), 18-up (3x6), and 30-up (3x10)
+    if cols == 2:
+        margin_x = 0.15625 * inch
+        margin_y = 0.5 * inch
+        label_w = 4.0 * inch
+        pitch_x = 4.1875 * inch
+    elif rows == 10:
+        margin_x = 0.1875 * inch
+        margin_y = 0.5 * inch
+        pitch_x = 2.75 * inch
+        label_w = 2.625 * inch
+    else:
+        # Butt-cut 3-column 2.625" wide retest sticker stock (matches Ryan's sample sheets)
+        margin_x = 0.3125 * inch
+        margin_y = 0.5 * inch
+        label_w = (W - 2 * margin_x) / cols
+        pitch_x = label_w
+
+    label_h = (H - 2 * margin_y) / max(1, rows)
+    per_page = cols * rows
+    needed = max(1, count)
+    skipped = max(0, skip_slots)
     total_slots = skipped + needed
+    is_prop = eff_type == "propane"
+    lic = (visual_rin or "V143159") if is_prop else (dot_rin or "B386")
+
     for slot in range(total_slots):
         if slot > 0 and slot % per_page == 0:
             c.showPage()
         if slot < skipped:
             continue
-
         local = slot % per_page
         r_idx = local // cols
         c_idx = local % cols
-
         lx = margin_x + c_idx * pitch_x
         ly = H - margin_y - (r_idx + 1) * label_h
-
-        pad_x = 5.0
-        pad_y = 4.5
-        bx, by = lx + pad_x, ly + pad_y
-        bw, bh = label_w - 2 * pad_x, label_h - 2 * pad_y
-
-        c.setLineWidth(1.15)
-        c.roundRect(bx, by, bw, bh, 5.5, stroke=1, fill=0)
-
-        side_w = bw * 0.26
-        side_h = 28.0
-        side_bot = by + 20.0
-
-        mid_w = bw * 0.32
-        mid_h = 42.0
-        mid_bot = by + 13.5
-
-        m_x = bx + bw * 0.055
-        rin_x = bx + (bw - mid_w) / 2.0
-        y_x = bx + bw * 0.945 - side_w
-
-        c.setLineWidth(0.95)
-        c.rect(m_x, side_bot, side_w, side_h, stroke=1, fill=0)
-        c.rect(rin_x, mid_bot, mid_w, mid_h, stroke=1, fill=0)
-        c.rect(y_x, side_bot, side_w, side_h, stroke=1, fill=0)
-
-        c.setFont("Helvetica-Bold", 14.5)
-        c.drawCentredString(m_x + side_w / 2.0, side_bot + side_h / 2.0 - 5.0, month_str)
-        c.drawCentredString(y_x + side_w / 2.0, side_bot + side_h / 2.0 - 5.0, year_str)
-
-        c.setFont("Helvetica-Bold", 13.5)
-        cx_rin = rin_x + mid_w / 2.0
-        cy_rin = mid_bot + mid_h / 2.0
-        c.drawCentredString(cx_rin - 10.5, cy_rin + 4.0, r_tl)
-        c.drawCentredString(cx_rin + 10.5, cy_rin + 4.0, r_tr)
-        c.drawCentredString(cx_rin - 10.5, cy_rin - 13.0, r_bl)
-        c.drawCentredString(cx_rin + 10.5, cy_rin - 13.0, r_br)
-
-        c.setFont("Helvetica-Bold", 6.0)
-        c.drawCentredString(m_x + side_w / 2.0, by + 11.5, "MONTH")
-        c.drawCentredString(y_x + side_w / 2.0, by + 11.5, "YEAR")
-        c.drawCentredString(cx_rin, by + 5.5, "LICENSE NO.")
+        _draw_webers_shop_sticker(c, lx, ly, label_w, label_h, month_str, year_str, lic, is_propane_visual=is_prop)
 
     c.save()
     return buf.getvalue()

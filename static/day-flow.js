@@ -141,8 +141,12 @@
             <span class="nav-badge ${locked ? 'green' : 'amber'}">${locked ? 'Locked' : 'Plan'}</span>
           </button>` : ''}
         <button type="button" class="rail-btn" onclick="window.openTasksModal()">
-          <span>📋 ${isBoss ? 'Crew Tasks' : 'My Tasks'}</span>
+          <span>📋 Shop &amp; Property To-Do</span>
           <span class="nav-badge ${openTasks ? 'amber' : 'green'}">${openTasks}</span>
+        </button>
+        <button type="button" class="rail-btn" onclick="window.openShopMessagesDrawer && window.openShopMessagesDrawer()">
+          <span>💬 Crew &amp; Web Chat</span>
+          <span class="nav-badge" id="railMsgBadge">Chat</span>
         </button>
         <button type="button" class="rail-btn" onclick="window.openEndDayModal()">
           <span>🌙 ${isBoss ? 'End Your Day' : 'Wrap Up Shift'}</span>
@@ -236,7 +240,8 @@
 
         <div style="display:flex;flex-direction:column;gap:7px;">
           ${isBoss ? `<button type="button" class="secondary" style="padding:10px;justify-content:flex-start;" onclick="document.getElementById('unifiedAccountDrawer').hidden=true;window.openStartDayModal()">☀️ Start Your Day &amp; Lock Lineup</button>` : ''}
-          <button type="button" class="secondary" style="padding:10px;justify-content:flex-start;" onclick="document.getElementById('unifiedAccountDrawer').hidden=true;window.openTasksModal()">📋 ${isBoss ? 'Assign &amp; View Crew Tasks' : 'My Assigned Tasks'}</button>
+          <button type="button" class="secondary" style="padding:10px;justify-content:flex-start;" onclick="document.getElementById('unifiedAccountDrawer').hidden=true;window.openTasksModal()">📋 Shop &amp; Property To-Do List</button>
+          <button type="button" class="secondary" style="padding:10px;justify-content:flex-start;" onclick="document.getElementById('unifiedAccountDrawer').hidden=true;window.openShopMessagesDrawer&&window.openShopMessagesDrawer()">💬 Crew &amp; Website Messages</button>
           <button type="button" class="secondary" style="padding:10px;justify-content:flex-start;" onclick="document.getElementById('unifiedAccountDrawer').hidden=true;window.openEndDayModal()">🌙 ${isBoss ? 'End Your Day Closeout' : 'Wrap Up My Shift'}</button>
           <button type="button" class="secondary" style="padding:10px;justify-content:flex-start;" onclick="document.getElementById('unifiedAccountDrawer').hidden=true;typeof toggleFeedbackModal==='function'?toggleFeedbackModal(true):(location.href='/ops')">💬 Crew Feedback &amp; Notes</button>
           <button type="button" class="secondary" style="padding:10px;justify-content:flex-start;background:#fffbeb;border-color:#f59e0b;color:#92400e;font-weight:800;" onclick="location.href='/merch'">👕 Crew Gear &amp; Merch Locker</button>
@@ -431,7 +436,6 @@
   window.openTasksModal = async function () {
     await refreshDayOverview();
     if (!DAY_DATA) return;
-    const isBoss = window.CURRENT_USER?.role === 'OWNER' || window.CURRENT_USER?.role === 'SYSTEM_ADMIN';
     let m = document.getElementById('crewTasksModal');
     if (!m) {
       m = document.createElement('div'); m.id = 'crewTasksModal'; m.className = 'modal-bg';
@@ -441,40 +445,56 @@
     m.hidden = false;
     const tasks = DAY_DATA.tasks || [];
     m.innerHTML = `
-      <div class="modal" style="max-width:620px;">
+      <div class="modal" style="max-width:660px;">
         <div class="card-hdr">
-          <h3>📋 ${isBoss ? 'Crew &amp; Property Tasks' : 'My Assigned Tasks'}</h3>
+          <div>
+            <h3>📋 Shop &amp; Property To-Do List</h3>
+            <small style="color:var(--muted);">Shared across Ryan &amp; all Crew — open items broadcast onto Live TV</small>
+          </div>
           <button type="button" class="secondary" onclick="document.getElementById('crewTasksModal').hidden=true">✖ Close</button>
         </div>
-        ${isBoss ? `
         <div class="day-sec-box">
           <div class="grid">
-            <div style="grid-column:1/-1;"><label>Task Description</label><input id="ctTitle" placeholder="e.g. Devalve & tag Economy VFD batch, sweep Main Bay..." onkeydown="if(event.key==='Enter')window.addCrewTaskNow()" /></div>
+            <div style="grid-column:1/-1;"><label>Task Description</label><input id="ctTitle" placeholder="e.g. Service Kubota/ATV for winter plowing, Firewood, Clean shop garage..." onkeydown="if(event.key==='Enter')window.addCrewTaskNow()" /></div>
             <div><label>Assign To</label>
               <select id="ctAssign">
                 <option value="ALL">All Crew</option>
                 ${(DAY_DATA.crew_list || []).map(c => `<option value="${esc(c.initials)}">${esc(c.name)} (${esc(c.initials)})</option>`).join('')}
               </select>
             </div>
-            <div><label>Category</label><select id="ctCat"><option value="SHOP">Shop / Cylinders</option><option value="PROPERTY">Property / Truck</option></select></div>
+            <div><label>Area</label>
+              <select id="ctCat">
+                <option value="PROPERTY">🚜 Property &amp; Grounds</option>
+                <option value="SHOP" selected>🔧 Shop &amp; Garage</option>
+                <option value="CYLINDERS">🧪 Cylinders &amp; Stand</option>
+              </select>
+            </div>
+            <div><label>Priority</label>
+              <select id="ctPrio">
+                <option value="NORMAL" selected>Normal</option>
+                <option value="HIGH">⚡ High Priority</option>
+              </select>
+            </div>
           </div>
-          <button type="button" class="primary" onclick="window.addCrewTaskNow()">+ Assign Task</button>
-        </div>` : ''}
+          <button type="button" class="primary" onclick="window.addCrewTaskNow()">+ Add To-Do Item</button>
+        </div>
         <div>
           ${tasks.length ? tasks.map(t => `
             <div class="rec-item">
               <div class="rec-main">
                 <div class="rec-title">
-                  <span style="${t.status === 'DONE' ? 'text-decoration:line-through;color:var(--muted);' : ''}">${esc(t.title)}</span>
+                  <span style="${t.status === 'DONE' ? 'text-decoration:line-through;color:var(--muted);' : 'font-weight:800;'}">${t.category === 'PROPERTY' ? '🚜 ' : '🔧 '}${esc(t.title)}</span>
                   <span class="sub-badge">${esc(t.assigned_name || t.assigned_to)}</span>
+                  ${t.priority === 'HIGH' && t.status !== 'DONE' ? '<span class="rush-badge">⚡ HIGH</span>' : ''}
                 </div>
-                <div class="rec-sub">${esc(t.category)} • ${t.status === 'DONE' ? `Done by ${esc(t.completed_by)} at ${esc(t.completed_at)}` : 'Open'}</div>
+                <div class="rec-sub">${esc(t.category)} • ${t.status === 'DONE' ? `Done by ${esc(t.completed_by)} at ${esc(t.completed_at)}` : 'Open • Shows on TV'}</div>
               </div>
               <div class="rec-actions">
                 <button type="button" class="secondary" onclick="window.toggleCrewTaskDone(${t.id}, '${t.status === 'DONE' ? 'OPEN' : 'DONE'}')">${t.status === 'DONE' ? 'Undo' : '✓ Done'}</button>
-                ${isBoss ? `<button type="button" class="secondary" style="color:#b91c1c;" onclick="window.removeCrewTask(${t.id})">✕</button>` : ''}
+                <button type="button" class="secondary" onclick="window.promptEditCrewTask(${t.id}, '${esc(t.title).replace(/'/g, "\\'")}')">✎</button>
+                <button type="button" class="secondary" style="color:#b91c1c;" onclick="window.removeCrewTask(${t.id})">✕</button>
               </div>
-            </div>`).join('') : '<div style="color:var(--muted);font-size:0.86rem;padding:8px 0;">No open tasks assigned right now.</div>'}
+            </div>`).join('') : '<div style="color:var(--muted);font-size:0.86rem;padding:8px 0;">No open tasks right now.</div>'}
         </div>
       </div>`;
   };
@@ -484,8 +504,25 @@
     if (!title) return;
     await fetch('/api/day/tasks', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, assigned_to: document.getElementById('ctAssign').value, category: document.getElementById('ctCat').value }),
+      body: JSON.stringify({
+        title,
+        assigned_to: document.getElementById('ctAssign').value,
+        category: document.getElementById('ctCat').value,
+        priority: document.getElementById('ctPrio')?.value || 'NORMAL',
+      }),
     });
+    if (typeof loadState === 'function') loadState(false);
+    window.openTasksModal();
+  };
+
+  window.promptEditCrewTask = async function (id, curTitle) {
+    const next = prompt('Edit To-Do item:', curTitle);
+    if (next === null || !next.trim()) return;
+    await fetch('/api/day/tasks/' + id, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: next.trim() }),
+    });
+    if (typeof loadState === 'function') loadState(false);
     window.openTasksModal();
   };
 
@@ -745,4 +782,250 @@ if (!window._WEBER_TIMECLOCK_V13) {
 
   setTimeout(() => window.refreshWorkerTimeClock(), 600);
   setInterval(() => window.refreshWorkerTimeClock(), 30000);
+}
+
+// =========================================================================
+// v16.0 UNIFIED SHOP MESSAGING (CREW ↔ CREW + WEBSITE CUSTOMER INQUIRIES)
+// =========================================================================
+if (!window._WEBER_MESSAGES_V16) {
+  window._WEBER_MESSAGES_V16 = true;
+  let MSG_STATE = { crew_messages: [], web_inquiries: [], crew_directory: [], latest_msg_id: 0, open_inquiries_count: 0 };
+  let MSG_TAB = 'CREW';
+
+  const escM = s => String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+
+  function seenMsgStorageKey() {
+    const init = window.CURRENT_USER?.initials || localStorage.getItem('webers_active_crew') || 'RP';
+    return `webers_seen_msg_${init}`;
+  }
+
+  function installTopMessagesButton() {
+    const topCtrl = document.querySelector('.top-controls');
+    if (!topCtrl || document.getElementById('topShopMsgBtn')) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'topShopMsgBtn';
+    btn.className = 'menu-pill';
+    btn.title = 'Crew Chat & Website Customer Messages';
+    btn.onclick = () => window.openShopMessagesDrawer();
+    const anchor = document.getElementById('topHelpAiBtn') || topCtrl.firstChild;
+    topCtrl.insertBefore(btn, anchor);
+    updateMessagesBadges();
+  }
+
+  function updateMessagesBadges() {
+    const btn = document.getElementById('topShopMsgBtn');
+    const seenId = parseInt(localStorage.getItem(seenMsgStorageKey()) || '0', 10);
+    const hasNewCrew = (MSG_STATE.latest_msg_id || 0) > seenId;
+    const openInq = MSG_STATE.open_inquiries_count || 0;
+    const badgeNum = openInq + (hasNewCrew ? 1 : 0);
+
+    if (btn) {
+      btn.innerHTML = badgeNum > 0
+        ? `💬 <span class="full-lbl">Messages</span> <span class="top-msg-badge">${openInq || '•'}</span>`
+        : `💬 <span class="full-lbl">Messages</span>`;
+    }
+    const railB = document.getElementById('railMsgBadge');
+    if (railB) {
+      railB.textContent = openInq ? `${openInq} New` : (hasNewCrew ? 'New' : 'Chat');
+      railB.className = 'nav-badge ' + ((openInq || hasNewCrew) ? 'amber' : '');
+    }
+  }
+
+  window.refreshMessagesBadgeSilent = async function () {
+    const shell = document.getElementById('appShell');
+    if (!shell || shell.hidden) return;
+    installTopMessagesButton();
+    try {
+      const res = await fetch('/api/ping');
+      if (!res.ok) return;
+      const p = await res.json();
+      MSG_STATE.latest_msg_id = p.latest_msg_id || 0;
+      MSG_STATE.open_inquiries_count = p.open_inquiries_count || 0;
+      updateMessagesBadges();
+      const drawer = document.getElementById('shopMessagesDrawer');
+      if (drawer && !drawer.hidden) {
+        await loadFullMessagesState(false);
+      }
+    } catch (_) {}
+  };
+
+  async function loadFullMessagesState(markSeen = true) {
+    const res = await fetch('/api/messages');
+    if (!res.ok) return;
+    MSG_STATE = await res.json();
+    if (markSeen && MSG_STATE.latest_msg_id) {
+      localStorage.setItem(seenMsgStorageKey(), String(MSG_STATE.latest_msg_id));
+    }
+    updateMessagesBadges();
+    renderShopMessagesDrawerBody();
+  }
+
+  window.openShopMessagesDrawer = async function (forceTab = null) {
+    if (forceTab) MSG_TAB = forceTab;
+    let d = document.getElementById('shopMessagesDrawer');
+    if (!d) {
+      d = document.createElement('div');
+      d.id = 'shopMessagesDrawer';
+      d.className = 'modal-bg';
+      d.onclick = e => { if (e.target === d) d.hidden = true; };
+      document.body.appendChild(d);
+    }
+    d.hidden = false;
+    d.innerHTML = `
+      <div class="drawer-panel msg-drawer-panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <div>
+            <h3 style="margin:0;font-size:1.12rem;">💬 Shop &amp; Customer Messages</h3>
+            <small style="color:var(--ui-muted);font-weight:600;">Crew-to-Crew Chat + Website Inquiries</small>
+          </div>
+          <button type="button" class="secondary" onclick="document.getElementById('shopMessagesDrawer').hidden=true">✖</button>
+        </div>
+
+        <div class="cal-view-seg" style="width:100%;display:grid;grid-template-columns:1fr 1fr;" id="msgTabBar">
+          <button type="button" class="cal-vseg-btn" id="msgTabBtnCrew" onclick="window.switchMsgDrawerTab('CREW')">👷 Crew Chat</button>
+          <button type="button" class="cal-vseg-btn" id="msgTabBtnWeb" onclick="window.switchMsgDrawerTab('WEB')">🌐 Website Inquiries <span id="msgWebCntSpan"></span></button>
+        </div>
+
+        <div id="msgDrawerContent" style="display:flex;flex-direction:column;flex:1;min-height:0;gap:10px;">
+          <div style="color:var(--ui-muted);font-size:0.85rem;">Loading messages...</div>
+        </div>
+      </div>`;
+    await loadFullMessagesState(true);
+    if (!forceTab && MSG_STATE.open_inquiries_count > 0 && !(MSG_STATE.crew_messages || []).length) {
+      MSG_TAB = 'WEB';
+      renderShopMessagesDrawerBody();
+    }
+  };
+
+  window.switchMsgDrawerTab = function (tab) {
+    MSG_TAB = tab;
+    renderShopMessagesDrawerBody();
+  };
+
+  function renderShopMessagesDrawerBody() {
+    const host = document.getElementById('msgDrawerContent');
+    if (!host) return;
+    document.getElementById('msgTabBtnCrew')?.classList.toggle('active', MSG_TAB === 'CREW');
+    document.getElementById('msgTabBtnWeb')?.classList.toggle('active', MSG_TAB === 'WEB');
+    const cntSpan = document.getElementById('msgWebCntSpan');
+    if (cntSpan) cntSpan.textContent = MSG_STATE.open_inquiries_count ? `(${MSG_STATE.open_inquiries_count})` : '';
+
+    const myInit = (window.CURRENT_USER?.initials || 'RP').toUpperCase();
+    const isBoss = ['OWNER', 'SYSTEM_ADMIN'].includes(window.CURRENT_USER?.role || '');
+
+    if (MSG_TAB === 'CREW') {
+      const prevRecip = document.getElementById('msgRecipSel')?.value || 'ALL';
+      const prevDraft = document.getElementById('msgBodyInput')?.value || '';
+      const msgs = MSG_STATE.crew_messages || [];
+      const dirOpts = (MSG_STATE.crew_directory || [])
+        .filter(c => c.initials !== myInit)
+        .map(c => `<option value="${escM(c.initials)}" ${c.initials === prevRecip ? 'selected' : ''}>Direct → ${escM(c.name)} (${escM(c.initials)})</option>`)
+        .join('');
+
+      host.innerHTML = `
+        <div class="msg-chat-stream" id="msgChatStream">
+          ${msgs.length ? msgs.map(m => {
+            const mine = (m.sender_initials || '').toUpperCase() === myInit;
+            const recipTag = m.recipient && m.recipient !== 'ALL' ? ` → @${escM(m.recipient)}` : ' → All Crew';
+            return `
+              <div class="msg-bubble ${mine ? 'mine' : 'theirs'}">
+                <div class="msg-bubble-meta">
+                  <strong>${escM(m.sender_name)} (${escM(m.sender_initials)})</strong><span>${recipTag} • ${escM(m.created_at)}</span>
+                  ${(mine || isBoss) ? `<button type="button" class="msg-del-x" onclick="window.deleteShopMsg(${m.id})" title="Delete">×</button>` : ''}
+                </div>
+                <div class="msg-bubble-txt">${escM(m.body)}</div>
+              </div>`;
+          }).join('') : `<div style="margin:auto;text-align:center;color:var(--ui-muted);font-size:0.84rem;padding:24px 12px;">
+            <div style="font-size:1.8rem;margin-bottom:6px;">💬</div>
+            <strong>Crew Chat Ready</strong>
+            <p style="margin:4px 0 0;">Leave notes between Ryan and the crew (e.g. valve parts, truck pickup updates, or shop handoffs).</p>
+          </div>`}
+        </div>
+
+        <div class="msg-composer-box">
+          <div style="display:flex;gap:6px;margin-bottom:6px;">
+            <select id="msgRecipSel" style="padding:6px 10px;font-size:0.78rem;font-weight:700;">
+              <option value="ALL" ${prevRecip === 'ALL' ? 'selected' : ''}>📣 All Shop Crew</option>
+              ${dirOpts}
+            </select>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <input id="msgBodyInput" value="${escM(prevDraft)}" placeholder="Message crew or Ryan..." onkeydown="if(event.key==='Enter'){event.preventDefault();window.sendCrewChatMsg();}" style="flex:1;" />
+            <button type="button" class="primary" style="width:auto;margin:0;padding:9px 16px;" onclick="window.sendCrewChatMsg()">Send</button>
+          </div>
+        </div>`;
+
+      const stream = document.getElementById('msgChatStream');
+      if (stream) stream.scrollTop = stream.scrollHeight;
+      return;
+    }
+
+    // WEBSITE CUSTOMER INQUIRIES TAB
+    const inqs = MSG_STATE.web_inquiries || [];
+    host.innerHTML = `
+      <div class="msg-chat-stream">
+        ${inqs.length ? inqs.map(q => {
+          const isOpen = q.status === 'OPEN';
+          const digits = String(q.sender_phone || '').replace(/\D/g, '');
+          const smsHref = digits ? `sms:${digits}?body=${encodeURIComponent(`Hi ${q.sender_name}, this is Ryan at Weber's Tank Testing regarding your message: `)}` : '';
+          const mailHref = q.sender_email ? `mailto:${encodeURIComponent(q.sender_email)}?subject=${encodeURIComponent("Re: Your Question for Weber's Tank Testing")}` : '';
+          return `
+            <div class="msg-inq-card ${isOpen ? 'open' : 'resolved'}">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                <div>
+                  <strong style="font-size:0.93rem;">${escM(q.sender_name)}</strong>
+                  <span class="${isOpen ? 'dwell-badge' : 'pass'}" style="margin-left:6px;">${isOpen ? 'OPEN' : '✓ Resolved'}</span>
+                  <div style="font-size:0.74rem;color:var(--ui-muted);margin-top:2px;">${escM(q.created_at)}${q.sender_phone ? ' • 📞 ' + escM(q.sender_phone) : ''}${q.sender_email ? ' • ✉️ ' + escM(q.sender_email) : ''}</div>
+                </div>
+                ${isBoss ? `<button type="button" class="msg-del-x" onclick="window.deleteShopMsg(${q.id})" title="Delete">×</button>` : ''}
+              </div>
+              <div style="margin:8px 0;font-size:0.86rem;line-height:1.48;white-space:pre-line;">${escM(q.body)}</div>
+              ${q.replied_at ? `<div style="font-size:0.74rem;color:var(--ui-accent);font-weight:700;margin-bottom:6px;">✓ Marked resolved by ${escM(q.replied_by)} (${escM(q.replied_at)})${q.reply_note ? ': ' + escM(q.reply_note) : ''}</div>` : ''}
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                ${smsHref ? `<a class="secondary" href="${smsHref}">📲 Text Back</a>` : ''}
+                ${digits ? `<a class="secondary" href="tel:${digits}">📞 Call</a>` : ''}
+                ${mailHref ? `<a class="secondary" href="${mailHref}">✉️ Email</a>` : ''}
+                <button type="button" class="secondary" onclick="window.toggleInquiryResolved(${q.id}, '${isOpen ? 'RESOLVED' : 'OPEN'}')">${isOpen ? '✓ Mark Resolved' : 'Reopen'}</button>
+              </div>
+            </div>`;
+        }).join('') : `<div style="margin:auto;text-align:center;color:var(--ui-muted);font-size:0.84rem;padding:24px 12px;">
+          <div style="font-size:1.8rem;margin-bottom:6px;">🌐</div>
+          <strong>No Website Questions Waiting</strong>
+          <p style="margin:4px 0 0;">Questions submitted via the "Message Ryan" button on weberstanktesting.com appear right here.</p>
+        </div>`}
+      </div>`;
+  }
+
+  window.sendCrewChatMsg = async function () {
+    const inp = document.getElementById('msgBodyInput');
+    const body = (inp?.value || '').trim();
+    if (!body) return;
+    const recipient = document.getElementById('msgRecipSel')?.value || 'ALL';
+    inp.value = '';
+    const res = await fetch('/api/messages', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipient, body }),
+    });
+    if (!res.ok) { alert((await res.json()).detail || 'Could not send message.'); return; }
+    await loadFullMessagesState(true);
+    setTimeout(() => document.getElementById('msgBodyInput')?.focus(), 30);
+  };
+
+  window.toggleInquiryResolved = async function (id, status) {
+    await fetch(`/api/messages/${id}/resolve`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    await loadFullMessagesState(true);
+  };
+
+  window.deleteShopMsg = async function (id) {
+    if (!confirm('Delete this message?')) return;
+    await fetch(`/api/messages/${id}`, { method: 'DELETE' });
+    await loadFullMessagesState(true);
+  };
+
+  setTimeout(() => window.refreshMessagesBadgeSilent(), 800);
+  setInterval(() => window.refreshMessagesBadgeSilent(), 12000);
 }

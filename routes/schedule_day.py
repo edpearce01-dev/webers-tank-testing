@@ -501,25 +501,22 @@ def get_day_overview(request: Request):
         ).fetchall()
     ]
 
-    if u["role"] in ("OWNER", "SYSTEM_ADMIN"):
-        tasks = [
-            dict(r) for r in conn.execute(
-                "SELECT * FROM crew_tasks WHERE work_date=? OR status='OPEN' ORDER BY CASE status WHEN 'OPEN' THEN 0 ELSE 1 END, id DESC;",
-                (today_iso,),
-            ).fetchall()
-        ]
-        crew_list = [
-            {"initials": r["initials"], "name": r["name"]}
-            for r in conn.execute("SELECT initials, name FROM crew_users WHERE active=1 AND role!='SYSTEM_ADMIN' ORDER BY CASE role WHEN 'OWNER' THEN 0 ELSE 1 END, id;").fetchall()
-        ]
-    else:
-        tasks = [
-            dict(r) for r in conn.execute(
-                "SELECT * FROM crew_tasks WHERE (work_date=? OR status='OPEN') AND (assigned_to='ALL' OR assigned_to=?) ORDER BY CASE status WHEN 'OPEN' THEN 0 ELSE 1 END, id DESC;",
-                (today_iso, u["initials"]),
-            ).fetchall()
-        ]
-        crew_list = []
+    tasks = [
+        dict(r) for r in conn.execute(
+            """SELECT * FROM crew_tasks
+               WHERE work_date=? OR status='OPEN'
+               ORDER BY CASE status WHEN 'OPEN' THEN 0 ELSE 1 END,
+                        CASE priority WHEN 'HIGH' THEN 0 ELSE 1 END,
+                        id DESC;""",
+            (today_iso,),
+        ).fetchall()
+    ]
+    crew_list = [
+        {"initials": r["initials"], "name": r["name"], "role": r["role"]}
+        for r in conn.execute(
+            "SELECT initials, name, role FROM crew_users WHERE active=1 AND role!='SYSTEM_ADMIN' ORDER BY CASE role WHEN 'OWNER' THEN 0 ELSE 1 END, id;"
+        ).fetchall()
+    ]
 
     # End-of-Day Stats
     tested_today = conn.execute("SELECT COUNT(*) FROM cylinder_records WHERE work_date=? AND status='COMPLETED';", (today_iso,)).fetchone()[0]
@@ -641,15 +638,53 @@ def trigger_manual_autopace(request: Request):
     return res
 
 
+@router.get("/api/tasks")
+def list_shop_and_property_tasks(request: Request):
+    u = getattr(request.state, "user", None) or get_current_session_user(request)
+    if not u:
+        raise HTTPException(401, "Not authenticated.")
+    conn = get_conn()
+    tasks = [
+        dict(r) for r in conn.execute(
+            """SELECT * FROM crew_tasks
+               WHERE status='OPEN'
+               UNION ALL
+               SELECT * FROM (
+                   SELECT * FROM crew_tasks WHERE status='DONE' ORDER BY id DESC LIMIT 30
+               );"""
+        ).fetchall()
+    ]
+    tasks.sort(
+        key=lambda t: (
+            0 if t.get("status") == "OPEN" else 1,
+            0 if t.get("priority") == "HIGH" else 1,
+            -int(t.get("id") or 0),
+        )
+    )
+    crew_list = [
+        {"initials": r["initials"], "name": r["name"], "role": r["role"]}
+        for r in conn.execute(
+            "SELECT initials, name, role FROM crew_users WHERE active=1 AND role!='SYSTEM_ADMIN' ORDER BY CASE role WHEN 'OWNER' THEN 0 ELSE 1 END, id;"
+        ).fetchall()
+    ]
+    conn.close()
+    return {"tasks": tasks, "crew_list": crew_list}
+
+
 @router.post("/api/day/tasks")
 def create_crew_task(payload: CrewTaskInput, request: Request):
-    u = require_owner_or_admin(request)
-    title = payload.title.strip()[:200]
+    u = getattr(request.state, "user", None) or get_current_session_user(request)
+    if not u:
+        raise HTTPException(401, "Not authenticated.")
+    title = payload.title.strip()[:240]
     if not title:
         raise HTTPException(400, "Enter a task description first.")
     w_date = payload.work_date.strip() or today_eastern()
     assigned = payload.assigned_to.strip().upper()[:8] or "ALL"
-    cat = "PROPERTY" if payload.category.strip().upper() == "PROPERTY" else "SHOP"
+    raw_cat = payload.category.strip().upper()
+    cat = raw_cat if raw_cat in ("PROPERTY", "SHOP", "CYLINDERS") else "SHOP"
+    prio = "HIGH" if payload.priority.strip().upper() in ("HIGH", "URGENT", "RUSH") else "NORMAL"
+    ts = now_eastern().strftime("%I:%M %p")
 
     conn = get_conn()
     a_name = "All Crew"
@@ -657,16 +692,18 @@ def create_crew_task(payload: CrewTaskInput, request: Request):
         urow = conn.execute("SELECT name FROM crew_users WHERE initials=?;", (assigned,)).fetchone()
         if urow:
             a_name = urow["name"]
-    conn.execute(
+    cur = conn.cursor()
+    cur.execute(
         """INSERT INTO crew_tasks
-           (work_date, assigned_to, assigned_name, category, title, priority, status, created_by, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, 'OPEN', ?, ?);""",
-        (w_date, assigned, a_name, cat, title, payload.priority.strip().upper() or "NORMAL", u["initials"], now_eastern().strftime("%I:%M %p")),
+           (work_date, assigned_to, assigned_name, category, title, priority, status, created_by, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, 'OPEN', ?, ?, ?);""",
+        (w_date, assigned, a_name, cat, title, prio, u["initials"], ts, ts),
     )
+    new_id = cur.lastrowid
     bump_db_version(conn)
     conn.commit()
     conn.close()
-    return {"created": True}
+    return {"created": True, "id": new_id}
 
 
 @router.put("/api/day/tasks/{task_id}")
@@ -680,12 +717,46 @@ def update_crew_task(task_id: int, payload: CrewTaskUpdateInput, request: Reques
         conn.close()
         raise HTTPException(404, "Task not found.")
     new_status = payload.status if payload.status in ("OPEN", "DONE") else t["status"]
-    comp_by = u["initials"] if new_status == "DONE" else ""
-    comp_at = now_eastern().strftime("%I:%M %p") if new_status == "DONE" else ""
-    note = payload.crew_note.strip()[:200] if payload.crew_note is not None else t["crew_note"]
+    if payload.status == "DONE" and t["status"] != "DONE":
+        comp_by = u["initials"]
+        comp_at = now_eastern().strftime("%I:%M %p")
+    elif payload.status == "OPEN":
+        comp_by = ""
+        comp_at = ""
+    else:
+        comp_by = t["completed_by"] or ""
+        comp_at = t["completed_at"] or ""
+
+    note = payload.crew_note.strip()[:200] if payload.crew_note is not None else (t["crew_note"] or "")
+    new_title = payload.title.strip()[:240] if (payload.title is not None and payload.title.strip()) else t["title"]
+    if payload.category is not None:
+        rc = payload.category.strip().upper()
+        new_cat = rc if rc in ("PROPERTY", "SHOP", "CYLINDERS") else t["category"]
+    else:
+        new_cat = t["category"]
+    if payload.priority is not None:
+        new_prio = "HIGH" if payload.priority.strip().upper() in ("HIGH", "URGENT", "RUSH") else "NORMAL"
+    else:
+        new_prio = t["priority"] or "NORMAL"
+
+    if payload.assigned_to is not None:
+        new_assigned = payload.assigned_to.strip().upper()[:8] or "ALL"
+        new_a_name = "All Crew"
+        if new_assigned != "ALL":
+            urow = conn.execute("SELECT name FROM crew_users WHERE initials=?;", (new_assigned,)).fetchone()
+            if urow:
+                new_a_name = urow["name"]
+    else:
+        new_assigned = t["assigned_to"]
+        new_a_name = t["assigned_name"]
+
+    ts = now_eastern().strftime("%I:%M %p")
     conn.execute(
-        "UPDATE crew_tasks SET status=?, completed_by=?, completed_at=?, crew_note=? WHERE id=?;",
-        (new_status, comp_by, comp_at, note, task_id),
+        """UPDATE crew_tasks
+           SET title=?, category=?, priority=?, assigned_to=?, assigned_name=?,
+               status=?, completed_by=?, completed_at=?, crew_note=?, updated_at=?
+           WHERE id=?;""",
+        (new_title, new_cat, new_prio, new_assigned, new_a_name, new_status, comp_by, comp_at, note, ts, task_id),
     )
     bump_db_version(conn)
     conn.commit()
@@ -695,7 +766,9 @@ def update_crew_task(task_id: int, payload: CrewTaskUpdateInput, request: Reques
 
 @router.delete("/api/day/tasks/{task_id}")
 def delete_crew_task(task_id: int, request: Request):
-    require_owner_or_admin(request)
+    u = getattr(request.state, "user", None) or get_current_session_user(request)
+    if not u:
+        raise HTTPException(401, "Not authenticated.")
     conn = get_conn()
     conn.execute("DELETE FROM crew_tasks WHERE id=?;", (task_id,))
     bump_db_version(conn)

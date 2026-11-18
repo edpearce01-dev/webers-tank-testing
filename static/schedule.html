@@ -7,11 +7,11 @@
   <link rel="manifest" href="/manifest.json" />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/static/ops.css?v=15.4" />
-  <link rel="stylesheet" href="/static/css/modern-ui.css?v=15.4" />
+  <link rel="stylesheet" href="/static/ops.css?v=16.0" />
+  <link rel="stylesheet" href="/static/css/modern-ui.css?v=16.0" />
   <title>Weber's Tank Testing — Month Schedule &amp; Dispatch | DOT B386</title>
 </head>
-<body>
+<body data-workspace="schedule">
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
@@ -98,48 +98,60 @@
         <!-- TAB 1: FULL MONTH CALENDAR + SELECTED DAY INSPECTOR -->
         <section id="tab-cal">
           <div class="split-cal">
-            <div class="card">
-              <div class="month-nav-bar">
-                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                  <button class="secondary" onclick="shiftCalendarMonth(-1)">◀ Prev</button>
-                  <strong style="font-size:1.08rem;min-width:142px;text-align:center;" id="monthTitleLbl">Month</strong>
-                  <button class="secondary" onclick="shiftCalendarMonth(1)">Next ▶</button>
+            <div class="card cal-2027-host-card">
+              <div class="cal-2027-toolbar">
+                <div class="cal-2027-title-cluster">
+                  <div class="cal-2027-stepper">
+                    <button type="button" class="cal-step-icon" onclick="shiftCalendarMonth(-1)" title="Previous Month">‹</button>
+                    <button type="button" class="cal-today-chip" onclick="jumpToToday()">Today</button>
+                    <button type="button" class="cal-step-icon" onclick="shiftCalendarMonth(1)" title="Next Month">›</button>
+                  </div>
+                  <h2 class="cal-2027-month-heading" id="monthTitleLbl">Month</h2>
                 </div>
-                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                  <input type="month" id="jumpMonthInput" style="width:auto;padding:5px 8px;font-size:0.82rem;font-weight:700;" onchange="jumpToPickedMonth(this.value)" />
-                  <button class="secondary" style="background:#fde68a;color:#111827;border-color:#f59e0b;font-weight:900;" onclick="jumpToToday()">📍 Jump to Today</button>
+
+                <div class="cal-2027-right-controls">
+                  <div class="cal-view-seg" id="calViewSegBar">
+                    <button type="button" class="cal-vseg-btn active" data-cview="MONTH" onclick="setCalViewMode('MONTH')">Month</button>
+                    <button type="button" class="cal-vseg-btn" data-cview="TWOWEEK" onclick="setCalViewMode('TWOWEEK')">2-Week</button>
+                    <button type="button" class="cal-vseg-btn" data-cview="AGENDA" onclick="setCalViewMode('AGENDA')">Agenda</button>
+                  </div>
+                  <input type="month" id="jumpMonthInput" class="cal-month-picker" onchange="jumpToPickedMonth(this.value)" />
                 </div>
               </div>
 
-              <div class="month-scroll">
-                              <div class="sched-filter-bar" id="schedFilterBar">
+              <div class="sched-filter-bar" id="schedFilterBar">
                 <div style="display:flex;gap:5px;flex-wrap:wrap;" id="calFilterPills">
                   <button type="button" class="tap-pill active" data-cfilter="ALL" onclick="setCalFilter('ALL')">All</button>
-                  <button type="button" class="tap-pill" data-cfilter="TRUCK" onclick="setCalFilter('TRUCK')">🚚 Pickups &amp; Deliveries</button>
+                  <button type="button" class="tap-pill" data-cfilter="TRUCK" onclick="setCalFilter('TRUCK')">🚚 Truck Runs</button>
                   <button type="button" class="tap-pill" data-cfilter="WALKIN" onclick="setCalFilter('WALKIN')">🚪 Drop-Offs</button>
                   <button type="button" class="tap-pill" data-cfilter="RUSH" onclick="setCalFilter('RUSH')">🚨 Rush</button>
                   <button type="button" class="tap-pill" data-cfilter="OPEN" onclick="setCalFilter('OPEN')">⏳ Open Only</button>
                 </div>
                 <div style="display:flex;align-items:center;gap:6px;">
-                  <select id="calSortMode" onchange="applyCalSortAndFilter()" style="width:auto;padding:5px 9px;font-size:0.76rem;font-weight:700;">
-                    <option value="TRUCK_FIRST">Sort: 🚚 Truck Runs First</option>
-                    <option value="DATE_ASC">Sort: Date (Soonest)</option>
+                  <select id="calSortMode" onchange="applyCalSortAndFilter()" style="width:auto;padding:5px 10px;font-size:0.76rem;font-weight:700;">
+                    <option value="TRUCK_FIRST">Sort: 🚚 Truck First</option>
+                    <option value="DATE_ASC">Sort: Soonest</option>
                     <option value="RUSH_FIRST">Sort: 🚨 Rush First</option>
                     <option value="BOTTLES_DESC">Sort: Largest Batch</option>
-                    <option value="NAME_ASC">Sort: Customer (A–Z)</option>
+                    <option value="NAME_ASC">Sort: Customer A–Z</option>
                   </select>
                 </div>
               </div>
-              <div class="month-dow-grid">
-                  <div class="month-dow-cell">Sun</div>
-                  <div class="month-dow-cell">Mon</div>
-                  <div class="month-dow-cell">Tue</div>
-                  <div class="month-dow-cell">Wed</div>
-                  <div class="month-dow-cell">Thu</div>
-                  <div class="month-dow-cell">Fri</div>
-                  <div class="month-dow-cell">Sat</div>
+
+              <div class="month-scroll">
+                <div class="cal-2027-frame" id="cal2027Frame">
+                  <div class="month-dow-grid" id="calDowHeader">
+                    <div class="month-dow-cell">Sun</div>
+                    <div class="month-dow-cell">Mon</div>
+                    <div class="month-dow-cell">Tue</div>
+                    <div class="month-dow-cell">Wed</div>
+                    <div class="month-dow-cell">Thu</div>
+                    <div class="month-dow-cell">Fri</div>
+                    <div class="month-dow-cell">Sat</div>
+                  </div>
+                  <div class="month-days-grid" id="monthGridCells"></div>
                 </div>
-                <div class="month-days-grid" id="monthGridCells"></div>
+                <div id="calAgendaView" hidden></div>
               </div>
             </div>
 
@@ -665,11 +677,11 @@
     </div>
   </div>
 
-  <script src="/static/js/schedule-app.js?v=15.4"></script>
-  <script src="/static/js/schedule-calls.js?v=15.4"></script>
-  <script src="/static/day-flow.js?v=15.4"></script>
-  <script src="/static/theme-engine.js?v=15.4"></script>
-  <script src="/static/js/app-switcher.js?v=15.4"></script>
-  <script src="/static/help-bot.js?v=15.4"></script>
+  <script src="/static/js/schedule-app.js?v=16.0"></script>
+  <script src="/static/js/schedule-calls.js?v=16.0"></script>
+  <script src="/static/day-flow.js?v=16.0"></script>
+  <script src="/static/theme-engine.js?v=16.0"></script>
+  <script src="/static/js/app-switcher.js?v=16.0"></script>
+  <script src="/static/help-bot.js?v=16.0"></script>
 </body>
 </html>

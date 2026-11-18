@@ -1,15 +1,65 @@
 let STATE = { db_version: 0, today: '', selected_date: '', customers_summary: [], dates_summary: [], records: [] };
 let CURRENT_TAB = 'cabinet';
+let ACTIVE_PREVIEW_URL = '';
 
 function escHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
+function previewDocument(url, title, kindLabel = 'LIVE DOCUMENT PREVIEW', scrollOnMobile = true) {
+  if (!url) return;
+  ACTIVE_PREVIEW_URL = url;
+  const frame = document.getElementById('docPreviewFrame');
+  const empty = document.getElementById('docPreviewEmpty');
+  const tEl = document.getElementById('docPreviewTitle');
+  const kEl = document.getElementById('docPreviewKind');
+  const pBtn = document.getElementById('btnPrintPreviewNow');
+  const dBtn = document.getElementById('btnDownloadPreviewDoc');
+  const nBtn = document.getElementById('btnNewTabPreviewDoc');
+
+  if (kEl) kEl.textContent = kindLabel;
+  if (tEl) tEl.textContent = title || 'Document Preview';
+  if (empty) empty.hidden = true;
+  if (frame) {
+    frame.hidden = false;
+    frame.src = url;
+  }
+  if (pBtn) pBtn.disabled = false;
+  if (dBtn) {
+    dBtn.href = url;
+    dBtn.style.pointerEvents = 'auto';
+    dBtn.style.opacity = '1';
+  }
+  if (nBtn) {
+    nBtn.href = url;
+    nBtn.style.pointerEvents = 'auto';
+    nBtn.style.opacity = '1';
+  }
+  document.querySelectorAll('#cabinetDrawerBody .cab-doc-row').forEach(row => {
+    row.classList.toggle('is-previewed', row.getAttribute('data-preview-url') === url);
+  });
+  if (scrollOnMobile && window.innerWidth <= 1040) {
+    document.getElementById('docPreviewPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function printActivePreviewDoc() {
+  if (!ACTIVE_PREVIEW_URL) return;
+  const frame = document.getElementById('docPreviewFrame');
+  try {
+    if (frame && frame.contentWindow) {
+      frame.contentWindow.focus();
+      frame.contentWindow.print();
+      return;
+    }
+  } catch (_) {}
+  window.open(ACTIVE_PREVIEW_URL, '_blank');
+}
+
 function switchPrintTab(tab) {
   CURRENT_TAB = tab;
-  document.querySelectorAll('main.ops-workspace > section').forEach(s => { s.hidden = true; });
-  const el = document.getElementById('tab-' + tab);
-  if (el) el.hidden = false;
+  document.getElementById('tab-cabinet').hidden = (tab !== 'cabinet');
+  document.getElementById('tab-print').hidden = (tab !== 'print');
   document.querySelectorAll('.rail-btn, .bnav-btn').forEach(b => {
     b.classList.toggle('active', b.getAttribute('data-tab') === tab);
   });
@@ -57,7 +107,17 @@ async function loadPrintState() {
   if (STATE.master_sheet_url && document.getElementById('railMasterSheetBtn')) document.getElementById('railMasterSheetBtn').href = STATE.master_sheet_url;
 
   const doneToday = (STATE.records || []).filter(r => r.status === 'COMPLETED' && r.hydro_disposition === 'A');
-  document.getElementById('stickerCount').value = Math.max(1, doneToday.length);
+  const savedLayout = localStorage.getItem('webers_sticker_layout') || '18_up';
+  const laySel = document.getElementById('stickerLayoutSel');
+  if (laySel && [...laySel.options].some(o => o.value === savedLayout)) laySel.value = savedLayout;
+  const fullSheetCnt = fullSheetCountForLayout(savedLayout, document.getElementById('stickerTypeSel')?.value || 'hydro');
+  document.getElementById('stickerCount').value = doneToday.length > 0 ? doneToday.length : fullSheetCnt;
+  if (STATE.selected_date && STATE.selected_date.includes('-')) {
+    const [sy, sm] = STATE.selected_date.split('-');
+    const mEl = document.getElementById('stickerMonthOvr'), yEl = document.getElementById('stickerYearOvr');
+    if (mEl && !mEl.value) mEl.value = sm;
+    if (yEl && !yEl.value) yEl.value = sy.slice(-2);
+  }
   const allDayCusts = [...new Set((STATE.records || []).map(r => r.customer_name))];
   document.getElementById('pdfCustomerFilter').innerHTML = '<option value="">-- All Customers on Selected Date --</option>' + allDayCusts.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
   document.getElementById('claimSlipCustomerSel').innerHTML = (STATE.customers_summary || []).length
@@ -86,6 +146,18 @@ async function bootPrintVault() {
   if (window.syncAuthAndRoleUI) await window.syncAuthAndRoleUI(auth.user, false);
   await loadPrintState();
   switchPrintTab(CURRENT_TAB);
+  const reqSheet = parseInt(params.get('sheet') || '0', 10);
+  if (reqSheet > 0) {
+    previewDocument(`/api/pdf/retest?sheet_no=${reqSheet}&by_sheet=true`, `Form 393-001 • Sheet #${reqSheet}`, '5-YEAR DOT FILING CABINET', false);
+  } else if (!ACTIVE_PREVIEW_URL) {
+    const firstSh = CAB_DATA?.retest_sheets?.[0];
+    if (firstSh) {
+      previewDocument(`/api/pdf/retest?sheet_no=${firstSh.sheet_no}&by_sheet=true`, `Form 393-001 • Sheet #${firstSh.sheet_no} (${firstSh.row_count}/12 Rows)`, '5-YEAR DOT FILING CABINET', false);
+    } else {
+      const actSh = STATE.binder_state?.active_sheet_no || STATE.starting_sheet_no || 8095;
+      previewDocument(`/api/pdf/retest?sheet_no=${actSh}&by_sheet=true`, `Form 393-001 • Active Sheet #${actSh}`, 'LIVE BINDER SHEET PREVIEW', false);
+    }
+  }
 }
 
 // --- 🗄️ 5-YEAR DOT AUDIT FILING CABINET ---
@@ -139,19 +211,22 @@ async function bootPrintVault() {
         const rows = (CAB_DATA.retest_sheets || []).filter(s => matchQ('sheet #' + s.sheet_no, s.sheet_no, s.customers, s.first_date, s.last_date, s.first_sn, s.last_sn));
         host.innerHTML = rows.length ? rows.map(s => {
           const span = s.first_date === s.last_date ? s.last_date : `${s.first_date} → ${s.last_date}`;
-          return `<div class="rec-item">
+          const pUrl = `/api/pdf/retest?sheet_no=${s.sheet_no}&by_sheet=true`;
+          const pTitle = `Form 393-001 • Sheet #${s.sheet_no} (${s.row_count}/12 Rows)`;
+          return `<div class="rec-item cab-doc-row ${ACTIVE_PREVIEW_URL === pUrl ? 'is-previewed' : ''}" data-preview-url="${pUrl}" onclick="previewDocument('${pUrl}', '${escHtml(pTitle)}', '5-YEAR RETEST VAULT')">
             <div class="rec-main">
               <div class="rec-title">
                 <span style="font-size:0.98rem;color:var(--forest);">📖 Form 393-001 • <strong>Sheet #${s.sheet_no}</strong></span>
-                <span class="${s.sealed ? 'pass' : 'sub-badge'}">${s.sealed ? '✅ Complete 12/12 Binder Sheet' : `⏳ In Progress (${s.row_count}/12 Rows)`}</span>
+                <span class="${s.sealed ? 'pass' : 'sub-badge'}">${s.sealed ? '✅ Complete 12/12 Sheet' : `⏳ ${s.row_count}/12 Rows`}</span>
                 ${s.condemn_count ? `<span class="rush-badge">⛔ ${s.condemn_count} Condemned</span>` : ''}
               </div>
               <div class="rec-sub">
-                Dates: <strong>${escHtml(span)}</strong> • Passed: <strong>${s.pass_count}</strong> • Customers: ${escHtml((s.customers || '—').replace(/,(?!\s)/g, ', '))} • Serials: ${escHtml(s.first_sn)}..${escHtml(s.last_sn)}
+                Dates: <strong>${escHtml(span)}</strong> • Passed: <strong>${s.pass_count}</strong> • Customers: ${escHtml((s.customers || '—').replace(/,(?!\s)/g, ', '))} • SNs: ${escHtml(s.first_sn)}..${escHtml(s.last_sn)}
               </div>
             </div>
-            <div class="rec-actions">
-              <a class="primary" style="width:auto;margin:0;padding:8px 14px;" href="/api/pdf/retest?sheet_no=${s.sheet_no}&by_sheet=true" target="_blank">📄 Open Sheet #${s.sheet_no} PDF</a>
+            <div class="rec-actions" onclick="event.stopPropagation()">
+              <button type="button" class="primary" style="width:auto;margin:0;padding:7px 13px;font-size:0.78rem;" onclick="previewDocument('${pUrl}', '${escHtml(pTitle)}', '5-YEAR RETEST VAULT')">👁️ Preview</button>
+              <a class="secondary" href="${pUrl}" target="_blank" title="Open in full browser tab">↗</a>
             </div>
           </div>`;
         }).join('') : '<div style="color:var(--muted);font-size:0.86rem;padding:10px 2px;">No Form 393-001 hydro retest sheets match yet — sheets file here automatically as cylinders complete on Station 3.</div>';
@@ -160,21 +235,26 @@ async function bootPrintVault() {
 
       if (CAB_DRAWER === 'cals') {
         const rows = (CAB_DATA.calibration_days || []).filter(c => matchQ(c.test_date, c.calibrated_serial, c.short_cal_psi, c.tall_cal_psi));
-        host.innerHTML = rows.length ? rows.map(c => `
-          <div class="rec-item">
+        host.innerHTML = rows.length ? rows.map(c => {
+          const pUrl = `/api/pdf/verification?work_date=${encodeURIComponent(c.test_date)}`;
+          const pTitle = `Daily Jacket Verification • ${c.test_date}`;
+          return `
+          <div class="rec-item cab-doc-row ${ACTIVE_PREVIEW_URL === pUrl ? 'is-previewed' : ''}" data-preview-url="${pUrl}" onclick="previewDocument('${pUrl}', '${escHtml(pTitle)}', 'DAILY CALIBRATION VAULT')">
             <div class="rec-main">
               <div class="rec-title">
                 <span>📊 Daily Verification — <strong>${escHtml(c.test_date)}</strong></span>
                 <span class="${c.all_passed ? 'pass' : 'fail'}">${c.all_passed ? '✓ CERTIFIED (±1.0%)' : '⚠ CHECK LOG'}</span>
               </div>
               <div class="rec-sub">
-                Master Cyl: <strong>${escHtml(c.calibrated_serial)}</strong> • Short Jacket: <strong>${c.short_cal_psi ? c.short_cal_psi + ' PSI' : 'Not Run'}</strong> • Tall Jacket: <strong>${c.tall_cal_psi ? c.tall_cal_psi + ' PSI' : 'Not Run'}</strong> (${c.step_count} ladder steps • Last ${escHtml(c.last_time)})
+                Master Cyl: <strong>${escHtml(c.calibrated_serial)}</strong> • Short: <strong>${c.short_cal_psi ? c.short_cal_psi + ' PSI' : 'Not Run'}</strong> • Tall: <strong>${c.tall_cal_psi ? c.tall_cal_psi + ' PSI' : 'Not Run'}</strong> (${c.step_count} steps • ${escHtml(c.last_time)})
               </div>
             </div>
-            <div class="rec-actions">
-              <a class="primary" style="width:auto;margin:0;padding:8px 14px;" href="/api/pdf/verification?work_date=${encodeURIComponent(c.test_date)}" target="_blank">📄 Open Calibration PDF</a>
+            <div class="rec-actions" onclick="event.stopPropagation()">
+              <button type="button" class="primary" style="width:auto;margin:0;padding:7px 13px;font-size:0.78rem;" onclick="previewDocument('${pUrl}', '${escHtml(pTitle)}', 'DAILY CALIBRATION VAULT')">👁️ Preview</button>
+              <a class="secondary" href="${pUrl}" target="_blank" title="Open in full browser tab">↗</a>
             </div>
-          </div>`).join('') : '<div style="color:var(--muted);font-size:0.86rem;padding:10px 2px;">No daily calibration sheets filed in this filter yet.</div>';
+          </div>`;
+        }).join('') : '<div style="color:var(--muted);font-size:0.86rem;padding:10px 2px;">No daily calibration sheets filed in this filter yet.</div>';
         return;
       }
 
@@ -183,8 +263,11 @@ async function bootPrintVault() {
         const cRows = (CAB_DATA.condemned_records || []).filter(c => matchQ(c.work_date, c.serial_number, c.customer_name, c.dot_spec, c.condemn_action));
         host.innerHTML = `
           <h4 style="margin:4px 0 8px;color:var(--forest);">🔍 Daily 7-Point &amp; Propane Visual Inspection Logs</h4>
-          ${vRows.length ? vRows.map(v => `
-            <div class="rec-item">
+          ${vRows.length ? vRows.map(v => {
+            const pUrl = `/api/pdf/visual?work_date=${encodeURIComponent(v.work_date)}`;
+            const pTitle = `7-Point Visual Inspection Log • ${v.work_date}`;
+            return `
+            <div class="rec-item cab-doc-row ${ACTIVE_PREVIEW_URL === pUrl ? 'is-previewed' : ''}" data-preview-url="${pUrl}" onclick="previewDocument('${pUrl}', '${escHtml(pTitle)}', 'VISUAL INSPECTION VAULT')">
               <div class="rec-main">
                 <div class="rec-title">
                   <span>🔍 Visual Inspection Log — <strong>${escHtml(v.work_date)}</strong></span>
@@ -194,14 +277,16 @@ async function bootPrintVault() {
                 </div>
                 <div class="rec-sub">Customers: ${escHtml(v.customers || '—')}</div>
               </div>
-              <div class="rec-actions">
-                <a class="secondary" style="font-weight:800;" href="/api/pdf/visual?work_date=${encodeURIComponent(v.work_date)}" target="_blank">📄 Open Visual Log PDF</a>
+              <div class="rec-actions" onclick="event.stopPropagation()">
+                <button type="button" class="secondary" style="font-weight:800;" onclick="previewDocument('${pUrl}', '${escHtml(pTitle)}', 'VISUAL INSPECTION VAULT')">👁️ Preview</button>
+                <a class="secondary" href="${pUrl}" target="_blank">↗</a>
               </div>
-            </div>`).join('') : '<div style="color:var(--muted);font-size:0.85rem;margin-bottom:12px;">No visual logs in this filter yet.</div>'}
+            </div>`;
+          }).join('') : '<div style="color:var(--muted);font-size:0.85rem;margin-bottom:12px;">No visual logs in this filter yet.</div>'}
 
           <h4 style="margin:16px 0 8px;color:#991b1b;">⛔ Condemned / Rejected Cylinders Register (49 CFR §180.205(i))</h4>
           ${cRows.length ? cRows.map(c => `
-            <div class="rec-item" style="border-left:4px solid #dc2626;">
+            <div class="rec-item" style="border-left:4px solid #dc2626;" ${c.sheet_no ? `onclick="previewDocument('/api/pdf/retest?sheet_no=${c.sheet_no}&by_sheet=true', 'Condemned Record • Sheet #${c.sheet_no}', 'CONDEMNED REGISTER')"` : ''}>
               <div class="rec-main">
                 <div class="rec-title"><span>SN <strong>${escHtml(c.serial_number)}</strong> — ${escHtml(c.customer_name)}</span><span class="fail">Code ${escHtml(c.hydro_disposition)}</span></div>
                 <div class="rec-sub">${escHtml(c.work_date)}${c.sheet_no ? ' • Sheet #' + c.sheet_no : ''} • ${escHtml(c.dot_spec)}-${c.service_psi} • Action: <strong>${escHtml(c.condemn_action || 'Condemned')}</strong>${c.notes ? ' • ' + escHtml(c.notes) : ''}</div>
@@ -215,29 +300,39 @@ async function bootPrintVault() {
         const tRows = (CAB_DATA.tickets || []).filter(t => matchQ(t.ticket_no, t.customer_name, t.work_date, t.service_requested));
         host.innerHTML = `
           <h4 style="margin:4px 0 8px;color:var(--forest);">💲 Saved Customer Invoices (${iRows.length})</h4>
-          ${iRows.length ? iRows.map(iv => `
-            <div class="rec-item">
+          ${iRows.length ? iRows.map(iv => {
+            const pUrl = `/api/pdf/invoice/${iv.id}`;
+            const slUrl = `/api/pdf/claim-slip?customer=${encodeURIComponent(iv.customer_name)}&work_date=${encodeURIComponent(iv.work_date)}`;
+            const pTitle = `Invoice ${iv.invoice_no} • ${iv.customer_name}`;
+            return `
+            <div class="rec-item cab-doc-row ${ACTIVE_PREVIEW_URL === pUrl ? 'is-previewed' : ''}" data-preview-url="${pUrl}" onclick="previewDocument('${pUrl}', '${escHtml(pTitle)}', 'CUSTOMER INVOICE')">
               <div class="rec-main">
                 <div class="rec-title"><span><strong>${escHtml(iv.invoice_no)}</strong> — ${escHtml(iv.customer_name)}</span><span class="${iv.status === 'PAID' ? 'pass' : 'dwell-badge'}">$${Number(iv.total_amount || 0).toFixed(2)} (${escHtml(iv.status)})</span></div>
                 <div class="rec-sub">Date: ${escHtml(iv.invoice_date)} • ${iv.line_count || 1} line(s)${iv.payment_method ? ' • ' + escHtml(iv.payment_method) : ''}</div>
               </div>
-              <div class="rec-actions">
-                <a class="secondary" style="font-weight:800;" href="/api/pdf/invoice/${iv.id}" target="_blank">📄 Invoice PDF</a>
-                <a class="secondary" href="/api/pdf/claim-slip?customer=${encodeURIComponent(iv.customer_name)}&work_date=${encodeURIComponent(iv.work_date)}" target="_blank">🏷️ Claim Slip</a>
+              <div class="rec-actions" onclick="event.stopPropagation()">
+                <button type="button" class="secondary" style="font-weight:800;" onclick="previewDocument('${pUrl}', '${escHtml(pTitle)}', 'CUSTOMER INVOICE')">👁️ Invoice</button>
+                <button type="button" class="secondary" onclick="previewDocument('${slUrl}', 'Claim Slip • ${escHtml(iv.customer_name)}', 'PICKUP CLAIM SLIP')">🏷️ Slip</button>
               </div>
-            </div>`).join('') : '<div style="color:var(--muted);font-size:0.85rem;margin-bottom:12px;">No invoices in this filter yet.</div>'}
+            </div>`;
+          }).join('') : '<div style="color:var(--muted);font-size:0.85rem;margin-bottom:12px;">No invoices in this filter yet.</div>'}
 
           <h4 style="margin:16px 0 8px;color:var(--forest);">📥 24/7 Loading Dock &amp; Truck Tickets (${tRows.length})</h4>
-          ${tRows.length ? tRows.slice(0, 60).map(t => `
-            <div class="rec-item">
+          ${tRows.length ? tRows.slice(0, 60).map(t => {
+            const pUrl = `/api/public/receipt/${encodeURIComponent(t.ticket_no)}.pdf?p=${encodeURIComponent(t.phone_last4)}&inline=1`;
+            const pTitle = `Ticket ${t.ticket_no} • ${t.customer_name} (${t.bottle_count} Cyl)`;
+            return `
+            <div class="rec-item cab-doc-row ${ACTIVE_PREVIEW_URL === pUrl ? 'is-previewed' : ''}" data-preview-url="${pUrl}" onclick="previewDocument('${pUrl}', '${escHtml(pTitle)}', 'DOCK & TRUCK TICKET')">
               <div class="rec-main">
                 <div class="rec-title"><span><strong>${escHtml(t.ticket_no)}</strong> — ${escHtml(t.customer_name)} (${t.bottle_count} Cyl)</span><span class="sub-badge">${escHtml(t.entry_type)}</span></div>
                 <div class="rec-sub">${escHtml(t.created_at)} • ${escHtml(t.service_requested || '')}${t.tank_summary ? ' • ' + escHtml(t.tank_summary) : ''}</div>
               </div>
-              <div class="rec-actions">
-                <a class="secondary" href="/api/public/receipt/${encodeURIComponent(t.ticket_no)}.pdf?p=${encodeURIComponent(t.phone_last4)}" target="_blank">📄 Ticket PDF</a>
+              <div class="rec-actions" onclick="event.stopPropagation()">
+                <button type="button" class="secondary" onclick="previewDocument('${pUrl}', '${escHtml(pTitle)}', 'DOCK & TRUCK TICKET')">👁️ Preview</button>
+                <a class="secondary" href="${pUrl}" target="_blank">↗</a>
               </div>
-            </div>`).join('') : '<div style="color:var(--muted);font-size:0.85rem;">No Loading Dock tickets logged in this filter yet.</div>'}`;
+            </div>`;
+          }).join('') : '<div style="color:var(--muted);font-size:0.85rem;">No Loading Dock tickets logged in this filter yet.</div>'}`;
         return;
       }
 
@@ -285,34 +380,96 @@ async function bootPrintVault() {
         </div>`;
     }
 
-// --- TAB 4: DOT PDFS, STICKERS & ZONE E CLAIM SLIPS ---
+// --- TAB 2: DOT PDFS, HYDRO (B386) & PROPANE VISUAL (V143159 E) STICKERS & CLAIM SLIPS ---
+    let STICKER_PREVIEW_TIMER = null;
+
+    function fullSheetCountForLayout(layout, sType) {
+      if (sType === 'mini_hpa') return 60;
+      if (layout === '30_up') return 30;
+      if (layout === '18_up') return 18;
+      if (layout === '10_up') return 10;
+      return 15;
+    }
+
+    function quickSelectStickerPreset(sType) {
+      const tSel = document.getElementById('stickerTypeSel');
+      const lSel = document.getElementById('stickerLayoutSel');
+      if (tSel) tSel.value = sType;
+      const lay = lSel?.value || '15_up';
+      document.getElementById('stickerCount').value = fullSheetCountForLayout(lay, sType);
+      document.getElementById('stickerSkip').value = 0;
+      if (lSel) lSel.disabled = (sType === 'mini_hpa');
+      openPdf('stickers');
+    }
+
+    function onStickerConfigChange() {
+      const sType = document.getElementById('stickerTypeSel')?.value || 'hydro';
+      const lSel = document.getElementById('stickerLayoutSel');
+      const lay = lSel?.value || '15_up';
+      if (lSel) {
+        lSel.disabled = (sType === 'mini_hpa');
+        if (sType !== 'mini_hpa') localStorage.setItem('webers_sticker_layout', lay);
+      }
+      document.getElementById('stickerCount').value = fullSheetCountForLayout(lay, sType);
+      openPdf('stickers');
+    }
+
+    function scheduleStickerAutoPreview() {
+      clearTimeout(STICKER_PREVIEW_TIMER);
+      STICKER_PREVIEW_TIMER = setTimeout(() => {
+        if (CURRENT_TAB === 'print') openPdf('stickers');
+      }, 420);
+    }
+
     function preprintFullSheet(compact) {
-      const d = STATE.today || STATE.selected_date;
-      window.open(`/api/pdf/stickers?work_date=${encodeURIComponent(d)}&count=${compact ? 60 : 30}&skip=0&compact=${compact}`, '_blank');
+      quickSelectStickerPreset(compact ? 'mini_hpa' : 'hydro');
     }
 
     function printClaimSlipFromTab() {
       const c = document.getElementById('claimSlipCustomerSel').value;
       if (!c) { alert('No customer batch available yet.'); return; }
-      window.open(`/api/pdf/claim-slip?customer=${encodeURIComponent(c)}&work_date=${encodeURIComponent(STATE.selected_date)}`, '_blank');
+      const url = `/api/pdf/claim-slip?customer=${encodeURIComponent(c)}&work_date=${encodeURIComponent(STATE.selected_date)}`;
+      previewDocument(url, `Loading Dock Pickup Slip • ${c}`, 'PICKUP CLAIM SLIP');
     }
 
     function openPdf(kind) {
       if (kind === 'poster') {
-        window.open('/api/pdf/poster?checkin_url=' + encodeURIComponent('https://weberstanktesting.com/#dropoff'), '_blank');
+        previewDocument('/api/pdf/poster?checkin_url=' + encodeURIComponent('https://weberstanktesting.com/#dropoff'), '24/7 Loading Dock Drop-Off & Pickup QR Sign', 'PRINTABLE WALL SIGN');
         return;
       }
-      const d = STATE.selected_date;
+      const d = STATE.selected_date || STATE.today;
       const cust = document.getElementById('pdfCustomerFilter').value;
       const sheetNo = document.getElementById('pdfSheetNo').value || '8095';
-      const cnt = document.getElementById('stickerCount').value || '12';
-      const skip = document.getElementById('stickerSkip').value || '0';
-      const compact = document.getElementById('stickerCompact').checked;
+      const sType = document.getElementById('stickerTypeSel')?.value || 'hydro';
+      const sLay = document.getElementById('stickerLayoutSel')?.value || '15_up';
+      const cnt = document.getElementById('stickerCount')?.value || '15';
+      const skip = document.getElementById('stickerSkip')?.value || '0';
+      const mOvr = (document.getElementById('stickerMonthOvr')?.value || '').trim();
+      const yOvr = (document.getElementById('stickerYearOvr')?.value || '').trim();
+
       let url = `/api/pdf/${kind}?work_date=${encodeURIComponent(d)}`;
-      if (cust) url += `&customer=${encodeURIComponent(cust)}`;
+      if (cust && kind !== 'stickers') url += `&customer=${encodeURIComponent(cust)}`;
       if (kind === 'retest') url += `&sheet_no=${encodeURIComponent(sheetNo)}`;
-      if (kind === 'stickers') url += `&count=${encodeURIComponent(cnt)}&skip=${encodeURIComponent(skip)}&compact=${compact}`;
-      window.open(url, '_blank');
+      if (kind === 'stickers') {
+        url += `&sticker_type=${encodeURIComponent(sType)}&layout=${encodeURIComponent(sLay)}&count=${encodeURIComponent(cnt)}&skip=${encodeURIComponent(skip)}&compact=${sType === 'mini_hpa'}`;
+        if (mOvr) url += `&month_override=${encodeURIComponent(mOvr)}`;
+        if (yOvr) url += `&year_override=${encodeURIComponent(yOvr)}`;
+      }
+
+      const stickerTitle = sType === 'propane'
+        ? `${cnt}x Propane Visual Stickers (${STATE.visual_rin || 'V143159'} E • ${sLay.replace('_', '-')})`
+        : (sType === 'mini_hpa'
+          ? `${cnt}x Mini Paintball HPA Collar Stickers (2-Up)`
+          : `${cnt}x Hydro Retest Stickers (${STATE.dot_rin || 'B386'} • ${sLay.replace('_', '-')})`);
+
+      const titles = {
+        retest: `DOT Form 393-001 Retest Sheet #${sheetNo} (${d})`,
+        verification: `Daily Jacket Verification Sheet (${d})`,
+        visual: `D.O.T./I.C.C. Visual & Propane Log (${d})`,
+        valvetags: `Active Valve Tag Match Sheet (${d})`,
+        stickers: stickerTitle,
+      };
+      previewDocument(url, titles[kind] || `PDF Preview (${d})`, 'PRINT & LABELS STUDIO');
     }
 
 bootPrintVault();

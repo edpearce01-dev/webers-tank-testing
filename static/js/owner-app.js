@@ -126,6 +126,7 @@ async function loadUnbilledItems() {}
       setValIfIdle('ofTaxRate', STATE.default_tax_rate ?? 6.0);
       setValIfIdle('ofRinExp', STATE.rin_expires_date || '');
       setValIfIdle('ofGaugeExp', STATE.gauge_cert_expires_date || '');
+      setValIfIdle('ofVisualRin', STATE.visual_rin || 'V143159');
       if (document.getElementById('ofTestingMode')) document.getElementById('ofTestingMode').checked = Boolean(STATE.testing_mode);
       if (document.getElementById('ofResendStatus')) document.getElementById('ofResendStatus').textContent = STATE.has_resend_key ? 'Configured ✓' : 'Not Set';
       if (document.getElementById('ofGeminiStatus')) document.getElementById('ofGeminiStatus').textContent = STATE.has_gemini_key ? 'Configured ✓' : 'Not Set';
@@ -224,6 +225,7 @@ async function loadUnbilledItems() {}
     async function saveFacilitySetupFromOffice(silent = false) {
       const body = {
         calibrated_serial: document.getElementById('ofCalSerial')?.value || '1SF11904',
+        visual_rin: document.getElementById('ofVisualRin')?.value || 'V143159',
         starting_sheet_no: parseInt(document.getElementById('ofSheetNo')?.value || '8095', 10),
         daily_hydro_capacity: parseInt(document.getElementById('ofDailyCap')?.value || '24', 10),
         default_tax_rate: parseFloat(document.getElementById('ofTaxRate')?.value || '6.0'),
@@ -331,9 +333,9 @@ async function loadUnbilledItems() {}
       loadUnbilledItems();
     }
 
-// Override switchSetupPane to handle all 4 Owner/Admin panes + sidebar highlight
+// Override switchSetupPane to handle all 5 Owner/Admin panes + sidebar highlight
 window.switchSetupPane = function (pane) {
-  ['hours', 'rates', 'facility', 'sysadmin'].forEach(p => {
+  ['hours', 'rates', 'website', 'facility', 'sysadmin'].forEach(p => {
     const el = document.getElementById('setupPane-' + p);
     if (el) el.hidden = (p !== pane);
   });
@@ -342,6 +344,74 @@ window.switchSetupPane = function (pane) {
   });
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
+
+function populateWebsiteEditorFields() {
+  const sc = STATE.site_content || {};
+  const setIfIdle = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && document.activeElement !== el) el.value = val ?? '';
+  };
+  setIfIdle('wsBannerAnnouncement', sc.site_banner_announcement || '');
+  setIfIdle('wsAboutEyebrow', sc.site_about_eyebrow || 'Firefighter Owned & Operated • Baden, PA');
+  setIfIdle('wsAboutHeading', sc.site_about_heading || "About Weber's Tank Testing");
+  setIfIdle('wsAboutStory', sc.site_about_story || '');
+  setIfIdle('wsBusinessDetails', sc.site_business_details || '');
+  setIfIdle('wsDropoffNote', sc.site_dropoff_note || '');
+  setIfIdle('wsOwnerSignoff', sc.site_owner_signoff || '— Ryan Pearce, Facility Manager (DOT RIN B386)');
+  updateWebsiteLivePreview();
+}
+
+function updateWebsiteLivePreview() {
+  const box = document.getElementById('wsLivePreviewBox');
+  if (!box) return;
+  const banner = (document.getElementById('wsBannerAnnouncement')?.value || '').trim();
+  const eye = (document.getElementById('wsAboutEyebrow')?.value || '').trim();
+  const hdg = (document.getElementById('wsAboutHeading')?.value || '').trim();
+  const story = (document.getElementById('wsAboutStory')?.value || '').trim();
+  const details = (document.getElementById('wsBusinessDetails')?.value || '').trim();
+  const drop = (document.getElementById('wsDropoffNote')?.value || '').trim();
+  const sig = (document.getElementById('wsOwnerSignoff')?.value || '').trim();
+
+  box.innerHTML = `
+    ${banner ? `<div style="padding:10px 14px;border-radius:12px;background:#fffbeb;border:1.5px solid #f59e0b;color:#78350f;font-weight:800;font-size:0.84rem;">📣 ${escHtml(banner)}</div>` : ''}
+    <div style="padding:18px;border-radius:16px;background:var(--ui-surface-2);border:1px solid var(--ui-border);">
+      ${eye ? `<div style="display:inline-block;padding:3px 10px;border-radius:999px;background:var(--ui-accent-soft);color:var(--ui-accent);font-size:0.72rem;font-weight:800;margin-bottom:8px;">${escHtml(eye)}</div>` : ''}
+      <h4 style="margin:0 0 8px;font-size:1.18rem;font-weight:800;">${escHtml(hdg || "About Weber's Tank Testing")}</h4>
+      ${story ? `<p style="margin:0 0 10px;font-size:0.87rem;line-height:1.55;white-space:pre-line;">${escHtml(story)}</p>` : ''}
+      ${details ? `<p style="margin:0 0 10px;font-size:0.85rem;color:var(--ui-text-soft);line-height:1.55;white-space:pre-line;">${escHtml(details)}</p>` : ''}
+      ${drop ? `<div style="padding:10px 12px;border-radius:10px;background:var(--ui-surface);border-left:4px solid var(--ui-accent);font-size:0.82rem;margin-bottom:10px;"><strong>24/7 Loading Dock &amp; Pickup:</strong> ${escHtml(drop)}</div>` : ''}
+      ${sig ? `<div style="font-weight:800;font-size:0.84rem;color:var(--ui-accent);">${escHtml(sig)}</div>` : ''}
+    </div>`;
+}
+
+async function saveOwnerWebsiteCopy() {
+  const btn = document.getElementById('btnPublishWebsiteCopy');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Publishing...'; }
+  try {
+    const res = await fetch('/api/owner/site-content', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        site_banner_announcement: document.getElementById('wsBannerAnnouncement')?.value || '',
+        site_about_eyebrow: document.getElementById('wsAboutEyebrow')?.value || '',
+        site_about_heading: document.getElementById('wsAboutHeading')?.value || '',
+        site_about_story: document.getElementById('wsAboutStory')?.value || '',
+        site_business_details: document.getElementById('wsBusinessDetails')?.value || '',
+        site_dropoff_note: document.getElementById('wsDropoffNote')?.value || '',
+        site_owner_signoff: document.getElementById('wsOwnerSignoff')?.value || '',
+      }),
+    });
+    const d = await res.json();
+    if (!res.ok) { alert(d.detail || 'Could not publish website content.'); return; }
+    STATE.site_content = d.site_content || STATE.site_content;
+    if (btn) {
+      btn.textContent = '✅ Published Live on weberstanktesting.com!';
+      setTimeout(() => { btn.textContent = '💾 Publish to weberstanktesting.com'; }, 2400);
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
 
 async function submitLoginPin() {
   const pin = document.getElementById('loginPinInput').value;
@@ -357,6 +427,7 @@ async function loadOwnerState() {
   STATE = await res.json();
   EDITABLE_RATES = (STATE.pricing_rates || []).map(p => ({ ...p, isNew: false }));
   renderRateScheduleTable();
+  populateWebsiteEditorFields();
   await renderOperatingScheduleTab();
 }
 
@@ -378,7 +449,7 @@ async function bootOwnerPage() {
   document.getElementById('appShell').hidden = false;
   if (window.syncAuthAndRoleUI) await window.syncAuthAndRoleUI(auth.user, false);
   await loadOwnerState();
-  if (pane && ['hours', 'rates', 'facility', 'sysadmin'].includes(pane)) window.switchSetupPane(pane);
+  if (pane && ['hours', 'rates', 'website', 'facility', 'sysadmin'].includes(pane)) window.switchSetupPane(pane);
 }
 
 bootOwnerPage();

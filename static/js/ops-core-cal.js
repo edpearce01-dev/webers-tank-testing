@@ -256,7 +256,7 @@ function applyUrlDeepLink() {
     importDropoffToIntake(dropId);
     jumpToTab('intake');
     history.replaceState(null, '', '/ops');
-  } else if (tab && ['cal', 'intake', 'bench', 'logs', 'search'].includes(tab)) {
+  } else if (tab && ['cal', 'intake', 'bench', 'logs', 'search', 'todo'].includes(tab)) {
     jumpToTab(tab);
     history.replaceState(null, '', '/ops');
   }
@@ -300,6 +300,7 @@ function jumpToTab(name) {
     b.classList.toggle('active', b.getAttribute('data-tab') === name);
   });
   if (name === 'search') runSearch(false);
+  if (name === 'todo') renderShopTodoStation();
   if (name === 'bench') {
     setTimeout(() => { const tot = document.getElementById('bTotal'); if (tot) tot.focus(); }, 40);
   }
@@ -510,9 +511,16 @@ async function loadState(rebuildLadder = false) {
   document.getElementById('navBadgeValves').textContent = String((STATE.huddle?.needs_stamp_count || 0) + STATE.active_valves.length);
 
   const setMobDot = (id, n) => { const el = document.getElementById(id); if (el) { el.hidden = !n; el.textContent = n; } };
+  const openTodosCnt = (STATE.shop_tasks || []).filter(t => t.status === 'OPEN').length;
   setMobDot('mobBadgeIntake', waitingDrops.length);
   setMobDot('mobBadgeBench', queued.length);
   setMobDot('mobBadgeValves', needsFinish);
+  setMobDot('mobBadgeTodo', openTodosCnt);
+  const nbTodo = document.getElementById('navBadgeTodo');
+  if (nbTodo) {
+    nbTodo.textContent = String(openTodosCnt);
+    nbTodo.className = 'nav-badge ' + (openTodosCnt ? 'amber' : 'green');
+  }
 
   const b = STATE.binder_state || {};
   document.getElementById('standBinderBadge').textContent =
@@ -526,6 +534,8 @@ async function loadState(rebuildLadder = false) {
   renderStandPillsAndBench(queued);
   renderCompletedSection(doneToday);
   renderFinishValvesAndCustomers();
+  renderLiveDotForm393Sheets();
+  renderShopTodoStation();
   refreshOpsDispatchRadar();
 
   document.getElementById('feedbackTable').innerHTML = STATE.feedback_items.length
@@ -672,10 +682,12 @@ function onCalStepInput(idx, val) {
   LADDER[idx].actual = val;
   updateSingleStepStatusDom(idx);
   saveCalDraftLocalAndRemote();
+  if (ACTIVE_BINDER_VIEW === 'verification') renderLiveDotForm393Sheets();
 }
 
 function onCalPermInput() {
   saveCalDraftLocalAndRemote();
+  if (ACTIVE_BINDER_VIEW === 'verification') renderLiveDotForm393Sheets();
 }
 
 function updateSingleStepStatusDom(i) {
@@ -929,4 +941,738 @@ async function submitCalibrationLadder(forcePass = false) {
     btn.disabled = false;
     btn.textContent = origTxt;
   }
+}
+
+// =========================================================================
+// v16.0 LIVE INTERACTIVE DOT FORM 393-001 VISUAL PAPER SHEET
+// =========================================================================
+function fmtDotSpecCell(rec) {
+  let sp = String(rec.dot_spec || '').trim().toUpperCase().replace('SP-', 'SP');
+  const psi = parseInt(rec.service_psi || '0', 10);
+  if (!sp) return psi ? String(psi) : '';
+  const star = (rec.star_10yr && (rec.hydro_disposition || 'A') === 'A') ? ' ★' : '';
+  if (psi && sp.endsWith(String(psi))) return sp + star;
+  if (sp.startsWith('SP') || sp.startsWith('E-')) {
+    return (psi ? `${sp}-${psi}` : sp) + star;
+  }
+  return (psi ? `${sp}${psi}` : sp) + star;
+}
+
+function fmtDotNum(v) {
+  if (v === null || v === undefined || v === '') return '';
+  const n = Number(v);
+  if (isNaN(n)) return '';
+  return Number.isInteger(n) ? n.toFixed(1) : n.toFixed(2).replace(/0$/, '');
+}
+
+function cleanReeForSheet(rec) {
+  const sp = String(rec.dot_spec || '').trim().toUpperCase();
+  if (['3A', '3AA', '3AL'].includes(sp) && Number(rec.ree_limit) === 7.2) return '';
+  return (rec.ree_limit !== null && rec.ree_limit !== undefined && rec.ree_limit !== '') ? fmtDotNum(rec.ree_limit) : '';
+}
+
+let ACTIVE_BINDER_VIEW = localStorage.getItem('webers_binder_view') || 'retest';
+
+function setLiveBinderView(view) {
+  ACTIVE_BINDER_VIEW = view;
+  try { localStorage.setItem('webers_binder_view', view); } catch (_) {}
+  renderLiveDotForm393Sheets();
+}
+
+function buildVerificationMethodBPaperHtml(moS, dyS, yrS) {
+  const calSn = STATE.calibrated_serial || '1SF11904';
+  const savedVers = STATE.verifications || [];
+  const draftJacket = document.getElementById('calJacket')?.value || 'Short Jacket';
+  const draftPermNum = parseFloat(document.getElementById('calFinalPerm')?.value || '0') || 0;
+  const draftSteps = (LADDER || []).filter(s => String(s.actual ?? '').trim() !== '' && !isNaN(parseFloat(s.actual)));
+
+  const combined = [
+    ...savedVers.map(v => ({
+      kind: 'saved',
+      time: v.test_time || '',
+      jacket: v.jacket_type || '',
+      psi: v.target_pressure_psi,
+      expA: v.expected_cc,
+      actB: v.actual_total_cc,
+      perm: v.permanent_cc ?? 0,
+      elastic: v.elastic_cc,
+      dev: v.percent_deviation,
+      passed: Boolean(v.passed),
+    })),
+    ...draftSteps.map((s, idx) => {
+      const actNum = parseFloat(s.actual);
+      const pVal = idx === draftSteps.length - 1 ? draftPermNum : 0;
+      const elVal = actNum - pVal;
+      const devVal = (((s.expected_cc - actNum) / s.expected_cc) * 100).toFixed(2);
+      const ok = Math.abs(parseFloat(devVal)) <= 1.0 || Math.abs(s.expected_cc - actNum) <= 0.15;
+      return {
+        kind: 'draft',
+        time: 'LIVE',
+        jacket: draftJacket,
+        psi: s.pressure_psi,
+        expA: s.expected_cc,
+        actB: actNum,
+        perm: pVal,
+        elastic: elVal,
+        dev: devVal,
+        passed: ok,
+      };
+    }),
+  ];
+
+  const totalRows = Math.max(10, combined.length);
+  let bodyHtml = '';
+  for (let i = 0; i < totalRows; i++) {
+    const r = combined[i];
+    if (r) {
+      const cls = r.kind === 'draft' ? 'stand-live-row' : 'done-row';
+      bodyHtml += `
+        <tr class="dot-data-tr ${cls}" onclick="jumpToTab('cal')">
+          <td class="dot-num-td">${i + 1}</td>
+          <td class="mono-ink">${escHtml(r.time)} • ${escHtml(r.jacket.replace(' Jacket', ''))}</td>
+          <td class="mono-ink"><strong>${escHtml(r.psi)}</strong></td>
+          <td class="mono-ink">${fmtDotNum(r.expA)}</td>
+          <td class="mono-ink live-val"><strong>${fmtDotNum(r.actB)}</strong></td>
+          <td class="mono-ink">${fmtDotNum(r.perm)}</td>
+          <td class="mono-ink">${fmtDotNum(r.elastic)}</td>
+          <td class="mono-ink ${r.passed ? '' : 'bad'}"><strong>${escHtml(r.dev)}%</strong></td>
+          <td class="chk-ink ${r.passed ? '' : 'bad'}">${r.passed ? '✓ PASS' : '✗ OUT'}</td>
+        </tr>`;
+    } else {
+      bodyHtml += `
+        <tr class="dot-data-tr blank-row" onclick="jumpToTab('cal')">
+          <td class="dot-num-td">${i + 1}</td>
+          <td><span class="blank-row-hint">+ Cal Step</span></td>
+          <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>`;
+    }
+  }
+
+  return `
+    <div class="dot-paper-sheet">
+      <div class="dot-paper-top">
+        <div class="dot-paper-sheetno" style="font-size:0.86rem;color:#334155;">LEFT PAGE</div>
+        <div class="dot-paper-title">VERIFICATION DATA FOR WATER JACKET TESTING</div>
+        <div class="dot-paper-rin-row">
+          <span><strong>Date:</strong> <u class="dot-ink-u">&nbsp;${escHtml(String(parseInt(moS || '1', 10)))} / ${escHtml(String(parseInt(dyS || '1', 10)))} / ${escHtml(yrS)}&nbsp;</u></span>
+          <span><strong>Serial No. of Calibrated Cylinder:</strong> <u class="dot-ink-u">&nbsp;${escHtml(calSn)} (7,500# Chart)&nbsp;</u></span>
+          <span><strong>Operator's Name:</strong> <u class="dot-ink-u">&nbsp;${window.CURRENT_USER?.role === 'SYSTEM_ADMIN' ? 'ADMIN DIAGNOSTIC' : 'Ryan Pearce (RP)'}&nbsp;</u></span>
+        </div>
+        <div style="font-size:0.76rem;margin-top:4px;color:#1e293b;">
+          <strong>Method B</strong> — Verification procedure using the Pressure Indicating Device (PID) against Expansion Indicating Device (EID)
+        </div>
+      </div>
+      <table class="dot-paper-table">
+        <thead>
+          <tr>
+            <th style="width:26px;">#</th>
+            <th>Time &amp; Jacket</th>
+            <th>Pressure Reading<br/><small>(From Chart PSI)</small></th>
+            <th>Expected Expansion<br/><small>Reading (cc's) (A)</small></th>
+            <th>Actual Expansion<br/><small>Reading from E.I.D. (B)</small></th>
+            <th>Permanent<br/><small>After Release</small></th>
+            <th>Elastic<br/><small>(Total - Perm)</small></th>
+            <th>% Deviation<br/><small>((A-B)/A × 100)</small></th>
+            <th>±1.0%<br/><small>Check</small></th>
+          </tr>
+        </thead>
+        <tbody>${bodyHtml}</tbody>
+      </table>
+      <div class="dot-paper-footer">
+        <div>
+          <strong>Example (Method B):</strong> 3000 PSI | Expected (A): 54.0 | Actual (B): 53.8 | Perm: 0 | Elastic: 53.8 | % Dev: 0.37%<br/>
+          <strong>Formula:</strong> (A − B) ÷ A × 100 = % Deviation (±1.0% max) • Actual (B) − Permanent = Elastic Expansion
+        </div>
+        <div style="text-align:right;">
+          <div>Reorder no. 393-001 • CFR Title 49 §180.215</div>
+          <div><strong>Master Chart ${escHtml(calSn)}:</strong> 2000→34.2 • 3000→51.4 • 5000→86.2 • 7500→130.4 cc</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function buildVisualInspectionPaperHtml(moS, yrS) {
+  const recs = STATE.records || [];
+  const visRin = STATE.visual_rin || 'V143159';
+  const dotRin = STATE.dot_rin || 'B386';
+  const inspMy = `${String(moS || '11').padStart(2, '0')}/${String(yrS || '2026').slice(-2)}`;
+  const totalRows = Math.max(10, recs.length);
+  let bodyHtml = '';
+
+  for (let i = 0; i < totalRows; i++) {
+    const r = recs[i];
+    if (r) {
+      const phys = String(r.physical_size || ((r.outside_dia && r.length_in) ? `${r.outside_dia}x${r.length_in}` : '')).replace(/\s*x\s*/gi, 'x');
+      const disp = r.hydro_disposition === 'D' ? 'SC' : (r.visual_disposition || 'OK');
+      const rvChg = (r.relief_valve_changed === 'Yes' || r.addon_burst_disc) ? 'Yes' : 'No';
+      const op = String(r.operator_initials || '').includes('ADMIN') ? 'ADM*' : 'RP';
+      const rCls = r.status === 'COMPLETED' ? 'done-row' : 'queued-preview-row';
+      bodyHtml += `
+        <tr class="dot-data-tr ${rCls}" onclick="openEditModal(${r.id})" title="Click to edit visual checks or stamps for SN ${escHtml(r.serial_number)}">
+          <td class="mono-ink"><strong>${escHtml(r.serial_number)}</strong></td>
+          <td class="mono-ink">${escHtml(String(r.mfg_date || '').replace(/^'+/, ''))}</td>
+          <td class="mono-ink">${escHtml(fmtDotSpecCell(r))}</td>
+          <td class="mono-ink">${escHtml(r.mfg_id || '')}</td>
+          <td class="dot-owner-td">${escHtml(r.customer_name || 'Walk-In')}</td>
+          <td class="mono-ink">${escHtml(phys)}</td>
+          <td class="mono-ink">${escHtml(r.coating_type || 'Painted')}</td>
+          <td class="mono-ink">${escHtml(r.coating_condition || 'Good')}</td>
+          <td class="mono-ink">${escHtml(r.chk_corrosion || 'OK')}</td>
+          <td class="mono-ink">${escHtml(r.chk_dents_dings || 'OK')}</td>
+          <td class="mono-ink">${escHtml(r.chk_cuts_gouges || 'OK')}</td>
+          <td class="mono-ink">${escHtml(r.chk_leaks || 'OK')}</td>
+          <td class="mono-ink">${escHtml(r.chk_fire_damage || 'OK')}</td>
+          <td class="mono-ink">${escHtml(r.chk_bulges || 'OK')}</td>
+          <td class="mono-ink">${escHtml(r.chk_neck_defects || 'OK')}</td>
+          <td class="mono-ink ${disp !== 'OK' ? 'bad' : ''}"><strong>${escHtml(disp)}</strong></td>
+          <td class="mono-ink">${escHtml(inspMy)}</td>
+          <td class="mono-ink">${rvChg}</td>
+          <td class="mono-ink">${op}</td>
+        </tr>`;
+    } else {
+      bodyHtml += `
+        <tr class="dot-data-tr blank-row" onclick="jumpToTab('intake')">
+          <td><span class="blank-row-hint">+ Visual Row</span></td>
+          <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+          <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+          <td></td><td></td><td></td><td></td>
+        </tr>`;
+    }
+  }
+
+  return `
+    <div class="dot-paper-sheet">
+      <div class="dot-paper-top">
+        <div class="dot-paper-sheetno" style="font-size:0.84rem;color:#92400e;">${escHtml(visRin)} E</div>
+        <div class="dot-paper-title">D.O.T./I.C.C. CYLINDER VISUAL INSPECTION AND REQUALIFICATION LOG</div>
+        <div class="dot-paper-rin-row">
+          <span><strong>Company:</strong> <u class="dot-ink-u">&nbsp;Weber's Tank Testing&nbsp;</u></span>
+          <span><strong>Plant / City:</strong> <u class="dot-ink-u">&nbsp;3086 Legionville Rd, Baden, PA 15005&nbsp;</u></span>
+          <span><strong>RIN:</strong> <u class="dot-ink-u">&nbsp;${escHtml(visRin)} (Propane/Visual) / ${escHtml(dotRin)}&nbsp;</u></span>
+        </div>
+      </div>
+      <table class="dot-paper-table">
+        <thead>
+          <tr>
+            <th colspan="6">CYLINDER IDENTIFICATION</th>
+            <th colspan="2">PROTECTIVE COATING</th>
+            <th colspan="7">CYLINDER CHECKED FOR</th>
+            <th rowspan="2">Disp.<br/><small>Code</small></th>
+            <th rowspan="2">Date Insp.<br/><small>(MM/YY)</small></th>
+            <th rowspan="2">Relief<br/><small>Changed</small></th>
+            <th rowspan="2">Init.</th>
+          </tr>
+          <tr>
+            <th>Serial No.</th><th>Mfg Date</th><th>ICC/DOT Spec</th><th>Mfg</th><th>Owner</th><th>Size</th>
+            <th>Type</th><th>Cond.</th>
+            <th>Corr.</th><th>Dents</th><th>Cuts</th><th>Leaks</th><th>Fire</th><th>Bulges</th><th>Neck</th>
+          </tr>
+        </thead>
+        <tbody>${bodyHtml}</tbody>
+      </table>
+      <div class="dot-paper-footer">
+        <div><strong>Original</strong> — Retain in Service Unit files for five years after last inspection date listed.</div>
+        <div><strong>Disposition Code:</strong> OK - Return to Service • SC - Scrap (Condemned) • RM - Removed from Service</div>
+        <div style="text-align:right;"><strong>Responsible Manager:</strong> ${window.CURRENT_USER?.role === 'SYSTEM_ADMIN' ? 'ADMIN DIAGNOSTIC' : 'Ryan Pearce'}</div>
+      </div>
+    </div>`;
+}
+
+function buildDotForm393PaperHtml(hostKind) {
+  const b = STATE.binder_state || {};
+  const shNo = b.active_sheet_no || STATE.starting_sheet_no || 8095;
+  const completedOnSheet = Array.isArray(STATE.active_sheet_records)
+    ? STATE.active_sheet_records.slice(0, 12)
+    : (STATE.records || []).filter(r => r.status === 'COMPLETED' && r.service_mode !== 'VISUAL_ONLY' && r.sheet_no === shNo).slice(0, 12);
+
+  const queuedHydro = (STATE.records || []).filter(r => r.status === 'QUEUED' && r.service_mode !== 'VISUAL_ONLY');
+  const activeStandId = parseInt(document.getElementById('benchSelect')?.value || '0', 10);
+
+  // Put currently selected Stand bottle first in the upcoming open rows!
+  let orderedQueue = [...queuedHydro];
+  if (activeStandId) {
+    const idx = orderedQueue.findIndex(r => r.id === activeStandId);
+    if (idx > 0) {
+      const [picked] = orderedQueue.splice(idx, 1);
+      orderedQueue.unshift(picked);
+    }
+  }
+
+  // Optional live intake preview if typing on Station 2
+  const liveInSn = (document.getElementById('fSerial')?.value || '').trim();
+  const liveInSpec = (document.getElementById('fSpec')?.value || '').trim();
+  const liveInCust = (document.getElementById('fCustomer')?.value || '').trim();
+  const hasIntakeDraft = Boolean(liveInSn || liveInSpec);
+
+  const rawDate = (completedOnSheet.length ? completedOnSheet[completedOnSheet.length - 1].work_date : '') || STATE.selected_date || STATE.today || '';
+  const [yrS, moS, dyS] = rawDate.includes('-') ? rawDate.split('-') : ['2026', '11', '18'];
+  const sMax = STATE.jacket_ceilings?.['Short Jacket']?.max_allowed_test_psi || 0;
+  const tMax = STATE.jacket_ceilings?.['Tall Jacket']?.max_allowed_test_psi || 0;
+  const calOk = Boolean(sMax || tMax);
+
+  let qCursor = 0;
+  let draftShown = false;
+  let rowsHtml = '';
+
+  for (let i = 0; i < 12; i++) {
+    const rowNum = i + 1;
+    let rec = completedOnSheet[i] || null;
+    let rowKind = 'blank';
+
+    if (rec) {
+      rowKind = 'done';
+    } else if (qCursor < orderedQueue.length) {
+      rec = orderedQueue[qCursor++];
+      rowKind = (rec.id === activeStandId) ? 'stand' : 'queued';
+    } else if (hasIntakeDraft && !draftShown) {
+      draftShown = true;
+      rowKind = 'draft';
+      const dia = (document.getElementById('fDia')?.value || '').trim();
+      const len = (document.getElementById('fLen')?.value || '').trim();
+      rec = {
+        customer_name: liveInCust || 'Walk-In (Typing...)',
+        serial_number: liveInSn || '—',
+        mfg_id: (document.getElementById('fMfg')?.value || '').trim(),
+        mfg_date: (document.getElementById('fMfgDate')?.value || '').trim(),
+        gas_service: (document.getElementById('fGas')?.value || 'AIR').trim(),
+        physical_size: (dia && len) ? `${dia}x${len}` : (dia || len || ''),
+        dot_spec: liveInSpec,
+        service_psi: document.getElementById('fSvcPsi')?.value || '',
+        test_psi: document.getElementById('fTestPsi')?.value || '',
+        ree_limit: document.getElementById('fRee')?.value || '',
+        star_10yr: Boolean(document.getElementById('fStar10Yr')?.checked),
+      };
+    }
+
+    if (rowKind === 'done') {
+      const visOk = rec.visual_pass !== 0 && rec.visual_pass !== false;
+      const disp = rec.hydro_disposition || 'A';
+      const opCell = (String(rec.operator_initials || '').includes('ADMIN') || String(rec.tested_by || '').includes('ADMIN')) ? 'ADM*' : 'RP';
+      const phys = String(rec.physical_size || ((rec.outside_dia && rec.length_in) ? `${rec.outside_dia}x${rec.length_in}` : '')).replace(/\s*x\s*/gi, 'x');
+      const stampBadge = disp !== 'A'
+        ? '<span class="dot-row-pill bad">⛔ Condemned</span>'
+        : (rec.rin_marked
+          ? `<span class="dot-row-pill ok">${rec.rin_mark_type === 'STICKERED' ? '🏷️ B386 Stickered' : '🔨 B386 Stamped'}</span>`
+          : '<span class="dot-row-pill warn">⏳ Drying • Needs B386</span>');
+      const noteTxt = rec.dot_row_note || rec.notes || '';
+      rowsHtml += `
+        <tr class="dot-data-tr done-row ${disp !== 'A' ? 'condemn-row' : ''}" onclick="openEditModal(${rec.id})" title="Click row to edit any field on SN ${escHtml(rec.serial_number)}">
+          <td rowspan="2" class="dot-num-td">${rowNum}</td>
+          <td class="dot-owner-td">${escHtml(rec.customer_name || 'Walk-In')}</td>
+          <td class="mono-ink"><strong>${escHtml(rec.serial_number)}</strong></td>
+          <td class="mono-ink">${escHtml(rec.mfg_id || '')}</td>
+          <td class="mono-ink">${escHtml(String(rec.mfg_date || '').replace(/^'+/, ''))}</td>
+          <td class="mono-ink">${escHtml(rec.gas_service || 'AIR')}</td>
+          <td class="mono-ink">${escHtml(phys)}</td>
+          <td class="mono-ink">${escHtml(fmtDotSpecCell(rec))}</td>
+          <td class="mono-ink">${escHtml(rec.test_psi || '')}</td>
+          <td class="mono-ink">${fmtDotNum(rec.total_cc)}</td>
+          <td class="mono-ink">${fmtDotNum(rec.permanent_cc)}</td>
+          <td class="mono-ink">${fmtDotNum(rec.elastic_cc)}</td>
+          <td class="mono-ink">${rec.percent_permanent !== null && rec.percent_permanent !== undefined ? Number(rec.percent_permanent).toFixed(1) + '%' : ''}</td>
+          <td class="mono-ink">${cleanReeForSheet(rec)}</td>
+          <td class="chk-ink">${visOk ? '✓' : ''}</td>
+          <td class="chk-ink bad">${!visOk ? '✓' : ''}</td>
+          <td class="mono-ink"><strong>${escHtml(disp)}</strong></td>
+          <td class="mono-ink">${opCell}</td>
+        </tr>
+        <tr class="dot-note-tr done-row" onclick="openEditModal(${rec.id})" title="Click to edit SN ${escHtml(rec.serial_number)}">
+          <td colspan="17">
+            <div class="dot-note-flex">
+              <span><strong>Notes:</strong> ${escHtml(noteTxt || 'Certified — 49 CFR §180.205')}</span>
+              <span class="dot-note-actions">${stampBadge} <span class="dot-edit-hint">✎ Edit</span></span>
+            </div>
+          </td>
+        </tr>`;
+    } else if (rowKind === 'stand' || rowKind === 'queued') {
+      const phys = String(rec.physical_size || ((rec.outside_dia && rec.length_in) ? `${rec.outside_dia}x${rec.length_in}` : '')).replace(/\s*x\s*/gi, 'x');
+      let totStr = '', permStr = '', elStr = '', pctStr = '', visPassMark = '', visFailMark = '', dispStr = '';
+      if (rowKind === 'stand') {
+        const bTotRaw = document.getElementById('bTotal')?.value || '';
+        const bPermRaw = document.getElementById('bPerm')?.value || '0';
+        const bTot = parseFloat(bTotRaw);
+        const bPerm = parseFloat(bPermRaw || '0');
+        const visFailed = Object.values(BENCH_VIS || {}).some(v => v !== 'OK');
+        visPassMark = visFailed ? '' : '✓';
+        visFailMark = visFailed ? '✓' : '';
+        if (bTotRaw && bTot > 0) {
+          const elNum = bTot - bPerm;
+          const pctNum = (bPerm / bTot) * 100;
+          const effReeStr = cleanReeForSheet(rec);
+          const reeFail = effReeStr !== '' && elNum > parseFloat(effReeStr);
+          const permFail = pctNum > 10.0 || bPerm < 0 || bPerm > bTot;
+          totStr = fmtDotNum(bTot);
+          permStr = fmtDotNum(bPerm);
+          elStr = fmtDotNum(elNum);
+          pctStr = pctNum.toFixed(1) + '%';
+          dispStr = (visFailed || reeFail || permFail) ? 'D' : 'A';
+        }
+      }
+      const clickAct = rowKind === 'stand'
+        ? (CURRENT_TAB === 'bench' ? `document.getElementById('bTotal')?.focus()` : `loadBottleToStand(${rec.id})`)
+        : `loadBottleToStand(${rec.id})`;
+      rowsHtml += `
+        <tr class="dot-data-tr ${rowKind === 'stand' ? 'stand-live-row' : 'queued-preview-row'}" onclick="${clickAct}" title="${rowKind === 'stand' ? 'Currently active on Hydro Stand' : 'Click to load onto Hydro Stand'}">
+          <td rowspan="2" class="dot-num-td">${rowNum}</td>
+          <td class="dot-owner-td">${escHtml(rec.customer_name || 'Walk-In')}</td>
+          <td class="mono-ink"><strong>${escHtml(rec.serial_number)}</strong></td>
+          <td class="mono-ink">${escHtml(rec.mfg_id || '')}</td>
+          <td class="mono-ink">${escHtml(String(rec.mfg_date || '').replace(/^'+/, ''))}</td>
+          <td class="mono-ink">${escHtml(rec.gas_service || 'AIR')}</td>
+          <td class="mono-ink">${escHtml(phys)}</td>
+          <td class="mono-ink">${escHtml(fmtDotSpecCell(rec))}</td>
+          <td class="mono-ink">${escHtml(rec.test_psi || '')}</td>
+          <td class="mono-ink live-val">${totStr}</td>
+          <td class="mono-ink live-val">${permStr}</td>
+          <td class="mono-ink live-val">${elStr}</td>
+          <td class="mono-ink live-val">${pctStr}</td>
+          <td class="mono-ink">${cleanReeForSheet(rec)}</td>
+          <td class="chk-ink">${visPassMark}</td>
+          <td class="chk-ink bad">${visFailMark}</td>
+          <td class="mono-ink live-val"><strong>${dispStr}</strong></td>
+          <td class="mono-ink" style="opacity:0.45;">RP</td>
+        </tr>
+        <tr class="dot-note-tr ${rowKind === 'stand' ? 'stand-live-row' : 'queued-preview-row'}" onclick="${clickAct}">
+          <td colspan="17">
+            <div class="dot-note-flex">
+              <span><strong>Notes:</strong> ${rowKind === 'stand' ? '<strong style="color:#b45309;">▶ ON HYDRO STAND NOW — type Total &amp; Perm cc to certify into this row</strong>' : '<em>Queued &amp; Prepped — tap row to load onto Hydro Stand</em>'}${rec.valve_tag && !rec.valve_reinstalled ? ` • Tag #${escHtml(rec.valve_tag)}` : ''}</span>
+              <span class="dot-note-actions" onclick="event.stopPropagation()">
+                <button type="button" class="dot-mini-btn" onclick="openEditModal(${rec.id})">✎ Edit Stamps</button>
+              </span>
+            </div>
+          </td>
+        </tr>`;
+    } else if (rowKind === 'draft') {
+      rowsHtml += `
+        <tr class="dot-data-tr draft-preview-row">
+          <td rowspan="2" class="dot-num-td">${rowNum}</td>
+          <td class="dot-owner-td">${escHtml(rec.customer_name)}</td>
+          <td class="mono-ink">${escHtml(rec.serial_number)}</td>
+          <td class="mono-ink">${escHtml(rec.mfg_id)}</td>
+          <td class="mono-ink">${escHtml(rec.mfg_date)}</td>
+          <td class="mono-ink">${escHtml(rec.gas_service)}</td>
+          <td class="mono-ink">${escHtml(rec.physical_size)}</td>
+          <td class="mono-ink">${escHtml(fmtDotSpecCell(rec))}</td>
+          <td class="mono-ink">${escHtml(rec.test_psi)}</td>
+          <td></td><td></td><td></td><td></td><td class="mono-ink">${escHtml(rec.ree_limit)}</td><td></td><td></td><td></td><td></td>
+        </tr>
+        <tr class="dot-note-tr draft-preview-row">
+          <td colspan="17"><strong>Notes:</strong> <em style="color:#0369a1;">📷 Live Prep Preview — click "Queue Bottle &amp; Next" to lock stamps</em></td>
+        </tr>`;
+    } else {
+      rowsHtml += `
+        <tr class="dot-data-tr blank-row" onclick="jumpToTab('intake')">
+          <td rowspan="2" class="dot-num-td">${rowNum}</td>
+          <td class="dot-owner-td"><span class="blank-row-hint">+ Open Row</span></td>
+          <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+          <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>
+        <tr class="dot-note-tr blank-row" onclick="jumpToTab('intake')">
+          <td colspan="17"><strong>Notes:</strong></td>
+        </tr>`;
+    }
+  }
+
+  const storageKey = `webers_dot393_open_${hostKind}`;
+  const defaultOpen = hostKind !== 'intake';
+  const savedState = localStorage.getItem(storageKey);
+  const isOpen = savedState === null ? defaultOpen : savedState === '1';
+
+  const retestSheetHtml = `
+    <div class="dot-paper-sheet">
+      <div class="dot-paper-top">
+        <div class="dot-paper-sheetno">${shNo}</div>
+        <div class="dot-paper-title">HYDROSTATIC WATER JACKET TEST RETEST DATA SHEET</div>
+        <div class="dot-paper-rin-row">
+          <span><strong>D.O.T. Requalification Identification Number (RIN):</strong> <u class="dot-ink-u">${escHtml(STATE.dot_rin || 'B386')}</u></span>
+          <span><strong>and/or Transport Canada (TC) Registration Number:</strong> <u class="dot-ink-u">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u></span>
+        </div>
+        <div class="dot-paper-date-row">
+          <span><strong>Date:</strong> <u class="dot-ink-u">&nbsp;${escHtml(String(parseInt(moS || '1', 10)))} / ${escHtml(String(parseInt(dyS || '1', 10)))} / ${escHtml(yrS)}&nbsp;</u></span>
+          <span class="dot-cal-stamp ${calOk ? 'ok' : 'wait'}">
+            ${calOk
+              ? `✓ Master ${escHtml(STATE.calibrated_serial || '1SF11904')} Verified (${sMax ? `Short ≤${sMax}#` : ''}${sMax && tMax ? ' • ' : ''}${tMax ? `Tall ≤${tMax}#` : ''})`
+              : `⚠ Verify Master Cyl ${escHtml(STATE.calibrated_serial || '1SF11904')} Prior to Testing`}
+          </span>
+        </div>
+      </div>
+
+      <table class="dot-paper-table">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:24px;">#</th>
+            <th rowspan="2" style="min-width:118px;">Cylinder Owner</th>
+            <th rowspan="2" style="min-width:96px;">Cylinder Serial<br/>Number</th>
+            <th rowspan="2" style="min-width:52px;">MFG ID</th>
+            <th rowspan="2" style="min-width:50px;">MFG<br/>Date</th>
+            <th rowspan="2" style="min-width:44px;">Gas<br/>Service</th>
+            <th rowspan="2" style="min-width:68px;">Physical Size (*)<br/><small>(dia. x length)</small></th>
+            <th rowspan="2" style="min-width:86px;">Specification &amp;<br/>Service Pressure</th>
+            <th rowspan="2" style="min-width:56px;">Actual Test<br/>Pressure</th>
+            <th colspan="5">EXPANSION READINGS (cc's)</th>
+            <th colspan="2">Visual Insp.</th>
+            <th rowspan="2" style="min-width:48px;">Disposition<br/>Code (*)</th>
+            <th rowspan="2" style="min-width:46px;">Retest<br/>Operator</th>
+          </tr>
+          <tr>
+            <th style="min-width:44px;">Total</th>
+            <th style="min-width:52px;">Permanent</th>
+            <th style="min-width:44px;">Elastic</th>
+            <th style="min-width:52px;">%<br/>Permanent</th>
+            <th style="min-width:38px;">REE</th>
+            <th style="min-width:32px;">Pass</th>
+            <th style="min-width:32px;">Fail</th>
+          </tr>
+          <tr class="dot-cal-notice-tr">
+            <td></td>
+            <td colspan="17"><strong><em>Calibrated Cylinder:</em></strong> <em>Be sure to verify the system accuracy with the calibrated cylinder prior to each day of testing. Use the back of this form to properly record the verification procedure.</em></td>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+
+      <div class="dot-paper-footer">
+        <div>
+          <div>I hereby certify that all of the above tests were made under my supervision and in accordance with DOT and/or TC regulations.</div>
+          <div class="dot-sig-line">
+            <span class="dot-sig-script">${window.CURRENT_USER?.role === 'SYSTEM_ADMIN' ? 'ADMIN DIAGNOSTIC (NO RP SIGN-OFF)' : 'Ryan Pearce'}</span>
+            <small>(Facility Manager)</small>
+          </div>
+        </div>
+        <div class="dot-disp-legend">
+          <strong>(*) Disposition Codes:</strong>
+          <span>A - Return to Service • B - Hold for Retest • C - Rejected • D - Condemned • E - Other</span>
+        </div>
+        <div style="text-align:right;">
+          <div>49 CFR §180.215 Compliant Record • <strong>Weber's Tank Testing (RIN ${escHtml(STATE.dot_rin || 'B386')})</strong></div>
+          <div>Reorder no. 393-001 • 3086 Legionville Rd, Baden, PA 15005 • 5-Year Vault</div>
+        </div>
+      </div>
+    </div>`;
+
+  const activePaperHtml = ACTIVE_BINDER_VIEW === 'verification'
+    ? buildVerificationMethodBPaperHtml(moS, dyS, yrS)
+    : (ACTIVE_BINDER_VIEW === 'visual' ? buildVisualInspectionPaperHtml(moS, yrS) : retestSheetHtml);
+
+  const calStepCnt = (STATE.verifications || []).length;
+  const visRowCnt = (STATE.records || []).length;
+
+  return `
+    <details class="dot-sheet-CollapseWrap" ${isOpen ? 'open' : ''} ontoggle="localStorage.setItem('${storageKey}', this.open ? '1' : '0')">
+      <summary class="dot-sheet-summary-bar">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span>📋 <strong>Live DOT Shop Logbook — Sheet #${shNo}</strong></span>
+          <span class="sub-badge">${completedOnSheet.length}/12 Certified${orderedQueue.length ? ` • +${orderedQueue.length} Queued` : ''}</span>
+          <span style="font-size:0.75rem;color:var(--ui-muted);font-weight:600;">Click any row to edit stamps/readings</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;" onclick="event.stopPropagation()">
+          <a class="secondary" style="padding:4px 10px;font-size:0.74rem;" href="/print?tab=print" title="Print Hydro (B386) or Propane (V143159 E) stickers">🏷️ Stickers</a>
+          <a class="secondary" style="padding:4px 10px;font-size:0.74rem;" href="/print?sheet=${shNo}">🗄️ Filing Cabinet →</a>
+        </div>
+      </summary>
+
+      <div class="dot-binder-tabs">
+        <div class="dot-binder-tab-group">
+          <button type="button" class="dot-btab ${ACTIVE_BINDER_VIEW === 'verification' ? 'active' : ''}" onclick="setLiveBinderView('verification')">📊 Left Page: Verification (${calStepCnt} Steps)</button>
+          <button type="button" class="dot-btab ${ACTIVE_BINDER_VIEW === 'retest' ? 'active' : ''}" onclick="setLiveBinderView('retest')">📖 Right Page: Retest Sheet #${shNo}</button>
+          <button type="button" class="dot-btab ${ACTIVE_BINDER_VIEW === 'visual' ? 'active' : ''}" onclick="setLiveBinderView('visual')">🔍 Visual &amp; Propane Log (${visRowCnt})</button>
+        </div>
+        <a class="dot-binder-print-shortcut" href="/print?sheet=${shNo}">🖨️ Open Printable PDF Studio →</a>
+      </div>
+
+      <div class="dot-paper-scroll">
+        ${activePaperHtml}
+      </div>
+    </details>`;
+}
+
+function renderLiveDotForm393Sheets() {
+  const startHost = document.getElementById('liveDotSheetStartHost');
+  const intakeHost = document.getElementById('liveDotSheetIntakeHost');
+  const benchHost = document.getElementById('liveDotSheetBenchHost');
+  if (startHost) startHost.innerHTML = buildDotForm393PaperHtml('start');
+  if (intakeHost) intakeHost.innerHTML = buildDotForm393PaperHtml('intake');
+  if (benchHost) benchHost.innerHTML = buildDotForm393PaperHtml('bench');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  ['fCustomer', 'fSerial', 'fSpec', 'fSvcPsi', 'fTestPsi', 'fMfg', 'fMfgDate', 'fDia', 'fLen', 'fGas', 'fRee', 'fStar10Yr'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', () => {
+      const intakeHost = document.getElementById('liveDotSheetIntakeHost');
+      if (intakeHost && CURRENT_TAB === 'intake') intakeHost.innerHTML = buildDotForm393PaperHtml('intake');
+    });
+  });
+});
+
+// =========================================================================
+// v16.0 PERSISTENT SHOP & PROPERTY TO-DO BOARD (CREW + OWNER + LIVE TV)
+// =========================================================================
+let SHOP_TODO_FILTER = 'OPEN';
+let EDITING_TODO_ID = null;
+
+function setShopTodoFilter(mode) {
+  SHOP_TODO_FILTER = mode;
+  document.querySelectorAll('#shopTodoFilterBar .tap-pill').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-tfilter') === mode);
+  });
+  renderShopTodoStation();
+}
+
+function renderShopTodoStation() {
+  const area = document.getElementById('shopTodoListArea');
+  if (!area) return;
+
+  // Populate assignee dropdown cleanly without losing selection
+  const assignSel = document.getElementById('shopTodoAssign');
+  if (assignSel && document.activeElement !== assignSel) {
+    const prev = assignSel.value || 'ALL';
+    const crewOpts = (STATE.crew || []).map(c => `<option value="${escHtml(c.initials)}">${escHtml(c.full_name)} (${escHtml(c.initials)})</option>`).join('');
+    assignSel.innerHTML = `<option value="ALL">All Crew</option>${crewOpts}`;
+    if ([...assignSel.options].some(o => o.value === prev)) assignSel.value = prev;
+  }
+
+  const allTasks = STATE.shop_tasks || [];
+  const openCnt = allTasks.filter(t => t.status === 'OPEN').length;
+  const bEl = document.getElementById('todoOpenCountBadge');
+  if (bEl) bEl.textContent = `${openCnt} Open`;
+
+  const rows = allTasks.filter(t => {
+    if (SHOP_TODO_FILTER === 'OPEN') return t.status === 'OPEN';
+    if (SHOP_TODO_FILTER === 'DONE') return t.status === 'DONE';
+    if (SHOP_TODO_FILTER === 'PROPERTY') return t.category === 'PROPERTY' && t.status === 'OPEN';
+    if (SHOP_TODO_FILTER === 'SHOP') return t.category !== 'PROPERTY' && t.status === 'OPEN';
+    return true;
+  });
+
+  if (!rows.length) {
+    area.innerHTML = `<div style="padding:18px;text-align:center;color:var(--muted);font-size:0.88rem;background:var(--ui-surface-2);border-radius:14px;border:1px dashed var(--ui-border-strong);">
+      ${SHOP_TODO_FILTER === 'DONE' ? 'No completed tasks logged yet.' : '🎉 All tasks in this view are checked off! Add a new shop or property item above.'}
+    </div>`;
+    return;
+  }
+
+  area.innerHTML = rows.map(t => {
+    const isDone = t.status === 'DONE';
+    const catLbl = t.category === 'PROPERTY' ? '🚜 Property & Grounds' : (t.category === 'CYLINDERS' ? '🧪 Cylinders & Stand' : '🔧 Shop & Garage');
+    const catCls = t.category === 'PROPERTY' ? 'todo-cat-prop' : 'todo-cat-shop';
+
+    if (EDITING_TODO_ID === t.id) {
+      return `
+        <div class="todo-card editing">
+          <div class="todo-edit-grid">
+            <div style="grid-column:1/-1;">
+              <label>Task Description</label>
+              <input id="editTodoTitle_${t.id}" value="${escHtml(t.title)}" onkeydown="if(event.key==='Enter')saveEditShopTodo(${t.id})" />
+            </div>
+            <div>
+              <label>Area</label>
+              <select id="editTodoCat_${t.id}">
+                <option value="PROPERTY" ${t.category === 'PROPERTY' ? 'selected' : ''}>🚜 Property &amp; Grounds</option>
+                <option value="SHOP" ${t.category === 'SHOP' ? 'selected' : ''}>🔧 Shop &amp; Garage</option>
+                <option value="CYLINDERS" ${t.category === 'CYLINDERS' ? 'selected' : ''}>🧪 Cylinders &amp; Stand</option>
+              </select>
+            </div>
+            <div>
+              <label>Priority</label>
+              <select id="editTodoPrio_${t.id}">
+                <option value="NORMAL" ${t.priority !== 'HIGH' ? 'selected' : ''}>Normal</option>
+                <option value="HIGH" ${t.priority === 'HIGH' ? 'selected' : ''}>⚡ High Priority</option>
+              </select>
+            </div>
+            <div>
+              <label>Crew Note (Optional)</label>
+              <input id="editTodoNote_${t.id}" value="${escHtml(t.crew_note || '')}" placeholder="Status note or parts needed..." />
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+            <button type="button" class="secondary" onclick="EDITING_TODO_ID=null;renderShopTodoStation()">Cancel</button>
+            <button type="button" class="primary" style="width:auto;margin:0;padding:8px 16px;" onclick="saveEditShopTodo(${t.id})">✓ Save Changes</button>
+          </div>
+        </div>`;
+    }
+
+    return `
+      <div class="todo-card ${isDone ? 'is-done' : ''} ${t.priority === 'HIGH' && !isDone ? 'is-high' : ''}">
+        <button type="button" class="todo-check-btn ${isDone ? 'checked' : ''}" onclick="toggleShopTodoStatus(${t.id}, '${isDone ? 'OPEN' : 'DONE'}')" title="${isDone ? 'Mark Open again' : 'Check off task'}">
+          ${isDone ? '✓' : ''}
+        </button>
+        <div class="todo-body">
+          <div class="todo-title-row">
+            <span class="todo-title-txt">${escHtml(t.title)}</span>
+            <span class="todo-cat-pill ${catCls}">${catLbl}</span>
+            ${t.priority === 'HIGH' && !isDone ? '<span class="rush-badge">⚡ HIGH</span>' : ''}
+            ${t.assigned_to && t.assigned_to !== 'ALL' ? `<span class="sub-badge">👤 ${escHtml(t.assigned_name || t.assigned_to)}</span>` : ''}
+          </div>
+          <div class="todo-meta-row">
+            ${isDone
+              ? `✓ Checked off by <strong>${escHtml(t.completed_by || 'Crew')}</strong>${t.completed_at ? ' at ' + escHtml(t.completed_at) : ''}`
+              : `Added by ${escHtml(t.created_by || 'RP')}${t.work_date ? ' • ' + escHtml(t.work_date) : ''} • Broadcasts on Shop TV`}
+            ${t.crew_note ? ` • 📝 <em>${escHtml(t.crew_note)}</em>` : ''}
+          </div>
+        </div>
+        <div class="todo-actions">
+          <button type="button" class="secondary" onclick="startEditShopTodo(${t.id})">✎ Edit</button>
+          <button type="button" class="secondary" style="color:var(--ui-danger);" onclick="deleteShopTodoItem(${t.id})" title="Delete task">✕</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function addShopTodoItem() {
+  const inp = document.getElementById('shopTodoTitle');
+  const title = (inp?.value || '').trim();
+  if (!title) { inp?.focus(); return; }
+  const category = document.getElementById('shopTodoCat')?.value || 'SHOP';
+  const priority = document.getElementById('shopTodoPrio')?.value || 'NORMAL';
+  const assigned_to = document.getElementById('shopTodoAssign')?.value || 'ALL';
+  const res = await fetch('/api/day/tasks', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, category, priority, assigned_to }),
+  });
+  if (!res.ok) { alert((await res.json()).detail || 'Could not add task.'); return; }
+  inp.value = '';
+  if (SHOP_TODO_FILTER === 'DONE') SHOP_TODO_FILTER = 'OPEN';
+  playShopTone('step');
+  await loadState(false);
+}
+
+async function toggleShopTodoStatus(id, nextStatus) {
+  const res = await fetch(`/api/day/tasks/${id}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: nextStatus }),
+  });
+  if (!res.ok) { alert((await res.json()).detail || 'Could not update task.'); return; }
+  if (nextStatus === 'DONE') playShopTone('pass');
+  await loadState(false);
+}
+
+function startEditShopTodo(id) {
+  EDITING_TODO_ID = id;
+  renderShopTodoStation();
+  setTimeout(() => document.getElementById('editTodoTitle_' + id)?.focus(), 30);
+}
+
+async function saveEditShopTodo(id) {
+  const title = (document.getElementById('editTodoTitle_' + id)?.value || '').trim();
+  if (!title) { alert('Task description cannot be empty.'); return; }
+  const category = document.getElementById('editTodoCat_' + id)?.value || 'SHOP';
+  const priority = document.getElementById('editTodoPrio_' + id)?.value || 'NORMAL';
+  const crew_note = document.getElementById('editTodoNote_' + id)?.value ?? '';
+  const res = await fetch(`/api/day/tasks/${id}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, category, priority, crew_note }),
+  });
+  if (!res.ok) { alert((await res.json()).detail || 'Could not save task.'); return; }
+  EDITING_TODO_ID = null;
+  await loadState(false);
+}
+
+async function deleteShopTodoItem(id) {
+  if (!confirm('Remove this item from the Shop & Property To-Do list?')) return;
+  const res = await fetch(`/api/day/tasks/${id}`, { method: 'DELETE' });
+  if (!res.ok) { alert((await res.json()).detail || 'Could not delete task.'); return; }
+  await loadState(false);
 }

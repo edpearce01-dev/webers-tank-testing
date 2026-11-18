@@ -124,7 +124,7 @@ def track_public_ticket(request: Request, ticket: str = "", phone_last4: str = "
 
 
 @router.get("/api/public/receipt/{ticket_no}.pdf")
-def download_public_dropoff_receipt(ticket_no: str, request: Request, p: str = ""):
+def download_public_dropoff_receipt(ticket_no: str, request: Request, p: str = "", inline: bool = False):
     raw_num = re.sub(r"[^0-9]", "", (ticket_no or "").upper())
     if not raw_num:
         raise HTTPException(400, "Invalid ticket number.")
@@ -150,10 +150,11 @@ def download_public_dropoff_receipt(ticket_no: str, request: Request, p: str = "
         dot_rin=s_map.get("dot_rin", "B386"),
         track_url=track_link,
     )
+    disp_mode = "inline" if inline else "attachment"
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="Webers_Ticket_{t_code}.pdf"'},
+        headers={"Content-Disposition": f'{disp_mode}; filename="Webers_Ticket_{t_code}.pdf"'},
     )
 
 
@@ -456,3 +457,98 @@ def get_public_holiday_theme():
     data = compute_active_theme(conn)
     conn.close()
     return data
+
+
+@router.get("/api/public/site-content")
+def get_public_site_content():
+    keys = (
+        "site_banner_announcement",
+        "site_about_eyebrow",
+        "site_about_heading",
+        "site_about_story",
+        "site_business_details",
+        "site_dropoff_note",
+        "site_owner_signoff",
+        "phone",
+        "dot_rin",
+    )
+    conn = get_conn()
+    q_marks = ",".join("?" for _ in keys)
+    rows = conn.execute(f"SELECT key, value FROM settings WHERE key IN ({q_marks});", keys).fetchall()
+    conn.close()
+    s_map = {r["key"]: r["value"] for r in rows}
+    return {
+        "site_banner_announcement": s_map.get("site_banner_announcement", ""),
+        "site_about_eyebrow": s_map.get("site_about_eyebrow", "Firefighter Owned & Operated • Baden, PA"),
+        "site_about_heading": s_map.get("site_about_heading", "About Weber's Tank Testing"),
+        "site_about_story": s_map.get("site_about_story", ""),
+        "site_business_details": s_map.get("site_business_details", ""),
+        "site_dropoff_note": s_map.get("site_dropoff_note", ""),
+        "site_owner_signoff": s_map.get("site_owner_signoff", "— Ryan Pearce, Facility Manager (DOT RIN B386)"),
+        "phone": s_map.get("phone", "724-266-8008"),
+        "dot_rin": s_map.get("dot_rin", "B386"),
+    }
+
+
+@router.post("/api/public/inquiry")
+def submit_public_website_inquiry(payload: PublicInquiryInput):
+    import threading
+
+    if payload.website_hp.strip():
+        return {"sent": True}
+    name = payload.customer_name.strip()[:80]
+    msg_txt = payload.message.strip()[:800]
+    topic = (payload.topic or "General Question").strip()[:60]
+    ph_clean = clean_phone(payload.customer_phone)
+    ph_digits = re.sub(r"\D", "", ph_clean)
+    em_clean = payload.customer_email.strip()[:100]
+
+    if len(name) < 2:
+        raise HTTPException(400, "Please enter your name or department.")
+    if len(ph_digits) < 10 and "@" not in em_clean:
+        raise HTTPException(400, "Please include a 10-digit phone number or email address so Ryan can reply.")
+    if len(msg_txt) < 3:
+        raise HTTPException(400, "Please enter your question or message.")
+
+    est = now_eastern()
+    ts = est.strftime("%Y-%m-%d %I:%M %p")
+    w_date = est.date().isoformat()
+    full_body = f"[{topic}] {msg_txt}" if topic and topic.lower() != "general question" else msg_txt
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """INSERT INTO shop_messages
+           (created_at, work_date, channel, sender_name, sender_initials, sender_role,
+            sender_phone, sender_email, recipient, body, status)
+           VALUES (?, ?, 'WEB_INQUIRY', ?, 'WEB', 'CUSTOMER', ?, ?, 'RP', ?, 'OPEN');""",
+        (ts, w_date, name, ph_clean, em_clean, full_body),
+    )
+    msg_id = cur.lastrowid
+    alert_row = conn.execute("SELECT value FROM settings WHERE key='alert_email';").fetchone()
+    alert_to = (os.getenv("WEBER_ALERT_EMAIL") or (alert_row["value"] if alert_row else "") or "").strip()
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+
+    if alert_to and "@" in alert_to:
+        subj = f"💬 Website Question from {name} — Weber's Tank Testing"
+        email_body = (
+            f"New Customer Message from weberstanktesting.com\n"
+            f"================================================\n"
+            f"From:    {name}\n"
+            f"Phone:   {ph_clean or 'Not provided'}\n"
+            f"Email:   {em_clean or 'Not provided'}\n"
+            f"Topic:   {topic}\n"
+            f"Time:    {ts}\n\n"
+            f"Message:\n{msg_txt}\n\n"
+            f"Open your Shop Portal Messages drawer to text/email back or mark resolved:\n"
+            f"https://ops.weberstanktesting.com/ops"
+        )
+        threading.Thread(
+            target=send_raw_email_resend_or_smtp,
+            args=(alert_to, subj, email_body, em_clean),
+            daemon=True,
+        ).start()
+
+    return {"sent": True, "id": msg_id}

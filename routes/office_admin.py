@@ -78,6 +78,8 @@ def update_settings(payload: SettingsInput, request: Request):
         old_sn = conn.execute("SELECT value FROM settings WHERE key='calibrated_serial';").fetchone()["value"]
         conn.execute("UPDATE settings SET value=? WHERE key='calibrated_serial';", (new_sn,))
         conn.execute("UPDATE calibration_targets SET serial_number=? WHERE serial_number=?;", (new_sn, old_sn))
+    if payload.visual_rin is not None and payload.visual_rin.strip():
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('visual_rin', ?);", (payload.visual_rin.strip().upper()[:16],))
     if payload.starting_sheet_no is not None:
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('starting_sheet_no', ?);", (str(payload.starting_sheet_no),))
         conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('current_sheet_no', ?);", (str(payload.starting_sheet_no),))
@@ -862,6 +864,148 @@ def update_feedback_status(fb_id: int, payload: FeedbackStatusInput):
     return {"updated": fb_id}
 
 
+@router.post("/api/owner/site-content")
+def save_owner_website_content(payload: WebsiteContentInput, request: Request):
+    require_owner_or_admin(request)
+    updates = [
+        ("site_banner_announcement", payload.site_banner_announcement.strip()[:280]),
+        ("site_about_eyebrow", payload.site_about_eyebrow.strip()[:100]),
+        ("site_about_heading", payload.site_about_heading.strip()[:120]),
+        ("site_about_story", payload.site_about_story.strip()[:1500]),
+        ("site_business_details", payload.site_business_details.strip()[:1500]),
+        ("site_dropoff_note", payload.site_dropoff_note.strip()[:800]),
+        ("site_owner_signoff", payload.site_owner_signoff.strip()[:140]),
+    ]
+    conn = get_conn()
+    for k, v in updates:
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?);", (k, v))
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"saved": True, "site_content": dict(updates)}
+
+
+@router.get("/api/messages")
+def list_shop_messages(request: Request):
+    u = getattr(request.state, "user", None) or get_current_session_user(request)
+    if not u:
+        raise HTTPException(401, "Not authenticated.")
+    is_boss = u["role"] in ("OWNER", "SYSTEM_ADMIN")
+    my_init = (u.get("initials") or "").upper()
+    conn = get_conn()
+    if is_boss:
+        crew_rows = conn.execute(
+            "SELECT * FROM shop_messages WHERE channel='CREW' ORDER BY id DESC LIMIT 80;"
+        ).fetchall()
+    else:
+        crew_rows = conn.execute(
+            """SELECT * FROM shop_messages
+               WHERE channel='CREW' AND (recipient='ALL' OR recipient=? OR sender_initials=?)
+               ORDER BY id DESC LIMIT 80;""",
+            (my_init, my_init),
+        ).fetchall()
+    crew_messages = list(reversed([dict(r) for r in crew_rows]))
+
+    web_inquiries = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT * FROM shop_messages
+               WHERE channel='WEB_INQUIRY'
+               ORDER BY CASE status WHEN 'OPEN' THEN 0 ELSE 1 END, id DESC LIMIT 60;"""
+        ).fetchall()
+    ]
+    crew_dir = [
+        {"initials": r["initials"], "name": r["name"], "role": r["role"]}
+        for r in conn.execute(
+            "SELECT initials, name, role FROM crew_users WHERE active=1 ORDER BY CASE role WHEN 'OWNER' THEN 0 WHEN 'CREW' THEN 1 ELSE 2 END, id;"
+        ).fetchall()
+    ]
+    latest_id = conn.execute("SELECT COALESCE(MAX(id), 0) FROM shop_messages;").fetchone()[0]
+    conn.close()
+    return {
+        "crew_messages": crew_messages,
+        "web_inquiries": web_inquiries,
+        "crew_directory": crew_dir,
+        "latest_msg_id": latest_id,
+        "open_inquiries_count": sum(1 for x in web_inquiries if x.get("status") == "OPEN"),
+    }
+
+
+@router.post("/api/messages")
+def send_shop_crew_message(payload: ShopMessageInput, request: Request):
+    u = getattr(request.state, "user", None) or get_current_session_user(request)
+    if not u:
+        raise HTTPException(401, "Not authenticated.")
+    body = payload.body.strip()[:800]
+    if not body:
+        raise HTTPException(400, "Type a message first.")
+    recip = (payload.recipient or "ALL").strip().upper()[:12] or "ALL"
+    est = now_eastern()
+    ts = est.strftime("%Y-%m-%d %I:%M %p")
+    w_date = est.date().isoformat()
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """INSERT INTO shop_messages
+           (created_at, work_date, channel, sender_name, sender_initials, sender_role, recipient, body, status)
+           VALUES (?, ?, 'CREW', ?, ?, ?, ?, ?, 'SENT');""",
+        (ts, w_date, u["name"], u["initials"], u["role"], recip, body),
+    )
+    msg_id = cur.lastrowid
+    bump_db_version(conn)
+    conn.commit()
+    row = dict(conn.execute("SELECT * FROM shop_messages WHERE id=?;", (msg_id,)).fetchone())
+    conn.close()
+    return row
+
+
+@router.put("/api/messages/{msg_id}/resolve")
+def resolve_shop_message(msg_id: int, payload: ShopMessageResolveInput, request: Request):
+    u = getattr(request.state, "user", None) or get_current_session_user(request)
+    if not u:
+        raise HTTPException(401, "Not authenticated.")
+    st = payload.status.strip().upper()
+    if st not in ("OPEN", "RESOLVED", "SENT"):
+        st = "RESOLVED"
+    ts = now_eastern().strftime("%Y-%m-%d %I:%M %p") if st == "RESOLVED" else ""
+    by = u["initials"] if st == "RESOLVED" else ""
+    conn = get_conn()
+    m = conn.execute("SELECT * FROM shop_messages WHERE id=?;", (msg_id,)).fetchone()
+    if not m:
+        conn.close()
+        raise HTTPException(404, "Message not found.")
+    note = payload.reply_note.strip()[:300] if payload.reply_note is not None else (m["reply_note"] or "")
+    conn.execute(
+        "UPDATE shop_messages SET status=?, reply_note=?, replied_by=?, replied_at=? WHERE id=?;",
+        (st, note, by, ts, msg_id),
+    )
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"updated": msg_id, "status": st}
+
+
+@router.delete("/api/messages/{msg_id}")
+def delete_shop_message(msg_id: int, request: Request):
+    u = getattr(request.state, "user", None) or get_current_session_user(request)
+    if not u:
+        raise HTTPException(401, "Not authenticated.")
+    conn = get_conn()
+    m = conn.execute("SELECT * FROM shop_messages WHERE id=?;", (msg_id,)).fetchone()
+    if not m:
+        conn.close()
+        raise HTTPException(404, "Message not found.")
+    if u["role"] not in ("OWNER", "SYSTEM_ADMIN") and m["sender_initials"] != u["initials"]:
+        conn.close()
+        raise HTTPException(403, "Only the sender or Owner can delete this message.")
+    conn.execute("DELETE FROM shop_messages WHERE id=?;", (msg_id,))
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"deleted": msg_id}
+
+
 @router.get("/api/pdf/retest")
 def download_retest_pdf(work_date: str = "", customer: str = "", sheet_no: Optional[int] = None, by_sheet: bool = False):
     conn = get_conn()
@@ -908,18 +1052,49 @@ def download_visual_pdf(work_date: str, customer: str = ""):
     sql = "SELECT * FROM cylinder_records WHERE work_date=? AND status='COMPLETED'" + (" AND customer_name=?" if customer else "") + " ORDER BY id ASC;"
     rows = conn.execute(sql, (work_date, customer) if customer else (work_date,)).fetchall()
     conn.close()
-    pdf_bytes = build_visual_log_pdf(work_date=work_date, records=[dict(r) for r in rows], dot_rin=s_map.get("dot_rin", "B386"))
+    pdf_bytes = build_visual_log_pdf(
+        work_date=work_date,
+        records=[dict(r) for r in rows],
+        dot_rin=s_map.get("dot_rin", "B386"),
+        visual_rin=s_map.get("visual_rin", "V143159"),
+    )
     return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="DOT_Visual_Log_{work_date}.pdf"'})
 
 
 @router.get("/api/pdf/stickers")
-def download_stickers_pdf(work_date: str, count: int = 30, skip: int = 0, compact: bool = False):
+def download_stickers_pdf(
+    work_date: str,
+    count: int = 15,
+    skip: int = 0,
+    compact: bool = False,
+    sticker_type: str = "",
+    layout: str = "15_up",
+    month_override: str = "",
+    year_override: str = "",
+):
     conn = get_conn()
-    rin = conn.execute("SELECT value FROM settings WHERE key='dot_rin';").fetchone()["value"]
+    s_map = {
+        r["key"]: r["value"]
+        for r in conn.execute("SELECT key, value FROM settings WHERE key IN ('dot_rin', 'visual_rin');").fetchall()
+    }
     conn.close()
-    pdf_bytes = build_rin_stickers_pdf(work_date=work_date, count=count, dot_rin=rin, skip_slots=skip, compact=compact)
-    suffix = "Mini_HPA" if compact else "Standard"
-    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="B386_Stickers_{suffix}_{work_date}.pdf"'})
+    rin = s_map.get("dot_rin", "B386")
+    v_rin = s_map.get("visual_rin", "V143159")
+    eff_type = (sticker_type or ("mini_hpa" if compact else "hydro")).strip().lower()
+    pdf_bytes = build_rin_stickers_pdf(
+        work_date=work_date,
+        count=count,
+        dot_rin=rin,
+        visual_rin=v_rin,
+        skip_slots=skip,
+        compact=compact,
+        sticker_type=eff_type,
+        layout=layout,
+        month_override=month_override,
+        year_override=year_override,
+    )
+    suffix = "Propane_V143159_E" if eff_type == "propane" else ("Mini_HPA" if eff_type == "mini_hpa" else "Hydro_B386")
+    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="Webers_Stickers_{suffix}_{work_date}.pdf"'})
 
 
 @router.get("/api/pdf/valvetags")

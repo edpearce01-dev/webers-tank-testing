@@ -76,12 +76,18 @@ def ping_version():
         "SELECT COUNT(*) FROM dropoffs WHERE (status IN ('IN_BACKROOM', 'CHECKED_IN') AND COALESCE(imported_count,0) < bottle_count) OR status='PICKUP_LOGGED';"
     ).fetchone()[0]
     low_stock_count = conn.execute("SELECT COUNT(*) FROM shop_supplies WHERE low_stock=1;").fetchone()[0]
+    open_inquiries_count = conn.execute("SELECT COUNT(*) FROM shop_messages WHERE channel='WEB_INQUIRY' AND status='OPEN';").fetchone()[0]
+    latest_msg_id = conn.execute("SELECT COALESCE(MAX(id), 0) FROM shop_messages;").fetchone()[0]
+    open_tasks_count = conn.execute("SELECT COUNT(*) FROM crew_tasks WHERE status='OPEN';").fetchone()[0]
     conn.close()
     return {
         "db_version": ver,
         "unsynced_count": unsynced,
         "backroom_waiting": backroom_waiting,
         "low_stock_count": low_stock_count,
+        "open_inquiries_count": open_inquiries_count,
+        "latest_msg_id": latest_msg_id,
+        "open_tasks_count": open_tasks_count,
     }
 
 
@@ -219,6 +225,19 @@ def get_tv_leaderboard(work_date: Optional[str] = None):
         for r in conn.execute("SELECT item_name FROM shop_supplies WHERE low_stock=1 ORDER BY sort_order ASC;").fetchall()
     ]
 
+    shop_tasks = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT * FROM crew_tasks
+               WHERE status='OPEN' OR work_date=?
+               ORDER BY CASE status WHEN 'OPEN' THEN 0 ELSE 1 END,
+                        CASE priority WHEN 'HIGH' THEN 0 ELSE 1 END,
+                        id DESC LIMIT 28;""",
+            (target_date,),
+        ).fetchall()
+    ]
+    open_tasks = [t for t in shop_tasks if t.get("status") == "OPEN"]
+
     unsynced = conn.execute(
         "SELECT (SELECT COUNT(*) FROM daily_verifications WHERE synced=0) + "
         "(SELECT COUNT(*) FROM cylinder_records WHERE synced=0 AND status='COMPLETED') + "
@@ -249,6 +268,11 @@ def get_tv_leaderboard(work_date: Optional[str] = None):
     if needs_stamp_count:
         ticker.append(f"🔨 DRYING RACK: {needs_stamp_count} DRIED CYLINDER(S) NEED B386 STAMP / STICKER")
 
+    for t in open_tasks[:5]:
+        t_ico = "🚜 PROPERTY TO-DO" if t.get("category") == "PROPERTY" else "🛠️ SHOP TO-DO"
+        p_tag = " [⚡ HIGH]" if t.get("priority") == "HIGH" else ""
+        ticker.append(f"{t_ico}: {t['title']}{p_tag}")
+
     if low_supplies:
         ticker.append(f"📦 LOW SHOP SUPPLY: {', '.join(low_supplies[:3]).upper()}")
 
@@ -261,6 +285,7 @@ def get_tv_leaderboard(work_date: Optional[str] = None):
         "today_plan": today_plan,
         "binder_state": binder,
         "calendar_days": calendar_days,
+        "shop_tasks": shop_tasks,
         "unsynced_count": unsynced,
         "has_sheets_webhook": bool(s_map.get("sheets_webhook_url")),
         "jacket_ceilings": jacket_ceilings,
@@ -280,6 +305,7 @@ def get_tv_leaderboard(work_date: Optional[str] = None):
             "needs_stamp_count": needs_stamp_count,
             "backroom_waiting_count": len(dropoffs),
             "ready_pickup_count": ready_shelf_count,
+            "open_tasks_count": len(open_tasks),
         },
         "ticker": ticker,
     }
@@ -349,13 +375,37 @@ def ops_live_state(work_date: Optional[str] = None):
             "max_allowed_test_psi": dot_max_allowed_test_psi(max_cal),
         }
 
-    raw_records = [
-        enrich_record_meta(dict(r), est_today)
-        for r in conn.execute("SELECT * FROM cylinder_records WHERE work_date=? OR status='QUEUED' ORDER BY id ASC;", (target_date,)).fetchall()
-    ]
+    raw_records = []
+    for r in conn.execute("SELECT * FROM cylinder_records WHERE work_date=? OR status='QUEUED' ORDER BY id ASC;", (target_date,)).fetchall():
+        er = enrich_record_meta(dict(r), est_today)
+        er["dot_row_note"] = _format_dot_row_notes(er)
+        raw_records.append(er)
     queued_part = sorted([r for r in raw_records if r["status"] == "QUEUED"], key=queue_sort_key)
     done_part = [r for r in raw_records if r["status"] == "COMPLETED" and r["work_date"] == target_date]
     records = queued_part + done_part
+
+    active_sheet_records = []
+    for r in conn.execute(
+        "SELECT * FROM cylinder_records WHERE sheet_no=? AND service_mode='HYDRO_AND_VISUAL' AND status='COMPLETED' ORDER BY id ASC;",
+        (binder_state["active_sheet_no"],),
+    ).fetchall():
+        er = enrich_record_meta(dict(r), est_today)
+        er["dot_row_note"] = _format_dot_row_notes(er)
+        active_sheet_records.append(er)
+
+    shop_tasks = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT * FROM crew_tasks
+               WHERE status='OPEN' OR work_date=?
+               ORDER BY CASE status WHEN 'OPEN' THEN 0 ELSE 1 END,
+                        CASE priority WHEN 'HIGH' THEN 0 ELSE 1 END,
+                        id DESC LIMIT 50;""",
+            (target_date,),
+        ).fetchall()
+    ]
+    open_inquiries_count = conn.execute("SELECT COUNT(*) FROM shop_messages WHERE channel='WEB_INQUIRY' AND status='OPEN';").fetchone()[0]
+    latest_msg_id = conn.execute("SELECT COALESCE(MAX(id), 0) FROM shop_messages;").fetchone()[0]
 
     in_shop_post_test = [
         enrich_record_meta(dict(r), est_today)
@@ -442,6 +492,7 @@ def ops_live_state(work_date: Optional[str] = None):
         "db_version": int(s_map.get("db_version", "1")),
         "testing_mode": s_map.get("testing_mode", "1") == "1",
         "dot_rin": s_map.get("dot_rin", "B386"),
+        "visual_rin": s_map.get("visual_rin", "V143159"),
         "shop_phone": s_map.get("phone", "724-266-8008"),
         "starting_sheet_no": int(s_map.get("starting_sheet_no", "8095")),
         "daily_hydro_capacity": default_cap,
@@ -472,6 +523,10 @@ def ops_live_state(work_date: Optional[str] = None):
         "verifications": verifications,
         "jacket_ceilings": jacket_ceilings,
         "records": records,
+        "active_sheet_records": active_sheet_records,
+        "shop_tasks": shop_tasks,
+        "open_inquiries_count": open_inquiries_count,
+        "latest_msg_id": latest_msg_id,
         "in_shop_post_test": in_shop_post_test,
         "active_valves": active_valves,
         "dropoffs": dropoffs,
@@ -573,16 +628,52 @@ def bootstrap(work_date: Optional[str] = None, cal_year: Optional[int] = None, c
 
     specs = [dict(r) for r in conn.execute("SELECT * FROM cga_specs ORDER BY id ASC;").fetchall()]
 
-    raw_records = [
-        enrich_record_meta(dict(r), est_today)
-        for r in conn.execute(
-            "SELECT * FROM cylinder_records WHERE work_date=? OR status='QUEUED' ORDER BY id ASC;",
-            (target_date,),
-        ).fetchall()
-    ]
+    raw_records = []
+    for r in conn.execute(
+        "SELECT * FROM cylinder_records WHERE work_date=? OR status='QUEUED' ORDER BY id ASC;",
+        (target_date,),
+    ).fetchall():
+        er = enrich_record_meta(dict(r), est_today)
+        er["dot_row_note"] = _format_dot_row_notes(er)
+        raw_records.append(er)
     queued_part = sorted([r for r in raw_records if r["status"] == "QUEUED"], key=queue_sort_key)
     done_part = [r for r in raw_records if r["status"] == "COMPLETED" and r["work_date"] == target_date]
     records = queued_part + done_part
+
+    active_sheet_records = []
+    for r in conn.execute(
+        "SELECT * FROM cylinder_records WHERE sheet_no=? AND service_mode='HYDRO_AND_VISUAL' AND status='COMPLETED' ORDER BY id ASC;",
+        (binder_state["active_sheet_no"],),
+    ).fetchall():
+        er = enrich_record_meta(dict(r), est_today)
+        er["dot_row_note"] = _format_dot_row_notes(er)
+        active_sheet_records.append(er)
+
+    shop_tasks = [
+        dict(r)
+        for r in conn.execute(
+            """SELECT * FROM crew_tasks
+               WHERE status='OPEN' OR work_date=?
+               ORDER BY CASE status WHEN 'OPEN' THEN 0 ELSE 1 END,
+                        CASE priority WHEN 'HIGH' THEN 0 ELSE 1 END,
+                        id DESC LIMIT 50;""",
+            (target_date,),
+        ).fetchall()
+    ]
+    open_inquiries_count = conn.execute("SELECT COUNT(*) FROM shop_messages WHERE channel='WEB_INQUIRY' AND status='OPEN';").fetchone()[0]
+    latest_msg_id = conn.execute("SELECT COALESCE(MAX(id), 0) FROM shop_messages;").fetchone()[0]
+    site_content = {
+        k: s_map.get(k, "")
+        for k in (
+            "site_banner_announcement",
+            "site_about_eyebrow",
+            "site_about_heading",
+            "site_about_story",
+            "site_business_details",
+            "site_dropoff_note",
+            "site_owner_signoff",
+        )
+    }
 
     in_shop_post_test = [
         enrich_record_meta(dict(r), est_today)
@@ -694,6 +785,7 @@ def bootstrap(work_date: Optional[str] = None, cal_year: Optional[int] = None, c
         "db_version": int(s_map.get("db_version", "1")),
         "testing_mode": s_map.get("testing_mode", "1") == "1",
         "dot_rin": s_map.get("dot_rin", "B386"),
+        "visual_rin": s_map.get("visual_rin", "V143159"),
         "shop_phone": s_map.get("phone", "724-266-8008"),
         "starting_sheet_no": int(s_map.get("starting_sheet_no", "8095")),
         "daily_hydro_capacity": default_cap,
@@ -730,6 +822,11 @@ def bootstrap(work_date: Optional[str] = None, cal_year: Optional[int] = None, c
         "jacket_ceilings": jacket_ceilings,
         "cga_specs": specs,
         "records": records,
+        "active_sheet_records": active_sheet_records,
+        "shop_tasks": shop_tasks,
+        "open_inquiries_count": open_inquiries_count,
+        "latest_msg_id": latest_msg_id,
+        "site_content": site_content,
         "in_shop_post_test": in_shop_post_test,
         "active_valves": active_valves,
         "dropoffs": dropoffs,

@@ -98,7 +98,26 @@ def init_db() -> None:
             completed_at TEXT DEFAULT '',
             crew_note TEXT DEFAULT '',
             created_by TEXT DEFAULT 'RP',
-            created_at TEXT DEFAULT ''
+            created_at TEXT DEFAULT '',
+            updated_at TEXT DEFAULT ''
+        );
+
+        CREATE TABLE IF NOT EXISTS shop_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at TEXT NOT NULL,
+            work_date TEXT NOT NULL,
+            channel TEXT NOT NULL DEFAULT 'CREW',
+            sender_name TEXT NOT NULL,
+            sender_initials TEXT DEFAULT '',
+            sender_role TEXT DEFAULT 'CREW',
+            sender_phone TEXT DEFAULT '',
+            sender_email TEXT DEFAULT '',
+            recipient TEXT DEFAULT 'ALL',
+            body TEXT NOT NULL,
+            status TEXT DEFAULT 'OPEN',
+            reply_note TEXT DEFAULT '',
+            replied_by TEXT DEFAULT '',
+            replied_at TEXT DEFAULT ''
         );
 
         CREATE TABLE IF NOT EXISTS calibration_targets (
@@ -529,9 +548,12 @@ def init_db() -> None:
     ]:
         _ensure_column(conn, "shop_supplies", col, cdef)
 
+    _ensure_column(conn, "crew_tasks", "updated_at", "TEXT DEFAULT ''")
+
     # 2. Seed Core Settings
     default_settings = [
         ("dot_rin", "B386"),
+        ("visual_rin", "V143159"),
         ("tc_reg", ""),
         ("phone", "724-266-8008"),
         ("calibrated_serial", "1SF11904"),
@@ -556,9 +578,49 @@ def init_db() -> None:
         ("master_sheet_url", ""),
         ("gbp_edit_url", "https://business.google.com/"),
         ("sms_shortcut_key", secrets.token_hex(8)),
+        ("site_banner_announcement", ""),
+        ("site_about_eyebrow", "Firefighter Owned & Operated • Baden, PA"),
+        ("site_about_heading", "About Weber's Tank Testing"),
+        (
+            "site_about_story",
+            "Owned and operated by local firefighter Ryan Pearce in Baden, Pennsylvania, Weber's Tank Testing was built to give Western PA fire departments, EMS agencies, commercial fleets, divers, and paintball players fast, honest, audit-ready cylinder requalification without weeks of downtime.",
+        ),
+        (
+            "site_business_details",
+            "Every cylinder that enters our shop at 3086 Legionville Rd receives individual numbered valve tagging, calibrated water-jacket hydrostatic or CGA visual inspection, thorough warm-air internal drying, and permanent 5-year DOT compliance archiving.",
+        ),
+        (
+            "site_dropoff_note",
+            "Pull right up to our right-side Loading Dock & Ramp 24/7 for self-serve drop-off and pickup, or schedule our shop truck for regional station pickup & return delivery.",
+        ),
+        ("site_owner_signoff", "— Ryan Pearce, Facility Manager (DOT RIN B386)"),
         ("db_version", "1"),
     ]
     cur.executemany("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?);", default_settings)
+
+    seeded_todos = cur.execute("SELECT value FROM settings WHERE key='seeded_initial_shop_todos';").fetchone()
+    if not seeded_todos:
+        from datetime import date as _date
+        today_str = _date.today().isoformat()
+        existing_titles = {
+            (r["title"] or "").strip().lower()
+            for r in cur.execute("SELECT title FROM crew_tasks;").fetchall()
+        }
+        starter_tasks = [
+            ("PROPERTY", "Service Kubota/ATV for winter plowing", "HIGH"),
+            ("PROPERTY", "Firewood", "NORMAL"),
+            ("SHOP", "Clean/Organize shop garage", "NORMAL"),
+            ("SHOP", "Move the glass bead machine to the paint supplies area near the drying rack", "HIGH"),
+        ]
+        for t_cat, t_title, t_prio in starter_tasks:
+            if t_title.lower() not in existing_titles:
+                cur.execute(
+                    """INSERT INTO crew_tasks
+                       (work_date, assigned_to, assigned_name, category, title, priority, status, created_by, created_at)
+                       VALUES (?, 'ALL', 'All Crew', ?, ?, ?, 'OPEN', 'RP', 'Shop List');""",
+                    (today_str, t_cat, t_title, t_prio),
+                )
+        cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_initial_shop_todos', '1');")
 
     cur.executemany(
         "INSERT OR IGNORE INTO crew_members (full_name, initials, role, active) VALUES (?, ?, ?, 1);",
@@ -579,7 +641,12 @@ def init_db() -> None:
                 ("1SF11904", 5000, 86.2),
                 ("1SF11904", 6000, 103.6),
                 ("1SF11904", 7000, 121.8),
+                ("1SF11904", 7500, 130.4),
             ],
+        )
+    else:
+        cur.execute(
+            "INSERT OR IGNORE INTO calibration_targets (serial_number, pressure_psi, expected_cc) VALUES ('1SF11904', 7500, 130.4);"
         )
 
     if cur.execute("SELECT COUNT(*) FROM cga_specs;").fetchone()[0] == 0:

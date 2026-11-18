@@ -511,11 +511,101 @@ let PUB_ACCT = 'WALK_IN';
         : `<strong>IN-DATE &amp; VALID THROUGH <span class="mono">${String(mo).padStart(2,'0')}-${dueY}</span>:</strong> Next ${cycle}-year DOT ${isPropaneVis ? 'propane visual inspection' : 'hydro test'} is due by <span class="mono">${String(mo).padStart(2,'0')}-${dueY}</span>.`;
     }
 
+    async function loadPublicSiteContent() {
+      try {
+        const res = await fetch('/api/public/site-content');
+        if (!res.ok) return;
+        const sc = await res.json();
+        const banWrap = document.getElementById('pubOwnerAnnouncementWrap');
+        if (banWrap) {
+          const bTxt = (sc.site_banner_announcement || '').trim();
+          banWrap.hidden = !bTxt;
+          if (bTxt) {
+            banWrap.innerHTML = `<div class="glass-card" style="padding:12px 18px;border-left:5px solid #059669;background:rgba(236,253,245,0.95);font-weight:800;color:#064e3b;font-size:0.92rem;">📣 ${esc(bTxt)}</div>`;
+          }
+        }
+        const setTxt = (id, val, hideWrapId = null) => {
+          const el = document.getElementById(id);
+          const v = (val || '').trim();
+          if (el) {
+            if (v) { el.textContent = v; el.hidden = false; }
+            else el.hidden = true;
+          }
+          if (hideWrapId) {
+            const w = document.getElementById(hideWrapId);
+            if (w) w.hidden = !v;
+          }
+        };
+        if ((sc.site_about_eyebrow || '').trim()) setTxt('pubAboutEyebrow', sc.site_about_eyebrow);
+        if ((sc.site_about_heading || '').trim()) setTxt('pubAboutHeading', sc.site_about_heading);
+        setTxt('pubAboutStory', sc.site_about_story);
+        setTxt('pubBusinessDetails', sc.site_business_details);
+        setTxt('pubDropoffNote', sc.site_dropoff_note, 'pubDropoffNoteWrap');
+        setTxt('pubOwnerSignoff', sc.site_owner_signoff);
+      } catch (_) {}
+    }
+
+    function togglePublicInquiryWidget(forceOpen) {
+      const panel = document.getElementById('pubChatPanel');
+      if (!panel) return;
+      const nextOpen = typeof forceOpen === 'boolean' ? forceOpen : panel.hidden;
+      panel.hidden = !nextOpen;
+      if (nextOpen) setTimeout(() => document.getElementById('inqName')?.focus(), 50);
+    }
+
+    async function submitPublicInquiry() {
+      const name = (document.getElementById('inqName')?.value || '').trim();
+      const phone = (document.getElementById('inqPhone')?.value || '').trim();
+      const email = (document.getElementById('inqEmail')?.value || '').trim();
+      const topic = document.getElementById('inqTopic')?.value || 'General Question';
+      const message = (document.getElementById('inqMsg')?.value || '').trim();
+      const fb = document.getElementById('inqFeedback');
+      const btn = document.getElementById('btnSendPubInquiry');
+
+      if (!name || message.length < 3) {
+        if (fb) { fb.hidden = false; fb.innerHTML = '<div class="alert-box alert-bad" style="margin:0;">Please enter your name and question.</div>'; }
+        return;
+      }
+      if (phone.replace(/\D/g, '').length < 10 && !email.includes('@')) {
+        if (fb) { fb.hidden = false; fb.innerHTML = '<div class="alert-box alert-bad" style="margin:0;">Include your 10-digit phone number or email so Ryan can reply.</div>'; }
+        return;
+      }
+
+      if (btn) btn.disabled = true;
+      try {
+        const res = await fetch('/api/public/inquiry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer_name: name,
+            customer_phone: phone,
+            customer_email: email,
+            topic,
+            message,
+            website_hp: document.getElementById('inqHpField')?.value || '',
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          if (fb) { fb.hidden = false; fb.innerHTML = `<div class="alert-box alert-bad" style="margin:0;">${esc(data.detail || 'Could not send message.')}</div>`; }
+          return;
+        }
+        document.getElementById('inqMsg').value = '';
+        if (fb) {
+          fb.hidden = false;
+          fb.innerHTML = `<div class="alert-box alert-ok" style="margin:0;"><strong>✓ Sent straight to Ryan's Shop Inbox!</strong> We'll text, call, or email you right back.</div>`;
+        }
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
     (function initStorefront() {
       document.getElementById('trkPrefDate').value = new Date().toISOString().slice(0, 10);
       updateHeroScrollEffect();
       loadHolidayStorefrontTheme();
       loadPublicOperatingSchedule();
+      loadPublicSiteContent();
       const params = new URLSearchParams(location.search);
       const savedT = localStorage.getItem('webers_last_ticket') || '';
       const savedP = localStorage.getItem('webers_last_phone4') || '';

@@ -6,14 +6,14 @@
   <meta name="theme-color" content="#f4f6f9" />
   <link rel="manifest" href="/manifest.json" />
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
-  <link rel="stylesheet" href="/static/ops.css?v=15.4" />
-  <link rel="stylesheet" href="/static/css/modern-ui.css?v=15.4" />
+  <link rel="stylesheet" href="/static/ops.css?v=16.0" />
+  <link rel="stylesheet" href="/static/css/modern-ui.css?v=16.0" />
   <title>Weber's Tank Testing — Owner Control Center | DOT B386</title>
 </head>
 <body data-workspace="owner">
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=15.4" alt="Weber's" onerror="this.src='/icon.svg'" style="width:88px;height:88px;margin-bottom:8px;object-fit:contain;" />
+      <img src="/static/images/logo-crest.png?v=16.0" alt="Weber's" onerror="this.src='/icon.svg'" style="width:88px;height:88px;margin-bottom:8px;object-fit:contain;" />
       <h2 style="margin:4px 0;">Owner Control Center</h2>
       <p style="margin:0 0 18px;color:var(--ui-muted);font-size:0.88rem;">Enter Owner or System Admin PIN</p>
       <div style="text-align:left;"><label>Access PIN</label><input type="password" inputmode="numeric" id="loginPinInput" placeholder="••••" onkeydown="if(event.key==='Enter')submitLoginPin()" style="text-align:center;font-size:1.35rem;letter-spacing:6px;font-weight:800;" /></div>
@@ -45,6 +45,9 @@
           </button>
           <button class="rail-btn" data-spane="rates" onclick="switchSetupPane('rates')">
             <span>Service Pricing</span><span class="nav-badge">$</span>
+          </button>
+          <button class="rail-btn" data-spane="website" onclick="switchSetupPane('website')">
+            <span>Website &amp; About Us</span><span class="nav-badge green">Web</span>
           </button>
           <button class="rail-btn" data-spane="facility" onclick="switchSetupPane('facility')">
             <span>Team, Certs &amp; Alerts</span><span class="nav-badge">Shop</span>
@@ -143,6 +146,83 @@
           </div>
         </div>
 
+        <!-- PANE 2.5: WEBSITE ABOUT US, STORY & BUSINESS DETAILS (LIVE ON WEBERSTANKTESTING.COM) -->
+        <div id="setupPane-website" hidden>
+          <div class="split-2">
+            <div class="card" style="border-top:4px solid var(--ui-accent);">
+              <div class="card-hdr">
+                <div>
+                  <h3>🌐 Website Story, About Us &amp; Shop Details</h3>
+                  <small style="color:var(--ui-muted);">Fill out your story &amp; business details in your own words — publishes immediately to weberstanktesting.com</small>
+                </div>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:11px;">
+                <div>
+                  <label>Optional Top Announcement Banner <span style="font-weight:500;color:var(--ui-muted);">(Leave blank to hide)</span></label>
+                  <input id="wsBannerAnnouncement" placeholder="e.g. Now certifying Propane Cylinders &amp; 4500 PSI Carbon HPA — 24/7 Loading Dock Open!" oninput="updateWebsiteLivePreview()" />
+                </div>
+                <div class="grid">
+                  <div>
+                    <label>Badge / Eyebrow Line</label>
+                    <input id="wsAboutEyebrow" placeholder="Firefighter Owned &amp; Operated • Baden, PA" oninput="updateWebsiteLivePreview()" />
+                  </div>
+                  <div>
+                    <label>Section Heading</label>
+                    <input id="wsAboutHeading" placeholder="About Weber's Tank Testing" oninput="updateWebsiteLivePreview()" />
+                  </div>
+                </div>
+                <div>
+                  <label>About Me / Our Story (Who You Are &amp; Why Customers Trust Weber's)</label>
+                  <textarea id="wsAboutStory" rows="4" placeholder="Tell customers about yourself, your firefighting background, and why you built Weber's Tank Testing in Baden..." oninput="updateWebsiteLivePreview()"></textarea>
+                </div>
+                <div>
+                  <label>Detailed Business &amp; Testing Process Info</label>
+                  <textarea id="wsBusinessDetails" rows="4" placeholder="Share details on your dual water-jacket stand, valve tagging, drying rack care, Fire/EMS fleet service, scuba, welding, or paintball..." oninput="updateWebsiteLivePreview()"></textarea>
+                </div>
+                <div>
+                  <label>24/7 Loading Dock &amp; Pickup / Turnaround Note</label>
+                  <textarea id="wsDropoffNote" rows="3" placeholder="Any extra guidance for customers pulling up to the right-side Loading Dock or scheduling a station truck run..." oninput="updateWebsiteLivePreview()"></textarea>
+                </div>
+                <div>
+                  <label>Signature / Sign-Off Line</label>
+                  <input id="wsOwnerSignoff" placeholder="— Ryan Pearce, Owner &amp; Facility Manager (DOT RIN B386)" oninput="updateWebsiteLivePreview()" />
+                </div>
+              </div>
+
+              <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
+                <button type="button" class="primary" id="btnPublishWebsiteCopy" style="flex:2;margin:0;" onclick="saveOwnerWebsiteCopy()">💾 Publish to weberstanktesting.com</button>
+                <a class="secondary" style="flex:1;" href="/?view=public#about" target="_blank" rel="noopener">Preview Live Page ↗</a>
+              </div>
+            </div>
+
+            <div>
+              <div class="card" style="border-top:4px solid #059669;">
+                <div class="card-hdr">
+                  <div>
+                    <h3>👁️ Live Storefront Preview</h3>
+                    <small style="color:var(--ui-muted);">Updates as you type before publishing</small>
+                  </div>
+                </div>
+                <div id="wsLivePreviewBox" style="display:flex;flex-direction:column;gap:12px;"></div>
+              </div>
+
+              <div class="card">
+                <div class="card-hdr">
+                  <div>
+                    <h3>💬 Customer Website Chat &amp; Crew Inbox</h3>
+                    <small style="color:var(--ui-muted);">Visitors on weberstanktesting.com can send questions straight into your Shop Messages drawer</small>
+                  </div>
+                </div>
+                <p style="font-size:0.86rem;color:var(--ui-muted);margin-top:0;">
+                  Open the unified <strong>💬 Messages</strong> drawer anytime from the top bar on Phone or PC to message your crew (<code>RP</code>, <code>KR</code>, <code>AWP</code>, <code>AVP</code>) or reply to customer website inquiries by 1-tap SMS or email.
+                </p>
+                <button type="button" class="secondary" style="width:100%;padding:11px;" onclick="window.openShopMessagesDrawer&&window.openShopMessagesDrawer('WEB')">💬 Open Shop &amp; Customer Messages Inbox →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- PANE 3: RYAN'S SAFE SHOP DEFAULTS, TEAM PINS, CERT DATES & ALERT EMAIL -->
         <div id="setupPane-facility" hidden>
           <div class="split-2">
@@ -155,6 +235,7 @@
                 <div><label>Retail PA Sales Tax %</label><input type="number" step="0.01" id="ofTaxRate" value="6.0" /></div>
                 <div><label>DOT RIN B386 Renewal Date</label><input type="date" id="ofRinExp" /></div>
                 <div><label>Master Gauge Cert Expires</label><input type="date" id="ofGaugeExp" /></div>
+                <div><label>Propane / Visual RIN (V-Number)</label><input id="ofVisualRin" value="V143159" placeholder="V143159" /></div>
                 <div style="grid-column:1/-1;"><label>Notification Email (Receives Dock, Truck &amp; Low-Supply Alerts)</label><input type="email" id="ofAlertEmail" placeholder="weberstanktesting@gmail.com" /></div>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
@@ -211,14 +292,15 @@
     <nav class="bottom-nav">
       <button class="bnav-btn active" data-spane="hours" onclick="switchSetupPane('hours')"><span class="ico">01</span><span>Hours</span></button>
       <button class="bnav-btn" data-spane="rates" onclick="switchSetupPane('rates')"><span class="ico">02</span><span>Pricing</span></button>
-      <button class="bnav-btn" data-spane="facility" onclick="switchSetupPane('facility')"><span class="ico">03</span><span>Shop</span></button>
+      <button class="bnav-btn" data-spane="website" onclick="switchSetupPane('website')"><span class="ico">03</span><span>Website</span></button>
+      <button class="bnav-btn" data-spane="facility" onclick="switchSetupPane('facility')"><span class="ico">04</span><span>Shop</span></button>
     </nav>
   </div>
 
-  <script src="/static/js/owner-app.js?v=15.4"></script>
-  <script src="/static/day-flow.js?v=15.4"></script>
-  <script src="/static/theme-engine.js?v=15.4"></script>
-  <script src="/static/js/app-switcher.js?v=15.4"></script>
-  <script src="/static/help-bot.js?v=15.4"></script>
+  <script src="/static/js/owner-app.js?v=16.0"></script>
+  <script src="/static/day-flow.js?v=16.0"></script>
+  <script src="/static/theme-engine.js?v=16.0"></script>
+  <script src="/static/js/app-switcher.js?v=16.0"></script>
+  <script src="/static/help-bot.js?v=16.0"></script>
 </body>
 </html>

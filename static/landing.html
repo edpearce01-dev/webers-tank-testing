@@ -33,7 +33,7 @@
   }
   </script>
   <title>Weber's Tank Testing | Certified Cylinder Testing — Baden, PA</title>
-  <link rel="stylesheet" href="/static/css/landing.css?v=14.0" />
+  <link rel="stylesheet" href="/static/css/landing.css?v=16.0" />
 </head>
 <body>
   <!-- CONSOLIDATED DOT COMPLIANCE + HOLIDAY BAR -->
@@ -72,7 +72,7 @@
         <a href="#dropoff">24/7 Check-In</a>
         <a href="#tracker">Track Ticket</a>
         <a href="#capabilities">Capabilities</a>
-        <a href="#departments">Fire &amp; Fleet</a>
+        <a href="#about">About Us</a>
         <a href="#checker">Date Checker</a>
         <a href="#facility">Location</a>
       </nav>
@@ -123,6 +123,7 @@
 
     <!-- LIVE TURNAROUND & TICKET TRACKER -->
     <section class="sec" id="tracker" style="padding-top:14px;">
+      <div class="wrap" id="pubOwnerAnnouncementWrap" style="margin-bottom:14px;" hidden></div>
       <div class="wrap" id="pubClosureBannerWrap" style="margin-bottom:16px;" hidden></div>
       <div class="wrap top-action-grid">
         <div class="glass-card" style="display:flex;flex-direction:column;justify-content:space-between;gap:14px;">
@@ -488,6 +489,33 @@
       </div>
     </section>
 
+    <!-- RYAN'S EDITABLE ABOUT US & SHOP STORY SECTION -->
+    <section class="sec" id="about" style="padding-top:6px;">
+      <div class="wrap">
+        <div class="glass-card pub-about-card">
+          <div>
+            <span class="badge-rin" id="pubAboutEyebrow" style="margin-bottom:10px;">Firefighter Owned &amp; Operated • Baden, PA</span>
+            <h2 id="pubAboutHeading" style="margin:0 0 12px;font-family:var(--font-display);font-size:2rem;font-weight:800;color:var(--forest);line-height:1.1;">About Weber's Tank Testing</h2>
+            <p id="pubAboutStory" style="margin:0 0 12px;color:var(--ink);font-size:0.95rem;line-height:1.65;white-space:pre-line;">
+              Owned and operated by local firefighter Ryan Pearce in Baden, Pennsylvania, Weber's Tank Testing was built to give Western PA fire departments, EMS agencies, commercial fleets, divers, and paintball players fast, honest, audit-ready cylinder requalification without weeks of downtime.
+            </p>
+            <p id="pubBusinessDetails" style="margin:0 0 14px;color:var(--ink-soft);font-size:0.9rem;line-height:1.62;white-space:pre-line;">
+              Every cylinder that enters our shop at 3086 Legionville Rd receives individual numbered valve tagging, calibrated water-jacket hydrostatic or CGA visual inspection, thorough warm-air internal drying, and permanent 5-year DOT compliance archiving.
+            </p>
+            <div id="pubDropoffNoteWrap" class="alert-box alert-ok" style="margin:0 0 14px;">
+              <strong>24/7 Loading Dock &amp; Regional Service:</strong> <span id="pubDropoffNote">Pull right up to our right-side Loading Dock &amp; Ramp 24/7 for self-serve drop-off and pickup, or schedule our shop truck for regional station pickup &amp; return delivery.</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+              <strong id="pubOwnerSignoff" style="color:var(--forest);font-size:0.9rem;">— Ryan Pearce, Facility Manager (DOT RIN B386)</strong>
+              <button type="button" class="btn btn-forest" onclick="togglePublicInquiryWidget(true)">
+                <span>💬 Ask Ryan a Question</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- DOT HYDRO DATE CALCULATOR -->
     <section class="sec" id="checker" style="padding-top:6px;">
       <div class="wrap">
@@ -544,11 +572,62 @@
     <footer>
       <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
         <div><strong>Weber's Tank Testing</strong> • U.S. D.O.T. Certified Facility • 3086 Legionville Rd, Baden, PA 15005 • <span class="mono">724-266-8008</span></div>
-        <div><a href="#dropoff">24/7 Check-In</a> &nbsp;|&nbsp; <a href="#tracker">Track Ticket</a> &nbsp;|&nbsp; <a href="https://www.facebook.com/share/1K52tfW568/" target="_blank" rel="noopener">Facebook</a> &nbsp;|&nbsp; <a href="https://ops.weberstanktesting.com/ops">Crew Ops Portal</a></div>
+        <div><a href="#dropoff">24/7 Check-In</a> &nbsp;|&nbsp; <a href="#about">About Us</a> &nbsp;|&nbsp; <a href="#tracker">Track Ticket</a> &nbsp;|&nbsp; <a href="javascript:void(0)" onclick="togglePublicInquiryWidget(true)">Message Us</a> &nbsp;|&nbsp; <a href="https://ops.weberstanktesting.com/ops">Crew Ops Portal</a></div>
       </div>
     </footer>
   </div>
 
-  <script src="/static/js/landing-app.js?v=14.0"></script>
+  <!-- FLOATING CUSTOMER QUESTION / CHAT WIDGET (SENDS DIRECTLY TO RYAN'S IN-APP MESSAGES INBOX) -->
+  <button type="button" class="pub-chat-fab" id="pubChatFab" onclick="togglePublicInquiryWidget()">
+    <span>💬</span>
+    <span>Message Ryan</span>
+  </button>
+
+  <div class="pub-chat-panel" id="pubChatPanel" hidden>
+    <div class="pub-chat-hdr">
+      <div>
+        <strong>Message Weber's Tank Testing</strong>
+        <small>Direct to Ryan Pearce • Baden Shop Inbox</small>
+      </div>
+      <button type="button" class="pub-chat-close" onclick="togglePublicInquiryWidget(false)">✖</button>
+    </div>
+    <div class="pub-chat-body" id="pubChatFormWrap">
+      <input type="text" id="inqHpField" style="display:none;" tabindex="-1" autocomplete="off" />
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="grid-column:1/-1;">
+          <label>Your Name or Fire Dept *</label>
+          <input id="inqName" placeholder="e.g. John Smith or Baden VFD" />
+        </div>
+        <div>
+          <label>Phone # *</label>
+          <input id="inqPhone" type="tel" class="mono" placeholder="724-555-0199" oninput="formatPubPhone(this)" />
+        </div>
+        <div>
+          <label>Email <span class="opt">(Optional)</span></label>
+          <input id="inqEmail" type="email" placeholder="you@email.com" />
+        </div>
+        <div style="grid-column:1/-1;">
+          <label>Topic</label>
+          <select id="inqTopic">
+            <option value="Cylinder Testing Question">Cylinder Testing / Spec Question</option>
+            <option value="Turnaround & Pricing">Turnaround &amp; Pricing Quote</option>
+            <option value="Fire / EMS / Fleet Run">Fire Dept / EMS / Fleet Pickup</option>
+            <option value="Ticket / Pickup Question">Existing Ticket or Dock Pickup</option>
+            <option value="General Question">General Question</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1;">
+          <label>How Can Ryan Help? *</label>
+          <textarea id="inqMsg" rows="3" placeholder="Ask about cylinder dates, batch pricing, truck pickup, or drop-off..."></textarea>
+        </div>
+      </div>
+      <button type="button" class="btn btn-gold" id="btnSendPubInquiry" style="width:100%;justify-content:center;margin-top:10px;padding:11px;" onclick="submitPublicInquiry()">
+        <span>Send Message to Shop →</span>
+      </button>
+      <div id="inqFeedback" style="margin-top:8px;" hidden></div>
+    </div>
+  </div>
+
+  <script src="/static/js/landing-app.js?v=16.0"></script>
 </body>
 </html>

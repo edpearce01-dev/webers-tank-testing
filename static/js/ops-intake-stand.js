@@ -663,6 +663,7 @@ function renderBenchForm() {
 
     <button class="primary" id="btnCompleteBench" onclick="completeBottle(${rec.id}, ${isHydro}, false)">${certBtnLbl}</button>
     ${isHydro ? `<div style="text-align:center;font-size:0.75rem;color:var(--muted);margin-top:6px;">⌨️ Hands-Fast Numpad: Type <strong>Total cc</strong> → <strong>Enter</strong> → <strong>Perm cc</strong> → <strong>Enter</strong> to certify &amp; load next bottle</div>` : ''}`;
+  if (typeof renderLiveDotForm393Sheets === 'function') renderLiveDotForm393Sheets();
 }
 
 function previewBenchMath(reeLimit) {
@@ -692,6 +693,7 @@ function previewBenchMath(reeLimit) {
     if (pctVal) pctVal.textContent = '— %';
     if (dispVal) dispVal.textContent = visFailed ? '⛔ VISUAL FAIL (Code D)' : 'Enter Total cc ↵';
     if (condemnWrap) condemnWrap.hidden = !visFailed;
+    if (typeof renderLiveDotForm393Sheets === 'function') renderLiveDotForm393Sheets();
     return;
   }
 
@@ -712,6 +714,7 @@ function previewBenchMath(reeLimit) {
     dispVal.textContent = bad ? `⛔ CONDEMN (${reason})` : '✓ PASS • Code A';
   }
   if (condemnWrap) condemnWrap.hidden = !bad;
+  if (typeof renderLiveDotForm393Sheets === 'function') renderLiveDotForm393Sheets();
 }
 
 async function completeBottle(id, isHydro, fromEnterKey = false) {

@@ -46,6 +46,7 @@ async def auth_gate_middleware(request: Request, call_next):
         "/", "/ops", "/schedule", "/office", "/print", "/owner", "/tv", "/manifest.json", "/merch", "/sw.js", "/icon.svg", "/pwa-icon.png", "/apple-touch-icon.png",
         "/api/auth/login", "/api/auth/status", "/api/auth/logout",
         "/api/public/dropoff", "/api/public/track", "/api/public/turnaround", "/api/public/theme",
+        "/api/public/site-content", "/api/public/inquiry",
     }
     if path in public_paths or path in ("/bbq", "/homestead") or path.startswith(("/static", "/bbq/", "/api/public/receipt/", "/api/bbq/public/", "/api/homestead/public/")):
         return await call_next(request)

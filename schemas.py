@@ -138,6 +138,7 @@ class CalibrationDraftInput(BaseModel):
 
 class SettingsInput(BaseModel):
     calibrated_serial: Optional[str] = None
+    visual_rin: Optional[str] = None
     starting_sheet_no: Optional[int] = None
     daily_hydro_capacity: Optional[int] = None
     default_tax_rate: Optional[float] = None
@@ -497,6 +498,40 @@ class CrewTaskInput(BaseModel):
 class CrewTaskUpdateInput(BaseModel):
     status: Optional[str] = None
     crew_note: Optional[str] = None
+    title: Optional[str] = None
+    category: Optional[str] = None
+    priority: Optional[str] = None
+    assigned_to: Optional[str] = None
+
+
+class ShopMessageInput(BaseModel):
+    recipient: str = "ALL"
+    body: str
+    channel: str = "CREW"
+
+
+class ShopMessageResolveInput(BaseModel):
+    status: str = "RESOLVED"
+    reply_note: Optional[str] = None
+
+
+class PublicInquiryInput(BaseModel):
+    customer_name: str
+    customer_phone: str = ""
+    customer_email: str = ""
+    topic: str = "General Question"
+    message: str
+    website_hp: str = ""
+
+
+class WebsiteContentInput(BaseModel):
+    site_banner_announcement: str = ""
+    site_about_eyebrow: str = ""
+    site_about_heading: str = ""
+    site_about_story: str = ""
+    site_business_details: str = ""
+    site_dropoff_note: str = ""
+    site_owner_signoff: str = ""
 
 
 class EndOfDayInput(BaseModel):
@@ -516,4 +551,4 @@ class MerchStoreSettingsInput(BaseModel):
     popup_store_url: str = ""
     allowance_note: str = ""
 
-__all__ = ['LoginInput', 'PublicDropoffInput', 'DropoffStatusInput', 'BinderActionInput', 'DayPlanInput', 'ScheduleJobInput', 'ScheduleJobPatchInput', 'LadderStep', 'VerificationLadderInput', 'SettingsInput', 'CrewInput', 'IntakeInput', 'RecordPriorityInput', 'RecordAddonsInput', 'ValveTagAssignInput', 'ShopStageInput', 'BatchStageInput', 'ScanBottleJsonInput', 'TestCompleteInput', 'RecordEditInput', 'CustomerRolodexInput', 'SupplyUpsertInput', 'SupplyLowStockInput', 'PricingRateUpsert', 'InvoiceLineInput', 'InvoiceCreateInput', 'InvoiceStatusInput', 'CrewFeedbackInput', 'FeedbackStatusInput', 'HelpChatTurn', 'HelpAssistantInput', 'SupplyQtyPatchInput', 'DayHoursRowInput', 'OperatingScheduleSaveInput', 'HolidayClosureInput', 'TimePunchActionInput', 'ManualPunchEditInput', 'PinUserInput', 'LockDayLineupInput', 'DayJobMoveInput', 'CrewTaskInput', 'CrewTaskUpdateInput', 'EndOfDayInput', 'ThemeSettingsInput', 'MerchStoreSettingsInput']
+__all__ = ['LoginInput', 'PublicDropoffInput', 'DropoffStatusInput', 'BinderActionInput', 'DayPlanInput', 'ScheduleJobInput', 'ScheduleJobPatchInput', 'LadderStep', 'VerificationLadderInput', 'SettingsInput', 'CrewInput', 'IntakeInput', 'RecordPriorityInput', 'RecordAddonsInput', 'ValveTagAssignInput', 'ShopStageInput', 'BatchStageInput', 'ScanBottleJsonInput', 'TestCompleteInput', 'RecordEditInput', 'CustomerRolodexInput', 'SupplyUpsertInput', 'SupplyLowStockInput', 'PricingRateUpsert', 'InvoiceLineInput', 'InvoiceCreateInput', 'InvoiceStatusInput', 'CrewFeedbackInput', 'FeedbackStatusInput', 'HelpChatTurn', 'HelpAssistantInput', 'SupplyQtyPatchInput', 'DayHoursRowInput', 'OperatingScheduleSaveInput', 'HolidayClosureInput', 'TimePunchActionInput', 'ManualPunchEditInput', 'PinUserInput', 'LockDayLineupInput', 'DayJobMoveInput', 'CrewTaskInput', 'CrewTaskUpdateInput', 'ShopMessageInput', 'ShopMessageResolveInput', 'PublicInquiryInput', 'WebsiteContentInput', 'EndOfDayInput', 'ThemeSettingsInput', 'MerchStoreSettingsInput']

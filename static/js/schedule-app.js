@@ -214,51 +214,117 @@ let STATE = { db_version: 0, daily_hydro_capacity: 24, today: '', selected_date:
       return `<a class="eta-route-pill" href="${mapUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Pre-planned driving route from 3086 Legionville Rd, Baden">${txt} ↗</a>`;
     }
 
+    let CAL_VIEW_MODE = localStorage.getItem('webers_cal_view_mode') || 'MONTH';
+
+    window.setCalViewMode = function (vmode) {
+      CAL_VIEW_MODE = vmode;
+      localStorage.setItem('webers_cal_view_mode', vmode);
+      document.querySelectorAll('#calViewSegBar .cal-vseg-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-cview') === vmode);
+      });
+      renderMonthGrid();
+    };
+
     function renderMonthGrid() {
       if (!MONTH_DATA) return;
       document.getElementById('monthTitleLbl').textContent = MONTH_DATA.month_label;
       document.getElementById('jumpMonthInput').value = `${MONTH_DATA.year}-${String(MONTH_DATA.month).padStart(2, '0')}`;
+      document.querySelectorAll('#calViewSegBar .cal-vseg-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-cview') === CAL_VIEW_MODE);
+      });
 
+      const frameEl = document.getElementById('cal2027Frame');
+      const agendaEl = document.getElementById('calAgendaView');
+      const gridEl = document.getElementById('monthGridCells');
       const sel = STATE.selected_date;
-      document.getElementById('monthGridCells').innerHTML = (MONTH_DATA.days || []).map(d => {
-        const shortMode = d.is_closure ? '🏖️ Closed'
-          : (d.shift_mode === 'FULL_HYDRO' ? `🟢 ${d.bottle_capacity} cap`
-          : (d.shift_mode === 'PREP_ONLY' ? '🔧 Prep'
-          : (d.shift_mode === 'ROAD_RUN' ? `🚚 Road (${d.bottle_capacity})` : '🚪 24/7')));
+      const allDays = MONTH_DATA.days || [];
+
+      if (CAL_VIEW_MODE === 'AGENDA') {
+        if (frameEl) frameEl.hidden = true;
+        if (agendaEl) {
+          agendaEl.hidden = false;
+          const activeDays = allDays.filter(d => d.in_month && ((d.jobs && d.jobs.length) || d.day_notes || d.is_today));
+          agendaEl.innerHTML = activeDays.length ? `<div class="cal-agenda-stack">` + activeDays.map(d => `
+            <div class="cal-agenda-day ${d.is_today ? 'is-today' : ''} ${d.work_date === sel ? 'is-selected' : ''}" onclick="selectCalendarDay('${d.work_date}', false)">
+              <div class="cal-agenda-datecol">
+                <span class="cal-agenda-dow">${escHtml(d.weekday || '')}</span>
+                <strong class="cal-agenda-dom">${d.day_num}</strong>
+                ${d.is_today ? '<span class="cal-today-tag">Today</span>' : ''}
+              </div>
+              <div class="cal-agenda-events">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+                  <span style="font-size:0.76rem;font-weight:700;color:var(--ui-muted);">${escHtml(d.shift_label || '')}</span>
+                  ${d.bottle_capacity > 0 ? `<span class="sub-badge">${d.booked_bottles || 0}/${d.bottle_capacity} cyl booked</span>` : ''}
+                </div>
+                ${d.day_notes ? `<div class="mday-note-pill" style="margin-bottom:6px;">📝 ${escHtml(d.day_notes)}</div>` : ''}
+                ${(d.jobs || []).length ? d.jobs.map(j => jobRowHtml(j)).join('') : '<div style="font-size:0.82rem;color:var(--ui-muted);">Open hydro capacity — click ➕ Book Here on the right to schedule.</div>'}
+              </div>
+            </div>`).join('') + `</div>`
+            : `<div style="padding:24px;text-align:center;color:var(--ui-muted);background:var(--ui-surface-2);border-radius:16px;">No scheduled runs or day notes in ${escHtml(MONTH_DATA.month_label)} yet.</div>`;
+        }
+        return;
+      }
+
+      if (frameEl) frameEl.hidden = false;
+      if (agendaEl) agendaEl.hidden = true;
+
+      let visibleDays = allDays;
+      if (CAL_VIEW_MODE === 'TWOWEEK') {
+        const selIdx = Math.max(0, allDays.findIndex(d => d.work_date === sel));
+        const rowStart = Math.floor(selIdx / 7) * 7;
+        visibleDays = allDays.slice(rowStart, Math.min(allDays.length, rowStart + 14));
+        if (visibleDays.length < 14 && allDays.length >= 14) {
+          visibleDays = allDays.slice(allDays.length - 14);
+        }
+      }
+      if (gridEl) gridEl.classList.toggle('twoweek-mode', CAL_VIEW_MODE === 'TWOWEEK');
+      const maxPills = CAL_VIEW_MODE === 'TWOWEEK' ? 5 : 3;
+
+      gridEl.innerHTML = visibleDays.map(d => {
+        const modeDotCls = d.is_closure ? 'dot-closed'
+          : (d.shift_mode === 'FULL_HYDRO' ? 'dot-hydro'
+          : (d.shift_mode === 'ROAD_RUN' ? 'dot-road'
+          : (d.shift_mode === 'PREP_ONLY' ? 'dot-prep' : 'dot-dock')));
+        const modeShort = d.is_closure ? 'Closed'
+          : (d.shift_mode === 'FULL_HYDRO' ? `${d.booked_bottles || 0}/${d.bottle_capacity}`
+          : (d.shift_mode === 'ROAD_RUN' ? `Truck • ${d.booked_bottles || 0}/${d.bottle_capacity}`
+          : (d.shift_mode === 'PREP_ONLY' ? 'Prep' : '24/7 Dock')));
+
         const pct = d.bottle_capacity > 0 ? Math.min(100, Math.round(((d.booked_bottles || 0) / d.bottle_capacity) * 100)) : 0;
         const fillCls = pct >= 100 ? 'full' : (pct >= 80 ? 'warn' : '');
 
-        const jobsHtml = (d.jobs || []).slice(0, 3).map(j => {
+        const jobsHtml = (d.jobs || []).slice(0, maxPills).map(j => {
           const isR = Boolean(j.rush_fee || j.priority === 'RUSH');
           const leg = j.cal_leg || (j.job_type === 'ROAD_DELIVERY' ? 'RETURN' : (j.job_type.startsWith('ROAD_') ? 'PICKUP' : 'SHOP'));
-          const legCls = leg === 'RETURN' ? 'leg-return' : (leg === 'PICKUP' ? 'leg-pickup' : '');
+          const legCls = leg === 'RETURN' ? 'leg-return' : (leg === 'PICKUP' ? 'leg-pickup' : 'leg-shop');
           const doneCls = j.cal_done ? 'leg-done' : '';
-          const ico = leg === 'RETURN' ? '📤' : (leg === 'PICKUP' ? '📥' : '📌');
+          const ico = leg === 'RETURN' ? '↗' : (leg === 'PICKUP' ? '🚚' : '●');
           const tm = shortTimeBadge(j.cal_time || (leg === 'RETURN' ? j.dropoff_time : j.pickup_time));
-          const eta = (leg !== 'SHOP' && j.drive_eta_mins) ? ` • ${j.drive_eta_mins}m` : '';
           return `<div class="mday-job-pill ${isR ? 'rush' : legCls} ${doneCls}"
             onclick="event.stopPropagation(); selectCalendarDay('${d.work_date}', ${!d.in_month}); openJobDetailModal(${j.id}, '${leg}')"
-            title="Click to inspect full details for ${escHtml(j.customer_name)}">
-            ${ico} ${tm ? `<strong>${escHtml(tm)}</strong> ` : ''}${escHtml(j.customer_name)} (${j.bottle_count})${eta}
+            title="${escHtml(j.customer_name)} (${j.bottle_count} cyl)">
+            <span class="jp-ico">${ico}</span>
+            ${tm ? `<span class="jp-time">${escHtml(tm)}</span>` : ''}
+            <span class="jp-name">${escHtml(j.customer_name)}</span>
+            <span class="jp-cnt">${j.bottle_count}</span>
           </div>`;
         }).join('');
-        const extra = (d.jobs || []).length > 3 ? `<div style="font-size:0.65rem;color:var(--forest);font-weight:800;">+${d.jobs.length - 3} more (tap day)</div>` : '';
+        const extra = (d.jobs || []).length > maxPills ? `<div class="mday-more-chip">+${d.jobs.length - maxPills} more</div>` : '';
 
         return `
-          <div class="mday-cell mode-${d.shift_mode} ${d.in_month ? '' : 'out-month'} ${d.is_today ? 'is-today' : ''} ${d.work_date === sel ? 'is-selected' : ''}"
+          <div class="mday-cell ${d.in_month || CAL_VIEW_MODE === 'TWOWEEK' ? '' : 'out-month'} ${d.is_today ? 'is-today' : ''} ${d.work_date === sel ? 'is-selected' : ''}"
             onclick="selectCalendarDay('${d.work_date}', ${!d.in_month})">
-            <div>
-              <div class="mday-top">
-                <span>${d.day_num}</span>
-                ${d.is_today ? '<span style="background:var(--gold);color:#111;font-size:0.58rem;padding:1px 5px;border-radius:4px;">TODAY</span>' : `<span style="font-size:0.62rem;color:var(--green);font-weight:800;">${escHtml(shortMode)}</span>`}
-              </div>
-              ${d.bottle_capacity > 0 ? `<div class="cap-bar"><div class="cap-fill ${fillCls}" style="width:${pct}%"></div></div>` : ''}
+            <div class="mday-head">
+              <span class="mday-num ${d.is_today ? 'today-circle' : ''}">${d.day_num}</span>
+              <span class="mday-cap-tag"><i class="mode-dot ${modeDotCls}"></i>${escHtml(modeShort)}</span>
+            </div>
+            <div class="mday-events-stack">
               ${d.day_notes ? `<div class="mday-note-pill" title="${escHtml(d.day_notes)}">📝 ${escHtml(d.day_notes)}</div>` : ''}
               ${jobsHtml}${extra}
             </div>
-            <div style="font-size:0.64rem;color:var(--muted);display:flex;justify-content:space-between;">
-              <span>${d.bottle_capacity > 0 ? `${d.booked_bottles}/${d.bottle_capacity}` : ''}</span>
-              ${d.completed_bottles ? `<span style="color:#15803d;font-weight:800;">✓${d.completed_bottles}</span>` : ''}
+            <div class="mday-foot">
+              ${d.bottle_capacity > 0 ? `<div class="cap-bar"><div class="cap-fill ${fillCls}" style="width:${pct}%"></div></div>` : '<span></span>'}
+              ${d.completed_bottles ? `<span class="mday-done-pill">✓${d.completed_bottles}</span>` : ''}
             </div>
           </div>`;
       }).join('');

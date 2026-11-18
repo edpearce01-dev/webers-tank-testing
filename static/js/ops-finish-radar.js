@@ -318,6 +318,7 @@ function toggleEditVis(key) {
 
 function openEditModal(recordId) {
   const rec = STATE.records.find(r => r.id === recordId)
+    || (STATE.active_sheet_records || []).find(r => r.id === recordId)
     || (STATE.in_shop_post_test || []).find(r => r.id === recordId)
     || STATE.active_valves.find(r => r.id === recordId)
     || LAST_SEARCH_ROWS.find(r => r.id === recordId);
