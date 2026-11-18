@@ -602,7 +602,8 @@ window.openOpsJobModal = function (jobId) {
   document.getElementById('ojdTitle').textContent = `${j.customer_name} (${j.bottle_count} Cylinders)`;
   document.getElementById('ojdSub').textContent = isRound ? 'Round-Trip: Pickup & Return Delivery' : j.job_type.replace('_', ' ');
   document.getElementById('ojdActions').innerHTML = `
-    <button class="primary" style="width:auto;margin:0;padding:8px 13px;" onclick="document.getElementById('opsJobDetailModal').hidden=true;importScheduleJobToIntake(${j.id})">📥 Load into Prep &amp; Scan</button>
+    <button class="primary" style="width:auto;margin:0;padding:8px 13px;" onclick="document.getElementById('opsJobDetailModal').hidden=true;importScheduleJobToIntake(${j.id})">📥 Scan Now (Prep &amp; Scan)</button>
+    ${(j.job_type === 'ROAD_PICKUP' || j.job_type === 'ROAD_ROUNDTRIP') && !j.pickup_leg_done ? `<button class="secondary" style="padding:8px 12px;background:#fef3c7;color:#92400e;border-color:#f59e0b;font-weight:800;" onclick="stageJobToBackroomFromOps(${j.id}, true)">🚚 Picked Up → Hold in Backroom</button>` : ''}
     ${mapsUrl ? `<a class="secondary" style="padding:8px 12px;background:#eff6ff;color:#1d4ed8;border-color:#93c5fd;font-weight:800;" href="${mapsUrl}" target="_blank" rel="noopener">🗺️ Route from Shop${j.drive_eta_mins ? ` (~${j.drive_eta_mins}m)` : ''}</a>` : ''}
     ${digits ? `<a class="secondary" style="padding:8px 12px;font-weight:800;" href="tel:${digits}">📞 ${escHtml(j.customer_phone)}</a>` : ''}
     ${digits ? `<a class="secondary" style="padding:8px 12px;background:#fef3c7;color:#92400e;border-color:#f59e0b;font-weight:800;" href="sms:${digits}${sep}body=${encodeURIComponent(smsTxt)}">📲 Text (iPhone)</a>` : ''}
@@ -741,6 +742,20 @@ async function refreshOpsDispatchRadar() {
         }).join('')}
       </div>`;
   } catch (_) {}
+}
+
+async function stageJobToBackroomFromOps(jobId, closeModal = false) {
+  const res = await fetch(`/api/schedule/jobs/${jobId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ move_to_backroom: true, pickup_leg_done: true }),
+  });
+  if (!res.ok) { alert((await res.json()).detail || 'Could not stage batch to backroom.'); return; }
+  if (closeModal) document.getElementById('opsJobDetailModal').hidden = true;
+  if (typeof playShopTone === 'function') playShopTone('pass');
+  await loadState(false);
+  refreshOpsDispatchRadar();
+  alert('✓ Truck batch moved into Backroom Holding (2. Prep & Scan → 24/7 Loading Dock Check-Ins)!');
 }
 
 async function completeTruckRunFromOps(jobId) {

@@ -92,6 +92,7 @@ class ScheduleJobPatchInput(BaseModel):
     dropoff_time: Optional[str] = None
     return_address: Optional[str] = None
     pickup_leg_done: Optional[bool] = None
+    move_to_backroom: Optional[bool] = None
     job_type: Optional[str] = None
     account_type: Optional[str] = None
     po_station: Optional[str] = None
@@ -123,6 +124,16 @@ class VerificationLadderInput(BaseModel):
     steps: list[LadderStep]
     permanent_cc: float = 0.0
     logged_by: str = "RP"
+    force_pass: bool = False
+
+
+class CalibrationDraftInput(BaseModel):
+    test_date: Optional[str] = None
+    jacket_type: str = "Short Jacket"
+    max_target_psi: int = 4000
+    values: dict[str, str] = {}
+    permanent_cc: str = "0"
+    device_id: str = ""
 
 
 class SettingsInput(BaseModel):

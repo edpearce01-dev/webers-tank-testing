@@ -169,6 +169,18 @@ def update_schedule_job(job_id: int, payload: ScheduleJobPatchInput):
         d_miles, d_eta = estimate_route_from_shop(new_loc) if new_loc else (0.0, 0)
 
     leg1_done = (1 if payload.pickup_leg_done else 0) if payload.pickup_leg_done is not None else int(rec["pickup_leg_done"] or 0)
+    if payload.move_to_backroom:
+        leg1_done = 1
+
+    eff_cust = payload.customer_name.strip() if payload.customer_name is not None else rec["customer_name"]
+    eff_phone = clean_phone(payload.customer_phone) if payload.customer_phone is not None else rec["customer_phone"]
+    eff_cnt = payload.bottle_count if payload.bottle_count is not None else rec["bottle_count"]
+    eff_sum = payload.tank_summary if payload.tank_summary is not None else rec["tank_summary"]
+    eff_due = payload.due_date if payload.due_date is not None else rec["due_date"]
+    eff_notes = payload.notes if payload.notes is not None else rec["notes"]
+    eff_zone = payload.holding_zone if payload.holding_zone is not None else ("ZONE_A_BACKROOM" if payload.move_to_backroom else rec["holding_zone"])
+    eff_prep = payload.prep_status if payload.prep_status is not None else ("IN_BACKROOM" if payload.move_to_backroom else rec["prep_status"])
+    eff_status = payload.status if payload.status is not None else ("IN_BACKROOM" if (payload.move_to_backroom and new_jtype == "ROAD_PICKUP") else rec["status"])
 
     conn.execute(
         """UPDATE schedule_jobs SET
@@ -180,7 +192,7 @@ def update_schedule_job(job_id: int, payload: ScheduleJobPatchInput):
            WHERE id=?;""",
         (
             payload.scheduled_date if payload.scheduled_date is not None else rec["scheduled_date"],
-            payload.due_date if payload.due_date is not None else rec["due_date"],
+            eff_due,
             payload.pickup_time.strip()[:24] if payload.pickup_time is not None else (rec["pickup_time"] or ""),
             payload.dropoff_time.strip()[:24] if payload.dropoff_time is not None else (rec["dropoff_time"] or ""),
             payload.return_address.strip()[:140] if payload.return_address is not None else (rec["return_address"] or ""),
@@ -188,20 +200,65 @@ def update_schedule_job(job_id: int, payload: ScheduleJobPatchInput):
             d_eta,
             leg1_done,
             new_jtype,
-            payload.customer_name.strip() if payload.customer_name is not None else rec["customer_name"],
-            clean_phone(payload.customer_phone) if payload.customer_phone is not None else rec["customer_phone"],
+            eff_cust,
+            eff_phone,
             new_loc,
-            payload.bottle_count if payload.bottle_count is not None else rec["bottle_count"],
-            payload.tank_summary if payload.tank_summary is not None else rec["tank_summary"],
+            eff_cnt,
+            eff_sum,
             pri,
             rfee,
-            payload.holding_zone if payload.holding_zone is not None else rec["holding_zone"],
-            payload.prep_status if payload.prep_status is not None else rec["prep_status"],
-            payload.status if payload.status is not None else rec["status"],
-            payload.notes if payload.notes is not None else rec["notes"],
+            eff_zone,
+            eff_prep,
+            eff_status,
+            eff_notes,
             job_id,
         ),
     )
+
+    # Automatically stage picked-up truck batches into Backroom Intake (dropoffs) for Station 2 holding!
+    should_stage_backroom = bool(payload.move_to_backroom) or (
+        leg1_done == 1 and int(rec["pickup_leg_done"] or 0) == 0 and new_jtype in ("ROAD_PICKUP", "ROAD_ROUNDTRIP")
+    )
+    if should_stage_backroom:
+        already_staged = conn.execute(
+            """SELECT id FROM dropoffs
+               WHERE UPPER(customer_name)=UPPER(?) AND status IN ('IN_BACKROOM', 'CHECKED_IN')
+                 AND COALESCE(imported_count, 0) < bottle_count
+               LIMIT 1;""",
+            (eff_cust,),
+        ).fetchone()
+        scanned_for_job = conn.execute(
+            "SELECT COUNT(*) FROM cylinder_records WHERE schedule_job_id=?;",
+            (job_id,),
+        ).fetchone()[0]
+        if not already_staged and scanned_for_job < int(eff_cnt or 1):
+            now_e = now_eastern()
+            conn.execute(
+                """INSERT INTO dropoffs
+                   (created_at, work_date, entry_type, account_type, po_station, contact_person,
+                    customer_name, customer_phone, customer_email, pickup_address,
+                    bottle_count, imported_count, tank_summary, service_requested,
+                    valves_attached, rush_requested, promised_date, holding_zone, notes, status, synced)
+                   VALUES (?, ?, 'DROPOFF', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Hydro + Visual', ?, ?, ?, 'ZONE_A_BACKROOM', ?, 'IN_BACKROOM', 0);""",
+                (
+                    now_e.strftime("%Y-%m-%d %I:%M %p"),
+                    now_e.date().isoformat(),
+                    rec["account_type"] or "COMMERCIAL",
+                    rec["po_station"] or "",
+                    rec["contact_person"] or "",
+                    eff_cust,
+                    eff_phone,
+                    rec["customer_email"] or "",
+                    new_loc,
+                    max(1, int(eff_cnt or 1)),
+                    int(scanned_for_job or 0),
+                    eff_sum or "",
+                    int(rec["valves_attached"] if rec["valves_attached"] is not None else 1),
+                    int(rfee or 0),
+                    eff_due or "",
+                    (f"Truck pickup back at shop (Job #{job_id})" + (f" • {eff_notes}" if eff_notes else ""))[:240],
+                ),
+            )
     bump_db_version(conn)
     conn.commit()
     updated = enrich_schedule_job_view(dict(conn.execute("SELECT * FROM schedule_jobs WHERE id=?;", (job_id,)).fetchone()))

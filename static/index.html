@@ -8,15 +8,15 @@
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   
-  <link rel="stylesheet" href="/static/ops.css?v=15.3" />
-  <link rel="stylesheet" href="/static/css/modern-ui.css?v=15.3" />
+  <link rel="stylesheet" href="/static/ops.css?v=15.4" />
+  <link rel="stylesheet" href="/static/css/modern-ui.css?v=15.4" />
   <title>Weber's Tank Testing — Shop Floor Ops | DOT B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=15.3" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
+      <img src="/static/images/logo-crest.png?v=15.4" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Tank Testing</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">
         Shop Floor Operations Workspace<br />
@@ -56,7 +56,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=15.3" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=15.4" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>Shop Floor</h1>
           <small>DOT RIN B386</small>
@@ -157,11 +157,11 @@
           <div id="calCollapsedBanner" class="card" style="background:#f0fdf4;border:2px solid #86efac;" hidden>
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
               <div>
-                <strong style="color:#166534;font-size:0.98rem;">✅ Both Water Jackets Certified for Selected Date</strong>
+                <strong id="calCollapsedTitle" style="color:#166534;font-size:0.98rem;">✅ Water Jacket Certified — Hydro Stand Ready</strong>
                 <div id="calCollapsedSummary" style="font-size:0.84rem;color:#15803d;margin-top:3px;"></div>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button class="secondary" onclick="setCalExpanded(true)">Re-Calibrate / Higher PSI</button>
+                <button class="secondary" id="btnExpandCalCard" onclick="setCalExpanded(true)">+ Calibrate Other Jacket / Higher PSI</button>
                 <button class="primary" style="width:auto;margin:0;padding:9px 15px;" onclick="jumpToTab('intake')">Go to Prep &amp; Scan →</button>
                 <button class="primary" style="width:auto;margin:0;padding:9px 15px;background:#047857;" onclick="jumpToTab('bench')">Go to Hydro Stand →</button>
               </div>
@@ -170,28 +170,38 @@
 
           <div class="card" id="calFormCard">
             <div class="card-hdr">
-              <h3>Water Jacket Verification — Master Cyl <span id="calSerialLabel">1SF11904</span></h3>
+              <div>
+                <h3>Water Jacket Verification — Master Cyl <span id="calSerialLabel">1SF11904</span></h3>
+                <small id="calLiveSyncBadge" style="color:var(--muted);font-weight:700;">📱+💻 Live Phone &amp; Computer Sync Active — enter any 1 target pressure or full ladder, then tap Save below</small>
+              </div>
               <span class="sub-badge" id="calRecommendedBadge">49 CFR §180.215 (±1.0%)</span>
             </div>
             <div class="grid" style="margin-bottom:11px;">
               <div>
                 <label>1. Water Jacket</label>
-                <select id="calJacket" onchange="buildCalibrationLadder()">
+                <select id="calJacket" onchange="onCalJacketOrMaxChange()">
                   <option value="Short Jacket">Short Jacket</option>
                   <option value="Tall Jacket">Tall Jacket</option>
                 </select>
               </div>
               <div>
                 <label>2. Max Pressure Needed Today</label>
-                <select id="calMaxPsi" onchange="buildCalibrationLadder()"></select>
+                <select id="calMaxPsi" onchange="onCalJacketOrMaxChange()"></select>
               </div>
             </div>
-            <div class="notice">Type each burette reading and press <strong>Enter</strong> to step down the ladder.</div>
+            <div class="notice">Enter burette reading(s) on your <strong>Phone or Computer</strong> (single test pressure or multi-step ladder), then tap <strong>Save &amp; Certify</strong> below.</div>
             <div id="ladderSteps"></div>
-            <div id="releaseSection" class="card" style="background:#f0fdf4;border:2px solid var(--green);margin-top:12px;" hidden>
-              <label>Bleed Pressure to 0 PSI — Permanent Expansion (cc)</label>
-              <input type="number" step="0.1" id="calFinalPerm" value="0" style="max-width:220px;" onkeydown="if(event.key==='Enter')submitCalibrationLadder()" />
-              <button class="primary" id="btnCertCal" onclick="submitCalibrationLadder()">Certify Calibration Under Ryan Pearce (RP)</button>
+            <div id="releaseSection" class="card" style="background:#f0fdf4;border:2px solid var(--green);margin-top:12px;">
+              <div style="display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:200px;">
+                  <label>Bleed Pressure to 0 PSI — Permanent Expansion (cc)</label>
+                  <input type="number" step="0.1" id="calFinalPerm" value="0" style="max-width:240px;" oninput="onCalPermInput(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();submitCalibrationLadder();}" />
+                </div>
+                <div style="flex:2;min-width:240px;">
+                  <button class="primary" id="btnCertCal" style="margin-top:0;" onclick="submitCalibrationLadder()">✓ Save &amp; Certify Calibration (RP)</button>
+                </div>
+              </div>
+              <div id="calSaveNotice" class="notice" style="margin-top:10px;margin-bottom:0;" hidden></div>
             </div>
           </div>
 
@@ -754,13 +764,13 @@
     </div>
   </div>
 
-  <script src="/static/ops-camera.js?v=15.3"></script>
-  <script src="/static/js/ops-core-cal.js?v=15.3"></script>
-  <script src="/static/js/ops-intake-stand.js?v=15.3"></script>
-  <script src="/static/js/ops-finish-radar.js?v=15.3"></script>
-  <script src="/static/day-flow.js?v=15.3"></script>
-  <script src="/static/theme-engine.js?v=15.3"></script>
-  <script src="/static/js/app-switcher.js?v=15.3"></script>
-  <script src="/static/help-bot.js?v=15.3"></script>
+  <script src="/static/ops-camera.js?v=15.4"></script>
+  <script src="/static/js/ops-core-cal.js?v=15.4"></script>
+  <script src="/static/js/ops-intake-stand.js?v=15.4"></script>
+  <script src="/static/js/ops-finish-radar.js?v=15.4"></script>
+  <script src="/static/day-flow.js?v=15.4"></script>
+  <script src="/static/theme-engine.js?v=15.4"></script>
+  <script src="/static/js/app-switcher.js?v=15.4"></script>
+  <script src="/static/help-bot.js?v=15.4"></script>
 </body>
 </html>

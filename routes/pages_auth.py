@@ -172,6 +172,7 @@ def auth_login(payload: LoginInput, response: Response):
         key=AUTH_COOKIE,
         value=token,
         max_age=ttl,
+        path="/",
         httponly=True,
         samesite="lax",
     )
@@ -180,6 +181,7 @@ def auth_login(payload: LoginInput, response: Response):
         key="webers_tv_auth",
         value=make_tv_kiosk_token(tv_seed),
         max_age=60 * 60 * 24 * 90,
+        path="/",
         httponly=True,
         samesite="lax",
     )
@@ -199,7 +201,7 @@ def auth_login(payload: LoginInput, response: Response):
 
 @router.post("/api/auth/logout")
 def auth_logout(response: Response):
-    response.delete_cookie(AUTH_COOKIE)
+    response.delete_cookie(AUTH_COOKIE, path="/")
     return {"authenticated": False}
 
 

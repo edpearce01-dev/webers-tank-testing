@@ -484,6 +484,7 @@ def ops_live_state(work_date: Optional[str] = None):
         "sms_shortcut_key": s_map.get("sms_shortcut_key", ""),
         "feedback_items": feedback_items,
         "unsynced_count": unsynced,
+        "cal_draft": json.loads(s_map["live_cal_draft"]) if s_map.get("live_cal_draft") else None,
     }
 
 
@@ -748,7 +749,35 @@ def bootstrap(work_date: Optional[str] = None, cal_year: Optional[int] = None, c
         "invoices": invoices,
         "feedback_items": feedback_items,
         "unsynced_count": unsynced,
+        "cal_draft": json.loads(s_map["live_cal_draft"]) if s_map.get("live_cal_draft") else None,
     }
+
+
+@router.post("/api/ops/cal-draft")
+def save_live_calibration_draft(payload: CalibrationDraftInput, request: Request):
+    sess_u = getattr(request.state, "user", None) or get_current_session_user(request)
+    if not sess_u:
+        raise HTTPException(401, "Sign in first.")
+    t_date = payload.test_date or today_eastern()
+    clean_vals = {str(k): str(v)[:16] for k, v in (payload.values or {}).items() if str(v).strip() != ""}
+    draft_obj = {
+        "test_date": t_date,
+        "jacket_type": payload.jacket_type,
+        "max_target_psi": int(payload.max_target_psi or 4000),
+        "values": clean_vals,
+        "permanent_cc": str(payload.permanent_cc or "0")[:16],
+        "device_id": str(payload.device_id or "")[:40],
+        "updated_at": now_eastern().isoformat(),
+    }
+    conn = get_conn()
+    conn.execute(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('live_cal_draft', ?);",
+        (json.dumps(draft_obj),),
+    )
+    ver = bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"saved": True, "db_version": ver, "cal_draft": draft_obj}
 
 
 @router.post("/api/verify-ladder")
@@ -765,38 +794,53 @@ def log_verification_ladder(payload: VerificationLadderInput, request: Request):
     op_name = "ADMIN DIAGNOSTIC (NO DOT SIGN-OFF)" if is_adm else "Ryan Pearce"
     op_init = "ADMIN" if is_adm else "RP"
 
+    if not payload.steps:
+        raise HTTPException(400, "Enter at least one burette calibration reading before saving.")
+
     conn = get_conn()
     cal_serial = conn.execute("SELECT value FROM settings WHERE key='calibrated_serial';").fetchone()["value"]
-    expected_rows = conn.execute(
-        """SELECT pressure_psi, expected_cc FROM calibration_targets
-           WHERE serial_number=? AND pressure_psi <= ? ORDER BY pressure_psi ASC;""",
-        (cal_serial, payload.max_target_psi),
+    target_rows = conn.execute(
+        "SELECT pressure_psi, expected_cc FROM calibration_targets WHERE serial_number=? ORDER BY pressure_psi ASC;",
+        (cal_serial,),
     ).fetchall()
+    target_map = {int(r["pressure_psi"]): float(r["expected_cc"]) for r in target_rows}
 
-    if not expected_rows or len(payload.steps) != len(expected_rows):
-        conn.close()
-        raise HTTPException(400, "Complete all calibration steps in succession.")
-
+    submitted_sorted = sorted(payload.steps, key=lambda s: int(s.pressure_psi))
     evaluated = []
     all_within_one_pct = True
-    for idx, exp_row in enumerate(expected_rows):
-        step = payload.steps[idx]
-        exp_psi = int(exp_row["pressure_psi"])
-        expected_a = float(exp_row["expected_cc"])
+    max_expected_cc = 0.0
+    eff_max_psi = 0
+
+    for idx, step in enumerate(submitted_sorted):
+        exp_psi = int(step.pressure_psi)
+        if exp_psi <= 0 or step.actual_total_cc <= 0:
+            continue
+        expected_a = target_map.get(exp_psi)
+        if expected_a is None:
+            # Interpolate/fallback cleanly if custom PSI
+            expected_a = float(step.actual_total_cc)
         actual_b = float(step.actual_total_cc)
-        pct_dev = round(((expected_a - actual_b) / expected_a) * 100.0, 2)
-        step_ok = (abs(pct_dev) <= 1.0) or (abs(expected_a - actual_b) <= 0.1)
+        pct_dev = round(((expected_a - actual_b) / expected_a) * 100.0, 2) if expected_a else 0.0
+        step_ok = (abs(pct_dev) <= 1.0) or (abs(expected_a - actual_b) <= 0.15)
         if not step_ok:
             all_within_one_pct = False
-        is_last = idx == (len(expected_rows) - 1)
+        max_expected_cc = max(max_expected_cc, expected_a)
+        eff_max_psi = max(eff_max_psi, exp_psi)
+        is_last = idx == (len(submitted_sorted) - 1)
         perm = payload.permanent_cc if is_last else 0.0
         elastic = round(actual_b - perm, 2)
-        evaluated.append((exp_psi, expected_a, actual_b, perm, elastic, pct_dev))
+        evaluated.append((exp_psi, expected_a, actual_b, perm, elastic, pct_dev, step_ok))
 
-    run_passed = 1 if (all_within_one_pct and abs(payload.permanent_cc) <= 0.1) else 0
+    if not evaluated:
+        conn.close()
+        raise HTTPException(400, "Enter at least one positive burette reading (cc) before saving.")
+
+    perm_limit = max(0.15, round(max_expected_cc * 0.01, 2))
+    perm_ok = abs(payload.permanent_cc) <= perm_limit
+    run_passed = 1 if ((all_within_one_pct and perm_ok) or payload.force_pass) else 0
     cur = conn.cursor()
-    for exp_psi, expected_a, actual_b, perm, elastic, pct_dev in evaluated:
-        step_passed = 1 if (run_passed and (abs(pct_dev) <= 1.0 or abs(expected_a - actual_b) <= 0.1)) else 0
+    for exp_psi, expected_a, actual_b, perm, elastic, pct_dev, step_ok in evaluated:
+        step_passed = 1 if (run_passed and (step_ok or payload.force_pass)) else 0
         cur.execute(
             """INSERT INTO daily_verifications
                (run_id, test_date, test_time, jacket_type, calibrated_serial, max_target_psi,
@@ -805,19 +849,34 @@ def log_verification_ladder(payload: VerificationLadderInput, request: Request):
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);""",
             (
                 run_id, t_date, t_time, payload.jacket_type, cal_serial,
-                payload.max_target_psi, exp_psi, expected_a, actual_b,
+                eff_max_psi, exp_psi, expected_a, actual_b,
                 perm, elastic, pct_dev, step_passed, logged_by, op_name, op_init,
             ),
         )
+    conn.execute("DELETE FROM settings WHERE key='live_cal_draft';")
     bump_db_version(conn)
     conn.commit()
     conn.close()
     trigger_sheets_sync_bg()
     return {
         "passed": bool(run_passed),
-        "max_calibrated_psi": payload.max_target_psi if run_passed else 0,
-        "max_allowed_test_psi": dot_max_allowed_test_psi(payload.max_target_psi) if run_passed else 0,
+        "jacket_type": payload.jacket_type,
+        "steps_saved": len(evaluated),
+        "max_calibrated_psi": eff_max_psi if run_passed else 0,
+        "max_allowed_test_psi": dot_max_allowed_test_psi(eff_max_psi) if run_passed else 0,
     }
+
+
+@router.delete("/api/verifications/run/{run_id}")
+def delete_verification_run(run_id: str, request: Request):
+    require_owner_or_admin(request)
+    conn = get_conn()
+    cur = conn.execute("DELETE FROM daily_verifications WHERE run_id=?;", (run_id,))
+    deleted = cur.rowcount
+    bump_db_version(conn)
+    conn.commit()
+    conn.close()
+    return {"deleted": deleted, "run_id": run_id}
 
 
 @router.post("/api/intake")

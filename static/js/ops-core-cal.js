@@ -36,6 +36,16 @@ let SHOW_ALL_SHELF_CUSTS = false;
 let DEFERRED_PWA = null;
 let DEEP_LINK_APPLIED = false;
 let SHOP_AUDIO_CTX = null;
+let CAL_DRAFT_TIMER = null;
+let LAST_APPLIED_DRAFT_TS = '';
+const DEVICE_ID = (() => {
+  let id = localStorage.getItem('webers_device_id');
+  if (!id) {
+    id = 'dev-' + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem('webers_device_id', id);
+  }
+  return id;
+})();
 
 function isShopAudioEnabled() {
   return localStorage.getItem('webers_shop_audio') !== 'off';
@@ -306,18 +316,49 @@ function changeWorkingDate() {
 
 function setCalExpanded(exp) {
   CAL_FORCE_EXPANDED = exp;
+  if (exp) {
+    const sMax = STATE.jacket_ceilings['Short Jacket']?.max_allowed_test_psi || 0;
+    const tMax = STATE.jacket_ceilings['Tall Jacket']?.max_allowed_test_psi || 0;
+    const calJacketSel = document.getElementById('calJacket');
+    if (calJacketSel) {
+      if (sMax > 0 && !tMax) calJacketSel.value = 'Tall Jacket';
+      else if (tMax > 0 && !sMax) calJacketSel.value = 'Short Jacket';
+      buildCalibrationLadder();
+    }
+  }
   updateCalCollapseUI();
 }
 
 function updateCalCollapseUI() {
   const sMax = STATE.jacket_ceilings['Short Jacket']?.max_allowed_test_psi || 0;
   const tMax = STATE.jacket_ceilings['Tall Jacket']?.max_allowed_test_psi || 0;
+  const anyReady = sMax > 0 || tMax > 0;
   const bothReady = sMax > 0 && tMax > 0;
-  document.getElementById('calCollapsedBanner').hidden = !(bothReady && !CAL_FORCE_EXPANDED);
-  document.getElementById('calFormCard').hidden = (bothReady && !CAL_FORCE_EXPANDED);
-  if (bothReady) {
-    document.getElementById('calCollapsedSummary').textContent =
-      `Short ≤ ${sMax} PSI • Tall ≤ ${tMax} PSI (Signed Off: RP)`;
+  const hasDraft = LADDER.some(s => String(s.actual || '').trim() !== '');
+  const showCollapsed = anyReady && !CAL_FORCE_EXPANDED && !hasDraft;
+
+  document.getElementById('calCollapsedBanner').hidden = !showCollapsed;
+  document.getElementById('calFormCard').hidden = showCollapsed;
+
+  if (anyReady) {
+    const titleEl = document.getElementById('calCollapsedTitle');
+    const expBtn = document.getElementById('btnExpandCalCard');
+    if (bothReady) {
+      if (titleEl) titleEl.textContent = '✅ Both Water Jackets Certified — Hydro Stand Ready';
+      if (expBtn) expBtn.textContent = 'Re-Calibrate / Higher PSI';
+      document.getElementById('calCollapsedSummary').textContent =
+        `Short ≤ ${sMax} PSI • Tall ≤ ${tMax} PSI (Signed Off: RP)`;
+    } else if (sMax > 0) {
+      if (titleEl) titleEl.textContent = `✅ Short Jacket Certified (≤ ${sMax} PSI) — Hydro Stand Unlocked & Ready`;
+      if (expBtn) expBtn.textContent = '+ Calibrate Tall Jacket';
+      document.getElementById('calCollapsedSummary').textContent =
+        `Short Jacket ready up to ${sMax} PSI • Tall Jacket not calibrated yet (click "+ Calibrate Tall Jacket" only if needed today)`;
+    } else {
+      if (titleEl) titleEl.textContent = `✅ Tall Jacket Certified (≤ ${tMax} PSI) — Hydro Stand Unlocked & Ready`;
+      if (expBtn) expBtn.textContent = '+ Calibrate Short Jacket';
+      document.getElementById('calCollapsedSummary').textContent =
+        `Tall Jacket ready up to ${tMax} PSI • Short Jacket not calibrated yet (click "+ Calibrate Short Jacket" only if needed today)`;
+    }
   }
 }
 
@@ -432,10 +473,23 @@ async function loadState(rebuildLadder = false) {
   pTall.innerHTML = tCeil.max_calibrated_psi ? `T: <span class="full-lbl">≤${tCeil.max_allowed_test_psi}</span>✓` : `T: <span class="full-lbl">Uncal</span>`;
 
   const calJacketSel = document.getElementById('calJacket');
-  if (rebuildLadder) {
-    if (sCeil.max_calibrated_psi && !tCeil.max_calibrated_psi) calJacketSel.value = 'Tall Jacket';
-    else if (!sCeil.max_calibrated_psi && tCeil.max_calibrated_psi) calJacketSel.value = 'Short Jacket';
+  const activeTag = document.activeElement ? document.activeElement.id : '';
+  const typingCalNow = activeTag.startsWith('stepIn_') || activeTag === 'calFinalPerm' || activeTag === 'calJacket' || activeTag === 'calMaxPsi';
+  const hasTypedSteps = LADDER.some(s => String(s.actual || '').trim() !== '');
+
+  if (calJacketSel) {
+    const prevJ = calJacketSel.value;
+    calJacketSel.innerHTML = [
+      `<option value="Short Jacket">Short Jacket ${sCeil.max_calibrated_psi ? `(✓ Certified ≤${sCeil.max_allowed_test_psi}#)` : '(Needs Calibration)'}</option>`,
+      `<option value="Tall Jacket">Tall Jacket ${tCeil.max_calibrated_psi ? `(✓ Certified ≤${tCeil.max_allowed_test_psi}#)` : '(Needs Calibration)'}</option>`,
+    ].join('');
+    calJacketSel.value = prevJ || 'Short Jacket';
+    if (!typingCalNow && !hasTypedSteps) {
+      if (sCeil.max_calibrated_psi && !tCeil.max_calibrated_psi) calJacketSel.value = 'Tall Jacket';
+      else if (!sCeil.max_calibrated_psi && tCeil.max_calibrated_psi) calJacketSel.value = 'Short Jacket';
+    }
   }
+  const anyCalReady = Boolean(sCeil.max_calibrated_psi || tCeil.max_calibrated_psi);
   updateCalCollapseUI();
 
   const queued = STATE.records.filter(r => r.status === 'QUEUED');
@@ -448,8 +502,8 @@ async function loadState(rebuildLadder = false) {
   document.getElementById('wsSchedBadge').textContent = openSched.length ? `(${openSched.length})` : '';
   document.getElementById('wsBillBadge').textContent = (totalUnbilled + STATE.low_stock_count) ? `(${totalUnbilled || '!'})` : '';
 
-  document.getElementById('navBadgeCal').textContent = (sCeil.max_calibrated_psi && tCeil.max_calibrated_psi) ? '✓' : '!';
-  document.getElementById('navBadgeCal').className = 'nav-badge ' + ((sCeil.max_calibrated_psi && tCeil.max_calibrated_psi) ? 'green' : 'amber');
+  document.getElementById('navBadgeCal').textContent = anyCalReady ? '✓' : '!';
+  document.getElementById('navBadgeCal').className = 'nav-badge ' + (anyCalReady ? 'green' : 'amber');
   document.getElementById('navBadgeIntake').textContent = waitingDrops.length ? `${waitingDrops.length}🚪` : String(queued.length);
   document.getElementById('navBadgeBench').textContent = String(queued.length);
   document.getElementById('navBadgeBench').className = 'nav-badge ' + ((STATE.huddle?.rush_queued_count || 0) > 0 ? 'red' : '');
@@ -550,6 +604,7 @@ function renderStartOfDayHuddle(queued, openSched, waitingDrops) {
             </div>
             <div class="rec-actions" onclick="event.stopPropagation()">
               <button class="secondary" onclick="openOpsJobModal(${j.id})">🔍 Details</button>
+              ${(j.job_type === 'ROAD_PICKUP' || j.job_type === 'ROAD_ROUNDTRIP') && !j.pickup_leg_done ? `<button class="secondary" style="background:#fef3c7;color:#92400e;border-color:#f59e0b;font-weight:800;" onclick="stageJobToBackroomFromOps(${j.id})">🚚 Picked Up → Backroom</button>` : ''}
               <button class="secondary" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7;" onclick="importScheduleJobToIntake(${j.id})">↳ Lock &amp; Prep</button>
               <a class="secondary" href="/schedule">📅 Calendar</a>
             </div>
@@ -574,8 +629,80 @@ async function setCustomBinderSheet() {
   loadState(false);
 }
 
+function localCalDraftKey() {
+  return `webers_cal_draft_${STATE.selected_date || STATE.today || 'today'}`;
+}
+
+function saveCalDraftLocalAndRemote() {
+  const jacket = document.getElementById('calJacket')?.value || 'Short Jacket';
+  const maxPsi = parseInt(document.getElementById('calMaxPsi')?.value || '4000', 10);
+  const permVal = document.getElementById('calFinalPerm')?.value ?? '0';
+  const values = {};
+  LADDER.forEach(s => {
+    if (String(s.actual ?? '').trim() !== '') values[String(s.pressure_psi)] = String(s.actual).trim();
+  });
+  const payload = {
+    test_date: STATE.selected_date || STATE.today,
+    jacket_type: jacket,
+    max_target_psi: maxPsi,
+    values,
+    permanent_cc: String(permVal),
+    device_id: DEVICE_ID,
+  };
+  try { localStorage.setItem(localCalDraftKey(), JSON.stringify(payload)); } catch (_) {}
+  clearTimeout(CAL_DRAFT_TIMER);
+  CAL_DRAFT_TIMER = setTimeout(() => {
+    fetch('/api/ops/cal-draft', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+  }, 320);
+}
+
+function onCalJacketOrMaxChange() {
+  const prevVals = {};
+  LADDER.forEach(s => { if (String(s.actual ?? '').trim() !== '') prevVals[String(s.pressure_psi)] = s.actual; });
+  buildCalibrationLadder(prevVals);
+  saveCalDraftLocalAndRemote();
+}
+
+function onCalStepInput(idx, val) {
+  if (!LADDER[idx]) return;
+  LADDER[idx].actual = val;
+  updateSingleStepStatusDom(idx);
+  saveCalDraftLocalAndRemote();
+}
+
+function onCalPermInput() {
+  saveCalDraftLocalAndRemote();
+}
+
+function updateSingleStepStatusDom(i) {
+  const step = LADDER[i];
+  const stEl = document.getElementById('stepSt_' + i);
+  if (!step || !stEl) return;
+  const minP = (Math.ceil(step.expected_cc * 0.99 * 10) / 10).toFixed(1);
+  const maxP = (Math.floor(step.expected_cc * 1.01 * 10) / 10).toFixed(1);
+  const raw = String(step.actual ?? '').trim();
+  if (!raw || isNaN(parseFloat(raw))) {
+    stEl.innerHTML = `<small style="color:var(--muted);">${minP}–${maxP} cc</small>`;
+    return;
+  }
+  const actualNum = parseFloat(raw);
+  const dev = (((step.expected_cc - actualNum) / step.expected_cc) * 100).toFixed(2);
+  const ok = Math.abs(parseFloat(dev)) <= 1.0 || Math.abs(step.expected_cc - actualNum) <= 0.15;
+  stEl.innerHTML = `<span class="${ok ? 'pass' : 'fail'}">${ok ? '✓ PASS' : '⚠ OUT'} (${dev}%)</span>`;
+}
+
 function renderCalibrationControls() {
-  if (LAST_CAL_DATE !== STATE.selected_date) { LAST_CAL_DATE = STATE.selected_date; LADDER = []; }
+  const activeId = document.activeElement ? document.activeElement.id : '';
+  const userTypingCal = activeId.startsWith('stepIn_') || activeId === 'calFinalPerm' || activeId === 'calJacket' || activeId === 'calMaxPsi';
+
+  if (LAST_CAL_DATE !== STATE.selected_date) {
+    LAST_CAL_DATE = STATE.selected_date;
+    LADDER = [];
+  }
   const recCal = STATE.huddle?.recommended_cal_psi || 0;
   const recBadge = document.getElementById('calRecommendedBadge');
   recBadge.textContent = recCal ? `Queue Max: ${STATE.huddle.max_queued_test_psi}# → Calibrate to ${recCal} PSI` : '49 CFR §180.215 (±1.0%)';
@@ -590,25 +717,79 @@ function renderCalibrationControls() {
     const stepWord = idx === 0 ? 'step' : 'steps';
     return `<option value="${t.pressure_psi}" ${String(t.pressure_psi) === String(curMax) ? 'selected' : ''}>${t.pressure_psi} PSI (${idx + 1} ${stepWord} → ≤${allow})</option>`;
   }).join('');
-  if (!LADDER.length) buildCalibrationLadder();
 
+  // Apply remote/local draft if user is not actively typing in a calibration field
+  const remoteDraft = STATE.cal_draft && STATE.cal_draft.test_date === STATE.selected_date ? STATE.cal_draft : null;
+  if (!userTypingCal && remoteDraft && remoteDraft.updated_at && remoteDraft.updated_at !== LAST_APPLIED_DRAFT_TS && remoteDraft.device_id !== DEVICE_ID) {
+    LAST_APPLIED_DRAFT_TS = remoteDraft.updated_at;
+    if (remoteDraft.jacket_type && calJacketSel) calJacketSel.value = remoteDraft.jacket_type;
+    if (remoteDraft.max_target_psi && maxSel) maxSel.value = String(remoteDraft.max_target_psi);
+    buildCalibrationLadder(remoteDraft.values || {});
+    const permIn = document.getElementById('calFinalPerm');
+    if (permIn && remoteDraft.permanent_cc !== undefined) permIn.value = remoteDraft.permanent_cc;
+    if (Object.keys(remoteDraft.values || {}).length > 0) {
+      CAL_FORCE_EXPANDED = true;
+      updateCalCollapseUI();
+    }
+  } else if (!LADDER.length) {
+    let seedVals = {};
+    if (remoteDraft && Object.keys(remoteDraft.values || {}).length > 0) {
+      if (remoteDraft.jacket_type && calJacketSel) calJacketSel.value = remoteDraft.jacket_type;
+      if (remoteDraft.max_target_psi && maxSel) maxSel.value = String(remoteDraft.max_target_psi);
+      seedVals = remoteDraft.values || {};
+    } else {
+      try {
+        const loc = JSON.parse(localStorage.getItem(localCalDraftKey()) || 'null');
+        if (loc && loc.values && Object.keys(loc.values).length > 0) {
+          if (loc.jacket_type && calJacketSel) calJacketSel.value = loc.jacket_type;
+          if (loc.max_target_psi && maxSel) maxSel.value = String(loc.max_target_psi);
+          seedVals = loc.values;
+        }
+      } catch (_) {}
+    }
+    buildCalibrationLadder(seedVals);
+  }
+
+  const canDeleteCal = !window.CURRENT_USER || ['OWNER', 'SYSTEM_ADMIN'].includes(window.CURRENT_USER.role);
+  const seenRunIds = new Set();
   document.getElementById('calTable').innerHTML = STATE.verifications.length
-    ? STATE.verifications.map(v => `
+    ? STATE.verifications.map(v => {
+        const firstOfRun = v.run_id && !seenRunIds.has(v.run_id);
+        if (v.run_id) seenRunIds.add(v.run_id);
+        const safeRunId = String(v.run_id || '').replace(/'/g, "\\'");
+        const delBtn = (canDeleteCal && firstOfRun)
+          ? ` <button type="button" class="secondary" title="Delete this calibration run" style="padding:1px 6px;font-size:0.7rem;color:#b91c1c;margin-left:5px;" onclick="deleteCalibrationRun('${safeRunId}', '${escHtml(v.jacket_type)}', '${escHtml(v.test_time)}')">✕</button>`
+          : '';
+        return `
       <tr>
         <td>${escHtml(v.test_time)}</td><td>${escHtml(v.jacket_type)}</td><td><strong>${v.target_pressure_psi}</strong></td>
         <td>${v.expected_cc}</td><td>${v.actual_total_cc}</td><td>${v.permanent_cc}</td>
         <td>${v.percent_deviation}%</td><td>${escHtml(v.logged_by || 'RP')}</td>
-        <td class="${v.passed ? 'pass' : 'fail'}">${v.passed ? 'PASS' : 'FAIL'}</td>
-      </tr>`).join('')
+        <td style="white-space:nowrap;"><span class="${v.passed ? 'pass' : 'fail'}">${v.passed ? 'PASS' : 'FAIL'}</span>${delBtn}</td>
+      </tr>`;
+      }).join('')
     : '<tr><td colspan="9">No calibrations logged for this date yet.</td></tr>';
 }
 
-function buildCalibrationLadder() {
+async function deleteCalibrationRun(runId, jacket, timeLbl) {
+  if (!runId) return;
+  if (!confirm(`Delete the ${jacket} calibration run (${timeLbl}) from this date's DOT verification log?`)) return;
+  const res = await fetch(`/api/verifications/run/${encodeURIComponent(runId)}`, { method: 'DELETE' });
+  if (!res.ok) { alert((await res.json()).detail || 'Could not delete calibration run.'); return; }
+  await loadState(true);
+  if (typeof window.syncAuthAndRoleUI === 'function') window.syncAuthAndRoleUI(window.CURRENT_USER, false);
+}
+
+function buildCalibrationLadder(preserveValues = {}) {
   const jacket = document.getElementById('calJacket').value;
   const maxSel = document.getElementById('calMaxPsi');
-  if (jacket === 'Short Jacket' && !LADDER.length && maxSel.querySelector('option[value="3000"]')) maxSel.value = '3000';
+  if (jacket === 'Short Jacket' && !LADDER.length && !Object.keys(preserveValues || {}).length && maxSel.querySelector('option[value="3000"]')) {
+    maxSel.value = '3000';
+  }
   const maxPsi = parseInt(maxSel.value || '4000', 10);
-  LADDER = STATE.calibration_targets.filter(t => t.pressure_psi <= maxPsi).map(t => ({ ...t, actual: '', locked: false }));
+  LADDER = STATE.calibration_targets
+    .filter(t => t.pressure_psi <= maxPsi)
+    .map(t => ({ ...t, actual: preserveValues[String(t.pressure_psi)] ?? '', locked: false }));
   ACTIVE_STEP = 0;
   renderLadder(false);
 }
@@ -617,79 +798,135 @@ function renderLadder(autoFocusActive = false) {
   document.getElementById('ladderSteps').innerHTML = LADDER.map((step, i) => {
     const minP = (Math.ceil(step.expected_cc * 0.99 * 10) / 10).toFixed(1);
     const maxP = (Math.floor(step.expected_cc * 1.01 * 10) / 10).toFixed(1);
-    const isActive = i === ACTIVE_STEP, isLocked = i > ACTIVE_STEP;
     let statusHtml = `<small style="color:var(--muted);">${minP}–${maxP} cc</small>`;
-    if (step.actual !== '') {
-      const dev = (((step.expected_cc - parseFloat(step.actual)) / step.expected_cc) * 100).toFixed(2);
-      const ok = Math.abs(parseFloat(dev)) <= 1.0;
+    if (String(step.actual ?? '').trim() !== '' && !isNaN(parseFloat(step.actual))) {
+      const actualNum = parseFloat(step.actual);
+      const dev = (((step.expected_cc - actualNum) / step.expected_cc) * 100).toFixed(2);
+      const ok = Math.abs(parseFloat(dev)) <= 1.0 || Math.abs(step.expected_cc - actualNum) <= 0.15;
       statusHtml = `<span class="${ok ? 'pass' : 'fail'}">${ok ? '✓ PASS' : '⚠ OUT'} (${dev}%)</span>`;
     }
     return `
-      <div class="ladder-row ${isActive ? 'active-step' : ''} ${isLocked ? 'locked-step' : ''}">
+      <div class="ladder-row ${i === ACTIVE_STEP ? 'active-step' : ''}">
         <div><strong>Step ${i + 1}: ${step.pressure_psi}#</strong></div>
         <div>Chart: <strong>${step.expected_cc} cc</strong></div>
         <div>
-          <input type="number" step="0.1" id="stepIn_${i}" value="${step.actual}" placeholder="Burette cc"
-            ${isLocked || step.locked ? 'disabled' : ''}
-            oninput="LADDER[${i}].actual=this.value"
-            onkeydown="if(event.key==='Enter'){event.preventDefault();lockLadderStep(${i});}" />
+          <input type="number" step="0.1" inputmode="decimal" id="stepIn_${i}" value="${escHtml(step.actual)}" placeholder="Burette cc"
+            onfocus="ACTIVE_STEP=${i}"
+            oninput="onCalStepInput(${i}, this.value)"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();advanceLadderFocus(${i});}" />
         </div>
-        <div>
-          ${isActive && !step.locked
-            ? `<button class="secondary" style="width:100%;background:var(--green);color:#fff;border:none;" onclick="lockLadderStep(${i})">Lock ↓</button>`
-            : statusHtml}
-        </div>
+        <div id="stepSt_${i}">${statusHtml}</div>
       </div>`;
   }).join('');
 
-  const allDone = LADDER.length > 0 && LADDER.every(s => s.locked);
-  document.getElementById('releaseSection').hidden = !allDone;
+  const rel = document.getElementById('releaseSection');
+  if (rel) rel.hidden = false;
   if (autoFocusActive) {
     setTimeout(() => {
-      const el = allDone ? document.getElementById('calFinalPerm') : document.getElementById('stepIn_' + ACTIVE_STEP);
-      if (el) { el.focus(); if (allDone) el.select(); }
+      const el = document.getElementById('stepIn_' + ACTIVE_STEP);
+      if (el) el.focus();
     }, 30);
   }
 }
 
-function lockLadderStep(idx) {
-  const step = LADDER[idx];
-  if (step.actual === '' || isNaN(parseFloat(step.actual))) { alert('Enter burette reading first.'); return; }
-  const dev = Math.abs(((step.expected_cc - parseFloat(step.actual)) / step.expected_cc) * 100);
-  if (dev > 1.0) {
-    playShopTone('condemn');
-    if (!confirm(`Deviates by ${dev.toFixed(2)}% (>1.0% limit). Record anyway?`)) return;
+function advanceLadderFocus(idx) {
+  playShopTone('step');
+  if (idx + 1 < LADDER.length) {
+    ACTIVE_STEP = idx + 1;
+    const nxt = document.getElementById('stepIn_' + ACTIVE_STEP);
+    if (nxt) { nxt.focus(); nxt.select(); }
   } else {
-    playShopTone('step');
+    const perm = document.getElementById('calFinalPerm');
+    if (perm) { perm.focus(); perm.select(); }
   }
-  step.locked = true;
-  if (idx + 1 < LADDER.length) ACTIVE_STEP = idx + 1;
-  renderLadder(true);
 }
 
-async function submitCalibrationLadder() {
+function lockLadderStep(idx) {
+  advanceLadderFocus(idx);
+}
+
+async function submitCalibrationLadder(forcePass = false) {
+  const filledSteps = LADDER
+    .map((s, idx) => {
+      const domVal = document.getElementById('stepIn_' + idx)?.value ?? s.actual;
+      return { ...s, actual: String(domVal ?? '').trim() };
+    })
+    .filter(s => s.actual !== '' && !isNaN(parseFloat(s.actual)) && parseFloat(s.actual) > 0);
+
+  const saveNotice = document.getElementById('calSaveNotice');
+  if (!filledSteps.length) {
+    if (saveNotice) {
+      saveNotice.className = 'notice bad';
+      saveNotice.textContent = '⚠️ Enter at least one burette calibration reading (cc) above before clicking Save.';
+      saveNotice.hidden = false;
+    }
+    document.getElementById('stepIn_0')?.focus();
+    return;
+  }
+
+  const permVal = parseFloat(document.getElementById('calFinalPerm')?.value || '0') || 0;
+  const maxExp = Math.max(...filledSteps.map(s => Number(s.expected_cc || 0)));
+  const permLimit = Math.max(0.15, Number((maxExp * 0.01).toFixed(2)));
+  const outSteps = filledSteps.filter(s => {
+    const a = parseFloat(s.actual);
+    const dev = Math.abs(((s.expected_cc - a) / s.expected_cc) * 100);
+    return dev > 1.0 && Math.abs(s.expected_cc - a) > 0.15;
+  });
+
+  if (!forcePass && (outSteps.length > 0 || Math.abs(permVal) > permLimit)) {
+    playShopTone('condemn');
+    const warnMsg = outSteps.length
+      ? `Step ${outSteps[0].pressure_psi} PSI deviates from chart (${outSteps[0].actual} cc vs ${outSteps[0].expected_cc} cc — >1.0%).\n\nClick OK to force-certify anyway, or Cancel to re-check burette zero.`
+      : `Permanent expansion (${permVal} cc) exceeds ${permLimit} cc.\n\nClick OK to force-certify anyway, or Cancel to re-bleed to zero.`;
+    if (!confirm(warnMsg)) return;
+    forcePass = true;
+  }
+
   const btn = document.getElementById('btnCertCal');
+  const jacketChosen = document.getElementById('calJacket').value;
+  const maxFilledPsi = Math.max(...filledSteps.map(s => s.pressure_psi));
   btn.disabled = true;
+  const origTxt = btn.textContent;
+  btn.textContent = '⏳ Saving Calibration...';
   try {
     const res = await fetch('/api/verify-ladder', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         test_date: STATE.selected_date,
-        jacket_type: document.getElementById('calJacket').value,
-        max_target_psi: parseInt(document.getElementById('calMaxPsi').value, 10),
-        steps: LADDER.map(s => ({ pressure_psi: s.pressure_psi, actual_total_cc: parseFloat(s.actual) })),
-        permanent_cc: parseFloat(document.getElementById('calFinalPerm').value || '0'),
+        jacket_type: jacketChosen,
+        max_target_psi: maxFilledPsi,
+        steps: filledSteps.map(s => ({ pressure_psi: s.pressure_psi, actual_total_cc: parseFloat(s.actual) })),
+        permanent_cc: permVal,
         logged_by: getActiveCrew(),
+        force_pass: forcePass,
       }),
     });
     const data = await res.json();
-    if (!res.ok) { alert(data.detail); return; }
+    if (!res.ok) {
+      if (saveNotice) {
+        saveNotice.className = 'notice bad';
+        saveNotice.textContent = '⛔ ' + (data.detail || 'Could not save calibration.');
+        saveNotice.hidden = false;
+      } else {
+        alert(data.detail || 'Could not save calibration.');
+      }
+      return;
+    }
+    try { localStorage.removeItem(localCalDraftKey()); } catch (_) {}
     CAL_FORCE_EXPANDED = false;
     LADDER = [];
     playShopTone(data.passed ? 'pass' : 'condemn');
-    alert(data.passed ? `CERTIFIED ≤ ${data.max_allowed_test_psi} PSI (RP)!` : 'Calibration FAILED — check burette zero.');
+    if (saveNotice) {
+      saveNotice.className = data.passed ? 'notice' : 'notice bad';
+      saveNotice.textContent = data.passed
+        ? `✅ SAVED! ${jacketChosen} Certified ≤ ${data.max_allowed_test_psi} PSI (${data.steps_saved || filledSteps.length} step(s) logged).`
+        : '⚠️ Calibration logged as FAILED — check burette zero and re-run.';
+      saveNotice.hidden = false;
+    }
     await loadState(true);
+    if (typeof window.syncAuthAndRoleUI === 'function') window.syncAuthAndRoleUI(window.CURRENT_USER, false);
   } finally {
     btn.disabled = false;
+    btn.textContent = origTxt;
   }
 }

@@ -78,8 +78,8 @@
           crewLockCard.className = 'crew-cal-lock-box';
           calForm.insertAdjacentElement('beforebegin', crewLockCard);
         }
-        const bothOk = DAY_DATA?.cal_status?.both_calibrated;
-        crewLockCard.hidden = Boolean(bothOk);
+        const anyOk = Boolean(DAY_DATA?.cal_status?.short_calibrated || DAY_DATA?.cal_status?.tall_calibrated);
+        crewLockCard.hidden = anyOk;
         crewLockCard.innerHTML = `
           <div>
             <strong style="color:#92400e;font-size:0.94rem;">🔒 Owner Calibration Gate (Signed in as ${esc(u.name)})</strong>
@@ -171,7 +171,8 @@
     if (!ws || !DAY_DATA) return;
     const selDate = document.getElementById('globalDate')?.value || DAY_DATA.today;
     const cs = DAY_DATA.cal_status || {};
-    if (selDate !== DAY_DATA.today || cs.both_calibrated) {
+    const anyCalibrated = Boolean(cs.short_calibrated || cs.tall_calibrated);
+    if (selDate !== DAY_DATA.today || anyCalibrated) {
       if (bar) bar.remove();
       return;
     }
