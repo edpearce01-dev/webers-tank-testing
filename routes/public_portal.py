@@ -54,21 +54,22 @@ def get_public_turnaround(bottles: int = 4):
 
 
 @router.get("/api/public/track")
-def track_public_ticket(ticket: str = "", phone_last4: str = ""):
+def track_public_ticket(request: Request, ticket: str = "", phone_last4: str = ""):
     raw_t = re.sub(r"[^0-9]", "", (ticket or "").upper())
     last4 = re.sub(r"\D", "", phone_last4 or "")[-4:]
     if not raw_t:
         raise HTTPException(400, "Enter your Ticket # (e.g. BR-0001).")
     did = int(raw_t)
+    is_staff = bool(get_current_session_user(request))
     conn = get_conn()
     d = conn.execute("SELECT * FROM dropoffs WHERE id=?;", (did,)).fetchone()
     if not d:
         conn.close()
         raise HTTPException(404, "Ticket not found. Check your BR-XXXX number or call 724-266-8008.")
     stored_digits = re.sub(r"\D", "", d["customer_phone"] or "")
-    if stored_digits and len(last4) == 4 and not stored_digits.endswith(last4):
+    if not is_staff and len(stored_digits) >= 4 and (len(last4) != 4 or not stored_digits.endswith(last4)):
         conn.close()
-        raise HTTPException(403, "Last 4 digits of phone number did not match this ticket.")
+        raise HTTPException(403, "Enter the matching last 4 digits of the phone number on this ticket.")
 
     recs = [
         dict(r)
@@ -123,11 +124,12 @@ def track_public_ticket(ticket: str = "", phone_last4: str = ""):
 
 
 @router.get("/api/public/receipt/{ticket_no}.pdf")
-def download_public_dropoff_receipt(ticket_no: str, p: str = ""):
+def download_public_dropoff_receipt(ticket_no: str, request: Request, p: str = ""):
     raw_num = re.sub(r"[^0-9]", "", (ticket_no or "").upper())
     if not raw_num:
         raise HTTPException(400, "Invalid ticket number.")
     did = int(raw_num)
+    is_staff = bool(get_current_session_user(request))
     conn = get_conn()
     d = conn.execute("SELECT * FROM dropoffs WHERE id=?;", (did,)).fetchone()
     s_map = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings;").fetchall()}
@@ -136,7 +138,7 @@ def download_public_dropoff_receipt(ticket_no: str, p: str = ""):
         raise HTTPException(404, "Ticket not found.")
     stored_digits = re.sub(r"\D", "", d["customer_phone"] or "")
     req_last4 = re.sub(r"\D", "", p or "")[-4:]
-    if stored_digits and len(req_last4) == 4 and not stored_digits.endswith(req_last4):
+    if not is_staff and len(stored_digits) >= 4 and (len(req_last4) != 4 or not stored_digits.endswith(req_last4)):
         raise HTTPException(403, "Phone verification mismatch.")
 
     t_code = f"BR-{did:04d}"
@@ -389,19 +391,43 @@ def get_public_operating_hours():
 
 
 @router.get("/api/public/iphone-sms-bridge")
-def iphone_shortcut_pull_sms(key: str = ""):
+def iphone_shortcut_pull_sms(key: str = "", auto_ack: bool = True):
     conn = get_conn()
     saved_k = conn.execute("SELECT value FROM settings WHERE key='sms_shortcut_key';").fetchone()
     if not saved_k or not key or key.strip() != saved_k["value"]:
         conn.close()
         raise HTTPException(403, "Invalid Shop iPhone Shortcut key.")
     rows = [dict(r) for r in conn.execute("SELECT id, customer_name, phone, message FROM sms_outbox WHERE status='PENDING' ORDER BY id ASC LIMIT 10;").fetchall()]
-    if rows:
+    if rows and auto_ack:
         ts = now_eastern().strftime("%I:%M %p")
         conn.executemany("UPDATE sms_outbox SET status='SENT', sent_at=? WHERE id=?;", [(ts, r["id"]) for r in rows])
         conn.commit()
     conn.close()
     return {"messages": rows}
+
+
+@router.api_route("/api/public/iphone-sms-bridge/ack", methods=["GET", "POST"])
+async def iphone_shortcut_ack_sms(request: Request, key: str = "", ids: str = ""):
+    if not ids and request.method == "POST":
+        try:
+            body = await request.json()
+            key = key or str(body.get("key") or "")
+            raw_ids = body.get("ids") or []
+            ids = ",".join(str(x) for x in raw_ids) if isinstance(raw_ids, list) else str(raw_ids)
+        except Exception:
+            pass
+    conn = get_conn()
+    saved_k = conn.execute("SELECT value FROM settings WHERE key='sms_shortcut_key';").fetchone()
+    if not saved_k or not key or key.strip() != saved_k["value"]:
+        conn.close()
+        raise HTTPException(403, "Invalid Shop iPhone Shortcut key.")
+    parsed_ids = [int(x) for x in re.findall(r"\d+", ids or "")]
+    if parsed_ids:
+        ts = now_eastern().strftime("%I:%M %p")
+        conn.executemany("UPDATE sms_outbox SET status='SENT', sent_at=? WHERE id=?;", [(ts, i) for i in parsed_ids])
+        conn.commit()
+    conn.close()
+    return {"acked": len(parsed_ids)}
 
 
 @router.get("/api/public/merch")

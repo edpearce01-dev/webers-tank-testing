@@ -1033,17 +1033,18 @@ def update_batch_stage(payload: BatchStageInput):
     elif stage == "PICKED_UP":
         who = (payload.picked_up_by or payload.customer_name).strip()[:60]
         ts = now_eastern().strftime("%Y-%m-%d %I:%M %p")
+        cutoff_date = payload.work_date or today_eastern()
         conn.execute(
             f"UPDATE cylinder_records SET shop_stage='PICKED_UP', valve_reinstalled=1, holding_zone='PICKED_UP', picked_up_by=?, picked_up_at=?, synced=0 {where_sql};",
             tuple([who, ts] + params),
         )
         conn.execute(
-            "UPDATE dropoffs SET status='ARCHIVED', synced=0 WHERE customer_name=? AND status!='ARCHIVED';",
-            (payload.customer_name,),
+            "UPDATE dropoffs SET status='ARCHIVED', synced=0 WHERE customer_name=? AND work_date <= ? AND status!='ARCHIVED';",
+            (payload.customer_name, cutoff_date),
         )
         conn.execute(
-            "UPDATE schedule_jobs SET status='COMPLETED' WHERE customer_name=? AND status!='COMPLETED';",
-            (payload.customer_name,),
+            "UPDATE schedule_jobs SET status='COMPLETED', synced=0 WHERE customer_name=? AND scheduled_date <= ? AND status!='COMPLETED';",
+            (payload.customer_name, cutoff_date),
         )
     else:
         conn.execute(
@@ -1384,7 +1385,7 @@ def edit_cylinder_record(record_id: int, payload: RecordEditInput):
     phys_size = f"{dia}x{length}".strip("x") if (dia or length) else ""
     spec_clean = payload.dot_spec.strip().upper().replace("SP-", "SP")
     gas_clean = normalize_gas_service(payload.gas_service)
-    cust_clean = payload.customer_name.strip()
+    cust_clean = payload.customer_name.strip() or "Walk-In"
     phone_clean = clean_phone(payload.customer_phone) or (rec["customer_phone"] or "")
     upsert_rolodex_from_activity(conn, cust_clean, phone_clean)
 
@@ -1400,6 +1401,7 @@ def edit_cylinder_record(record_id: int, payload: RecordEditInput):
     vis_pass = 1 if all(c == "OK" for c in checks) else 0
     vis_disp = "OK" if vis_pass else "SC"
 
+    eff_ree = None if (spec_clean in ("3A", "3AA", "3AL") and payload.ree_limit == 7.2) else payload.ree_limit
     elastic = rec["elastic_cc"]
     pct_perm = rec["percent_permanent"]
     hydro_disp = rec["hydro_disposition"]
@@ -1409,7 +1411,7 @@ def edit_cylinder_record(record_id: int, payload: RecordEditInput):
             perm_v = payload.permanent_cc or 0.0
             elastic = round(payload.total_cc - perm_v, 2)
             pct_perm = round((perm_v / payload.total_cc) * 100.0, 1)
-            ree_failed = payload.ree_limit is not None and elastic > float(payload.ree_limit)
+            ree_failed = eff_ree is not None and elastic > float(eff_ree)
             perm_failed = pct_perm > payload.max_percent_perm
             hydro_disp = "D" if (not vis_pass or ree_failed or perm_failed) else "A"
         else:
@@ -1422,6 +1424,8 @@ def edit_cylinder_record(record_id: int, payload: RecordEditInput):
     clean = 1 if payload.addon_clean else 0
     rel_chg = "Yes" if (payload.relief_valve_changed == "Yes" or bdisc) else "No"
     c_act = payload.condemn_action.strip().upper()
+    keep_op_name = rec["operator_name"] or "Ryan Pearce"
+    keep_op_init = rec["operator_initials"] or "RP"
 
     conn.execute(
         """UPDATE cylinder_records SET
@@ -1435,7 +1439,7 @@ def edit_cylinder_record(record_id: int, payload: RecordEditInput):
            chk_corrosion=?, chk_dents_dings=?, chk_cuts_gouges=?, chk_leaks=?,
            chk_fire_damage=?, chk_bulges=?, chk_neck_defects=?,
            visual_pass=?, hydro_disposition=?, visual_disposition=?,
-           operator_name='Ryan Pearce', operator_initials='RP', notes=?, synced=0
+           operator_name=?, operator_initials=?, notes=?, synced=0
            WHERE id=?;""",
         (
             cust_clean, phone_clean, pri, rfee,
@@ -1443,12 +1447,12 @@ def edit_cylinder_record(record_id: int, payload: RecordEditInput):
             payload.serial_number.strip().upper().replace(" ", ""),
             vtag, reinst, rin_marked, rin_type, (1 if (payload.star_10yr and spec_clean in ("3A", "3AA")) else 0), payload.shop_stage or rec["shop_stage"] or "IN_SHOP",
             payload.mfg_id.strip().upper(), payload.mfg_date.strip(), gas_clean,
-            dia, length, phys_size, spec_clean, payload.service_psi, payload.test_psi, payload.ree_limit,
+            dia, length, phys_size, spec_clean, payload.service_psi, payload.test_psi, eff_ree,
             payload.total_cc, payload.permanent_cc, elastic, pct_perm,
             payload.coating_condition, rel_chg, oring, bdisc, clean, c_act,
             payload.chk_corrosion, payload.chk_dents_dings, payload.chk_cuts_gouges, payload.chk_leaks,
             payload.chk_fire_damage, payload.chk_bulges, payload.chk_neck_defects,
-            vis_pass, hydro_disp, vis_disp, payload.notes, record_id,
+            vis_pass, hydro_disp, vis_disp, keep_op_name, keep_op_init, payload.notes, record_id,
         ),
     )
     bump_db_version(conn)

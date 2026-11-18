@@ -1,0 +1,160 @@
+/* Backroad Homestead & Sauce Stand — Warm Apothecary, Hive & Coop Theme */
+:root {
+  --hs-bg: #faf6ee;
+  --hs-bg-2: #f3ece0;
+  --hs-card: #ffffff;
+  --hs-border: #e4dccb;
+  --hs-border-strong: #cfc3ac;
+  --hs-ink: #1c1917;
+  --hs-soft: #57534e;
+  --hs-muted: #78716c;
+  --hs-pine: #1f3a2c;
+  --hs-pine-lt: #2d5440;
+  --hs-honey: #b45309;
+  --hs-honey-lt: #d97706;
+  --hs-amber-bg: #fef3c7;
+}
+* { box-sizing: border-box; scroll-behavior: smooth; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at 50% 0%, #fffdf9 0%, var(--hs-bg) 65%, var(--hs-bg-2) 100%);
+  color: var(--hs-ink);
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.hs-wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+
+/* Sticky Frosted Linen Navbar */
+.hs-nav {
+  position: sticky; top: 0; z-index: 60;
+  background: rgba(250, 246, 238, 0.92);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--hs-border);
+  padding: 12px 0;
+}
+.hs-nav-in { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+.hs-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--hs-ink); }
+.hs-seal {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: var(--hs-pine); color: #fde68a;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(31, 58, 44, 0.18);
+}
+.hs-brand strong {
+  display: block; font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.24rem; font-weight: 800; color: var(--hs-pine); line-height: 1.05;
+}
+.hs-brand small { display: block; font-size: 0.72rem; font-weight: 700; color: var(--hs-honey); letter-spacing: 0.04em; text-transform: uppercase; }
+
+.btn-hs {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--hs-pine); color: #ffffff; border: none; border-radius: 999px;
+  padding: 10px 20px; font-weight: 700; font-size: 0.88rem; cursor: pointer; text-decoration: none;
+  box-shadow: 0 6px 16px -4px rgba(31, 58, 44, 0.3);
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+.btn-hs:hover:not(:disabled) { background: var(--hs-pine-lt); transform: translateY(-1px); }
+.btn-hs:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-hs-honey { background: var(--hs-honey-lt); box-shadow: 0 6px 16px -4px rgba(180, 83, 9, 0.32); }
+.btn-hs-honey:hover:not(:disabled) { background: var(--hs-honey); }
+
+.btn-hs-ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background: #ffffff; color: var(--hs-ink); border: 1.5px solid var(--hs-border-strong);
+  border-radius: 999px; padding: 8px 15px; font-weight: 700; font-size: 0.82rem;
+  cursor: pointer; text-decoration: none; transition: border-color 0.14s ease, color 0.14s ease;
+}
+.btn-hs-ghost:hover { border-color: var(--hs-honey); color: var(--hs-honey); }
+
+/* Warm Farmstand Hero */
+.hs-hero {
+  padding: 46px 0 34px;
+  border-bottom: 1px solid var(--hs-border);
+  text-align: center;
+}
+.hs-eyebrow {
+  display: inline-block; padding: 4px 12px; border-radius: 999px;
+  background: var(--hs-amber-bg); border: 1px solid #fcd34d;
+  color: #92400e; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.hs-hero h1 {
+  margin: 12px auto 10px; max-width: 780px;
+  font-family: 'Fraunces', Georgia, serif; font-size: clamp(2.1rem, 5vw, 3.3rem);
+  font-weight: 800; line-height: 1.08; color: var(--hs-pine);
+}
+.hs-hero p { margin: 0 auto 18px; max-width: 650px; color: var(--hs-soft); font-size: 0.98rem; }
+
+/* Category Filter Pills */
+.hs-cats {
+  display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 26px 0 22px;
+}
+.hs-cat-pill {
+  padding: 8px 16px; border-radius: 999px; border: 1.5px solid var(--hs-border-strong);
+  background: #ffffff; color: var(--hs-soft); font-weight: 700; font-size: 0.84rem; cursor: pointer;
+}
+.hs-cat-pill.active {
+  background: var(--hs-pine); color: #ffffff; border-color: var(--hs-pine);
+}
+
+/* Product Cards Grid */
+.hs-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(295px, 1fr)); gap: 18px; padding-bottom: 44px;
+}
+.hs-card {
+  background: var(--hs-card); border: 1px solid var(--hs-border); border-radius: 18px;
+  padding: 20px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px;
+  box-shadow: 0 6px 20px -8px rgba(28, 25, 23, 0.08);
+  transition: transform 0.14s ease, border-color 0.15s ease;
+}
+.hs-card:hover { transform: translateY(-2px); border-color: var(--hs-border-strong); }
+.hs-card.sold-out { opacity: 0.68; background: #f8f5ef; }
+
+.hs-top-tags { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hs-cat-tag { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--hs-honey); }
+.hs-stock-pill {
+  font-size: 0.71rem; font-weight: 800; padding: 3px 9px; border-radius: 999px;
+  background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0;
+}
+.hs-stock-pill.low { background: #fffbeb; color: #92400e; border-color: #fcd34d; }
+.hs-stock-pill.out { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+
+.hs-card h3 { margin: 8px 0 3px; font-family: 'Fraunces', Georgia, serif; font-size: 1.24rem; color: var(--hs-ink); }
+.hs-unit { font-size: 0.8rem; font-weight: 700; color: var(--hs-muted); }
+.hs-desc { margin: 8px 0 0; font-size: 0.88rem; color: var(--hs-soft); }
+
+.hs-card-foot {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding-top: 12px; border-top: 1px solid var(--hs-border);
+}
+.hs-price { font-family: 'Fraunces', Georgia, serif; font-size: 1.38rem; font-weight: 800; color: var(--hs-pine); }
+
+/* Cross-Promo Banner back to /bbq */
+.hs-bbq-banner {
+  background: #181310; color: #fafaf9; border: 2px solid #ea580c; border-radius: 18px;
+  padding: 24px 28px; margin-bottom: 48px;
+  display: flex; justify-content: space-between; align-items: center; gap: 18px; flex-wrap: wrap;
+}
+
+/* Modals & Inputs */
+.hs-modal-bg {
+  position: fixed; inset: 0; z-index: 90; background: rgba(28, 25, 23, 0.62);
+  backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 14px;
+}
+.hs-modal {
+  background: #ffffff; border: 1px solid var(--hs-border-strong); border-radius: 20px;
+  width: 100%; max-width: 780px; max-height: 90vh; overflow-y: auto; padding: 22px; color: var(--hs-ink);
+  box-shadow: 0 24px 48px rgba(28, 25, 23, 0.24);
+}
+.hs-panel { background: #faf6ee; border: 1px solid var(--hs-border); border-radius: 14px; padding: 16px; }
+.hs-modal label { display: block; font-size: 0.77rem; font-weight: 700; color: var(--hs-soft); margin-bottom: 4px; }
+.hs-modal input, .hs-modal select, .hs-modal textarea {
+  width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--hs-border-strong);
+  background: #ffffff; color: var(--hs-ink); font-family: inherit; font-size: 0.92rem;
+}
+.hs-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 640px) { .hs-grid-2 { grid-template-columns: 1fr; } }
+.hs-tabs { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--hs-border); }

@@ -8,3 +8,5 @@ __pycache__/
 *.db-shm
 _ai_context/
 _local_preview.db*
+bbq_homestead.db*
+_local_preview_bbq.db*

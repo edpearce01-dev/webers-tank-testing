@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#0b0a09" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Plus+Jakarta+Sans:ital,wght@0,500;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/bbq.css?v=15.1" />
+  <title>Wood-Fired BBQ &amp; Pit Catering</title>
+</head>
+<body>
+  <header class="pit-nav">
+    <div class="pit-wrap pit-nav-in">
+      <a href="/bbq" class="pit-brand">
+        <div class="pit-emblem" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2c1.5 2.5 1.5 4.5 0 7-1.5-2.5-1.5-4.5 0-7z"/><path d="M5 12h14a7 7 0 01-14 0z"/><path d="M8 19l-2 3M16 19l2 3M12 19v3"/>
+          </svg>
+        </div>
+        <div>
+          <span class="pit-brand-t" id="navBrandTop">BACKROAD</span>
+          <span class="pit-brand-b" id="navBrandBot">PIT &amp; SMOKE</span>
+        </div>
+      </a>
+      <nav class="pit-links">
+        <a href="#menu">Catering Menu</a>
+        <a href="#club">Club &amp; Event Sign-Up</a>
+        <a href="#rig">Book The Rig</a>
+        <a href="/homestead" style="color:#fbbf24;">Homestead Stand ↗</a>
+      </nav>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button type="button" class="btn-pit-ghost" id="btnPitHqTop" onclick="openPitBossHq()" hidden>Pit Boss HQ</button>
+        <button type="button" class="btn-pit" onclick="openCartModal()">Order <span id="cartCountChip">(0)</span></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- CINEMATIC LOOPING PIT VIDEO HERO -->
+  <section class="pit-hero">
+    <video id="pitHeroVideo" autoplay muted loop playsinline poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='500'%3E%3Crect width='100%25' height='100%25' fill='%23120c08'/%3E%3C/svg%3E">
+      <source id="pitHeroVideoSrc" src="https://assets.mixkit.co/videos/preview/mixkit-barbecue-meat-cooking-on-the-grill-with-fire-43235-large.mp4" type="video/mp4" />
+    </video>
+    <div class="pit-hero-vignette"></div>
+    <canvas id="emberCanvas"></canvas>
+    <div class="pit-hero-content">
+      <span class="pit-eyebrow" id="heroEyebrow">SMOKERS • FRYERS • WARMERS • ON-SITE OR PARTY PANS</span>
+      <h1><div id="heroWhite">LOW &amp; SLOW</div><span id="heroOrange">WOOD-FIRED BBQ</span></h1>
+      <p id="heroLeadNote">Please allow at least 72 hours notice for smoked meat &amp; pan orders. Custom club events, stags &amp; private parties available.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <a href="#menu" class="btn-pit">Explore Catering Menu</a>
+        <a href="#rig" class="btn-pit-ghost">Request Trailer / Party Catering</a>
+        <a href="#club" class="btn-pit-ghost" id="heroClubBtn">Club Event Sign-Up</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACTIVE EVENT DROP BANNER (IF EVENT ACTIVE) -->
+  <section class="pit-wrap" id="activeEventBannerWrap" style="margin-top:26px;" hidden></section>
+
+  <!-- CATERING MENU (BIG RIG'S STYLE DARK + DASHED ORANGE HEADERS) -->
+  <section class="pit-sec" id="menu">
+    <div class="pit-wrap">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;border-bottom:1px solid #292524;padding-bottom:18px;">
+        <div>
+          <span class="pit-eyebrow" style="margin-bottom:4px;">FEED THE WHOLE CREW</span>
+          <h2 style="margin:0;font-family:'Barlow Condensed',sans-serif;font-size:2.7rem;text-transform:uppercase;line-height:1;">CATERING &amp; PARTY PAN MENU</h2>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <a id="topCallLink" href="tel:7242668008" class="btn-pit-ghost">Call / Text 724-266-8008</a>
+          <button type="button" class="btn-pit" onclick="openCartModal()">Review Order Pan</button>
+        </div>
+      </div>
+
+      <div id="pitMenuContainer"></div>
+
+      <!-- DEDICATED CROSS-LINK TO /homestead (KEEPS EGGS/HONEY/SYRUP OFF BBQ MENU) -->
+      <div class="homestead-callout">
+        <div style="max-width:650px;">
+          <span class="pit-eyebrow" style="margin-bottom:4px;">SMALL-BATCH BOTTLES, JARS &amp; COOP</span>
+          <h3 style="margin:0 0 6px;font-family:'Barlow Condensed',sans-serif;font-size:1.85rem;text-transform:uppercase;color:#fff;">Looking for Bottled House BBQ Sauces, Raw Honey, Maple Syrup, or Fresh Duck &amp; Chicken Eggs?</h3>
+          <p style="margin:0;color:#d6d3d1;font-size:0.91rem;">Visit our separate Homestead Stand page to grab 16 oz bottles of our house sauces, local raw hive honey, wood-fired PA maple syrup, and fresh coop eggs.</p>
+        </div>
+        <a href="/homestead" class="btn-pit" style="background:#d97706;">Visit Homestead Stand →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CLUB EVENT "BRING A DISH, DESSERT, DRINKS OR SUPPLIES" LIVE BOARD + QR POSTER -->
+  <section class="pit-sec" id="club" style="background:#0f0d0c;border-top:1px solid #241f1c;border-bottom:1px solid #241f1c;">
+    <div class="pit-wrap">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;margin-bottom:20px;">
+        <div>
+          <span class="pit-eyebrow">CLUBS, HALLS, STAGS &amp; HOLIDAY PARTIES</span>
+          <h2 style="margin:0;font-family:'Barlow Condensed',sans-serif;font-size:2.35rem;text-transform:uppercase;" id="clubEventTitle">Club Event Dish &amp; Supply Sign-Up</h2>
+          <div id="clubEventMeta" style="color:var(--pit-muted);font-size:0.9rem;margin-top:4px;"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="clubPosterBtns"></div>
+      </div>
+
+      <div id="clubPitProvidingBox" class="pit-panel" style="margin-bottom:18px;border-left:4px solid var(--pit-orange);" hidden></div>
+
+      <div class="pit-grid-2">
+        <div class="pit-panel">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;">
+            <h3 style="margin:0;font-family:'Barlow Condensed',sans-serif;font-size:1.5rem;text-transform:uppercase;color:#fbbf24;">Supplies, Sides &amp; Desserts Needed</h3>
+            <button type="button" class="btn-pit-ghost" style="padding:5px 10px;font-size:0.76rem;" onclick="promptHostAddSupply()">+ Host Add Needed Item</button>
+          </div>
+          <div id="clubChecklistArea"></div>
+        </div>
+
+        <div class="pit-panel">
+          <h3 style="margin:0 0 10px;font-family:'Barlow Condensed',sans-serif;font-size:1.5rem;text-transform:uppercase;color:#fff;">Sign Up to Bring a Dish, Dessert, or Drinks</h3>
+          <p style="margin:0 0 14px;color:var(--pit-muted);font-size:0.86rem;">Bringing a crockpot side, dessert tray, or cooler of drinks to share with the club? Post it below so everyone sees the spread:</p>
+          <div class="pit-grid-2">
+            <div><label>Your Name *</label><input id="potName" placeholder="e.g. Eric Pearce" /></div>
+            <div><label>Category</label>
+              <select id="potCat">
+                <option value="Side Dish">Side Dish / Appetizer</option>
+                <option value="Dessert">Dessert / Sweets</option>
+                <option value="Drinks / Ice">Drinks / Cooler / Ice</option>
+                <option value="Supplies">Plates / Cups / Supplies</option>
+              </select>
+            </div>
+            <div style="grid-column:1/-1;"><label>What Are You Bringing? *</label><input id="potDish" placeholder="e.g. Cookie tray, Pepperoni rolls, 2 cases of Yuengling..." /></div>
+          </div>
+          <button type="button" class="btn-pit" style="width:100%;margin-top:12px;" onclick="submitOpenPotluckDish()">Post to Event Sign-Up Sheet</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BOOK THE TRAILER RIG / CUSTOM EVENT CATERING -->
+  <section class="pit-sec" id="rig">
+    <div class="pit-wrap">
+      <div class="pit-panel" style="max-width:820px;margin:0 auto;">
+        <span class="pit-eyebrow">SMOKERS • FRYERS • WARMERS • FULL TRAILER SETUP</span>
+        <h2 style="margin:0 0 6px;font-family:'Barlow Condensed',sans-serif;font-size:2.2rem;text-transform:uppercase;">Request Party Pans or Full Trailer Catering</h2>
+        <p style="margin:0 0 18px;color:var(--pit-muted);font-size:0.9rem;">Planning a club night, graduation, stag, work party, or holiday dinner? Tell us the date and headcount and we'll put a custom spread together.</p>
+        <div class="pit-grid-2">
+          <div><label>Your Name / Club Name *</label><input id="rigName" placeholder="Name or Club / Company" /></div>
+          <div><label>Cell Phone *</label><input id="rigPhone" type="tel" placeholder="724-555-0199" /></div>
+          <div><label>Event Date *</label><input type="date" id="rigDate" /></div>
+          <div><label>Estimated Headcount</label><input type="number" id="rigHeads" value="35" min="5" /></div>
+          <div style="grid-column:1/-1;">
+            <label>Setup Style</label>
+            <select id="rigStyle">
+              <option value="HOT_DROP_PANS">Hot Party Pans Ready for Pickup / Drop-Off</option>
+              <option value="FULL_TRAILER_RIG">Full Trailer On-Site Setup (Smokers, Fryers, Warmers &amp; Fridge)</option>
+            </select>
+          </div>
+          <div style="grid-column:1/-1;"><label>Meats, Sides &amp; Event Details</label><textarea id="rigNotes" rows="3" placeholder="e.g. Brisket, pulled pork, 2 full pans smoked mac & cheese, wings..."></textarea></div>
+        </div>
+        <button type="button" class="btn-pit" style="margin-top:14px;width:100%;" onclick="submitRigInquiry()">Send Catering Inquiry</button>
+        <div id="rigConfirmMsg" style="margin-top:12px;color:#4ade80;font-weight:700;" hidden></div>
+      </div>
+    </div>
+  </section>
+
+  <footer style="border-top:1px solid #26221f;padding:28px 0;color:#78716c;font-size:0.84rem;">
+    <div class="pit-wrap" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+      <div id="pitFooterLeft">Wood-Fired BBQ &amp; Provisions • Beaver County, PA</div>
+      <div style="display:flex;gap:16px;align-items:center;">
+        <a href="/homestead" style="color:#fbbf24;text-decoration:none;font-weight:700;">Homestead Stand ↗</a>
+        <button type="button" onclick="openPitBossLoginOrHq()" style="background:none;border:none;color:#78716c;cursor:pointer;font-size:0.8rem;">Pit Boss PIN</button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ORDER CART MODAL -->
+  <div id="pitCartModal" class="pit-modal-bg" onclick="if(event.target===this)this.hidden=true" hidden>
+    <div class="pit-modal" style="max-width:580px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3 style="margin:0;font-family:'Barlow Condensed',sans-serif;font-size:1.75rem;text-transform:uppercase;">Your BBQ Pan &amp; Meat Order</h3>
+        <button type="button" class="btn-pit-ghost" onclick="document.getElementById('pitCartModal').hidden=true">✕ Close</button>
+      </div>
+      <div id="pitCartLines"></div>
+      <div style="display:flex;justify-content:space-between;font-size:1.15rem;font-weight:800;padding:12px 0;border-top:1px solid #292524;margin-top:8px;">
+        <span>Estimated Total</span><span id="pitCartTotal" style="color:#fbbf24;">$0.00</span>
+      </div>
+      <div class="pit-panel" style="padding:14px;margin-top:8px;">
+        <div class="pit-grid-2">
+          <div><label>Your Name *</label><input id="ordName" placeholder="Full Name" /></div>
+          <div><label>Cell Phone (For Pickup Text) *</label><input id="ordPhone" type="tel" placeholder="724-555-0199" /></div>
+          <div><label>Requested Pickup Date *</label><input type="date" id="ordDate" /></div>
+          <div><label>Preferred Payment (Zero Fees)</label><select id="ordPayMethod"></select></div>
+          <div style="grid-column:1/-1;"><label>Sauce Choices / Special Notes</label><input id="ordNotes" placeholder="e.g. Sweet Heat on side, pickup around 4 PM..." /></div>
+        </div>
+        <button type="button" class="btn-pit" style="width:100%;margin-top:12px;" onclick="submitCartOrder()">Lock In BBQ Order</button>
+      </div>
+      <div id="ordConfirmBox" style="margin-top:12px;" hidden></div>
+    </div>
+  </div>
+
+  <!-- PIT BOSS HQ MODAL (KENNY, RYAN & ERIC — USES EXISTING SHOP PINS!) -->
+  <div id="pitBossModal" class="pit-modal-bg" onclick="if(event.target===this)this.hidden=true" hidden>
+    <div class="pit-modal">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div>
+          <h3 style="margin:0;font-family:'Barlow Condensed',sans-serif;font-size:1.75rem;text-transform:uppercase;color:#fbbf24;">Pit Boss HQ</h3>
+          <small id="pitBossWho" style="color:var(--pit-muted);"></small>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <a class="btn-pit-ghost" href="/api/bbq/admin/pdf/prep-sheet?source=BBQ" target="_blank">Print Cook Sheet PDF</a>
+          <a class="btn-pit-ghost" href="/api/bbq/admin/pdf/business-cards" target="_blank">Print 10-Up Business Cards</a>
+          <button type="button" class="btn-pit-ghost" onclick="document.getElementById('pitBossModal').hidden=true">✕</button>
+        </div>
+      </div>
+      <div class="hq-tabs">
+        <button type="button" class="hq-tab active" data-hq="orders" onclick="switchHqTab('orders')">1. Orders &amp; Cook Totals</button>
+        <button type="button" class="hq-tab" data-hq="events" onclick="switchHqTab('events')">2. Event Links &amp; Club QR Posters</button>
+        <button type="button" class="hq-tab" data-hq="menu" onclick="switchHqTab('menu')">3. Edit Menu &amp; Prices</button>
+        <button type="button" class="hq-tab" data-hq="brand" onclick="switchHqTab('brand')">4. Pit Name, Video &amp; Payment Apps</button>
+      </div>
+      <div id="pitBossBody"></div>
+    </div>
+  </div>
+
+  <script src="/static/js/bbq-app.js?v=15.1"></script>
+</body>
+</html>

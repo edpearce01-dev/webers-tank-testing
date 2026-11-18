@@ -8,15 +8,15 @@
   <link id="dynamicFavicon" rel="icon" href="/pwa-icon.png?size=64&mode=any" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   
-  <link rel="stylesheet" href="/static/ops.css?v=15.0" />
-  <link rel="stylesheet" href="/static/css/modern-ui.css?v=15.0" />
+  <link rel="stylesheet" href="/static/ops.css?v=15.3" />
+  <link rel="stylesheet" href="/static/css/modern-ui.css?v=15.3" />
   <title>Weber's Tank Testing — Shop Floor Ops | DOT B386</title>
 </head>
 <body>
   <!-- CREW PIN LOGIN GATE -->
   <div id="loginScreen" class="login-wrap" hidden>
     <div class="login-card">
-      <img src="/static/images/logo-crest.png?v=15.0" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
+      <img src="/static/images/logo-crest.png?v=15.3" alt="Weber's Tank Testing" onerror="this.src='/icon.svg'" style="width:94px;height:94px;margin-bottom:8px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.22));" />
       <h2 style="margin:4px 0;color:var(--green);">Weber's Tank Testing</h2>
       <p style="margin:0 0 18px;color:var(--muted);font-size:0.88rem;">
         Shop Floor Operations Workspace<br />
@@ -56,7 +56,7 @@
   <div id="appShell" hidden>
     <header class="app-topbar">
       <a href="/ops" class="top-brand">
-        <img src="/static/images/logo-crest.png?v=15.0" alt="B386" onerror="this.src='/icon.svg'" />
+        <img src="/static/images/logo-crest.png?v=15.3" alt="B386" onerror="this.src='/icon.svg'" />
         <div class="top-brand-txt">
           <h1>Shop Floor</h1>
           <small>DOT RIN B386</small>
@@ -71,6 +71,7 @@
       </nav>
 
       <div class="top-controls">
+        <button type="button" id="shopSoundBtn" class="menu-pill" onclick="toggleShopAudio()" title="Toggle Shop Audio Chimes (Pass / Condemn)">🔊</button>
         <button type="button" id="topHelpAiBtn" class="menu-pill" onclick="document.querySelector('.help-fab')?.click()" title="Open Shop Help AI">? Help</button>
         <button id="testModeChip" data-owner-only="1" class="test-chip" onclick="toggleGuide(true)" title="Testing Mode Active" hidden>TEST</button>
         <div class="date-stepper">
@@ -116,6 +117,10 @@
 
       <!-- MAIN SHOP FLOOR WORKSPACE -->
       <main class="ops-workspace">
+        <div id="offlineGuardBanner" class="offline-guard-bar" hidden>
+          <span>📡 Connection to shop server interrupted — hold before submitting until connection restores.</span>
+          <button type="button" class="secondary" onclick="loadState(false)">Retry Now</button>
+        </div>
         <div id="complianceAlertBanner" hidden></div>
         <div id="opsDispatchRadar" style="display:none!important;" hidden></div>
         <div id="lowSupplyAlertBanner" style="display:none!important;" hidden></div>
@@ -247,10 +252,10 @@
                 <datalist id="customerSuggest"></datalist>
 
                 <!-- 1. Customer & Preset Quick-Fill -->
-                <div class="grid" style="margin-bottom:11px;">
+                <div class="intake-cust-grid">
                   <div>
                     <label>Customer / Fire Dept *</label>
-                    <input id="fCustomer" list="customerSuggest" placeholder="Start typing name or Fire Dept..."
+                    <input id="fCustomer" list="customerSuggest" placeholder="Customer or Fire Dept..."
                       oninput="document.getElementById('inCustomer').value=this.value;prefillPhoneFromRolodex('fCustomer','fPhone','inCustomer','inPhone')" />
                   </div>
                   <div>
@@ -396,10 +401,10 @@
               <div class="card" style="border-left:4px solid var(--amber);">
                 <div class="card-hdr"><h3>🏷️ Quick Valve Tag</h3></div>
                 <datalist id="serialSuggest"></datalist>
-                <div class="grid" style="align-items:end;">
-                  <div><label>Serial #</label><input id="quickTagSerial" list="serialSuggest" placeholder="Select Serial #" /></div>
-                  <div><label>Tag #</label><input id="quickTagNum" placeholder="Any tag # (e.g. 47)" onkeydown="if(event.key==='Enter')assignTagBySerial('quickTagSerial','quickTagNum')" /></div>
-                  <div><button class="primary" style="margin-top:0;" onclick="assignTagBySerial('quickTagSerial','quickTagNum')">Assign Tag</button></div>
+                <div class="quick-tag-grid">
+                  <div><label>Serial #</label><input id="quickTagSerial" list="serialSuggest" placeholder="e.g. B6680" /></div>
+                  <div><label>Tag #</label><input id="quickTagNum" placeholder="e.g. 47" onkeydown="if(event.key==='Enter')assignTagBySerial('quickTagSerial','quickTagNum')" /></div>
+                  <button class="primary" style="margin-top:0;width:auto;white-space:nowrap;" onclick="assignTagBySerial('quickTagSerial','quickTagNum')">Assign Tag</button>
                 </div>
               </div>
 
@@ -634,9 +639,10 @@
       </div>
 
       <div id="erVisPills" class="vis-pills-grid"></div>
-      <div style="display:flex;gap:8px;margin-top:14px;">
-        <button class="primary" style="margin:0;flex:3;" onclick="saveEditedRecord()">Save Changes &amp; Recalculate</button>
-        <button class="danger-btn" style="flex:1;" onclick="deleteRecordFromModal()">🗑 Delete</button>
+      <div class="modal-sticky-footer">
+        <button class="primary" style="margin:0;flex:2.6;" onclick="saveEditedRecord()">Save Changes &amp; Recalculate</button>
+        <button class="secondary" style="flex:0.8;padding:11px 14px;" onclick="closeEditModal()">Cancel</button>
+        <button class="danger-btn" style="flex:0.9;padding:11px 14px;" onclick="deleteRecordFromModal()">🗑 Delete</button>
       </div>
     </div>
   </div>
@@ -748,13 +754,13 @@
     </div>
   </div>
 
-  <script src="/static/ops-camera.js?v=15.0"></script>
-  <script src="/static/js/ops-core-cal.js?v=15.0"></script>
-  <script src="/static/js/ops-intake-stand.js?v=15.0"></script>
-  <script src="/static/js/ops-finish-radar.js?v=15.0"></script>
-  <script src="/static/day-flow.js?v=15.0"></script>
-  <script src="/static/theme-engine.js?v=15.0"></script>
-  <script src="/static/js/app-switcher.js?v=15.0"></script>
-  <script src="/static/help-bot.js?v=15.0"></script>
+  <script src="/static/ops-camera.js?v=15.3"></script>
+  <script src="/static/js/ops-core-cal.js?v=15.3"></script>
+  <script src="/static/js/ops-intake-stand.js?v=15.3"></script>
+  <script src="/static/js/ops-finish-radar.js?v=15.3"></script>
+  <script src="/static/day-flow.js?v=15.3"></script>
+  <script src="/static/theme-engine.js?v=15.3"></script>
+  <script src="/static/js/app-switcher.js?v=15.3"></script>
+  <script src="/static/help-bot.js?v=15.3"></script>
 </body>
 </html>

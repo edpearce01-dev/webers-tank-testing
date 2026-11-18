@@ -1,5 +1,6 @@
 import datetime
 import ipaddress
+import socket
 from pathlib import Path
 
 import uvicorn
@@ -8,7 +9,14 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 
-from main import get_lan_ip
+
+def get_lan_ip() -> str:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+    except Exception:
+        return "127.0.0.1"
 
 CERT_FILE = Path(__file__).parent / "cert.pem"
 KEY_FILE = Path(__file__).parent / "key.pem"

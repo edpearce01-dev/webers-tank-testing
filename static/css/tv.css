@@ -33,7 +33,8 @@
       width: 100vw; max-width: 100vw; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 56px minmax(0, 1fr);
       -webkit-font-smoothing: antialiased;
     }
-    .mono { font-family: var(--font-mono); letter-spacing: -0.02em; }
+    .mono { font-family: var(--font-sans); font-variant-numeric: tabular-nums lining-nums; letter-spacing: -0.01em; }
+    #tvBinderPill, .pill, .s-tile strong, .clock { font-family: var(--font-sans) !important; font-variant-numeric: tabular-nums lining-nums; }
     .ico { width: 15px; height: 15px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 
     /* =====================================================================

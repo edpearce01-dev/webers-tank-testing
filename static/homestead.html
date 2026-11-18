@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#faf6ee" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/homestead.css?v=15.1" />
+  <title>Homestead &amp; Sauce Stand</title>
+</head>
+<body>
+  <header class="hs-nav">
+    <div class="hs-wrap hs-nav-in">
+      <a href="/homestead" class="hs-brand">
+        <div class="hs-seal" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3h8l1 4H7l1-4z"/><rect x="6" y="7" width="12" height="14" rx="2"/><path d="M10 12h4M12 10v4"/>
+          </svg>
+        </div>
+        <div>
+          <strong id="hsNavTitle">Backroad Homestead &amp; Sauce Stand</strong>
+          <small>Sauces • Raw Honey • Maple Syrup • Coop Eggs</small>
+        </div>
+      </a>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <a href="/bbq" class="btn-hs-ghost">Smokehouse &amp; BBQ Catering ↗</a>
+        <button type="button" class="btn-hs-ghost" id="btnHsHqTop" onclick="openHsHq()" hidden>Stand HQ</button>
+        <button type="button" class="btn-hs btn-hs-honey" onclick="openHsCart()">Basket <span id="hsCartChip">(0)</span></button>
+      </div>
+    </div>
+  </header>
+
+  <section class="hs-hero">
+    <div class="hs-wrap">
+      <span class="hs-eyebrow">Small-Batch • Homemade &amp; Locally Gathered</span>
+      <h1 id="hsHeroTitle">Backroad Homestead &amp; Sauce Stand</h1>
+      <p id="hsHeroTagline">Small-Batch House BBQ Sauces • Raw Honey • Wood-Fired PA Maple Syrup • Fresh Duck &amp; Chicken Eggs</p>
+      <div style="display:inline-flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;background:#ffffff;border:1px solid var(--hs-border);padding:8px 16px;border-radius:999px;font-size:0.84rem;color:var(--hs-soft);">
+        <span id="hsPickupNote">Porch / shop pickup in Baden — pay Cash, Venmo, or Cash App at pickup.</span>
+      </div>
+    </div>
+  </section>
+
+  <main class="hs-wrap">
+    <div class="hs-cats" id="hsCatBar"></div>
+    <div class="hs-grid" id="hsProductGrid"></div>
+
+    <div class="hs-bbq-banner">
+      <div style="max-width:640px;">
+        <div style="color:#fbbf24;font-size:0.75rem;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;">Planning a Party, Stag, or Club Event?</div>
+        <h3 style="margin:4px 0 6px;font-size:1.45rem;">Check Out Our Wood-Fired BBQ &amp; Party Pan Menu</h3>
+        <div style="color:#d6d3d1;font-size:0.88rem;">Smoked brisket, pulled pork, signature smoked mac &amp; cheese, wings, bacon-wrapped eggs &amp; trailer catering.</div>
+      </div>
+      <a href="/bbq" class="btn-hs btn-hs-honey">View BBQ Catering Menu →</a>
+    </div>
+  </main>
+
+  <footer style="border-top:1px solid var(--hs-border);padding:24px 0;color:var(--hs-muted);font-size:0.83rem;">
+    <div class="hs-wrap" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+      <div id="hsFooterTxt">Backroad Homestead &amp; Sauce Stand • Beaver County, PA</div>
+      <div style="display:flex;gap:14px;align-items:center;">
+        <a href="/api/bbq/public/homestead-poster.pdf" target="_blank" style="color:var(--hs-honey);font-weight:700;text-decoration:none;">Printable QR Sign</a>
+        <button type="button" onclick="openHsLoginOrHq()" style="background:none;border:none;color:var(--hs-muted);cursor:pointer;font-size:0.8rem;">Stand PIN</button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- CUSTOMER BASKET & ZERO-FEE RESERVATION MODAL -->
+  <div id="hsCartModal" class="hs-modal-bg" onclick="if(event.target===this)this.hidden=true" hidden>
+    <div class="hs-modal" style="max-width:560px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3 style="margin:0;font-family:'Fraunces',serif;font-size:1.45rem;color:var(--hs-pine);">Your Stand Basket</h3>
+        <button type="button" class="btn-hs-ghost" onclick="document.getElementById('hsCartModal').hidden=true">✕ Close</button>
+      </div>
+      <div id="hsCartLines"></div>
+      <div style="display:flex;justify-content:space-between;font-size:1.15rem;font-weight:800;padding:12px 0;border-top:1px solid var(--hs-border);margin-top:8px;">
+        <span>Total Due at Pickup</span><span id="hsCartTotal" style="color:var(--hs-honey);">$0.00</span>
+      </div>
+      <div class="hs-panel" style="margin-top:8px;">
+        <div class="hs-grid-2">
+          <div><label>Your Name *</label><input id="hsOrdName" placeholder="Full Name" /></div>
+          <div><label>Cell Phone (For Pickup Text) *</label><input id="hsOrdPhone" type="tel" placeholder="724-555-0199" /></div>
+          <div><label>Preferred Pickup Day</label><input type="date" id="hsOrdDate" /></div>
+          <div><label>Payment Method (Zero Fees)</label><select id="hsOrdPay"></select></div>
+          <div style="grid-column:1/-1;"><label>Pickup Note (Optional)</label><input id="hsOrdNotes" placeholder="e.g. Swing by Friday after 4 PM..." /></div>
+        </div>
+        <button type="button" class="btn-hs" style="width:100%;margin-top:12px;" onclick="submitHsOrder()">Reserve Items for Pickup</button>
+      </div>
+      <div id="hsOrdConfirm" style="margin-top:12px;" hidden></div>
+    </div>
+  </div>
+
+  <!-- HOMESTEAD STAND HQ MODAL (PIN UNLOCK FOR RYAN, WIFE & KENNY) -->
+  <div id="hsHqModal" class="hs-modal-bg" onclick="if(event.target===this)this.hidden=true" hidden>
+    <div class="hs-modal">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+        <div>
+          <h3 style="margin:0;font-family:'Fraunces',serif;font-size:1.5rem;color:var(--hs-pine);">Homestead Stand HQ</h3>
+          <small id="hsHqWho" style="color:var(--hs-muted);"></small>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <a class="btn-hs-ghost" href="/api/bbq/public/homestead-poster.pdf" target="_blank">Print Stand QR Sign</a>
+          <a class="btn-hs-ghost" href="/api/bbq/admin/pdf/prep-sheet?source=HOMESTEAD" target="_blank">Pickup Sheet PDF</a>
+          <button type="button" class="btn-hs-ghost" onclick="document.getElementById('hsHqModal').hidden=true">✕</button>
+        </div>
+      </div>
+      <div class="hs-tabs">
+        <button type="button" class="hs-cat-pill active" data-hshq="stock" onclick="switchHsHqTab('stock')">1. Live Shelf Stock &amp; Items</button>
+        <button type="button" class="hs-cat-pill" data-hshq="orders" onclick="switchHsHqTab('orders')">2. Reserved Orders</button>
+        <button type="button" class="hs-cat-pill" data-hshq="settings" onclick="switchHsHqTab('settings')">3. Stand Name &amp; Payment Apps</button>
+      </div>
+      <div id="hsHqBody"></div>
+    </div>
+  </div>
+
+  <script src="/static/js/homestead-app.js?v=15.1"></script>
+</body>
+</html>

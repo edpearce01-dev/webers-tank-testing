@@ -529,3 +529,148 @@ td, .rec-item { border-bottom-color: var(--ui-border) !important; }
 }
 .ws-app-card strong { display: block; font-size: 0.93rem; font-weight: 800; margin-bottom: 2px; }
 .ws-app-card span { display: block; font-size: 0.76rem; color: var(--ui-muted); line-height: 1.38; }
+
+/* -------------------------------------------------------------------------
+   6. SHOP-FLOOR ERGONOMICS, ANTI-CLIPPING & LIVE HYDRO TELEMETRY (v15.2)
+   ------------------------------------------------------------------------- */
+@media (min-width: 1025px) {
+  body.has-ws-launcher .top-brand {
+    max-width: min(460px, 46vw) !important;
+  }
+  body.has-ws-launcher .top-brand-txt small {
+    display: block !important;
+  }
+}
+.nav-badge {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+/* Even, Unwrapped 7-Point Visual Inspection Pills */
+.vis-pills-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)) !important;
+  gap: 8px !important;
+  margin-top: 8px !important;
+}
+.vis-pill {
+  padding: 10px 13px !important;
+  min-height: 44px !important;
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+  font-size: 0.81rem !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 10px !important;
+  white-space: nowrap !important;
+  border: 1.5px solid rgba(16, 185, 129, 0.45) !important;
+  background: var(--ui-accent-soft) !important;
+  color: var(--ui-accent) !important;
+}
+.vis-pill.fail-state {
+  border-color: rgba(239, 68, 68, 0.55) !important;
+  background: var(--ui-danger-soft) !important;
+  color: var(--ui-danger) !important;
+}
+
+/* Quick Valve Tag Row, Intake Customer Row & Wider Sticky-Footer Edit Modal */
+.intake-cust-grid {
+  display: grid;
+  grid-template-columns: minmax(195px, 1.45fr) minmax(145px, 1fr);
+  gap: 10px;
+  margin-bottom: 11px;
+}
+@media (max-width: 560px) {
+  .intake-cust-grid { grid-template-columns: 1fr; }
+}
+.quick-tag-grid {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.25fr) minmax(110px, 1fr) auto;
+  gap: 9px;
+  align-items: end;
+}
+@media (max-width: 560px) {
+  .quick-tag-grid { grid-template-columns: 1fr 1fr; }
+  .quick-tag-grid > button { grid-column: 1 / -1; }
+}
+
+#editRecordModal .modal {
+  max-width: 880px !important;
+  padding-bottom: 0 !important;
+}
+#editRecordModal .grid {
+  grid-template-columns: repeat(auto-fit, minmax(182px, 1fr)) !important;
+}
+.modal-sticky-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  margin-top: 14px;
+  padding: 12px 0 18px;
+  background: var(--ui-surface);
+  border-top: 1px solid var(--ui-border);
+}
+
+/* Live Burette Expansion & DOT Disposition Instrument Strip */
+.bench-telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  margin: 10px 0 6px;
+}
+@media (max-width: 600px) {
+  .bench-telemetry-grid { grid-template-columns: 1fr; }
+}
+.bench-tele-tile {
+  background: var(--ui-surface-2);
+  border: 1.5px solid var(--ui-border);
+  border-radius: 12px;
+  padding: 9px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.bench-tele-tile small {
+  font-size: 0.69rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ui-muted);
+}
+.bench-tele-tile strong {
+  font-family: 'JetBrains Mono', ui-monospace, monospace !important;
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: var(--ui-text);
+  font-variant-numeric: tabular-nums;
+}
+.bench-tele-tile.state-pass {
+  background: var(--ui-accent-soft);
+  border-color: rgba(16, 185, 129, 0.5);
+}
+.bench-tele-tile.state-pass strong { color: var(--ui-accent); }
+.bench-tele-tile.state-fail {
+  background: var(--ui-danger-soft);
+  border-color: rgba(239, 68, 68, 0.55);
+}
+.bench-tele-tile.state-fail strong { color: var(--ui-danger); }
+
+/* Offline Shop Network Guard Banner */
+.offline-guard-bar {
+  background: linear-gradient(90deg, #991b1b 0%, #b45309 100%);
+  color: #ffffff;
+  border: 2px solid #fbbf24;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}

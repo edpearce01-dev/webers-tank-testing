@@ -119,7 +119,7 @@ async function bootPrintVault() {
       }
       const st = CAB_DATA.stats || {};
       const nb = document.getElementById('navBadgeCabinet');
-      if (nb) nb.textContent = st.total_sheets ? `${st.total_sheets} Sh` : 'Vault';
+      if (nb) nb.textContent = st.total_sheets ? `${st.total_sheets} ${st.total_sheets === 1 ? 'Sheet' : 'Sheets'}` : 'Vault';
       document.getElementById('cabCntSheets').textContent = String((CAB_DATA.retest_sheets || []).length);
       document.getElementById('cabCntCals').textContent = String((CAB_DATA.calibration_days || []).length);
       document.getElementById('cabCntVis').textContent = String((CAB_DATA.visual_days || []).length);
@@ -147,7 +147,7 @@ async function bootPrintVault() {
                 ${s.condemn_count ? `<span class="rush-badge">⛔ ${s.condemn_count} Condemned</span>` : ''}
               </div>
               <div class="rec-sub">
-                Dates: <strong>${escHtml(span)}</strong> • Passed: <strong>${s.pass_count}</strong> • Customers: ${escHtml(s.customers || '—')} • Serials: ${escHtml(s.first_sn)}..${escHtml(s.last_sn)}
+                Dates: <strong>${escHtml(span)}</strong> • Passed: <strong>${s.pass_count}</strong> • Customers: ${escHtml((s.customers || '—').replace(/,(?!\s)/g, ', '))} • Serials: ${escHtml(s.first_sn)}..${escHtml(s.last_sn)}
               </div>
             </div>
             <div class="rec-actions">

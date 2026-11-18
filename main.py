@@ -10,18 +10,20 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from database import init_db
+from bbq_db import init_bbq_db
 from services.core_ops import (
     STATIC_DIR,
     background_sheets_sync_loop,
     get_current_session_user,
     is_tv_authorized,
 )
-from routes import office_admin, ops_floor, pages_auth, public_portal, schedule_day
+from routes import bbq_homestead, office_admin, ops_floor, pages_auth, public_portal, schedule_day
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    init_bbq_db()
     task = asyncio.create_task(background_sheets_sync_loop())
     yield
     task.cancel()
@@ -45,7 +47,7 @@ async def auth_gate_middleware(request: Request, call_next):
         "/api/auth/login", "/api/auth/status", "/api/auth/logout",
         "/api/public/dropoff", "/api/public/track", "/api/public/turnaround", "/api/public/theme",
     }
-    if path in public_paths or path.startswith("/static") or path.startswith("/api/public/receipt/"):
+    if path in public_paths or path in ("/bbq", "/homestead") or path.startswith(("/static", "/bbq/", "/api/public/receipt/", "/api/bbq/public/", "/api/homestead/public/")):
         return await call_next(request)
 
     if path == "/api/tv" and is_tv_authorized(request):
@@ -63,5 +65,6 @@ app.include_router(public_portal.router)
 app.include_router(ops_floor.router)
 app.include_router(schedule_day.router)
 app.include_router(office_admin.router)
+app.include_router(bbq_homestead.router)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

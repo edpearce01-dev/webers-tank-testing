@@ -55,7 +55,10 @@
         <div class="modal" style="max-width:580px;">
           <div class="card-hdr">
             <div><h3>⚙ Quick-Set Default Service Prices</h3><small style="color:var(--muted);">Saves to Master Rates &amp; refreshes current draft invoice automatically</small></div>
-            <button type="button" class="secondary" onclick="document.getElementById('quickRatesModal').hidden=true">✖ Close</button>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <button type="button" class="secondary" onclick="fillQuickSuggestedRates()">⚡ Suggested Baseline</button>
+              <button type="button" class="secondary" onclick="document.getElementById('quickRatesModal').hidden=true">✖ Close</button>
+            </div>
           </div>
           <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
             ${rates.map((r, idx) => `
@@ -66,6 +69,18 @@
           </div>
           <button type="button" class="primary" onclick="saveQuickRatesAndRefreshDraft()">💾 Save Prices &amp; Refresh Current Invoice</button>
         </div>`;
+    }
+
+    function fillQuickSuggestedRates() {
+      const defaults = {
+        HYDRO_STD: 35, HYDRO_SCBA: 45, HYDRO_PAINTBALL: 30, VISUAL_ONLY: 18,
+        PROPANE_VISUAL: 15, RUSH_FEE: 20, NECK_ORING: 5, VALVE_RELIEF: 12,
+        INTERNAL_CLEAN: 25, REG_SERVICE: 10, CONDEMNED_FEE: 15, TRUCK_RUN: 35,
+      };
+      (STATE.pricing_rates || []).forEach((r, idx) => {
+        const inp = document.getElementById('qrPrice_' + idx);
+        if (inp && r.code in defaults) inp.value = defaults[r.code];
+      });
     }
 
     async function saveQuickRatesAndRefreshDraft() {

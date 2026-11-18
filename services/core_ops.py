@@ -1515,11 +1515,11 @@ def insert_cylinder_record(payload: IntakeInput) -> dict:
     intake_ts = est.strftime("%Y-%m-%d %I:%M %p")
     v_tag = payload.valve_tag.strip().lstrip("#")
     serial_clean = payload.serial_number.strip().upper().replace(" ", "")
-    cust_clean = payload.customer_name.strip()
+    cust_clean = payload.customer_name.strip() or "Walk-In"
     phone_clean = clean_phone(payload.customer_phone)
     spec_clean = payload.dot_spec.strip().upper().replace("SP-", "SP")
-    if not cust_clean or not serial_clean or not spec_clean or payload.service_psi <= 0:
-        raise HTTPException(400, "Customer, Serial #, DOT Spec, and Service Pressure are required.")
+    if not serial_clean or not spec_clean or payload.service_psi <= 0:
+        raise HTTPException(400, "Serial #, DOT Spec, and Service Pressure are required.")
 
     conn = get_conn()
     dup_tag = check_duplicate_active_valve_tag(conn, v_tag)
@@ -1636,9 +1636,18 @@ def insert_cylinder_record(payload: IntakeInput) -> dict:
             (payload.dropoff_id,),
         )
     if payload.schedule_job_id:
-        conn.execute(
-            "UPDATE schedule_jobs SET prep_status='DEVALVED_TAGGED', holding_zone='ZONE_C_READY_RACK', status='PREPPED' WHERE id=?;",
+        scanned_cnt = conn.execute(
+            "SELECT COUNT(*) FROM cylinder_records WHERE schedule_job_id=?;",
             (payload.schedule_job_id,),
+        ).fetchone()[0]
+        conn.execute(
+            """UPDATE schedule_jobs
+               SET prep_status = CASE WHEN ? >= COALESCE(bottle_count, 1) THEN 'DEVALVED_TAGGED' ELSE 'IN_PREP' END,
+                   holding_zone = 'ZONE_C_READY_RACK',
+                   status = CASE WHEN ? >= COALESCE(bottle_count, 1) THEN 'PREPPED' ELSE status END,
+                   synced = 0
+               WHERE id = ?;""",
+            (scanned_cnt, scanned_cnt, payload.schedule_job_id),
         )
 
     bump_db_version(conn)

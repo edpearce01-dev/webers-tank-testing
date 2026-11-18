@@ -264,6 +264,33 @@ async function loadUnbilledItems() {}
     }
 
 // --- TAB 6: MASTER SERVICE RATES ---
+    const SUGGESTED_SHOP_RATES = {
+      HYDRO_STD: 35.0,
+      HYDRO_SCBA: 45.0,
+      HYDRO_PAINTBALL: 30.0,
+      VISUAL_ONLY: 18.0,
+      PROPANE_VISUAL: 15.0,
+      RUSH_FEE: 20.0,
+      NECK_ORING: 5.0,
+      VALVE_RELIEF: 12.0,
+      INTERNAL_CLEAN: 25.0,
+      REG_SERVICE: 10.0,
+      CONDEMNED_FEE: 15.0,
+      TRUCK_RUN: 35.0,
+    };
+
+    function loadSuggestedShopRates() {
+      const hasNonZero = EDITABLE_RATES.some(r => Number(r.unit_price || 0) > 0);
+      if (hasNonZero && !confirm('Overwrite current rates with suggested Western PA shop baseline prices? (You can still edit any line before saving.)')) {
+        return;
+      }
+      EDITABLE_RATES = EDITABLE_RATES.map(r => ({
+        ...r,
+        unit_price: r.code in SUGGESTED_SHOP_RATES ? SUGGESTED_SHOP_RATES[r.code] : r.unit_price,
+      }));
+      renderRateScheduleTable();
+    }
+
     function renderRateScheduleTable() {
       document.getElementById('pricingList').innerHTML = EDITABLE_RATES.map((p, i) => `
         <div class="rate-edit-row">

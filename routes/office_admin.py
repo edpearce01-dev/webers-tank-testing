@@ -1012,7 +1012,7 @@ def get_filing_cabinet_index(year: str = ""):
                MAX(work_date) AS last_date,
                SUM(CASE WHEN hydro_disposition='A' THEN 1 ELSE 0 END) AS pass_count,
                SUM(CASE WHEN hydro_disposition!='A' THEN 1 ELSE 0 END) AS condemn_count,
-               GROUP_CONCAT(DISTINCT customer_name) AS customers,
+               GROUP_CONCAT(DISTINCT NULLIF(TRIM(customer_name), '')) AS customers,
                MIN(serial_number) AS first_sn,
                MAX(serial_number) AS last_sn
         FROM cylinder_records
@@ -1051,7 +1051,7 @@ def get_filing_cabinet_index(year: str = ""):
                SUM(CASE WHEN gas_service='LPG' OR dot_spec LIKE '4B%' THEN 1 ELSE 0 END) AS propane_count,
                SUM(CASE WHEN hydro_disposition='A' AND visual_pass=1 THEN 1 ELSE 0 END) AS pass_count,
                SUM(CASE WHEN hydro_disposition!='A' OR visual_pass=0 THEN 1 ELSE 0 END) AS fail_count,
-               GROUP_CONCAT(DISTINCT customer_name) AS customers
+               GROUP_CONCAT(DISTINCT NULLIF(TRIM(customer_name), '')) AS customers
         FROM cylinder_records
         WHERE status='COMPLETED'
         GROUP BY work_date

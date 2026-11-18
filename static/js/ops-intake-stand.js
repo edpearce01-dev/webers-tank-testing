@@ -209,6 +209,7 @@ function checkIntakeLifespanLive(serverLife = null) {
     box.className = serverLife.expired ? 'notice bad' : 'notice warn';
     box.textContent = (serverLife.expired ? '⛔ ' : '⚠️ ') + serverLife.warning;
     box.hidden = false;
+    if (serverLife.expired && typeof playShopTone === 'function') playShopTone('condemn');
     return;
   }
 
@@ -221,9 +222,11 @@ function checkIntakeLifespanLive(serverLife = null) {
     if (yr < 100) yr = yr <= ((now.getFullYear() % 100) + 1) ? 2000 + yr : 1900 + yr;
     const monthsLeft = ((yr + 15) - now.getFullYear()) * 12 + (mo - (now.getMonth() + 1));
     if (monthsLeft < 0) {
+      const wasHidden = box.hidden;
       box.className = 'notice bad';
       box.textContent = `⛔ EXPIRED COMPOSITE (>15 YRS): Born ${String(mo).padStart(2, '0')}-${yr} retired in ${String(mo).padStart(2, '0')}-${yr + 15}. Do NOT hydro unless covered by a valid 30-yr MAE permit.`;
       box.hidden = false;
+      if (wasHidden && typeof playShopTone === 'function') playShopTone('condemn');
       return;
     }
     if (monthsLeft <= 6) {
@@ -363,7 +366,16 @@ function clearIntakeForm(forceUnlock = false) {
 }
 
 async function submitIntake(allowDup = false) {
-  const cust = document.getElementById('fCustomer').value.trim() || document.getElementById('inCustomer').value.trim();
+  let cust = document.getElementById('fCustomer').value.trim() || document.getElementById('inCustomer').value.trim();
+  if (!cust) {
+    if (!confirm('No customer name entered.\n\nContinue without a customer name and log under "Walk-In"?')) {
+      document.getElementById('fCustomer').focus();
+      return;
+    }
+    cust = 'Walk-In';
+    document.getElementById('fCustomer').value = cust;
+    document.getElementById('inCustomer').value = cust;
+  }
   const ph = document.getElementById('fPhone').value.trim() || document.getElementById('inPhone').value.trim();
   const pri = document.getElementById('fPriority').value || 'STANDARD';
   const prevTag = document.getElementById('fValveTag').value.trim();
@@ -545,7 +557,7 @@ function renderVisPillsHtml(stateObj, toggleFnName) {
   return VIS_FIELDS.map(f => {
     const isFail = (stateObj[f.key] || 'OK') !== 'OK';
     return `<button type="button" class="vis-pill ${isFail ? 'fail-state' : ''}" onclick="${toggleFnName}('${f.key}')">
-      <span>${f.label}</span><span>${isFail ? '✗ FAIL' : '✓ OK'}</span>
+      <span>${f.label}</span> <span>${isFail ? '✗ FAIL' : '✓ OK'}</span>
     </button>`;
   }).join('');
 }
@@ -554,7 +566,10 @@ function toggleBenchVis(key) {
   BENCH_VIS[key] = BENCH_VIS[key] === 'OK' ? 'FAIL' : 'OK';
   document.getElementById('benchVisGrid').innerHTML = renderVisPillsHtml(BENCH_VIS, 'toggleBenchVis');
   const rec = STATE.records.find(r => r.id === parseInt(document.getElementById('benchSelect').value || '0', 10));
-  if (rec) previewBenchMath(rec.ree_limit ?? null);
+  if (rec) {
+    const effRee = (['3A', '3AA', '3AL'].includes((rec.dot_spec || '').toUpperCase()) && rec.ree_limit === 7.2) ? null : (rec.ree_limit ?? null);
+    previewBenchMath(effRee);
+  }
 }
 
 function renderBenchForm() {
@@ -574,9 +589,13 @@ function renderBenchForm() {
   const tAllow = STATE.jacket_ceilings['Tall Jacket']?.max_allowed_test_psi || 0;
   const effRee = (['3A', '3AA', '3AL'].includes((rec.dot_spec || '').toUpperCase()) && rec.ree_limit === 7.2) ? null : rec.ree_limit;
   const b = STATE.binder_state || {};
+  const isAdminDiag = window.CURRENT_USER && window.CURRENT_USER.role === 'SYSTEM_ADMIN';
+  const certBtnLbl = isAdminDiag
+    ? 'Certify &amp; Advance (ADMIN Diagnostic — Marks ADM*)'
+    : 'Certify &amp; Advance to Next Cylinder (RP)';
 
   area.innerHTML = `
-    <div class="notice" id="benchPreview">
+    <div class="notice" id="benchContextBanner">
       ${priorityBadgeHtml(rec)} <strong>[${escHtml(rec.customer_name)}]</strong> • SN <strong>${escHtml(rec.serial_number)}</strong> • Target: <strong>${rec.test_psi} PSI</strong>${rec.valve_tag && !rec.valve_reinstalled ? ` • 🏷️ #<strong>${escHtml(rec.valve_tag)}</strong>` : ''}${effRee ? ` • REE ≤ <strong>${effRee} cc</strong>` : ''} • Binder: <strong>#${b.active_sheet_no || 8095} Row ${b.next_row_number || 1}</strong>
     </div>
     ${rec.composite_warning ? `<div class="notice bad">⛔ ${escHtml(rec.composite_warning)}</div>` : ''}
@@ -588,8 +607,8 @@ function renderBenchForm() {
             <option value="Tall Jacket" ${defJacket === 'Tall Jacket' ? 'selected' : ''}>Tall Jacket (${tAllow ? '≤' + tAllow + '#' : 'Uncal'})</option>
           </select>
         </div>
-        <div><label>Total Exp (cc) *</label><input type="number" step="0.1" id="bTotal" oninput="previewBenchMath(${effRee ?? 'null'})" onkeydown="if(event.key==='Enter')document.getElementById('bPerm').focus()" /></div>
-        <div><label>Perm Exp (cc) *</label><input type="number" step="0.1" id="bPerm" value="0" oninput="previewBenchMath(${effRee ?? 'null'})" onkeydown="if(event.key==='Enter')completeBottle(${rec.id}, ${isHydro})" /></div>
+        <div><label>Total Exp (cc) *</label><input type="number" step="0.1" id="bTotal" placeholder="Numpad + Enter" oninput="previewBenchMath(${effRee ?? 'null'})" onkeydown="if(event.key==='Enter'){event.preventDefault();const p=document.getElementById('bPerm');if(p){p.focus();p.select();}}" /></div>
+        <div><label>Perm Exp (cc) *</label><input type="number" step="0.1" id="bPerm" value="0" oninput="previewBenchMath(${effRee ?? 'null'})" onkeydown="if(event.key==='Enter'){event.preventDefault();completeBottle(${rec.id}, ${isHydro}, true);}" /></div>
       ` : ''}
       <div><label>🏷️ Valve / Reg Tag #</label><input id="bValveTag" value="${rec.valve_tag && !rec.valve_reinstalled ? escHtml(rec.valve_tag) : ''}" placeholder="Tag #" /></div>
       <div><label>Coating</label><select id="bCoat"><option>Excellent</option><option selected>Good</option><option>Fair</option><option>Poor</option></select></div>
@@ -604,6 +623,23 @@ function renderBenchForm() {
       <div style="grid-column:1/-1;"><label>Row Notes</label><input id="bNotes" value="${escHtml(rec.notes || '')}" placeholder="Optional DOT note..." /></div>
     </div>
 
+    ${isHydro ? `
+      <div id="benchLiveMath" class="bench-telemetry-grid">
+        <div class="bench-tele-tile" id="teleElasticTile">
+          <small>Elastic Exp (Total − Perm)</small>
+          <strong id="teleElasticVal">— cc${effRee ? ` (≤ ${effRee})` : ''}</strong>
+        </div>
+        <div class="bench-tele-tile" id="telePctTile">
+          <small>% Permanent (≤ 10.0% Max)</small>
+          <strong id="telePctVal">— %</strong>
+        </div>
+        <div class="bench-tele-tile" id="teleDispTile">
+          <small>Live DOT Disposition</small>
+          <strong id="teleDispVal">Enter Total cc ↵</strong>
+        </div>
+      </div>
+    ` : ''}
+
     <div id="bCondemnWrap" class="card" style="background:#fef2f2;border:1.5px solid #f87171;margin-top:10px;padding:10px;" ${rec.composite_expired ? '' : 'hidden'}>
       <label style="color:#991b1b;">⛔ PHMSA Code D Condemned Legal Disposition (49 CFR §180.205(i))</label>
       <select id="bCondemnAct">
@@ -617,7 +653,7 @@ function renderBenchForm() {
     <label style="margin-top:11px;">7-Point Visual Inspection (Tap Any Pill to Toggle)</label>
     <div id="benchVisGrid" class="vis-pills-grid">${renderVisPillsHtml(BENCH_VIS, 'toggleBenchVis')}</div>
 
-    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:11px;padding:9px 11px;background:#f8fafc;border-radius:8px;border:1px solid var(--border-soft);">
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:11px;padding:9px 11px;background:var(--ui-surface-2);border-radius:10px;border:1px solid var(--border-soft);">
       ${["3A","3AA"].includes((rec.dot_spec||"").toUpperCase()) ? `<label class="inline-check" style="color:#92400e;"><input type="checkbox" id="bStar10Yr" ${rec.star_10yr ? "checked" : ""} /><span><strong>★ 10-Yr Star</strong></span></label>` : ""}
       <label class="inline-check"><input type="checkbox" id="bOring" ${rec.addon_oring ? 'checked' : ''} /><span>+ Neck O-Ring</span></label>
       <label class="inline-check"><input type="checkbox" id="bBurstDisc" ${(rec.addon_burst_disc || rec.relief_valve_changed === 'Yes') ? 'checked' : ''} /><span>+ Burst Disc / Relief</span></label>
@@ -625,11 +661,11 @@ function renderBenchForm() {
       <label class="inline-check"><input type="checkbox" id="bValveReinst" /><span>Valve Reinstalled</span></label>
     </div>
 
-    <button class="primary" id="btnCompleteBench" onclick="completeBottle(${rec.id}, ${isHydro})">Certify &amp; Advance to Next Cylinder (RP)</button>`;
+    <button class="primary" id="btnCompleteBench" onclick="completeBottle(${rec.id}, ${isHydro}, false)">${certBtnLbl}</button>
+    ${isHydro ? `<div style="text-align:center;font-size:0.75rem;color:var(--muted);margin-top:6px;">⌨️ Hands-Fast Numpad: Type <strong>Total cc</strong> → <strong>Enter</strong> → <strong>Perm cc</strong> → <strong>Enter</strong> to certify &amp; load next bottle</div>` : ''}`;
 }
 
 function previewBenchMath(reeLimit) {
-  const box = document.getElementById('benchPreview');
   const totEl = document.getElementById('bTotal');
   const condemnWrap = document.getElementById('bCondemnWrap');
   const visFailed = Object.values(BENCH_VIS).some(v => v !== 'OK');
@@ -637,19 +673,48 @@ function previewBenchMath(reeLimit) {
     if (condemnWrap) condemnWrap.hidden = !visFailed;
     return;
   }
-  const tot = parseFloat(totEl.value || '0'), perm = parseFloat(document.getElementById('bPerm').value || '0');
-  if (tot <= 0) {
+  const elTile = document.getElementById('teleElasticTile');
+  const pctTile = document.getElementById('telePctTile');
+  const dispTile = document.getElementById('teleDispTile');
+  const elVal = document.getElementById('teleElasticVal');
+  const pctVal = document.getElementById('telePctVal');
+  const dispVal = document.getElementById('teleDispVal');
+
+  const rawTot = totEl.value;
+  const tot = parseFloat(rawTot || '0');
+  const perm = parseFloat(document.getElementById('bPerm')?.value || '0');
+
+  if (!rawTot || !(tot > 0)) {
+    if (elTile) elTile.className = 'bench-tele-tile';
+    if (pctTile) pctTile.className = 'bench-tele-tile';
+    if (dispTile) dispTile.className = 'bench-tele-tile' + (visFailed ? ' state-fail' : '');
+    if (elVal) elVal.textContent = `— cc${reeLimit !== null ? ` (≤ ${reeLimit})` : ''}`;
+    if (pctVal) pctVal.textContent = '— %';
+    if (dispVal) dispVal.textContent = visFailed ? '⛔ VISUAL FAIL (Code D)' : 'Enter Total cc ↵';
     if (condemnWrap) condemnWrap.hidden = !visFailed;
     return;
   }
-  const elastic = (tot - perm).toFixed(2), pct = ((perm / tot) * 100).toFixed(1);
-  const bad = visFailed || (reeLimit !== null && parseFloat(elastic) > reeLimit) || parseFloat(pct) > 10.0;
-  box.className = bad ? 'notice bad' : 'notice';
-  box.textContent = `Elastic: ${elastic} cc | % Perm: ${pct}%${visFailed ? ' | VISUAL FAIL' : ''} — ${bad ? 'CONDEMN (CODE D) — Select Legal Action Below' : 'PASS (Code A)'}`;
+
+  const elasticNum = tot - perm;
+  const pctNum = (perm / tot) * 100;
+  const reeFailed = reeLimit !== null && elasticNum > reeLimit;
+  const permFailed = pctNum > 10.0 || perm < 0 || perm > tot;
+  const bad = visFailed || reeFailed || permFailed;
+
+  if (elTile) elTile.className = 'bench-tele-tile ' + (reeFailed ? 'state-fail' : 'state-pass');
+  if (pctTile) pctTile.className = 'bench-tele-tile ' + (permFailed ? 'state-fail' : 'state-pass');
+  if (dispTile) dispTile.className = 'bench-tele-tile ' + (bad ? 'state-fail' : 'state-pass');
+
+  if (elVal) elVal.textContent = `${elasticNum.toFixed(2)} cc${reeLimit !== null ? ` / ≤${reeLimit}` : ''}`;
+  if (pctVal) pctVal.textContent = `${pctNum.toFixed(1)}%`;
+  if (dispVal) {
+    const reason = visFailed ? 'Visual' : (reeFailed ? '>REE' : '>10%');
+    dispVal.textContent = bad ? `⛔ CONDEMN (${reason})` : '✓ PASS • Code A';
+  }
   if (condemnWrap) condemnWrap.hidden = !bad;
 }
 
-async function completeBottle(id, isHydro) {
+async function completeBottle(id, isHydro, fromEnterKey = false) {
   if (BENCH_SUBMITTING) return;
   if (isHydro && !(parseFloat(document.getElementById('bTotal').value) > 0)) {
     alert('Enter Burette Total Expansion (cc) first.');
@@ -660,6 +725,15 @@ async function completeBottle(id, isHydro) {
   const rinType = document.getElementById('bRinType').value;
   const burstChecked = document.getElementById('bBurstDisc').checked;
   const condemnHidden = document.getElementById('bCondemnWrap').hidden;
+
+  if (!condemnHidden && fromEnterKey) {
+    if (typeof playShopTone === 'function') playShopTone('condemn');
+    const rec = STATE.records.find(x => x.id === id);
+    if (!confirm(`⚠️ CONDEMN (CODE D) DETECTED for SN ${rec ? rec.serial_number : id}.\n\nConfirm condemning this cylinder under 49 CFR §180.205(i)? (Cancel to double-check burette reading or select Legal Action.)`)) {
+      document.getElementById('bCondemnAct')?.focus();
+      return;
+    }
+  }
 
   BENCH_SUBMITTING = true;
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Certifying...'; }
@@ -687,10 +761,23 @@ async function completeBottle(id, isHydro) {
         ...BENCH_VIS,
       }),
     });
-    if (!res.ok) { alert((await res.json()).detail); return; }
+    const out = await res.json();
+    if (!res.ok) {
+      if (typeof playShopTone === 'function') playShopTone('condemn');
+      alert(out.detail || 'Could not complete cylinder test.');
+      return;
+    }
+    if (typeof playShopTone === 'function') {
+      playShopTone(out.hydro_disposition === 'A' ? 'pass' : 'condemn');
+    }
   } finally {
     BENCH_SUBMITTING = false;
-    if (btn) { btn.disabled = false; btn.textContent = 'Certify & Advance to Next Cylinder (RP)'; }
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = (window.CURRENT_USER && window.CURRENT_USER.role === 'SYSTEM_ADMIN')
+        ? 'Certify & Advance (ADMIN Diagnostic — Marks ADM*)'
+        : 'Certify & Advance to Next Cylinder (RP)';
+    }
   }
   await loadState(false);
   const nextTot = document.getElementById('bTotal');

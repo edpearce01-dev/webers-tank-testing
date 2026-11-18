@@ -35,6 +35,63 @@ let LAST_SEARCH_ROWS = [];
 let SHOW_ALL_SHELF_CUSTS = false;
 let DEFERRED_PWA = null;
 let DEEP_LINK_APPLIED = false;
+let SHOP_AUDIO_CTX = null;
+
+function isShopAudioEnabled() {
+  return localStorage.getItem('webers_shop_audio') !== 'off';
+}
+
+function syncShopSoundBtn() {
+  const btn = document.getElementById('shopSoundBtn');
+  if (!btn) return;
+  const on = isShopAudioEnabled();
+  btn.textContent = on ? '🔊' : '🔇';
+  btn.title = on ? 'Shop Audio Cues: ON (Click to Mute)' : 'Shop Audio Cues: MUTED (Click to Enable)';
+}
+
+function toggleShopAudio() {
+  const next = isShopAudioEnabled() ? 'off' : 'on';
+  localStorage.setItem('webers_shop_audio', next);
+  syncShopSoundBtn();
+  if (next === 'on') playShopTone('pass');
+}
+
+function playShopTone(kind = 'pass') {
+  if (!isShopAudioEnabled()) return;
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    if (!SHOP_AUDIO_CTX) SHOP_AUDIO_CTX = new AudioCtx();
+    if (SHOP_AUDIO_CTX.state === 'suspended') SHOP_AUDIO_CTX.resume();
+    const now = SHOP_AUDIO_CTX.currentTime;
+    const notes = kind === 'condemn'
+      ? [{ f: 290, d: 0.16, t: 'sawtooth', g: 0.08, o: 0 }, { f: 205, d: 0.24, t: 'sawtooth', g: 0.09, o: 0.18 }]
+      : (kind === 'step'
+        ? [{ f: 660, d: 0.055, t: 'sine', g: 0.045, o: 0 }]
+        : [{ f: 659.25, d: 0.08, t: 'sine', g: 0.06, o: 0 }, { f: 880, d: 0.13, t: 'sine', g: 0.07, o: 0.085 }]);
+    notes.forEach(n => {
+      const osc = SHOP_AUDIO_CTX.createOscillator();
+      const gain = SHOP_AUDIO_CTX.createGain();
+      osc.type = n.t;
+      osc.frequency.setValueAtTime(n.f, now + n.o);
+      gain.gain.setValueAtTime(n.g, now + n.o);
+      gain.gain.exponentialRampToValueAtTime(0.0008, now + n.o + n.d);
+      osc.connect(gain);
+      gain.connect(SHOP_AUDIO_CTX.destination);
+      osc.start(now + n.o);
+      osc.stop(now + n.o + n.d + 0.01);
+    });
+  } catch (_) {}
+}
+
+function setOfflineGuard(isOffline) {
+  const bar = document.getElementById('offlineGuardBanner');
+  if (bar) bar.hidden = !isOffline;
+}
+
+window.addEventListener('online', () => { setOfflineGuard(false); loadState(false); });
+window.addEventListener('offline', () => setOfflineGuard(true));
+document.addEventListener('DOMContentLoaded', syncShopSoundBtn);
 
 const IS_OPS_HOST = !['weberstanktesting.com', 'www.weberstanktesting.com'].includes(location.hostname.toLowerCase());
 if (IS_OPS_HOST && 'serviceWorker' in navigator) {
@@ -233,6 +290,9 @@ function jumpToTab(name) {
     b.classList.toggle('active', b.getAttribute('data-tab') === name);
   });
   if (name === 'search') runSearch(false);
+  if (name === 'bench') {
+    setTimeout(() => { const tot = document.getElementById('bTotal'); if (tot) tot.focus(); }, 40);
+  }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -300,7 +360,7 @@ async function loadState(rebuildLadder = false) {
     certBanner.innerHTML = urgentCerts.map(a => `
       <div class="notice ${a.level === 'EXPIRED' ? 'bad' : 'warn'}" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
         <span>${a.level === 'EXPIRED' ? '⛔ EXPIRED:' : '⚠️ DUE SOON:'} <strong>${escHtml(a.title)}</strong> (${escHtml(a.expires_date)} — ${a.days_remaining < 0 ? Math.abs(a.days_remaining) + 'd overdue' : a.days_remaining + 'd remaining'})</span>
-        <button class="secondary" onclick="toggleGuide(true)">Update Cert Date</button>
+        <a class="secondary" href="/owner?pane=facility">Update Cert Date →</a>
       </div>`).join('');
   } else {
     certBanner.hidden = true;
@@ -430,10 +490,13 @@ setInterval(async () => {
     const res = await fetch('/api/ping');
     if (res.status === 401) { checkAuthAndBoot(); return; }
     if (res.ok) {
+      setOfflineGuard(false);
       const p = await res.json();
       if (p.db_version !== STATE.db_version) loadState(false);
     }
-  } catch (_) {}
+  } catch (_) {
+    setOfflineGuard(true);
+  }
 }, 3500);
 
 // --- STATION 1: START-OF-DAY HUDDLE & CALIBRATION LADDER ---
@@ -524,7 +587,8 @@ function renderCalibrationControls() {
   const curMax = !LADDER.length ? fallbackMax : (maxSel.value || fallbackMax);
   maxSel.innerHTML = STATE.calibration_targets.map((t, idx) => {
     const allow = t.pressure_psi >= 3000 ? t.pressure_psi + 500 : Math.round(t.pressure_psi * 1.1);
-    return `<option value="${t.pressure_psi}" ${String(t.pressure_psi) === String(curMax) ? 'selected' : ''}>${t.pressure_psi} PSI (${idx + 1} steps → ≤${allow})</option>`;
+    const stepWord = idx === 0 ? 'step' : 'steps';
+    return `<option value="${t.pressure_psi}" ${String(t.pressure_psi) === String(curMax) ? 'selected' : ''}>${t.pressure_psi} PSI (${idx + 1} ${stepWord} → ≤${allow})</option>`;
   }).join('');
   if (!LADDER.length) buildCalibrationLadder();
 
@@ -592,7 +656,12 @@ function lockLadderStep(idx) {
   const step = LADDER[idx];
   if (step.actual === '' || isNaN(parseFloat(step.actual))) { alert('Enter burette reading first.'); return; }
   const dev = Math.abs(((step.expected_cc - parseFloat(step.actual)) / step.expected_cc) * 100);
-  if (dev > 1.0 && !confirm(`Deviates by ${dev.toFixed(2)}% (>1.0% limit). Record anyway?`)) return;
+  if (dev > 1.0) {
+    playShopTone('condemn');
+    if (!confirm(`Deviates by ${dev.toFixed(2)}% (>1.0% limit). Record anyway?`)) return;
+  } else {
+    playShopTone('step');
+  }
   step.locked = true;
   if (idx + 1 < LADDER.length) ACTIVE_STEP = idx + 1;
   renderLadder(true);
@@ -617,6 +686,7 @@ async function submitCalibrationLadder() {
     if (!res.ok) { alert(data.detail); return; }
     CAL_FORCE_EXPANDED = false;
     LADDER = [];
+    playShopTone(data.passed ? 'pass' : 'condemn');
     alert(data.passed ? `CERTIFIED ≤ ${data.max_allowed_test_psi} PSI (RP)!` : 'Calibration FAILED — check burette zero.');
     await loadState(true);
   } finally {

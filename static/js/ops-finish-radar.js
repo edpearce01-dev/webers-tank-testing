@@ -364,13 +364,22 @@ function closeEditModal() { document.getElementById('editRecordModal').hidden = 
 
 async function saveEditedRecord() {
   const id = document.getElementById('erId').value;
+  let custVal = (document.getElementById('erCustomer').value || '').trim();
+  if (!custVal) {
+    if (!confirm('No customer name entered.\n\nContinue without a customer name and save under "Walk-In"?')) {
+      document.getElementById('erCustomer').focus();
+      return;
+    }
+    custVal = 'Walk-In';
+    document.getElementById('erCustomer').value = custVal;
+  }
   const pri = document.getElementById('erPriority').value;
   const rinType = document.getElementById('erRinType').value;
   const burstChecked = document.getElementById('erBurstDisc').checked;
   const res = await fetch(`/api/records/${id}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      customer_name: document.getElementById('erCustomer').value,
+      customer_name: custVal,
       customer_phone: document.getElementById('erPhone').value,
       priority: pri,
       rush_fee: pri === 'RUSH',

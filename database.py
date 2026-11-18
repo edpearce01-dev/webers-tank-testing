@@ -4,19 +4,30 @@ import sqlite3
 from pathlib import Path
 
 
+def _is_primary_hydro_db(p: Path) -> bool:
+    low = p.name.lower()
+    return not low.startswith("_") and "bbq" not in low and "homestead" not in low
+
+
 def _resolve_db_path() -> Path:
     env_p = os.getenv("WEBER_DB_PATH") or os.getenv("DATABASE_PATH")
     if env_p:
         return Path(env_p)
     for disk in (Path("/var/data"), Path("/data")):
         if disk.is_dir() and os.access(disk, os.W_OK):
-            existing = sorted(disk.glob("*.db"))
-            return existing[0] if existing else (disk / "webers_hydro.db")
+            preferred = disk / "webers_hydro.db"
+            if preferred.exists():
+                return preferred
+            existing = [p for p in sorted(disk.glob("*.db")) if _is_primary_hydro_db(p)]
+            return existing[0] if existing else preferred
     base = Path(__file__).parent
-    existing_local = sorted(base.glob("*.db"))
+    preferred_local = base / "webers_hydro.db"
+    if preferred_local.exists():
+        return preferred_local
+    existing_local = [p for p in sorted(base.glob("*.db")) if _is_primary_hydro_db(p)]
     if existing_local:
         return existing_local[0]
-    return base / "webers_hydro.db"
+    return preferred_local
 
 
 DB_PATH = _resolve_db_path()
@@ -702,6 +713,9 @@ def init_db() -> None:
             ],
         )
 
+    cur.execute("UPDATE cylinder_records SET customer_name='Walk-In' WHERE TRIM(COALESCE(customer_name, ''))='';")
+    cur.execute("UPDATE dropoffs SET customer_name='Walk-In' WHERE TRIM(COALESCE(customer_name, ''))='';")
+    cur.execute("UPDATE schedule_jobs SET customer_name='Walk-In' WHERE TRIM(COALESCE(customer_name, ''))='';")
     cur.execute("UPDATE settings SET value='weberstanktesting@gmail.com' WHERE key='alert_email' AND TRIM(value)='';")
     cur.execute("UPDATE settings SET value='https://docs.google.com/spreadsheets/d/1ILp9FZv6ZSKHf_tuSjjfOhWzE8oWgRYoSuDdNIfW_Qo/edit' WHERE key='master_sheet_url' AND TRIM(value)='';")
     conn.commit()

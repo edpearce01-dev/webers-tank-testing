@@ -41,7 +41,11 @@ print("  Shop Ops   : http://127.0.0.1:8000/ops")
 print("  Schedule   : http://127.0.0.1:8000/schedule")
 print("  Office     : http://127.0.0.1:8000/office")
 print("  Live TV    : http://127.0.0.1:8000/tv")
+print("  Print Vault: http://127.0.0.1:8000/print")
+print("  Owner Hub  : http://127.0.0.1:8000/owner")
 print("  Public Site: http://127.0.0.1:8000/?view=public")
+print("  Hidden BBQ : http://127.0.0.1:8000/bbq")
+print("  Homestead  : http://127.0.0.1:8000/homestead")
 print("----------------------------------------------------------------------")
 print("  Local Login PINs:")
 for name, init, role, pin in pins:
@@ -49,5 +53,6 @@ for name, init, role, pin in pins:
 print("  Press Ctrl + C in this window anytime to stop the local server.")
 print("======================================================================\n")
 
-Timer(1.4, lambda: webbrowser.open("http://127.0.0.1:8000/ops")).start()
+if "--no-browser" not in sys.argv:
+    Timer(1.4, lambda: webbrowser.open("http://127.0.0.1:8000/ops")).start()
 subprocess.run([sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000", "--reload"], cwd=str(ROOT))

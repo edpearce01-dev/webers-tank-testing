@@ -15,6 +15,8 @@ BACKEND_FILES = [
     ROOT / "database.py",
     ROOT / "schemas.py",
     ROOT / "pdf_generator.py",
+    ROOT / "bbq_db.py",
+    ROOT / "bbq_pdf.py",
     *sorted((ROOT / "services").glob("*.py")),
     *sorted((ROOT / "routes").glob("*.py")),
 ]
